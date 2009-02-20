@@ -42,7 +42,7 @@
 
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper, "$Revision: 1.106 $");
+vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper, "$Revision: 1.106.4.2 $");
 vtkStandardNewMacro(vtkOpenGLPolyDataMapper);
 #endif
 
