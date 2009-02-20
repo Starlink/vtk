@@ -40,8 +40,15 @@
 #define VTK_WIREFRAME 1
 #define VTK_SURFACE   2
 
-class vtkRenderer;
 class vtkActor;
+class vtkRenderer;
+class vtkShaderProgram;
+class vtkTexture;
+class vtkWindow;
+class vtkXMLDataElement;
+class vtkXMLMaterial;
+
+class vtkPropertyInternals;
 
 class VTK_RENDERING_EXPORT vtkProperty : public vtkObject
 {
@@ -66,7 +73,7 @@ public:
   // vtkProperty, which is created automatically. This
   // method includes the invoking actor as an argument which can
   // be used by property devices that require the actor.
-  virtual void Render(vtkActor *,vtkRenderer *) {};
+  virtual void Render(vtkActor *,vtkRenderer *);
 
   // Description:
   // This method renders the property as a backface property. TwoSidedLighting
@@ -75,6 +82,14 @@ public:
   // such as Representation, Culling are specified by the Property.
   virtual void BackfaceRender(vtkActor *,vtkRenderer *) {};
 
+  //BTX
+  // Description:
+  // This method is called after the actor has been rendered.
+  // Don't call this directly. This method cleans up
+  // any shaders allocated.
+  virtual void PostRender(vtkActor*, vtkRenderer*);
+  //ETX
+
   // Description:
   // Set the shading interpolation method for an object.
   vtkSetClampMacro(Interpolation,int,VTK_FLAT,VTK_PHONG);
@@ -82,7 +97,7 @@ public:
   void SetInterpolationToFlat() {this->SetInterpolation(VTK_FLAT);};
   void SetInterpolationToGouraud() {this->SetInterpolation(VTK_GOURAUD);};
   void SetInterpolationToPhong() {this->SetInterpolation(VTK_PHONG);};
-  char *GetInterpolationAsString();
+  const char *GetInterpolationAsString();
 
   // Description:
   // Control the surface geometry representation for the object.
@@ -92,16 +107,17 @@ public:
   void SetRepresentationToWireframe() {
     this->SetRepresentation(VTK_WIREFRAME);};
   void SetRepresentationToSurface() {this->SetRepresentation(VTK_SURFACE);};
-  char *GetRepresentationAsString();
+  const char *GetRepresentationAsString();
 
   // Description:
   // Set the color of the object. Has the side effect of setting the
   // ambient diffuse and specular colors as well. This is basically
   // a quick overall color setting method.
-  void SetColor(double r,double g,double b);
+  void SetColor(double r, double g, double b);
   void SetColor(double a[3]) { this->SetColor(a[0], a[1], a[2]); };
   double *GetColor();
   void GetColor(double rgb[3]);
+  void GetColor(double &r, double &g, double &b);
 
   // Description:
   // Set/Get the ambient lighting coefficient.
@@ -135,17 +151,17 @@ public:
   // doesn't make too much sense to have both. For the rendering
   // libraries that don't support both, the diffuse color is used.
   vtkSetVector3Macro(AmbientColor,double);
-  vtkGetVectorMacro(AmbientColor,double,3);
+  vtkGetVector3Macro(AmbientColor,double);
 
   // Description:
   // Set/Get the diffuse surface color.
   vtkSetVector3Macro(DiffuseColor,double);
-  vtkGetVectorMacro(DiffuseColor,double,3);
+  vtkGetVector3Macro(DiffuseColor,double);
 
   // Description:
   // Set/Get the specular surface color.
   vtkSetVector3Macro(SpecularColor,double);
-  vtkGetVectorMacro(SpecularColor,double,3);
+  vtkGetVector3Macro(SpecularColor,double);
 
   // Description:
   // Turn on/off the visibility of edges. On some renderers it is
@@ -158,7 +174,7 @@ public:
   // Description:
   // Set/Get the color of primitive edges (if edge visibility is enabled).
   vtkSetVector3Macro(EdgeColor,double);
-  vtkGetVectorMacro(EdgeColor,double,3);
+  vtkGetVector3Macro(EdgeColor,double);
 
   // Description:
   // Set/Get the width of a Line. The width is expressed in screen units.
@@ -187,7 +203,7 @@ public:
   vtkGetMacro(PointSize,float);
 
   // Description:
-  // Turn on/off fast culling of polygons based on orientation of normal 
+  // Turn on/off fast culling of polygons based on orientation of normal
   // with respect to camera. If backface culling is on, polygons facing
   // away from camera are not drawn.
   vtkGetMacro(BackfaceCulling,int);
@@ -195,16 +211,156 @@ public:
   vtkBooleanMacro(BackfaceCulling,int);
 
   // Description:
-  // Turn on/off fast culling of polygons based on orientation of normal 
+  // Turn on/off fast culling of polygons based on orientation of normal
   // with respect to camera. If frontface culling is on, polygons facing
   // towards camera are not drawn.
   vtkGetMacro(FrontfaceCulling,int);
   vtkSetMacro(FrontfaceCulling,int);
   vtkBooleanMacro(FrontfaceCulling,int);
 
+  // Description:
+  // Get the material representation used for shading. The material will be used
+  // only when shading is enabled.
+  vtkGetObjectMacro(Material, vtkXMLMaterial);
+
+  // Description:
+  // Returns the name of the material currenly loaded, if any.
+  vtkGetStringMacro(MaterialName);
+
+  // Description:
+  // Load the material. The material can be the name of a
+  // built-on material or the filename for a VTK material XML description.
+  void LoadMaterial(const char* name);
+
+  // Description:
+  // Load the material given the contents of the material file.
+  void LoadMaterialFromString(const char* materialxml);
+
+  // Description:
+  // Load the material given the material representation.
+  void LoadMaterial(vtkXMLMaterial*);
+
+  // Description:
+  // Enable/Disable shading. When shading is enabled, the
+  // Material must be set.
+  vtkSetMacro(Shading, int);
+  vtkGetMacro(Shading, int);
+  vtkBooleanMacro(Shading, int);
+
+  // Description:
+  // Get the Shader program. If Material is not set/or not loaded properly,
+  // this will return null.
+  vtkGetObjectMacro(ShaderProgram, vtkShaderProgram);
+
+  // Description
+  // Provide values to initialize shader variables. This is a conduit to initialize
+  // shader variables that change over time, useful for animation, gui widget inputs,
+  // etc.
+  // name - hardware name of the uniform variable
+  // numVars - number of variables being set
+  // x - values
+  virtual void AddShaderVariable(const char* name, int numVars, int* x);
+  virtual void AddShaderVariable(const char* name, int numVars, float* x);
+  virtual void AddShaderVariable(const char* name, int numVars, double* x);
+
+  // Description:
+  // Methods to provide to add shader variables from tcl.
+  void AddShaderVariable(const char* name, int v)
+    {
+    this->AddShaderVariable(name, 1, &v);
+    }
+  void AddShaderVariable(const char* name, float v)
+    {
+    this->AddShaderVariable(name, 1, &v);
+    }
+  void AddShaderVariable(const char* name, double v)
+    {
+    this->AddShaderVariable(name, 1, &v);
+    }
+  void AddShaderVariable(const char* name, int v1, int v2)
+    {
+    int v[2];
+    v[0] = v1;
+    v[1] = v2;
+    this->AddShaderVariable(name, 2, v);
+    }
+  void AddShaderVariable(const char* name, float v1, float v2)
+    {
+    float v[2];
+    v[0] = v1;
+    v[1] = v2;
+    this->AddShaderVariable(name, 2, v);
+    }
+  void AddShaderVariable(const char* name, double v1, double v2)
+    {
+    double v[2];
+    v[0] = v1;
+    v[1] = v2;
+    this->AddShaderVariable(name, 2, v);
+    }
+  void AddShaderVariable(const char* name, int v1, int v2, int v3)
+    {
+    int v[3];
+    v[0] = v1;
+    v[1] = v2;
+    v[2] = v3;
+    this->AddShaderVariable(name, 3, v);
+    }
+  void AddShaderVariable(const char* name, float v1, float v2, float v3)
+    {
+    float v[3];
+    v[0] = v1;
+    v[1] = v2;
+    v[2] = v3;
+    this->AddShaderVariable(name, 3, v);
+    }
+  void AddShaderVariable(const char* name, double v1, double v2, double v3)
+    {
+    double v[3];
+    v[0] = v1;
+    v[1] = v2;
+    v[2] = v3;
+    this->AddShaderVariable(name, 3, v);
+    }
+
+  // Description:
+  // Set/Get the texture object to control rendering texture maps.  This will
+  // be a vtkTexture object. A property does not need to have an associated
+  // texture map and multiple properties can share one texture. Textures
+  // must be assigned unique names.
+  void SetTexture(const char* name, vtkTexture* texture);
+  vtkTexture* GetTexture(const char* name);
+
+  // Description:
+  // Remove a texture from the collection. Note that the
+  // indices of all the subsquent textures, if any, will change.
+  void RemoveTexture(const char* name);
+
+  // Description:
+  // Remove all the textures.
+  void RemoveAllTextures();
+
+  // Description:
+  // Returns the number of textures in this property.
+  int GetNumberOfTextures();
+
+  // Description:
+  // Release any graphics resources that are being consumed by this
+  // property. The parameter window could be used to determine which graphic
+  // resources to release.
+  virtual void ReleaseGraphicsResources(vtkWindow *win);
+
 protected:
   vtkProperty();
-  ~vtkProperty() {};
+  ~vtkProperty();
+
+  // Description:
+  // Load property iVar values from the Material XML.
+  void LoadProperty();
+  void LoadTextures();
+  void LoadTexture(vtkXMLDataElement* elem);
+  void LoadPerlineNoise(vtkXMLDataElement* );
+  void LoadMember(vtkXMLDataElement* elem);
 
   double Color[3];
   double AmbientColor[3];
@@ -220,50 +376,75 @@ protected:
   float LineWidth;
   int   LineStipplePattern;
   int   LineStippleRepeatFactor;
-  int   Interpolation; 
+  int   Interpolation;
   int   Representation;
   int   EdgeVisibility;
   int   BackfaceCulling;
   int   FrontfaceCulling;
+
+  int Shading;
+
+  char* MaterialName;
+  vtkSetStringMacro(MaterialName);
+
+  vtkShaderProgram* ShaderProgram;
+  void SetShaderProgram(vtkShaderProgram*);
+
+  vtkXMLMaterial* Material; // TODO: I wonder if this reference needs to be maintained.
+
+//BTX
+private:
+  // These friends are provided only for the time being
+  // till we device a graceful way of loading texturing for GLSL.
+  friend class vtkGLSLShaderProgram;
+  friend class vtkShader;
+  // FIXME:
+  // Don't use these methods. They will be removed. They are provided only
+  // for the time-being.
+  vtkTexture* GetTextureAtIndex(int index);
+  int GetTextureIndex(const char* name);
+//ETX
 private:
   vtkProperty(const vtkProperty&);  // Not implemented.
   void operator=(const vtkProperty&);  // Not implemented.
+
+  vtkPropertyInternals* Internals;
 };
 
 // Description:
 // Return the method of shading as a descriptive character string.
-inline char *vtkProperty::GetInterpolationAsString(void)
+inline const char *vtkProperty::GetInterpolationAsString(void)
 {
   if ( this->Interpolation == VTK_FLAT )
     {
-    return (char *)"Flat";
+    return "Flat";
     }
-  else if ( this->Interpolation == VTK_GOURAUD ) 
+  else if ( this->Interpolation == VTK_GOURAUD )
     {
-    return (char *)"Gouraud";
+    return "Gouraud";
     }
-  else 
+  else
     {
-    return (char *)"Phong";
+    return "Phong";
     }
 }
 
 
 // Description:
 // Return the method of shading as a descriptive character string.
-inline char *vtkProperty::GetRepresentationAsString(void)
+inline const char *vtkProperty::GetRepresentationAsString(void)
 {
   if ( this->Representation == VTK_POINTS )
     {
-    return (char *)"Points";
+    return "Points";
     }
-  else if ( this->Representation == VTK_WIREFRAME ) 
+  else if ( this->Representation == VTK_WIREFRAME )
     {
-    return (char *)"Wireframe";
+    return "Wireframe";
     }
-  else 
+  else
     {
-    return (char *)"Surface";
+    return "Surface";
     }
 }
 

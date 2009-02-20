@@ -43,7 +43,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkContourFilter, "$Revision: 1.125 $");
+vtkCxxRevisionMacro(vtkContourFilter, "$Revision: 1.127 $");
 vtkStandardNewMacro(vtkContourFilter);
 vtkCxxSetObjectMacro(vtkContourFilter,ScalarTree,vtkScalarTree);
 
@@ -369,7 +369,7 @@ int vtkContourFilter::RequestData(
     vtkContourGrid *cgrid;
 
     cgrid = vtkContourGrid::New();
-    cgrid->SetInput((vtkUnstructuredGrid *)input);
+    cgrid->SetInput(input);
     for (i = 0; i < numContours; i++)
       {
       cgrid->SetValue(i, values[i]);
@@ -396,7 +396,8 @@ int vtkContourFilter::RequestData(
     // Create objects to hold output of contour operation. First estimate
     // allocation size.
     //
-    estimatedSize = (vtkIdType) pow ((double) numCells, .75);
+    estimatedSize=
+      static_cast<vtkIdType>(pow(static_cast<double>(numCells),.75));
     estimatedSize *= numContours;
     estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
     if (estimatedSize < 1024)
@@ -481,7 +482,7 @@ int vtkContourFilter::RequestData(
           if (dimensionality == 3 &&  ! (cellId % 5000) ) 
             {
             vtkDebugMacro(<<"Contouring #" << cellId);
-            this->UpdateProgress ((double)cellId/numCells);
+            this->UpdateProgress (static_cast<double>(cellId)/numCells);
             abortExecute = this->GetAbortExecute();
             }
         
@@ -604,6 +605,60 @@ void vtkContourFilter::SetArrayComponent( int comp )
 int vtkContourFilter::GetArrayComponent()
 {
   return( this->SynchronizedTemplates2D->GetArrayComponent() );
+}
+
+//----------------------------------------------------------------------------
+int vtkContourFilter::ProcessRequest(vtkInformation* request,
+                                     vtkInformationVector** inputVector,
+                                     vtkInformationVector* outputVector)
+{
+  // generate the data
+  if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT_INFORMATION()))
+    {
+    // compute the priority for this UE
+    vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+    if (!inInfo)
+      {
+      return 1;
+      }
+    // get the range of the input if available
+    vtkInformation *fInfo = 
+      vtkDataObject::GetActiveFieldInformation
+      (inInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS, 
+       vtkDataSetAttributes::SCALARS);
+    if (!fInfo)
+      {
+      return 1;
+      }
+    double *range = fInfo->Get(vtkDataObject::FIELD_RANGE());
+    if (range)
+      {
+      // compute the priority
+      // get the incoming priority if any
+      double inPrior = 1;
+      if (inInfo->Has(vtkStreamingDemandDrivenPipeline::PRIORITY()))
+        {
+        inPrior = inInfo->Get(vtkStreamingDemandDrivenPipeline::PRIORITY());
+        }
+      // do any contours intersect the range?
+      int numContours=this->ContourValues->GetNumberOfContours();
+      double *values=this->ContourValues->GetValues();
+      double prior = 0;
+      int i;
+      for (i=0; i < numContours; i++)
+        {
+        if (values[i] >= range[0] && values[i] <= range[1])
+          {
+          prior = inPrior;
+          break;
+          }
+        }
+      outputVector->GetInformationObject(0)->
+        Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),prior);
+      }
+    return 1;
+    }
+  return this->Superclass::ProcessRequest(request, inputVector, outputVector);
 }
 
 int vtkContourFilter::FillInputPortInformation(int, vtkInformation *info)

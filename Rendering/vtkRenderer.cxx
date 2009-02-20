@@ -14,26 +14,32 @@
 =========================================================================*/
 #include "vtkRenderer.h"
 
+#include "vtkAreaPicker.h"
 #include "vtkAssemblyNode.h"
 #include "vtkAssemblyPath.h"
 #include "vtkCamera.h"
 #include "vtkCommand.h"
-#include "vtkCuller.h"
 #include "vtkCullerCollection.h"
+#include "vtkCuller.h"
 #include "vtkFrustumCoverageCuller.h"
 #include "vtkGraphicsFactory.h"
-#include "vtkLight.h"
+#include "vtkIdentColoredPainter.h"
 #include "vtkLightCollection.h"
+#include "vtkLight.h"
 #include "vtkMath.h"
 #include "vtkMatrix4x4.h"
 #include "vtkOutputWindow.h"
+#include "vtkPainterPolyDataMapper.h"
 #include "vtkPicker.h"
 #include "vtkProp3DCollection.h"
+#include "vtkPropCollection.h"
 #include "vtkRenderWindow.h"
 #include "vtkTimerLog.h"
 #include "vtkVolume.h"
 
-vtkCxxRevisionMacro(vtkRenderer, "$Revision: 1.219 $");
+vtkCxxRevisionMacro(vtkRenderer, "$Revision: 1.240 $");
+
+vtkCxxSetObjectMacro(vtkRenderer, IdentPainter, vtkIdentColoredPainter);
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -99,6 +105,18 @@ vtkRenderer::vtkRenderer()
   this->NearClippingPlaneTolerance = 0;
 
   this->Erase = 1;
+  this->Draw = 1;
+
+  this->SelectMode = vtkRenderer::NOT_SELECTING;
+  this->SelectConst = 1;
+  this->PropsSelectedFrom = NULL;
+  this->PropsSelectedFromCount = 0;
+  this->IdentPainter = NULL;
+  
+  this->UseDepthPeeling=0;
+  this->OcclusionRatio=0.0;
+  this->MaximumNumberOfPeels=4;
+  this->LastRenderingUsedDepthPeeling=0;
 }
 
 vtkRenderer::~vtkRenderer()
@@ -130,6 +148,19 @@ vtkRenderer::~vtkRenderer()
   this->Lights = NULL;
   this->Cullers->Delete();
   this->Cullers = NULL;
+
+  if ( this->PropsSelectedFrom)
+    {
+    delete [] this->PropsSelectedFrom;
+    this->PropsSelectedFrom = NULL;
+    }
+  this->PropsSelectedFromCount = 0;
+  if (this->IdentPainter)
+    {
+    this->IdentPainter->Delete();
+    this->IdentPainter = NULL;
+    }
+
 }
 
 // return the correct type of Renderer 
@@ -137,7 +168,7 @@ vtkRenderer *vtkRenderer::New()
 { 
   // First try to create the object from the vtkObjectFactory
   vtkObject* ret = vtkGraphicsFactory::CreateInstance("vtkRenderer");
-  return (vtkRenderer *)ret;
+  return static_cast<vtkRenderer *>(ret);
 }
 
 // Concrete render method.
@@ -147,6 +178,13 @@ void vtkRenderer::Render(void)
   int      i;
   vtkProp  *aProp;
   int *size;
+
+  // If Draw is not on, ignore the render.
+  if (!this->Draw)
+    {
+    vtkDebugMacro("Ignoring render because Draw is off.");
+    return;
+    }
 
   t1 = vtkTimerLog::GetUniversalTime();
 
@@ -200,10 +238,14 @@ void vtkRenderer::Render(void)
       
       // backing store should be OK, lets use it
       // calc the pixel range for the renderer
-      rx1 = (int)(this->Viewport[0]*(this->RenderWindow->GetSize()[0] - 1));
-      ry1 = (int)(this->Viewport[1]*(this->RenderWindow->GetSize()[1] - 1));
-      rx2 = (int)(this->Viewport[2]*(this->RenderWindow->GetSize()[0] - 1));
-      ry2 = (int)(this->Viewport[3]*(this->RenderWindow->GetSize()[1] - 1));
+      rx1 = static_cast<int>(this->Viewport[0]*
+                             (this->RenderWindow->GetSize()[0] - 1));
+      ry1 = static_cast<int>(this->Viewport[1]*
+                             (this->RenderWindow->GetSize()[1] - 1));
+      rx2 = static_cast<int>(this->Viewport[2]*
+                             (this->RenderWindow->GetSize()[0] - 1));
+      ry2 = static_cast<int>(this->Viewport[3]*
+                             (this->RenderWindow->GetSize()[1] - 1));
       this->RenderWindow->SetPixelData(rx1,ry1,rx2,ry2,this->BackingImage,0);
       this->InvokeEvent(vtkCommand::EndEvent,NULL);
       return;
@@ -284,10 +326,10 @@ void vtkRenderer::Render(void)
     
     // backing store should be OK, lets use it
     // calc the pixel range for the renderer
-    rx1 = (int)(this->Viewport[0]*(size[0] - 1));
-    ry1 = (int)(this->Viewport[1]*(size[1] - 1));
-    rx2 = (int)(this->Viewport[2]*(size[0] - 1));
-    ry2 = (int)(this->Viewport[3]*(size[1] - 1));
+    rx1 = static_cast<int>(this->Viewport[0]*(size[0] - 1));
+    ry1 = static_cast<int>(this->Viewport[1]*(size[1] - 1));
+    rx2 = static_cast<int>(this->Viewport[2]*(size[0] - 1));
+    ry2 = static_cast<int>(this->Viewport[3]*(size[1] - 1));
     this->BackingImage = this->RenderWindow->GetPixelData(rx1,ry1,rx2,ry2,0);
     this->BackingStoreSize[0] = size[0];
     this->BackingStoreSize[1] = size[1];
@@ -302,7 +344,7 @@ void vtkRenderer::Render(void)
     {
     // Measure the actual RenderTime
     t2 = vtkTimerLog::GetUniversalTime();
-    this->LastRenderTimeInSeconds = (double) (t2 - t1);
+    this->LastRenderTimeInSeconds = static_cast<double>(t2 - t1);
 
     if (this->LastRenderTimeInSeconds == 0.0)
       {
@@ -312,6 +354,23 @@ void vtkRenderer::Render(void)
     }
 }
 
+// ----------------------------------------------------------------------------
+// Description:
+// Render translucent polygonal geometry. Default implementation just call
+// UpdateTranslucentPolygonalGeometry().
+// Subclasses of vtkRenderer that can deal with depth peeling must
+// override this method.
+void vtkRenderer::DeviceRenderTranslucentPolygonalGeometry()
+{
+  // Have to be set before a call to UpdateTranslucentPolygonalGeometry()
+  // because UpdateTranslucentPolygonalGeometry() will eventually call
+  // vtkOpenGLActor::Render() that uses this flag.
+  this->LastRenderingUsedDepthPeeling=0;
+  
+  this->UpdateTranslucentPolygonalGeometry();
+}
+
+// ----------------------------------------------------------------------------
 double vtkRenderer::GetAllocatedRenderTime()
 {
   return this->AllocatedRenderTime;
@@ -329,12 +388,16 @@ int vtkRenderer::UpdateCamera ()
     {
     vtkDebugMacro(<< "No cameras are on, creating one.");
     // the get method will automagically create a camera
-    // and reset it since one hasn't been specified yet
-    this->GetActiveCameraAndEventuallyReset();
+    // and reset it since one hasn't been specified yet.
+    // If is very unlikely that this can occur - if this
+    // renderer is part of a vtkRenderWindow, the camera
+    // will already have been created as part of the
+    // DoStereoRender() method.
+    this->GetActiveCameraAndResetIfCreated();
     }
 
   // update the viewing transformation
-  this->ActiveCamera->Render((vtkRenderer *)this); 
+  this->ActiveCamera->Render(this); 
   
   return 1;
 }
@@ -348,7 +411,7 @@ int vtkRenderer::UpdateLightsGeometryToFollowCamera()
   // only update the light's geometry if this Renderer is tracking
   // this lights.  That allows one renderer to view the lights that
   // another renderer is setting up.
-  camera = this->GetActiveCameraAndEventuallyReset();
+  camera = this->GetActiveCameraAndResetIfCreated();
   lightMatrix = camera->GetCameraLightTransformMatrix();
 
   vtkCollectionSimpleIterator sit;
@@ -425,21 +488,22 @@ void vtkRenderer::AllocateTime()
   // This does not reset the camera anymore. If no camera has been 
   // created though, we want it not only to be created but also reset
   // so that it behaves nicely for people who never bother with the camera
-  // (i.e. neither call GetActiveCamera or ResetCamera)
+  // (i.e. neither call GetActiveCamera or ResetCamera). Of course,
+  // it is very likely that the camera has already been created 
+  // (guaranteed if this renderer is being rendered as part of a
+  // vtkRenderWindow).
 
   if ( this->Cullers->GetNumberOfItems())
     {
-    this->GetActiveCameraAndEventuallyReset();
+    this->GetActiveCameraAndResetIfCreated();
     }
 
-  vtkCollectionSimpleIterator sit;    
-  for (this->Cullers->InitTraversal(sit); 
+  vtkCollectionSimpleIterator sit;
+  for (this->Cullers->InitTraversal(sit);
        (aCuller=this->Cullers->GetNextCuller(sit));)
     {
-    totalTime = 
-      aCuller->Cull((vtkRenderer *)this, 
-                    this->PropArray, this->PropArrayCount,
-                    initialized );
+    totalTime =
+      aCuller->Cull(this,this->PropArray, this->PropArrayCount,initialized );
     }
 
   // loop through all props and set the AllocatedRenderTime
@@ -475,29 +539,58 @@ int vtkRenderer::UpdateGeometry()
     return 0;
     }
 
+  if (this->SelectMode != vtkRenderer::NOT_SELECTING)
+    {
+    //we are doing a visible polygon selection instead of a normal render
+    int ret = this->UpdateGeometryForSelection();
+
+    this->InvokeEvent(vtkCommand::EndEvent,NULL);
+    this->RenderTime.Modified();
+
+    vtkDebugMacro( << "Rendered " << 
+                   this->NumberOfPropsRendered << " actors" );
+
+    return ret;
+    }
+
   // We can render everything because if it was
   // not visible it would not have been put in the
   // list in the first place, and if it was allocated
   // no time (culled) it would have been removed from
   // the list
-  
+
   // loop through props and give them a chance to 
   // render themselves as opaque geometry
   for ( i = 0; i < this->PropArrayCount; i++ )
-    {    
+    { 
     this->NumberOfPropsRendered += 
       this->PropArray[i]->RenderOpaqueGeometry(this);
     }
- 
   
+  // do the render library specific stuff about translucent polygonal geometry.
+  // As it can be expensive, do a quick check if we can skip this step
+  int hasTranslucentPolygonalGeometry=0;
+  for ( i = 0; !hasTranslucentPolygonalGeometry && i < this->PropArrayCount;
+        i++ )
+    { 
+    hasTranslucentPolygonalGeometry=
+      this->PropArray[i]->HasTranslucentPolygonalGeometry();
+    }
+  if(hasTranslucentPolygonalGeometry)
+    {
+    this->DeviceRenderTranslucentPolygonalGeometry();
+    }
+  
+  
+    
   // loop through props and give them a chance to 
-  // render themselves as translucent geometry
+  // render themselves as volumetric geometry.
   for ( i = 0; i < this->PropArrayCount; i++ )
     {
     this->NumberOfPropsRendered += 
-      this->PropArray[i]->RenderTranslucentGeometry(this);
+      this->PropArray[i]->RenderVolumetricGeometry(this);
     }
-
+  
   // loop through props and give them a chance to 
   // render themselves as an overlay (or underlay)
   for ( i = 0; i < this->PropArrayCount; i++ )
@@ -515,6 +608,28 @@ int vtkRenderer::UpdateGeometry()
   return  this->NumberOfPropsRendered;
 }
 
+// ----------------------------------------------------------------------------
+// Description:
+// Ask all props to update and draw any translucent polygonal
+// geometry. This includes both vtkActors and vtkVolumes
+// Return the number of rendered props.
+// It is called once with alpha blending technique. It is called multiple
+// times with depth peeling technique.
+int vtkRenderer::UpdateTranslucentPolygonalGeometry()
+{
+  int result=0;
+  // loop through props and give them a chance to 
+  // render themselves as translucent geometry
+  for (int i = 0; i < this->PropArrayCount; i++ )
+    {
+    int rendered=this->PropArray[i]->RenderTranslucentPolygonalGeometry(this);
+    this->NumberOfPropsRendered += rendered;
+    result+=rendered;
+    }
+  return result;
+}
+
+// ----------------------------------------------------------------------------
 vtkWindow *vtkRenderer::GetVTKWindow()
 {
   return this->RenderWindow;
@@ -560,7 +675,7 @@ vtkCamera *vtkRenderer::GetActiveCamera()
     // side effects (like computing the bounds of all props, which will
     // eventually call UpdateInformation() on data objects, etc).
     // Instead, the rendering code has been updated to internally use
-    // GetActiveCameraAndEventuallyReset which will reset the camera
+    // GetActiveCameraAndResetIfCreated which will reset the camera
     // if it gets created
     // this->ResetCamera();
     }
@@ -569,7 +684,7 @@ vtkCamera *vtkRenderer::GetActiveCamera()
 }
 
 //----------------------------------------------------------------------------
-vtkCamera *vtkRenderer::GetActiveCameraAndEventuallyReset()
+vtkCamera *vtkRenderer::GetActiveCameraAndResetIfCreated()
 {
   if (this->ActiveCamera == NULL)
     {
@@ -649,6 +764,12 @@ vtkVolumeCollection *vtkRenderer::GetVolumes()
 void vtkRenderer::RemoveLight(vtkLight *light)
 {
   this->Lights->RemoveItem(light);
+}
+
+// Remove all lights from the list of lights.
+void vtkRenderer::RemoveAllLights()
+{
+  this->Lights->RemoveAllItems();
 }
 
 // Add an culler to the list of cullers.
@@ -814,7 +935,7 @@ void vtkRenderer::ResetCameraClippingRange()
 // (xmin,xmax, ymin,ymax, zmin,zmax). Camera will reposition itself so
 // that its focal point is the center of the bounding box, and adjust its
 // distance and position to preserve its initial view plane normal 
-// (i.e., vector defined from camera position to focal point). Note: is 
+// (i.e., vector defined from camera position to focal point). Note: if 
 // the view plane is parallel to the view up axis, the view up axis will
 // be reset to one of the three coordinate axes.
 void vtkRenderer::ResetCamera(double bounds[6])
@@ -822,7 +943,7 @@ void vtkRenderer::ResetCamera(double bounds[6])
   double center[3];
   double distance;
   double vn[3], *vup;
-  
+
   this->GetActiveCamera();
   if ( this->ActiveCamera != NULL )
     {
@@ -853,7 +974,7 @@ void vtkRenderer::ResetCamera(double bounds[6])
   radius = sqrt(radius)*0.5;
 
   // default so that the bounding sphere fits within the view fustrum
-  
+
   // compute the distance from the intersection of the view frustum with the
   // bounding sphere. Basically in 2D draw a circle representing the bounding
   // sphere in 2D then draw a horizontal line going out from the center of
@@ -865,7 +986,7 @@ void vtkRenderer::ResetCamera(double bounds[6])
   // this forms a right triangle with one side being the radius, another being
   // the target distance for the camera, then just find the target dist using
   // a sin.
-  distance = 
+  distance =
     radius/sin(this->ActiveCamera->GetViewAngle()*vtkMath::Pi()/360.0);
 
   // check view-up vector against view plane normal
@@ -887,9 +1008,10 @@ void vtkRenderer::ResetCamera(double bounds[6])
   // setup default parallel scale
   this->ActiveCamera->SetParallelScale(radius);
 }
-  
+
 // Alternative version of ResetCamera(bounds[6]);
-void vtkRenderer::ResetCamera(double xmin, double xmax, double ymin, double ymax, 
+void vtkRenderer::ResetCamera(double xmin, double xmax,
+                              double ymin, double ymax,
                               double zmin, double zmax)
 {
   double bounds[6];
@@ -916,14 +1038,14 @@ void vtkRenderer::ResetCameraClippingRange( double bounds[6] )
     {
     return;
     }
-  
-  this->GetActiveCameraAndEventuallyReset();
+
+  this->GetActiveCameraAndResetIfCreated();
   if ( this->ActiveCamera == NULL )
     {
     vtkErrorMacro(<< "Trying to reset clipping range of non-existant camera");
     return;
     }
-  
+
   // Find the plane equation for the camera view plane
   this->ActiveCamera->GetViewPlaneNormal(vn);
   this->ActiveCamera->GetPosition(position);
@@ -1183,6 +1305,21 @@ void vtkRenderer::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Erase: " 
      << (this->Erase ? "On\n" : "Off\n");
 
+  os << indent << "Draw: "
+     << (this->Draw ? "On\n" : "Off\n");
+
+  os << indent << "UseDepthPeeling: "
+     << (this->UseDepthPeeling ? "On" : "Off")<< "\n";
+  
+  os << indent << "OcclusionRation: "
+     << this->OcclusionRatio << "\n";
+  
+  os << indent << "MaximumNumberOfPeels: "
+     << this->MaximumNumberOfPeels << "\n";
+  
+  os << indent << "LastRenderingUsedDepthPeeling: "
+     << (this->LastRenderingUsedDepthPeeling ? "On" : "Off")<< "\n";
+  
   // I don't want to print this since it is used just internally
   // os << indent << this->NumberOfPropsRendered;
 }
@@ -1243,12 +1380,15 @@ unsigned long int vtkRenderer::GetMTime()
 }
 
 
-vtkAssemblyPath* vtkRenderer::PickProp(double selectionX, double selectionY)
+vtkAssemblyPath* vtkRenderer::PickProp(double selectionX1, double selectionY1,
+                                       double selectionX2, double selectionY2)
 {
   // initialize picking information
   this->CurrentPickId = 1; // start at 1, so 0 can be a no pick
-  this->PickX = selectionX;
-  this->PickY = selectionY;
+  this->PickX1 = (selectionX1 < selectionX2) ? selectionX1 : selectionX2;
+  this->PickY1 = (selectionY1 < selectionY2) ? selectionY1 : selectionY2;
+  this->PickX2 = (selectionX1 > selectionX2) ? selectionX1 : selectionX2;
+  this->PickY2 = (selectionY1 > selectionY2) ? selectionY1 : selectionY2;
   int numberPickFrom;
   vtkPropCollection *props;
 
@@ -1264,7 +1404,7 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX, double selectionY)
     }
   // number determined from number of rendering passes plus reserved "0" slot
   numberPickFrom = 2*props->GetNumberOfPaths()*3 + 1;
-  
+
   this->IsPicking = 1; // turn on picking
   this->StartPick(numberPickFrom);
   this->PathArray = new vtkAssemblyPath *[numberPickFrom];
@@ -1272,6 +1412,7 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX, double selectionY)
 
   // Actually perform the pick
   this->PickRender(props);  // do the pick render
+
   this->IsPicking = 0; // turn off picking
   this->DonePick();
   vtkDebugMacro(<< "z value for pick " << this->GetPickedZ() << "\n");
@@ -1288,15 +1429,36 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX, double selectionY)
     {
     pickedId--; // pick ids start at 1, so move back one
 
-    // wrap around, as there are twice as many pickid's as PropArrayCount,
-    // because each Prop has both RenderOpaqueGeometry and 
-    // RenderTranslucentGeometry called on it
+    // wrap around, as there are thrice as many pickid's as PathArrayCount,
+    // because each Prop has RenderOpaqueGeometry,
+    // RenderTranslucentPolygonalGeometry, RenderVolumetricGeometry and
+    // RenderOverlay called on it.
     pickedId = pickedId % this->PathArrayCount;
     this->PickedProp = this->PathArray[pickedId];
     this->PickedProp->Register(this);
     }
 
+  //convert the list of picked props from integers to prop pointers
+  if (this->PickResultProps != NULL)
+    {
+    this->PickResultProps->Delete();
+    this->PickResultProps = NULL;
+    }
+  this->PickResultProps = vtkPropCollection::New();
+  unsigned int numPicked = this->GetNumPickedIds();
+  unsigned int *idBuff = new unsigned int[numPicked];
+  this->GetPickedIds(numPicked, idBuff);
+  unsigned int nextId;
+  for (unsigned int pIdx = 0; pIdx < numPicked; pIdx++)
+    {
+    nextId = idBuff[pIdx] - 1; // pick ids start at 1, so move back one
+    nextId = nextId % this->PathArrayCount;
+    vtkProp *propCandidate = this->PathArray[nextId]->GetLastNode()->GetViewProp();
+    this->PickResultProps->AddItem(propCandidate);
+    }
+
   // Clean up stuff from picking after we use it
+  delete [] idBuff;
   delete [] this->PathArray;
   this->PathArray = NULL;
 
@@ -1304,8 +1466,9 @@ vtkAssemblyPath* vtkRenderer::PickProp(double selectionX, double selectionY)
   return this->PickedProp; //returns an assembly path
 }
 
-// Do a render in pick mode.  This is normally done with rendering turned off.
-// Before each Prop is rendered the pick id is incremented
+// Do a render in pick or select mode.  This is normally done with 
+// rendering turned off. Before each Prop is rendered the pick id is 
+// incremented
 void vtkRenderer::PickRender(vtkPropCollection *props)
 {
   vtkProp  *aProp;
@@ -1348,20 +1511,49 @@ void vtkRenderer::PickRender(vtkPropCollection *props)
   // reduce the number of polygons that the hardware has to pick from, and
   // speeds things up substantially.
   //
-  // Create a picker to do the culling process
-  vtkPicker* cullPicker = vtkPicker::New();
-  // Add each of the Actors from the pickFrom list into the picker
-  for ( pickFrom->InitTraversal(pit); (aProp = pickFrom->GetNextProp(pit)); )
+
+  vtkPicker* pCullPicker = NULL;
+  vtkAreaPicker *aCullPicker = NULL;
+  vtkProp3DCollection* cullPicked;
+  if (this->GetPickWidth()==1 && this->GetPickHeight()==1)
     {
-    cullPicker->AddPickList(aProp);
+    // Create a picker to do the culling process
+    pCullPicker = vtkPicker::New();
+
+    // Add each of the Actors from the pickFrom list into the picker
+    for ( pickFrom->InitTraversal(pit); (aProp = pickFrom->GetNextProp(pit)); )
+      {
+      pCullPicker->AddPickList(aProp);
+      }
+
+    // make sure this selects from the pickers list and not the renderers list
+    pCullPicker->PickFromListOn();
+
+    // do the pick
+    pCullPicker->Pick(this->GetPickX(), this->GetPickY(), 0, this);
+
+    cullPicked = pCullPicker->GetProp3Ds();
     }
+  else
+    {
+    aCullPicker = vtkAreaPicker::New();
 
-  // make sure this selects from the pickers list and not the renderers list
-  cullPicker->PickFromListOn();
+    // Add each of the Actors from the pickFrom list into the picker
+    for ( pickFrom->InitTraversal(pit); (aProp = pickFrom->GetNextProp(pit)); )
+      {
+      aCullPicker->AddPickList(aProp);
+      }
 
-  // do the pick
-  cullPicker->Pick(this->PickX, this->PickY, 0, this);
-  vtkProp3DCollection* cullPicked = cullPicker->GetProp3Ds();
+    // make sure this selects from the pickers list and not the renderers list
+    aCullPicker->PickFromListOn();
+
+    // do the pick
+    aCullPicker->AreaPick(this->PickX1, this->PickY1, 
+                          this->PickX2, this->PickY2, 
+                          this);
+
+    cullPicked = aCullPicker->GetProp3Ds();
+    }  
 
   // Put all the ones that were picked by the cull process
   // into the PathArray to be picked from
@@ -1380,7 +1572,14 @@ void vtkRenderer::PickRender(vtkPropCollection *props)
 
   // Clean picking support objects up
   pickFrom->Delete();
-  cullPicker->Delete();
+  if (pCullPicker)
+    {
+    pCullPicker->Delete();
+    }
+  if (aCullPicker)
+    {
+    aCullPicker->Delete();
+    }
   
   if ( this->PathArrayCount == 0 )
     {
@@ -1422,9 +1621,9 @@ void vtkRenderer::PickGeometry()
     this->NumberOfPropsRendered += prop->RenderOpaqueGeometry(this);
     prop->PokeMatrix(NULL);
     }
- 
+
   // loop through props and give them a chance to 
-  // render themselves as translucent geometry
+  // render themselves as translucent polygonal geometry
   for ( i = 0; i < this->PathArrayCount; i++ )
     {
     this->UpdatePickId();
@@ -1432,10 +1631,23 @@ void vtkRenderer::PickGeometry()
     matrix = this->PathArray[i]->GetLastNode()->GetMatrix();
     prop->PokeMatrix(matrix);
     this->NumberOfPropsRendered += 
-      prop->RenderTranslucentGeometry(this);
+      prop->RenderTranslucentPolygonalGeometry(this);
     prop->PokeMatrix(NULL);
     }
 
+   // loop through props and give them a chance to 
+  // render themselves as volumetric geometry
+  for ( i = 0; i < this->PathArrayCount; i++ )
+    {
+    this->UpdatePickId();
+    prop = this->PathArray[i]->GetLastNode()->GetViewProp();
+    matrix = this->PathArray[i]->GetLastNode()->GetMatrix();
+    prop->PokeMatrix(matrix);
+    this->NumberOfPropsRendered += 
+      prop->RenderVolumetricGeometry(this);
+    prop->PokeMatrix(NULL);
+    }
+  
   for ( i = 0; i < this->PathArrayCount; i++ )
     {
     this->UpdatePickId();
@@ -1451,7 +1663,6 @@ void vtkRenderer::PickGeometry()
                     this->NumberOfPropsRendered << " actors" );
 
 }
-
 
 int  vtkRenderer::Transparent()
 {
@@ -1482,4 +1693,182 @@ double vtkRenderer::GetTiledAspectRatio()
     finalAspect = aspectModification*usize/vsize;
     }
   return finalAspect;
+}
+
+//----------------------------------------------------------------------------
+int vtkRenderer::UpdateGeometryForSelection()
+{
+
+  int        i;
+  if ( this->PropsSelectedFrom)
+    {
+    delete [] this->PropsSelectedFrom;
+    this->PropsSelectedFrom = NULL;
+    }
+  this->PropsSelectedFromCount = this->PropArrayCount;
+  this->PropsSelectedFrom = new vtkProp *[this->PropsSelectedFromCount];
+
+  //change the renderer's background to black, which will indicate a miss
+  double origBG[3];
+  this->GetBackground(origBG);
+  this->SetBackground(0.0,0.0,0.0);
+  bool origGrad = this->GetGradientBackground();
+  this->GradientBackgroundOff();
+  this->Clear();
+
+  //todo: save off and swap in other renderer/renderwindow settings that
+  //could affect colors
+
+  //create holders for prop's original rendering settings
+  int orig_visibility;
+  vtkPainter*orig_painter = NULL;
+
+  //create a painter that will color each cell with an index
+  if (this->IdentPainter==NULL)
+    {
+    this->IdentPainter = vtkIdentColoredPainter::New();
+    }
+
+  switch (this->SelectMode)
+    {
+    case COLOR_BY_PROCESSOR:
+      //SelectConst should have been set to this node's rank
+      this->IdentPainter->ColorByConstant(this->SelectConst);
+      break;
+    case COLOR_BY_ACTOR:
+      //SelectConst will be incremented with each prop
+      break;
+    case COLOR_BY_CELL_ID_HIGH:
+      //Each polygon will gets its own color
+      this->IdentPainter->ColorByIncreasingIdent(2);
+      break;
+    case COLOR_BY_CELL_ID_MID:
+      //Each polygon will gets its own color
+      this->IdentPainter->ColorByIncreasingIdent(1);
+      break;
+    case COLOR_BY_CELL_ID_LOW:
+      //Each polygon will gets its own color
+      this->IdentPainter->ColorByIncreasingIdent(0);
+      break;
+    case COLOR_BY_VERTEX:
+      //Each polygon will gets its own color
+      this->IdentPainter->ColorByVertex();
+      break;
+    default:
+      //should never get here
+      return 0; 
+    }        
+
+  // loop through props and give them a chance to 
+  // render themselves as opaque geometry
+  for ( i = 0; i < this->PropArrayCount; i++ )
+    { 
+    this->PropsSelectedFrom[i] = this->PropArray[i];
+    if (this->SelectMode == vtkRenderer::COLOR_BY_ACTOR)
+      {
+      this->IdentPainter->ColorByActorId(this->PropArray[i]);
+      }
+    else if (this->SelectMode == vtkRenderer::COLOR_BY_CELL_ID_HIGH ||
+             this->SelectMode == vtkRenderer::COLOR_BY_CELL_ID_MID ||
+             this->SelectMode == vtkRenderer::COLOR_BY_CELL_ID_LOW ||
+             this->SelectMode == vtkRenderer::COLOR_BY_VERTEX)
+      {
+      //each actor starts it's cell count at 0
+      this->IdentPainter->ResetCurrentId();
+      }        
+
+    //try to swap the ident color painter for the original one
+    //if this prop can not be selected, its visibility is turned off
+    orig_painter = this->SwapInSelectablePainter(this->PropArray[i], orig_visibility);
+
+    //render the prop
+    if (this->PropArray[i]->GetVisibility())
+      {
+      this->NumberOfPropsRendered += 
+        this->PropArray[i]->RenderOpaqueGeometry(this);
+      }
+
+    //restore the prop's original settings
+    this->SwapOutSelectablePainter(this->PropArray[i], orig_painter, orig_visibility);      
+    }
+
+  //restore original background
+  this->SetBackground(origBG);
+  this->SetGradientBackground(origGrad);
+
+  return this->NumberOfPropsRendered;
+}
+
+//----------------------------------------------------------------------------
+vtkPainter* vtkRenderer::SwapInSelectablePainter(
+  vtkProp *prop,
+  int &orig_visibility)
+{
+  vtkPainter* orig_painter = NULL;
+  vtkPainterPolyDataMapper *orig_mapper = NULL;
+  
+  //try to find a polydatapainter that we can swap out
+  vtkActor *actor = vtkActor::SafeDownCast(prop);
+  if (actor && 
+      !
+      (actor->IsA("vtkFollower") || 
+       actor->IsA("vtkLODActor") ||
+       !actor->GetPickable())
+    )
+    {
+    orig_mapper = 
+      vtkPainterPolyDataMapper::SafeDownCast(actor->GetMapper());
+
+    if (orig_mapper)
+      {
+      //found it, now swap it out
+      orig_painter = orig_mapper->GetPainter();
+
+      //Register this to prevent orig_painter from being deleted
+      //while we momentarily swap in a different painter
+      orig_painter->Register(this); 
+          
+      //ident painter colors each polygon based on the current selectmode.
+      orig_mapper->SetPainter(this->IdentPainter);
+      }
+    }
+  if (!orig_painter)
+    {
+    //if we couldn't find it, don't render the prop
+    orig_visibility = prop->GetVisibility();
+    prop->VisibilityOff();
+    }
+  return orig_painter;
+}
+
+//----------------------------------------------------------------------------
+void vtkRenderer::SwapOutSelectablePainter(
+  vtkProp *prop,
+  vtkPainter* orig_painter,
+  int orig_visibility) 
+{
+  vtkPainterPolyDataMapper *orig_mapper = NULL;
+  //try to restore the swapped out painter
+  vtkActor *actor = vtkActor::SafeDownCast(prop);
+  if (actor && 
+      !
+      (actor->IsA("vtkFollower") || 
+       actor->IsA("vtkLODActor")  ||
+       !actor->GetPickable()))
+    {
+    orig_mapper = 
+      vtkPainterPolyDataMapper::SafeDownCast(actor->GetMapper());
+
+    if (orig_painter)
+      {
+      orig_mapper->SetPainter(orig_painter);
+      orig_painter->UnRegister(this);
+      }
+    }
+  if (!orig_painter)
+    {
+    //if we never swapped in the ident painter, restore the prop's original
+    //visibility setting
+    prop->SetVisibility(orig_visibility);
+    }
 }

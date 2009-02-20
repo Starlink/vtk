@@ -69,7 +69,7 @@ class vtkPolygon;
 class vtkTriangleStrip;
 class vtkEmptyCell;
 
-class VTK_FILTERING_EXPORT vtkPolyData : public vtkPointSet 
+class VTK_FILTERING_EXPORT vtkPolyData : public vtkPointSet
 {
 public:
   static vtkPolyData *New();
@@ -94,7 +94,7 @@ public:
   void GetCellBounds(vtkIdType cellId, double bounds[6]);
   void GetCellNeighbors(vtkIdType cellId, vtkIdList *ptIds,
                         vtkIdList *cellIds);
-  
+
   // Description:
   // Copy cells listed in idList from pd, including points, point data,
   // and cell data.  This method assumes that point and cell data have
@@ -287,6 +287,15 @@ public:
   // Mark a point/cell as deleted from this vtkPolyData.
   void DeletePoint(vtkIdType ptId);
   void DeleteCell(vtkIdType cellId);
+
+  // Description:
+  // The cells marked by calls to DeleteCell are stored in the Cell Array
+  // VTK_EMPTY_CELL, but they still exist in the polys array.
+  // Calling RemoveDeletedCells will travers the poly array and remove/compact
+  // the cell array as well as any cell data thus truly removing the cells
+  // from the polydata object. WARNING. This only handles the polys 
+  // at the moment
+  void RemoveDeletedCells();
 
   // Description:
   // Add a point to the cell data structure (after cell pointers have been

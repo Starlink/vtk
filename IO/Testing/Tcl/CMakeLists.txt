@@ -9,18 +9,22 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestAVSucdReader
       TestGAMBITReader
       TestImageWriters
+      TestMINCImageReader
+      TestMINCImageWriter
       TestPLYReadWrite
       TestPolygonWriters
       TestJPEGReader
       TestTIFFReader
       TestBMPReader
       TestChacoReader
+      TestMetaImage2D
       Plot3DScalars
       Plot3DVectors
       ParticleReader
       caffeine
       TestXYZMol
       TestMHD
+      TestSetFileNames
       TestSimplePointsReader
       TestXMLRectilinearGridIO
       TestXMLStructuredGridIO
@@ -48,6 +52,15 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         -A ${VTK_SOURCE_DIR}/Wrapping/Tcl)
       ENDFOREACH( tfile )
     ENDIF (VTK_USE_PARALLEL)
+    # tests that don't produce images
+    FOREACH ( tfile
+      TestGlobFileNames
+      TestSortFileNames
+      )
+      ADD_TEST(${tfile} ${VTK_EXECUTABLE}
+               ${VTK_SOURCE_DIR}/IO/Testing/Tcl/${tfile}.tcl
+               -D ${VTK_DATA_ROOT})
+    ENDFOREACH( tfile )
   #
   # If we do not have the data, still run the tests that we can
   #

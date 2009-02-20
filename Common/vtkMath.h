@@ -11,19 +11,35 @@
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
+=========================================================================
+  Copyright 2007 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
+  license for use of this work by or on behalf of the
+  U.S. Government. Redistribution and use in source and binary forms, with
+  or without modification, are permitted provided that this Notice and any
+  statement of authorship are reproduced on all copies.
+
+  Contact: pppebay@ca.sandia.gov,dcthomp@sandia.gov
+
 =========================================================================*/
 // .NAME vtkMath - performs common math operations
 // .SECTION Description
-// vtkMath is provides methods to perform common math operations. These 
+// vtkMath provides methods to perform common math operations. These 
 // include providing constants such as Pi; conversion from degrees to 
 // radians; vector operations such as dot and cross products and vector 
-// norm; matrix determinant for 2x2 and 3x3 matrices; and random 
-// number generation.
+// norm; matrix determinant for 2x2 and 3x3 matrices; univariate polynomial
+// solvers; and random number generation.
 
 #ifndef __vtkMath_h
 #define __vtkMath_h
 
 #include "vtkObject.h"
+
+#ifndef DBL_EPSILON
+#  define VTK_DBL_EPSILON    2.2204460492503131e-16
+#else  // DBL_EPSILON
+#  define VTK_DBL_EPSILON    DBL_EPSILON
+#endif  // DBL_EPSILON
 
 class vtkDataArray;
 
@@ -56,6 +72,43 @@ public:
   static int Floor(double x);
   
   // Description:
+  // Compute N factorial, N! = N*(N-1)*(N-2)...*3*2*1.
+  // 0! is taken to be 1.
+  static vtkTypeInt64 Factorial( int N );
+
+  // Description:
+  // The number of combinations of n objects from a pool of m objects (m>n).
+  // This is commonly known as "m choose n" and sometimes denoted \f$_mC_n\f$
+  // or \f$\left(\begin{array}{c}m \\ n\end{array}\right)\f$.
+  static vtkTypeInt64 Binomial( int m, int n );
+
+  // Description:
+  // Start iterating over "m choose n" objects.
+  // This function returns an array of n integers, each from 0 to m-1.
+  // These integers represent the n items chosen from the set [0,m[. 
+  //
+  // You are responsible for calling vtkMath::FreeCombination() once the iterator is no longer needed.
+  //
+  // Warning: this gets large very quickly, especially when n nears m/2!
+  // (Hint: think of Pascal's triangle.)
+  static int* BeginCombination( int m, int n );
+
+  // Description:
+  // Given \a m, \a n, and a valid \a combination of \a n integers in
+  // the range [0,m[, this function alters the integers into the next
+  // combination in a sequence of all combinations of \a n items from
+  // a pool of \a m.
+  //
+  // If the \a combination is the last item in the sequence on input,
+  // then \a combination is unaltered and 0 is returned.
+  // Otherwise, 1 is returned and \a combination is updated.
+  static int NextCombination( int m, int n, int* combination );
+
+  // Description:
+  // Free the "iterator" array created by vtkMath::BeginCombination.
+  static void FreeCombination( int* combination);
+
+  // Description:
   // Dot product of two 3-vectors (float version).
   static float Dot(const float x[3], const float y[3]) {
     return (x[0]*y[0] + x[1]*y[1] + x[2]*y[2]);};
@@ -65,6 +118,21 @@ public:
   static double Dot(const double x[3], const double y[3]) {
     return (x[0]*y[0] + x[1]*y[1] + x[2]*y[2]);};
   
+  // Description:
+  // Outer product of two 3-vectors (float version).
+  static void Outer(const float x[3], const float y[3], float A[3][3]) {
+    for (int i=0; i < 3; i++)
+      for (int j=0; j < 3; j++)
+        A[i][j] = x[i]*y[j];
+  }
+  // Description:
+  // Outer product of two 3-vectors (double-precision version).
+  static void Outer(const double x[3], const double y[3], double A[3][3]) {
+    for (int i=0; i < 3; i++)
+      for (int j=0; j < 3; j++)
+        A[i][j] = x[i]*y[j];
+  }
+
   // Description:
   // Cross product of two 3-vectors. Result vector in z[3].
   static void Cross(const float x[3], const float y[3], float z[3]);
@@ -127,6 +195,21 @@ public:
   // ignored (double-precision version).
   static double Dot2D(const double x[3], const double y[3]) {
     return (x[0]*y[0] + x[1]*y[1]);};
+
+  // Description:
+  // Outer product of two 2-vectors (float version). z-comp is ignored
+  static void Outer2D(const float x[3], const float y[3], float A[3][3]) {
+    for (int i=0; i < 2; i++)
+      for (int j=0; j < 2; j++)
+        A[i][j] = x[i]*y[j];
+  }
+  // Description:
+  // Outer product of two 2-vectors (float version). z-comp is ignored
+  static void Outer2D(const double x[3], const double y[3], double A[3][3]) {
+    for (int i=0; i < 2; i++)
+      for (int j=0; j < 2; j++)
+        A[i][j] = x[i]*y[j];
+  }
 
   // Description:
   // Compute the norm of a 2-vector. Ignores z-component.
@@ -196,6 +279,15 @@ public:
                           float C[3][3]);
   static void Multiply3x3(const double A[3][3], const double B[3][3], 
                           double C[3][3]);
+
+  // Description:
+  // General matrix multiplication.  You must allocate output storage.
+  // colA == rowB
+  // and matrix C is rowA x colB
+  static void MultiplyMatrix(const double **A, const double **B,
+                             unsigned int rowA, unsigned int colA, 
+                             unsigned int rowB, unsigned int colB,
+                             double **C);
 
   // Description:
   // Transpose a 3x3 matrix.
@@ -345,6 +437,10 @@ public:
   static void RandomSeed(long s);  
 
   // Description:
+  // Return the current seed used by the random number generator.
+  static long GetSeed();
+  
+  // Description:
   // Generate random numbers between 0.0 and 1.0.
   // This is used to provide portability across different systems.
   static double Random();  
@@ -410,7 +506,7 @@ public:
                         double *r1, double *r2, double *r3, int *num_roots);
 
   // Description:
-  // Solves A Quadratic Equation c1*t^2  + c2*t  + c3 = 0 when 
+  // Solves a quadratic equation c1*t^2  + c2*t  + c3 = 0 when 
   // c1, c2, and c3 are REAL.
   // Solution is motivated by Numerical Recipes In C 2nd Ed.
   // Roots and number of roots are stored in user provided variables
@@ -418,6 +514,14 @@ public:
   static int SolveQuadratic(double c0, double c1, double c2, 
                             double *r1, double *r2, int *num_roots);
   
+  // Description:
+  // Algebraically extracts REAL roots of the quadratic polynomial with 
+  // REAL coefficients c[0] X^2 + c[1] X + c[2]
+  // and stores them (when they exist) and their respective multiplicities
+  // in the \a r and \a m arrays.
+  // Returns either the number of roots, or -1 if ininite number of roots.
+  static int SolveQuadratic( double* c, double* r, int* m );
+
   // Description:
   // Solves a linear equation c2*t + c3 = 0 when c2 and c3 are REAL.
   // Solution is motivated by Numerical Recipes In C 2nd Ed.
@@ -460,31 +564,80 @@ public:
   // Description:
   // Convert color in RGB format (Red, Green, Blue) to HSV format
   // (Hue, Saturation, Value). The input color is not modified.
-  static void RGBToHSV(float rgb[3], float hsv[3])
+  static void RGBToHSV(const float rgb[3], float hsv[3])
     { RGBToHSV(rgb[0], rgb[1], rgb[2], hsv, hsv+1, hsv+2); }
   static void RGBToHSV(float r, float g, float b, float *h, float *s, float *v);
-  static double* RGBToHSV(double rgb[3]);
+  static double* RGBToHSV(const double rgb[3]);
   static double* RGBToHSV(double r, double g, double b);
-  static void RGBToHSV(double rgb[3], double hsv[3])
+  static void RGBToHSV(const double rgb[3], double hsv[3])
     { RGBToHSV(rgb[0], rgb[1], rgb[2], hsv, hsv+1, hsv+2); }
   static void RGBToHSV(double r, double g, double b, double *h, double *s, double *v);
 
   // Description:
   // Convert color in HSV format (Hue, Saturation, Value) to RGB
   // format (Red, Green, Blue). The input color is not modified.
-  static void HSVToRGB(float hsv[3], float rgb[3])
+  static void HSVToRGB(const float hsv[3], float rgb[3])
     { HSVToRGB(hsv[0], hsv[1], hsv[2], rgb, rgb+1, rgb+2); }
   static void HSVToRGB(float h, float s, float v, float *r, float *g, float *b);
-  static double* HSVToRGB(double hsv[3]);
+  static double* HSVToRGB(const double hsv[3]);
   static double* HSVToRGB(double h, double s, double v);
-  static void HSVToRGB(double hsv[3], double rgb[3])
+  static void HSVToRGB(const double hsv[3], double rgb[3])
     { HSVToRGB(hsv[0], hsv[1], hsv[2], rgb, rgb+1, rgb+2); }
   static void HSVToRGB(double h, double s, double v, double *r, double *g, double *b);
 
   // Description:
-  // Convert color from Lab to XYZ system, and vice-versa
-  static void LabToXYZ(double lab[3], double xyz[3]);
-  static void XYZToRGB(double xyz[3], double rgb[3]);
+  // Convert color from the CIE-L*ab system to CIE XYZ.
+  static void LabToXYZ(const double lab[3], double xyz[3]) {
+    LabToXYZ(lab[0], lab[1], lab[2], xyz+0, xyz+1, xyz+2);
+  }
+  static void LabToXYZ(double L, double a, double b,
+                       double *x, double *y, double *z);
+  static double *LabToXYZ(const double lab[3]);
+
+  // Description:
+  // Convert Color from the CIE XYZ system to CIE-L*ab.
+  static void XYZToLab(const double xyz[3], double lab[3]) {
+    XYZToLab(xyz[0], xyz[1], xyz[2], lab+0, lab+1, lab+2);
+  }
+  static void XYZToLab(double x, double y, double z,
+                       double *L, double *a, double *b);
+  static double *XYZToLab(const double xyz[3]);
+
+  // Description:
+  // Convert color from the CIE XYZ system to RGB.
+  static void XYZToRGB(const double xyz[3], double rgb[3]) {
+    XYZToRGB(xyz[0], xyz[1], xyz[2], rgb+0, rgb+1, rgb+2);
+  }
+  static void XYZToRGB(double x, double y, double z,
+                       double *r, double *g, double *b);
+  static double *XYZToRGB(const double xyz[3]);
+
+  // Description:
+  // Convert color from the RGB system to CIE XYZ.
+  static void RGBToXYZ(const double rgb[3], double xyz[3]) {
+    RGBToXYZ(rgb[0], rgb[1], rgb[2], xyz+0, xyz+1, xyz+2);
+  }
+  static void RGBToXYZ(double r, double g, double b,
+                       double *x, double *y, double *z);
+  static double *RGBToXYZ(const double rgb[3]);
+
+  // Description:
+  // Convert color from the RGB system to CIE-L*ab.
+  static void RGBToLab(const double rgb[3], double lab[3]) {
+    RGBToLab(rgb[0], rgb[1], rgb[2], lab+0, lab+1, lab+2);
+  }
+  static void RGBToLab(double red, double green, double blue,
+                       double *L, double *a, double *b);
+  static double *RGBToLab(const double rgb[3]);
+
+  // Description:
+  // Convert color from the CIE-L*ab system to RGB.
+  static void LabToRGB(const double lab[3], double rgb[3]) {
+    LabToRGB(lab[0], lab[1], lab[2], rgb+0, rgb+1, rgb+2);
+  }
+  static void LabToRGB(double L, double a, double b,
+                       double *red, double *green, double *blue);
+  static double *LabToRGB(const double lab[3]);
 
   // Description:
   // Set the bounds to an uninitialized state
@@ -555,6 +708,11 @@ public:
   // Delta is the error margin along each axis (usually a small number)
   static int PointIsWithinBounds(double point[3], double bounds[6], double delta[3]);
   
+  // Description:
+  // Special IEEE-754 numbers used to represent positive and negative infinity and Not-A-Number (Nan).
+  static double Inf();
+  static double NegInf();
+  static double Nan();
 
 protected:
   vtkMath() {};
@@ -565,6 +723,17 @@ private:
   vtkMath(const vtkMath&);  // Not implemented.
   void operator=(const vtkMath&);  // Not implemented.
 };
+
+//----------------------------------------------------------------------------
+inline vtkTypeInt64 vtkMath::Factorial( int N )
+{
+  vtkTypeInt64 r = 1;
+  while ( N > 1 )
+    {
+    r *= N--;
+    }
+  return r;
+}
 
 //----------------------------------------------------------------------------
 inline int vtkMath::Floor(double x)
@@ -580,7 +749,7 @@ inline int vtkMath::Floor(double x)
   // round-to-nearest,even mode instead of round-to-nearest,+infinity
   return u.i[0] >> 1;
 #else
-  return (int)floor(x);
+  return static_cast<int>(floor(x));
 #endif
 }
 

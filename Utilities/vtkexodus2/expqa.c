@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994 Sandia Corporation. Under the terms of Contract
+ * Copyright (c) 2005 Sandia Corporation. Under the terms of Contract
  * DE-AC04-94AL85000 with Sandia Corporation, the U.S. Governement
  * retains certain rights in this software.
  * 
@@ -54,7 +54,7 @@
 *
 * revision history - 
 *
-*  $Id: expqa.c,v 1.1 2005/07/17 15:44:00 andy Exp $
+*  $Id: expqa.c,v 1.3 2008-04-22 21:14:53 david.cole Exp $
 *
 *****************************************************************************/
 
@@ -62,7 +62,7 @@
 #include "exodusII_int.h"
 #include <string.h>
 
-/*
+/*!
  * writes the QA records to the database
  */
 
@@ -178,7 +178,7 @@ int ex_put_qa (int   exoid,
 
          count[0] = 1;
          count[1] = 1;
-         count[2] = strlen(qa_record[i][j]) + 1;
+         count[2] = (long)strlen(qa_record[i][j]) + 1;
 
          if (ncvarput (exoid, varid, start, count,
                        (void*) qa_record[i][j]) == -1)

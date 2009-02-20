@@ -7,10 +7,14 @@ set VTK_VARY_RADIUS_BY_VECTOR 2
 # create pipeline
 #
 vtkGenericEnSightReader reader
+# Make sure all algorithms use the composite data pipeline
+vtkCompositeDataPipeline cdp
+reader SetDefaultExecutivePrototype cdp
     reader SetCaseFileName "$VTK_DATA_ROOT/Data/EnSight/RectGrid_bin.case"
     reader Update
 vtkCastToConcrete toRectilinearGrid
-    toRectilinearGrid SetInputConnection [reader GetOutputPort] 
+#    toRectilinearGrid SetInputConnection [reader GetOutputPort] 
+toRectilinearGrid SetInput [[reader GetOutput] GetBlock 0]
 vtkRectilinearGridGeometryFilter plane
     plane SetInput [toRectilinearGrid GetRectilinearGridOutput]
     plane SetExtent 0 100 0 100 15 15 
@@ -26,7 +30,8 @@ vtkActor planeActor
     planeActor SetMapper planeMapper
 
 vtkPlane cutPlane
-    eval cutPlane SetOrigin [[reader GetOutput] GetCenter]
+#    eval cutPlane SetOrigin [[reader GetOutput] GetCenter]
+eval cutPlane SetOrigin [[[reader GetOutput] GetBlock 0] GetCenter]
     cutPlane SetNormal 1 0 0
 vtkCutter planeCut
     planeCut SetInput [toRectilinearGrid GetRectilinearGridOutput]
@@ -34,7 +39,7 @@ vtkCutter planeCut
 vtkDataSetMapper cutMapper
     cutMapper SetInputConnection [planeCut GetOutputPort]
     eval cutMapper SetScalarRange \
-      [[[[reader GetOutput] GetPointData] GetScalars] GetRange]
+  [[[[[reader GetOutput] GetBlock 0] GetPointData] GetScalars] GetRange]
 vtkActor cutActor
     cutActor SetMapper cutMapper
 
@@ -53,7 +58,8 @@ vtkActor isoActor
     eval [isoActor GetProperty] SetRepresentationToWireframe
 
 vtkStreamLine streamer
-    streamer SetInputConnection [reader GetOutputPort]
+#    streamer SetInputConnection [reader GetOutputPort]
+streamer SetInput [[reader GetOutput] GetBlock 0]
     streamer SetStartPosition -1.2 -0.1 1.3
     streamer SetMaximumPropagationTime 500
     streamer SetStepLength 0.05
@@ -68,7 +74,8 @@ vtkTubeFilter streamTube
 vtkPolyDataMapper mapStreamTube
     mapStreamTube SetInputConnection [streamTube GetOutputPort]
     eval mapStreamTube SetScalarRange \
-       [[[[reader GetOutput] GetPointData] GetScalars] GetRange]
+  [[[[[reader GetOutput] GetBlock 0] GetPointData] GetScalars] GetRange]
+#       [[[[reader GetOutput] GetPointData] GetScalars] GetRange]
 vtkActor streamTubeActor
     streamTubeActor SetMapper mapStreamTube
     [streamTubeActor GetProperty] BackfaceCullingOn
@@ -116,5 +123,4 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
 
-
-
+reader SetDefaultExecutivePrototype {}

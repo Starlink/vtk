@@ -12,8 +12,6 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include <stdlib.h>
-
 #include "vtkTkRenderWidget.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkImageData.h"
@@ -32,22 +30,22 @@
 #endif
 #endif 
 
+#include <stdlib.h>
+
+// Silent warning like
+// "dereferencing type-punned pointer will break strict-aliasing rules"
+// it happens because this kind of expression: (long *)&ptr
+// pragma GCC diagnostic is available since gcc>=4.2
+#if defined(__GNUG__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=2)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 #define VTK_ALL_EVENTS_MASK \
     KeyPressMask|KeyReleaseMask|ButtonPressMask|ButtonReleaseMask|      \
     EnterWindowMask|LeaveWindowMask|PointerMotionMask|ExposureMask|     \
     VisibilityChangeMask|FocusChangeMask|PropertyChangeMask|ColormapChangeMask
 
 #define VTK_MAX(a,b)    (((a)>(b))?(a):(b))
-
-#if ( _MSC_VER >= 1300 ) // Visual studio .NET
-#pragma warning ( disable : 4311 )
-#pragma warning ( disable : 4312 )
-#  define vtkGetWindowLong GetWindowLongPtr
-#  define vtkSetWindowLong SetWindowLongPtr
-#else // regular Visual studio 
-#  define vtkGetWindowLong GetWindowLong
-#  define vtkSetWindowLong SetWindowLong
-#endif // 
 
 // These are the options that can be set when the widget is created
 // or with the command configure.  The only new one is "-rw" which allows
@@ -128,7 +126,7 @@ extern "C" {
   int vtkImageDataToTkPhoto_Cmd (ClientData vtkNotUsed(clientData), 
                                  Tcl_Interp *interp, 
                                  int argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                  CONST84
 #endif
                                  char **argv)
@@ -361,7 +359,7 @@ int vtkTkRenderWidget_Configure(Tcl_Interp *interp,
                          self->TkWin, 
                          vtkTkRenderWidgetConfigSpecs,
                          argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                          const_cast<CONST84 char **>(argv), 
 #else
                          argv, 
@@ -393,7 +391,7 @@ extern "C"
   int vtkTkRenderWidget_Widget(ClientData clientData, 
                                Tcl_Interp *interp,
                                int argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                CONST84
 #endif
                                char *argv[]) 
@@ -444,7 +442,7 @@ extern "C"
         {
         /* Execute a configuration change */
         result = vtkTkRenderWidget_Configure(interp, self, argc-2, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                              const_cast<char **>(argv+2), 
 #else
                                              argv+2, 
@@ -490,12 +488,12 @@ extern "C"
   int vtkTkRenderWidget_Cmd(ClientData clientData, 
                             Tcl_Interp *interp, 
                             int argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                             CONST84
 #endif
                             char **argv)
   {
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
     CONST84
 #endif
     char *name;
@@ -526,7 +524,7 @@ extern "C"
     Tk_SetClass(tkwin, (char *) "vtkTkRenderWidget");
     
     // Create vtkTkRenderWidget data structure 
-    self = (struct vtkTkRenderWidget *)ckalloc(sizeof(struct vtkTkRenderWidget));
+    self=(struct vtkTkRenderWidget *)ckalloc(sizeof(struct vtkTkRenderWidget));
     self->TkWin = tkwin;
     self->Interp = interp;
     self->Width = 0;
@@ -545,7 +543,7 @@ extern "C"
     if (vtkTkRenderWidget_Configure(interp, 
                                     self, 
                                     argc-2, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                     const_cast<char **>(argv+2), 
 #else
                                     argv+2, 
@@ -613,14 +611,12 @@ extern "C"
 
     if (self->RenderWindow)
       {
-      int netRefCount = self->RenderWindow->GetReferenceCount();
-      if (self->RenderWindow->GetInteractor() && 
-          self->RenderWindow->GetInteractor()->GetRenderWindow() == self->RenderWindow &&
-          self->RenderWindow->GetInteractor()->GetReferenceCount() == 1)
+      if (self->RenderWindow->GetInteractor() &&
+          self->RenderWindow->GetInteractor()->GetRenderWindow() == self->RenderWindow)
         {
-        netRefCount = netRefCount - 1;
+        self->RenderWindow->GetInteractor()->SetRenderWindow(0);
         }
-      if (netRefCount > 1)
+      if (self->RenderWindow->GetReferenceCount() > 1)
         {
         vtkGenericWarningMacro(
           "A TkRenderWidget is being destroyed before it associated vtkRenderWindow is destroyed."
@@ -761,23 +757,23 @@ LRESULT APIENTRY vtkTkRenderWidgetProc(HWND hWnd, UINT message,
 {
   LRESULT rval;
   struct vtkTkRenderWidget *self = 
-    (struct vtkTkRenderWidget *)vtkGetWindowLong(hWnd,4);
-  
+    (struct vtkTkRenderWidget *)vtkGetWindowLong(hWnd,sizeof(vtkLONG));
+
   if (!self)
     {
     return 1;
     }
   
   // watch for WM_USER + 12  this is a special message
-  // from the vtkRenderWIndowInteractor letting us 
+  // from the vtkRenderWindowInteractor letting us
   // know it wants to get events also
   if ((message == WM_USER+12)&&(wParam == 24))
     {
     WNDPROC tmp = (WNDPROC)lParam;
     // we need to tell it what the original vtk event handler was 
-    vtkSetWindowLong(hWnd,4,(LONG)self->RenderWindow);
-    tmp(hWnd, WM_USER+13,26,(LONG)self->OldProc);
-    vtkSetWindowLong(hWnd,4,(LONG)self);
+    vtkSetWindowLong(hWnd,sizeof(vtkLONG),(vtkLONG)self->RenderWindow);
+    tmp(hWnd, WM_USER+13,26,(vtkLONG)self->OldProc);
+    vtkSetWindowLong(hWnd,sizeof(vtkLONG),(vtkLONG)self);
     self->OldProc = tmp;
     return 1;
     }
@@ -794,16 +790,16 @@ LRESULT APIENTRY vtkTkRenderWidgetProc(HWND hWnd, UINT message,
     }
 
   // forward message to Tk handler
-  vtkSetWindowLong(hWnd,4,(LONG)((TkWindow *)self->TkWin)->window);
+  vtkSetWindowLong(hWnd,sizeof(vtkLONG),(vtkLONG)((TkWindow *)self->TkWin)->window);
   if (((TkWindow *)self->TkWin)->parentPtr)
     {
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinChildProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinChildProc);
     rval = TkWinChildProc(hWnd,message,wParam,lParam);
     }
   else
     {
 #if(TK_MAJOR_VERSION < 8)
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinTopLevelProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinTopLevelProc);
     rval = TkWinTopLevelProc(hWnd,message,wParam,lParam);
 #else
     if (message == WM_WINDOWPOSCHANGED) 
@@ -850,7 +846,7 @@ LRESULT APIENTRY vtkTkRenderWidgetProc(HWND hWnd, UINT message,
             Tcl_ServiceAll();
             return 0;
       }
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinChildProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinChildProc);
     rval = TkWinChildProc(hWnd,message,wParam,lParam);
 #endif
     }
@@ -859,15 +855,15 @@ LRESULT APIENTRY vtkTkRenderWidgetProc(HWND hWnd, UINT message,
       {
       if (self->RenderWindow)
         {
-        vtkSetWindowLong(hWnd,4,(LONG)self->RenderWindow);
-        vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)self->OldProc);
+        vtkSetWindowLong(hWnd,sizeof(vtkLONG),(vtkLONG)self->RenderWindow);
+        vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)self->OldProc);
         CallWindowProc(self->OldProc,hWnd,message,wParam,lParam);
         }
       }
 
   // now reset to the original config
-  vtkSetWindowLong(hWnd,4,(LONG)self);
-  vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)vtkTkRenderWidgetProc);
+  vtkSetWindowLong(hWnd,sizeof(vtkLONG),(vtkLONG)self);
+  vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)vtkTkRenderWidgetProc);
   return rval;
 }
 
@@ -906,9 +902,10 @@ static int vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
     vtkTclGetObjectFromPointer(self->Interp, self->RenderWindow,
                                "vtkRenderWindow");
 #endif
-    self->RW = ckalloc(strlen(self->Interp->result) + 1);
-    strcpy(self->RW, self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->RW = ckalloc(
+      static_cast<unsigned int>(strlen(Tcl_GetStringResult(self->Interp)) + 1));
+    strcpy(self->RW, Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {
@@ -981,10 +978,10 @@ static int vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
   twdPtr->window.handle = renderWindow->GetWindowId();
 #endif
 
-  self->OldProc = (WNDPROC)vtkGetWindowLong(twdPtr->window.handle,GWL_WNDPROC);
-  vtkSetWindowLong(twdPtr->window.handle,4,(LONG)self);
-  vtkSetWindowLong(twdPtr->window.handle,GWL_WNDPROC,
-     (LONG)vtkTkRenderWidgetProc);
+  self->OldProc = (WNDPROC)vtkGetWindowLong(twdPtr->window.handle,vtkGWL_WNDPROC);
+  vtkSetWindowLong(twdPtr->window.handle,sizeof(vtkLONG),(vtkLONG)self);
+  vtkSetWindowLong(twdPtr->window.handle,vtkGWL_WNDPROC,
+     (vtkLONG)vtkTkRenderWidgetProc);
 
   winPtr->window = (Window)twdPtr;
   
@@ -1082,9 +1079,10 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
     vtkTclGetObjectFromPointer(self->Interp, self->RenderWindow,
           "vtkRenderWindow");
 #endif
-    self->RW = ckalloc(strlen(self->Interp->result) + 1);
-    strcpy(self->RW, self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->RW = ckalloc(
+      static_cast<unsigned int>(strlen(Tcl_GetStringResult(self->Interp)) + 1));
+    strcpy(self->RW, Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {
@@ -1254,9 +1252,10 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
     vtkTclGetObjectFromPointer(self->Interp, self->RenderWindow,
           "vtkRenderWindow");
 #endif
-    self->RW = ckalloc(strlen(self->Interp->result) + 1);
-    strcpy(self->RW, self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->RW = ckalloc(
+      static_cast<unsigned int>(strlen(Tcl_GetStringResult(self->Interp)) + 1));
+    strcpy(self->RW, Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {

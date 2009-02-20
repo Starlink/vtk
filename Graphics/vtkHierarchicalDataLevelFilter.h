@@ -14,18 +14,20 @@
 =========================================================================*/
 // .NAME vtkHierarchicalDataLevelFilter - generate scalars from levels
 // .SECTION Description
-// vtkHierarchicalDataLevelFilter is a filter to that generates scalars 
-// using hiearchical data level information.
+// Legacy class. Use vtkLevelIdScalars instead.
+//
+// .SECTION See Also
+// vtkLevelIdScalars
 
 #ifndef __vtkHierarchicalDataLevelFilter_h
 #define __vtkHierarchicalDataLevelFilter_h
 
-#include "vtkHierarchicalDataSetAlgorithm.h"
+#include "vtkLevelIdScalars.h"
 
-class VTK_GRAPHICS_EXPORT vtkHierarchicalDataLevelFilter : public vtkHierarchicalDataSetAlgorithm 
+class VTK_GRAPHICS_EXPORT vtkHierarchicalDataLevelFilter : public vtkLevelIdScalars 
 {
 public:
-  vtkTypeRevisionMacro(vtkHierarchicalDataLevelFilter,vtkHierarchicalDataSetAlgorithm);
+  vtkTypeRevisionMacro(vtkHierarchicalDataLevelFilter,vtkLevelIdScalars);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -36,10 +38,6 @@ public:
 protected:
   vtkHierarchicalDataLevelFilter();
   ~vtkHierarchicalDataLevelFilter();
-
-  int RequestData(vtkInformation *, 
-                  vtkInformationVector **, 
-                  vtkInformationVector *);
 
 private:
   vtkHierarchicalDataLevelFilter(const vtkHierarchicalDataLevelFilter&);  // Not implemented.

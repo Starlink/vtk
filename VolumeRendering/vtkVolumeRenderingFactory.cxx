@@ -21,13 +21,16 @@
 #include "vtkGraphicsFactory.h"
 
 // if using some sort of opengl, then include these files
-#if defined(VTK_USE_OGLR) || defined(_WIN32) || defined(VTK_USE_COCOA) || defined(VTK_USE_CARBON)
+#if defined(VTK_USE_OGLR) || defined(VTK_USE_OSMESA) ||defined(_WIN32) || defined(VTK_USE_COCOA) || defined(VTK_USE_CARBON)
+#include "vtkOpenGLHAVSVolumeMapper.h"
+#include "vtkOpenGLProjectedTetrahedraMapper.h"
 #include "vtkOpenGLRayCastImageDisplayHelper.h"
 #include "vtkOpenGLVolumeTextureMapper2D.h"
 #include "vtkOpenGLVolumeTextureMapper3D.h"
 #endif
 
 #if defined(VTK_USE_MANGLED_MESA)
+#include "vtkMesaProjectedTetrahedraMapper.h"
 #include "vtkMesaRayCastImageDisplayHelper.h"
 #include "vtkMesaVolumeTextureMapper2D.h"
 #endif
@@ -36,7 +39,7 @@
 
 #include "stdlib.h"
 
-vtkCxxRevisionMacro(vtkVolumeRenderingFactory, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkVolumeRenderingFactory, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkVolumeRenderingFactory);
 
 
@@ -57,9 +60,34 @@ vtkObject* vtkVolumeRenderingFactory::CreateInstance(const char* vtkclassname )
   const char *rl = vtkGraphicsFactory::GetRenderLibrary();
   
 
-#if defined(VTK_USE_OGLR) || defined(_WIN32) || defined(VTK_USE_COCOA) || defined(VTK_USE_CARBON)
+#if defined(VTK_USE_OGLR) || defined(VTK_USE_OSMESA) ||defined(_WIN32) || defined(VTK_USE_COCOA) || defined(VTK_USE_CARBON)
   if (!strcmp("OpenGL",rl) || !strcmp("Win32OpenGL",rl) || !strcmp("CarbonOpenGL",rl) || !strcmp("CocoaOpenGL",rl))
     {
+    // Projected Tetrahedra Mapper
+    if(strcmp(vtkclassname, "vtkProjectedTetrahedraMapper") == 0)
+      {
+#if defined(VTK_USE_MANGLED_MESA)
+      if (vtkGraphicsFactory::GetUseMesaClasses())
+        {
+        return vtkMesaProjectedTetrahedraMapper::New();
+        }
+#endif
+      return vtkOpenGLProjectedTetrahedraMapper::New();
+      }
+
+    // HAVS Mapper
+    if(strcmp(vtkclassname, "vtkHAVSVolumeMapper") == 0)
+      {
+#if defined(VTK_USE_MANGLED_MESA)
+      if (vtkGraphicsFactory::GetUseMesaClasses())
+        {
+        vtkGenericWarningMacro("No support for mesa in vtkHAVSVolumeMapper");
+        return 0;
+        }
+#endif
+      return vtkOpenGLHAVSVolumeMapper::New();
+      }
+
     // 2D Volume Texture Mapper
     if(strcmp(vtkclassname, "vtkVolumeTextureMapper2D") == 0)
       {

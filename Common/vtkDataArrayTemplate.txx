@@ -17,13 +17,50 @@
 
 #include "vtkDataArrayTemplate.h"
 
+#include "vtkArrayIteratorTemplate.h"
+#include "vtkIdList.h"
+#include "vtkInformation.h"
+#include "vtkInformationDoubleVectorKey.h"
+#include "vtkInformationInformationVectorKey.h"
+#include "vtkInformationVector.h"
+#include "vtkSortDataArray.h"
 #include <vtkstd/exception>
+#include <vtkstd/utility>
+#include <vtkstd/algorithm>
 
 // We do not provide a definition for the copy constructor or
 // operator=.  Block the warning.
 #ifdef _MSC_VER
 # pragma warning (disable: 4661)
 #endif
+
+//----------------------------------------------------------------------------
+template <class T>
+class vtkDataArrayTemplateLookup
+{
+public:
+  vtkDataArrayTemplateLookup() : Rebuild(true)
+    {
+    this->SortedArray = NULL;
+    this->IndexArray = NULL;
+    }
+  ~vtkDataArrayTemplateLookup()
+    {
+    if (this->SortedArray)
+      {
+      this->SortedArray->Delete();
+      this->SortedArray = NULL;
+      }
+    if (this->IndexArray)
+      {
+      this->IndexArray->Delete();
+      this->IndexArray = NULL;
+      }
+    }
+  vtkAbstractArray* SortedArray;
+  vtkIdList* IndexArray;
+  bool Rebuild;
+};
 
 //----------------------------------------------------------------------------
 template <class T>
@@ -34,19 +71,22 @@ vtkDataArrayTemplate<T>::vtkDataArrayTemplate(vtkIdType numComp):
   this->Tuple = 0;
   this->TupleSize = 0;
   this->SaveUserArray = 0;
+  this->DeleteMethod = VTK_DATA_ARRAY_FREE;
+  this->Lookup = 0;
 }
 
 //----------------------------------------------------------------------------
 template <class T>
 vtkDataArrayTemplate<T>::~vtkDataArrayTemplate()
 {
-  if ((this->Array) && (!this->SaveUserArray))
-    {
-    free(this->Array);
-    }
+  this->DeleteArray();
   if(this->Tuple)
     {
     free(this->Tuple);
+    }
+  if(this->Lookup)
+    {
+    delete this->Lookup;
     }
 }
 
@@ -58,17 +98,12 @@ vtkDataArrayTemplate<T>::~vtkDataArrayTemplate()
 // The class uses the actual array provided; it does not copy the data
 // from the suppled array.
 template <class T>
-void vtkDataArrayTemplate<T>::SetArray(T* array, vtkIdType size, int save)
+void vtkDataArrayTemplate<T>::SetArray(T* array, 
+                                       vtkIdType size, 
+                                       int save,
+                                       int deleteMethod)
 {
-  if ((this->Array) && (!this->SaveUserArray))
-    {
-    vtkDebugMacro (<< "Deleting the array...");
-    free(this->Array);
-    }
-  else
-    {
-    vtkDebugMacro (<<"Warning, array not deleted, but will point to new array.");
-    }
+  this->DeleteArray();
 
   vtkDebugMacro(<<"Setting array to: " << static_cast<void*>(array));
 
@@ -76,6 +111,8 @@ void vtkDataArrayTemplate<T>::SetArray(T* array, vtkIdType size, int save)
   this->Size = size;
   this->MaxId = size-1;
   this->SaveUserArray = save;
+  this->DeleteMethod = deleteMethod;
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -87,17 +124,12 @@ int vtkDataArrayTemplate<T>::Allocate(vtkIdType sz, vtkIdType)
 
   if(sz > this->Size)
     {
-    if(this->Array && !this->SaveUserArray)
-      {
-      free(this->Array);
-      }
+    this->DeleteArray();
 
-    this->Array = 0;
     this->Size = 0;
-    this->SaveUserArray = 0;
 
     vtkIdType newSize = (sz > 0 ? sz : 1);
-    this->Array = (T*)malloc(newSize * sizeof(T));
+    this->Array = static_cast<T*>(malloc(newSize * sizeof(T)));
     if(!this->Array)
       {
       vtkErrorMacro("Unable to allocate " << newSize
@@ -107,6 +139,7 @@ int vtkDataArrayTemplate<T>::Allocate(vtkIdType sz, vtkIdType)
       }
     this->Size = newSize;
     }
+  this->DataChanged();
 
   return 1;
 }
@@ -116,14 +149,11 @@ int vtkDataArrayTemplate<T>::Allocate(vtkIdType sz, vtkIdType)
 template <class T>
 void vtkDataArrayTemplate<T>::Initialize()
 {
-  if(this->Array && !this->SaveUserArray)
-    {
-    free(this->Array);
-    }
+  this->DeleteArray();
   this->Array = 0;
   this->Size = 0;
   this->MaxId = -1;
-  this->SaveUserArray = 0;
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -147,21 +177,20 @@ void vtkDataArrayTemplate<T>::DeepCopy(vtkDataArray* fa)
   if(fa->GetDataType() != this->GetDataType())
     {
     this->Superclass::DeepCopy(fa);
+    this->DataChanged();
     return;
     }
 
   // Free our previous memory.
-  if(this->Array && !this->SaveUserArray)
-    {
-    free(this->Array);
-    }
+  this->DeleteArray();
 
   // Copy the given array into new memory.
   this->NumberOfComponents = fa->GetNumberOfComponents();
   this->MaxId = fa->GetMaxId();
   this->Size = fa->GetSize();
-  this->SaveUserArray = 0;
-  this->Array = (T*)malloc(this->Size * sizeof(T));
+
+  this->Size = (this->Size > 0 ? this->Size : 1);
+  this->Array = static_cast<T*>(malloc(this->Size * sizeof(T)));
   if(!this->Array)
     {
     vtkErrorMacro("Unable to allocate " << this->Size
@@ -172,7 +201,12 @@ void vtkDataArrayTemplate<T>::DeepCopy(vtkDataArray* fa)
     this->MaxId = -1;
     return;
     }
-  memcpy(this->Array, fa->GetVoidPointer(0), this->Size*sizeof(T));
+  if (fa->GetSize() > 0)
+    {
+    memcpy(this->Array, fa->GetVoidPointer(0), this->Size*sizeof(T));
+    }
+  this->vtkAbstractArray::DeepCopy( fa );
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -189,6 +223,51 @@ void vtkDataArrayTemplate<T>::PrintSelf(ostream& os, vtkIndent indent)
     {
     osw << indent << "Array: (null)\n";
     }
+}
+
+//----------------------------------------------------------------------------
+// Protected function does "reallocate"
+template <class T>
+void vtkDataArrayTemplate<T>::DeleteArray()
+{
+  if ((this->Array) && (!this->SaveUserArray))
+    {
+    if (this->DeleteMethod == VTK_DATA_ARRAY_FREE)
+      {
+      free(this->Array);
+      }
+    else
+      {
+      delete[] this->Array;
+      }
+    }
+  this->SaveUserArray = 0;
+  this->DeleteMethod = VTK_DATA_ARRAY_FREE;
+  this->Array = 0;
+}
+
+template <class T>
+T* vtkDataArrayTemplate<T>::Realloc(vtkIdType sz)
+{
+  // OS X's realloc does not free memory if the new block is smaller.  This
+  // is a very serious problem and causes huge amount of memory to be
+  // wasted. Do not use realloc on the Mac.
+#if defined(__APPLE__)
+  T* newArray = static_cast<T*>(malloc(sz*sizeof(T)));
+  if(!newArray)
+    {
+    return 0;
+    }
+  
+  // Copy the data from the old array.
+  memcpy(newArray, this->Array,
+         (sz < this->Size ? sz : this->Size) * sizeof(T));
+
+  free(this->Array);
+  return newArray;
+#else
+  return static_cast<T*>(realloc(this->Array, sz*sizeof(T)));
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -224,13 +303,14 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
     this->Initialize();
     return 0;
     }
-
+  
   // Allocate the new array or reallocate the old.
-  if(this->Array && this->SaveUserArray)
+  if(this->Array && (this->SaveUserArray || 
+                     this->DeleteMethod == VTK_DATA_ARRAY_DELETE))
     {
     // The old array is owned by the user so we cannot try to
     // reallocate it.  Just allocate new memory that we will own.
-    newArray = (T*)malloc(newSize*sizeof(T));
+    newArray = static_cast<T*>(malloc(newSize*sizeof(T)));
     if(!newArray)
       {
       vtkErrorMacro("Unable to allocate " << newSize
@@ -242,12 +322,18 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
     // Copy the data from the old array.
     memcpy(newArray, this->Array,
            (newSize < this->Size ? newSize : this->Size) * sizeof(T));
+    if (!this->SaveUserArray)
+      {
+      delete[] this->Array;
+      this->Array = 0;
+      }
+    this->DeleteMethod = VTK_DATA_ARRAY_FREE;
     }
   else
     {
     // Try to reallocate with minimal memory usage and possibly avoid
     // copying.
-    newArray = (T*)realloc(this->Array, newSize*sizeof(T));
+    newArray = this->Realloc(newSize);
     if(!newArray)
       {
       vtkErrorMacro("Unable to allocate " << newSize
@@ -275,6 +361,7 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
 template <class T>
 int vtkDataArrayTemplate<T>::Resize(vtkIdType sz)
 {
+  this->DataChanged();
   if(this->ResizeAndExtend(sz*this->NumberOfComponents) || sz <= 0)
     {
     return 1;
@@ -291,6 +378,117 @@ template <class T>
 void vtkDataArrayTemplate<T>::SetNumberOfTuples(vtkIdType number)
 {
   this->SetNumberOfValues(number*this->NumberOfComponents);
+  this->DataChanged();
+}
+
+//----------------------------------------------------------------------------
+// Set the tuple at the ith location using the jth tuple in the source array.
+// This method assumes that the two arrays have the same type
+// and structure. Note that range checking and memory allocation is not 
+// performed; use in conjunction with SetNumberOfTuples() to allocate space.
+template <class T>
+void vtkDataArrayTemplate<T>::SetTuple(vtkIdType i, vtkIdType j, 
+  vtkAbstractArray* source)
+{
+  if (source->GetDataType() != this->GetDataType())
+    {
+    vtkWarningMacro("Input and output array data types do not match.");
+    return;
+    }
+  if (this->NumberOfComponents != source->GetNumberOfComponents())
+    {
+    vtkWarningMacro("Input and output component sizes do not match.");
+    return;
+    }
+  
+  vtkIdType loci = i * this->NumberOfComponents;
+  vtkIdType locj = j * source->GetNumberOfComponents();
+
+  T* data = static_cast<T*>(source->GetVoidPointer(0));
+  
+  for (vtkIdType cur = 0; cur < this->NumberOfComponents; cur++)
+    {
+    this->Array[loci + cur] = data[locj + cur];
+    }
+  this->DataChanged();
+}
+
+//----------------------------------------------------------------------------
+// Insert the jth tuple in the source array, at ith location in this array. 
+// Note that memory allocation is performed as necessary to hold the data.
+template<class T>  
+void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, vtkIdType j, 
+  vtkAbstractArray* source)
+{
+  if (source->GetDataType() != this->GetDataType())
+    {
+    vtkWarningMacro("Input and output array data types do not match.");
+    return;
+    }
+  int inNumComp = source->GetNumberOfComponents();
+  if (this->NumberOfComponents != inNumComp)
+    {
+    vtkWarningMacro("Input and output component sizes do not match.");
+    return;
+    }
+  
+  vtkIdType locOut = i * inNumComp;
+  vtkIdType maxSize = locOut + inNumComp;
+  if (maxSize > this->Size)
+    {
+    this->ResizeAndExtend(maxSize);
+    }
+
+  vtkIdType locIn = j * inNumComp;
+
+  T* outPtr = this->GetPointer(locOut);
+  T* inPtr = static_cast<T*>(source->GetVoidPointer(locIn));
+
+  memcpy(outPtr, inPtr, sizeof(T)*inNumComp);
+
+  vtkIdType maxId = maxSize-1;
+  if ( maxId > this->MaxId )
+    {
+    this->MaxId = maxId;
+    }
+  this->DataChanged();
+}
+
+//----------------------------------------------------------------------------
+// Insert the jth tuple in the source array, at the end in this array. 
+// Note that memory allocation is performed as necessary to hold the data.
+// Returns the location at which the data was inserted.
+template<class T>  
+vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(vtkIdType j, 
+  vtkAbstractArray* source)
+{
+   if (source->GetDataType() != this->GetDataType())
+    {
+    vtkWarningMacro("Input and output array data types do not match.");
+    return -1;
+    }
+  if (this->NumberOfComponents != source->GetNumberOfComponents())
+    {
+    vtkWarningMacro("Input and output component sizes do not match.");
+    return -1;
+    } 
+  
+  // If this and source are the same, we need to make sure that
+  // the array grows before we get the pointer. Growing the array
+  // after getting the pointer may make it invalid.
+  if (this == source)
+    {
+    this->ResizeAndExtend(this->Size+1);
+    }
+
+  T* data = static_cast<T*>(source->GetVoidPointer(0));
+  vtkIdType locj = j * source->GetNumberOfComponents();
+  
+  for (vtkIdType cur = 0; cur < this->NumberOfComponents; cur++)
+    {
+    this->InsertNextValue(data[locj + cur]);
+    }
+  return (this->GetNumberOfTuples()-1);
 }
 
 //----------------------------------------------------------------------------
@@ -309,7 +507,7 @@ double* vtkDataArrayTemplate<T>::GetTuple(vtkIdType i)
     {
     this->TupleSize = this->NumberOfComponents;
     free(this->Tuple);
-    this->Tuple = (double*)malloc(this->TupleSize * sizeof(double));
+    this->Tuple = static_cast<double*>(malloc(this->TupleSize*sizeof(double)));
     }
 
   // Make sure tuple allocation succeeded.
@@ -390,6 +588,7 @@ void vtkDataArrayTemplate<T>::SetTuple(vtkIdType i, const float* tuple)
     {
     this->Array[loc+j] = static_cast<T>(tuple[j]);
     }
+  this->DataChanged();
 }
 
 template <class T>
@@ -400,6 +599,7 @@ void vtkDataArrayTemplate<T>::SetTuple(vtkIdType i, const double* tuple)
     {
     this->Array[loc+j] = static_cast<T>(tuple[j]);
     }
+  this->DataChanged();
 }
 
 template <class T>
@@ -410,6 +610,7 @@ void vtkDataArrayTemplate<T>::SetTupleValue(vtkIdType i, const T* tuple)
     {
     this->Array[loc+j] = tuple[j];
     }
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -425,6 +626,7 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, const float* tuple)
     {
     *t++ = static_cast<T>(*tuple++);
     }
+  this->DataChanged();
 }
 
 template <class T>
@@ -437,6 +639,7 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, const double* tuple)
     {
     *t++ = static_cast<T>(*tuple++);
     }
+  this->DataChanged();
 }
 
 template <class T>
@@ -449,6 +652,7 @@ void vtkDataArrayTemplate<T>::InsertTupleValue(vtkIdType i, const T* tuple)
     {
     *t++ = *tuple++;
     }
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -463,6 +667,7 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(const float* tuple)
     *t++ = static_cast<T>(*tuple++);
     }
 
+  this->DataChanged();
   return this->MaxId / this->NumberOfComponents;
 }
 
@@ -476,6 +681,7 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(const double* tuple)
     *t++ = static_cast<T>(*tuple++);
     }
 
+  this->DataChanged();
   return this->MaxId / this->NumberOfComponents;
 }
 
@@ -489,7 +695,50 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextTupleValue(const T* tuple)
     *t++ = *tuple++;
     }
 
+  this->DataChanged();
   return this->MaxId / this->NumberOfComponents;
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::RemoveTuple(vtkIdType id)
+{
+  if ( id < 0 || id >= this->GetNumberOfTuples())
+    {
+    // Nothing to be done
+    return;
+    }
+  if ( id == this->GetNumberOfTuples() - 1 )
+    {
+    // To remove last item, just decrease the size by one
+    this->RemoveLastTuple();
+    return;
+    }
+  // Remove the element by moving those after it over by one.  We must
+  // use memmove instead of memcpy because the memory areas overlap.
+  vtkIdType len = (this->GetNumberOfTuples() - id) - 1;
+  len *= this->GetNumberOfComponents();
+  vtkIdType from = (id+1) * this->GetNumberOfComponents();
+  vtkIdType to = id * this->GetNumberOfComponents();
+  memmove(this->Array + to, this->Array + from, len * sizeof(T));
+  this->Resize(this->GetNumberOfTuples() - 1);
+  this->DataChanged();
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::RemoveFirstTuple()
+{
+  this->RemoveTuple(0);
+  this->DataChanged();
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::RemoveLastTuple()
+{
+  this->Resize(this->GetNumberOfTuples()- 1);
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -529,6 +778,7 @@ void vtkDataArrayTemplate<T>::SetNumberOfValues(vtkIdType number)
     {
     this->MaxId = number - 1;
     }
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -545,6 +795,7 @@ T* vtkDataArrayTemplate<T>::WritePointer(vtkIdType id,
     {
     this->MaxId = newSize;
     }
+  this->DataChanged();
   return this->Array + id;
 }
 
@@ -561,6 +812,7 @@ void vtkDataArrayTemplate<T>::InsertValue(vtkIdType id, T f)
     {
     this->MaxId = id;
     }
+  this->DataChanged();
 }
 
 //----------------------------------------------------------------------------
@@ -575,45 +827,81 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextValue(T f)
 template <class T>
 void vtkDataArrayTemplate<T>::ComputeRange(int comp)
 {
+  if ( comp >= this->NumberOfComponents )
+    { // Ignore requests for nonexistent components.
+    return;
+    }
+
   // If we got component -1 on a vector array, compute vector magnitude.
-  if(comp < 0 && this->NumberOfComponents == 1)
+  if ( comp < 0 && this->NumberOfComponents == 1 )
     {
     comp = 0;
     }
 
-  // Choose index into component range cache.
-  int index = (comp<0)? this->NumberOfComponents : comp;
-
-  if(index >= VTK_MAXIMUM_NUMBER_OF_CACHED_COMPONENT_RANGES ||
-     (this->GetMTime() > this->ComponentRangeComputeTime[index]))
+  vtkInformation* info = this->GetInformation();
+  vtkInformationDoubleVectorKey* rkey;
+  if ( comp < 0 )
     {
-    // We need to compute the range.
-    this->Range[0] =  VTK_DOUBLE_MAX;
-    this->Range[1] =  VTK_DOUBLE_MIN;
-
-    if(comp >= 0)
-      {
-      this->ComputeScalarRange(comp);
-      }
-    else
-      {
-      this->ComputeVectorRange();
-      }
-
-    // Store the result in the range cache if there is room.
-    if(index < VTK_MAXIMUM_NUMBER_OF_CACHED_COMPONENT_RANGES)
-      {
-      this->ComponentRangeComputeTime[index].Modified();
-      this->ComponentRange[index][0] = this->Range[0];
-      this->ComponentRange[index][1] = this->Range[1];
-      }
+    rkey = L2_NORM_RANGE();
     }
   else
     {
-    // Copy value from range cache entry for this component.
-    this->Range[0] = this->ComponentRange[index][0];
-    this->Range[1] = this->ComponentRange[index][1];
+    vtkInformationVector* infoVec;
+    if ( ! info->Has( PER_COMPONENT() ) )
+      {
+      infoVec = vtkInformationVector::New();
+      info->Set( PER_COMPONENT(), infoVec );
+      infoVec->FastDelete();
+      }
+    else
+      {
+      infoVec = info->Get( PER_COMPONENT() );
+      }
+    int vlen = infoVec->GetNumberOfInformationObjects();
+    if ( vlen < this->NumberOfComponents )
+      {
+      infoVec->SetNumberOfInformationObjects( this->NumberOfComponents );
+      double rtmp[2];
+      rtmp[0] = VTK_DOUBLE_MAX;
+      rtmp[1] = VTK_DOUBLE_MIN;
+      // Since the MTime() of these new keys will be newer than this->MTime(), we must
+      // be sure that their ranges are marked "invalid" so that we know they must be
+      // computed.
+      for ( int i = vlen; i < this->NumberOfComponents; ++i )
+        {
+        infoVec->GetInformationObject( i )->Set( COMPONENT_RANGE(), rtmp, 2 );
+        }
+      }
+    info = infoVec->GetInformationObject( comp );
+    rkey = COMPONENT_RANGE();
     }
+
+  if ( info->Has( rkey ) )
+    {
+    if ( this->GetMTime() <= info->GetMTime() )
+      {
+      info->Get( rkey, this->Range );
+      if ( this->Range[0] != VTK_DOUBLE_MAX && this->Range[1] != VTK_DOUBLE_MIN )
+        {
+        // Only accept these values if they are reasonable. Otherwise, it is an
+        // indication that they've never been computed before.
+        return;
+        }
+      }
+    }
+
+  this->Range[0] = VTK_DOUBLE_MAX;
+  this->Range[1] = VTK_DOUBLE_MIN;
+  if ( comp < 0 )
+    {
+    this->ComputeVectorRange();
+    }
+  else
+    {
+    this->ComputeScalarRange( comp );
+    }
+
+  info->Set( rkey, this->Range, 2 );
 }
 
 //----------------------------------------------------------------------------
@@ -697,6 +985,125 @@ void vtkDataArrayTemplate<T>::ExportToVoidPointer(void *out_ptr)
     {
     memcpy(static_cast<T*>(out_ptr), this->Array, 
            (this->MaxId + 1)*sizeof(T));
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+vtkArrayIterator* vtkDataArrayTemplate<T>::NewIterator()
+{
+  vtkArrayIteratorTemplate<T>* iter = vtkArrayIteratorTemplate<T>::New();
+  iter->Initialize(this);
+  return iter;
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::UpdateLookup()
+{
+  if (!this->Lookup)
+    {
+    this->Lookup = new vtkDataArrayTemplateLookup<T>();
+    this->Lookup->SortedArray = vtkAbstractArray::CreateArray(this->GetDataType());
+    this->Lookup->IndexArray = vtkIdList::New();
+    }
+  if (this->Lookup->Rebuild)
+    {
+    int numComps = this->GetNumberOfComponents();
+    vtkIdType numTuples = this->GetNumberOfTuples();
+    this->Lookup->SortedArray->DeepCopy(this);
+    this->Lookup->IndexArray->SetNumberOfIds(numComps*numTuples);
+    for (vtkIdType i = 0; i < numComps*numTuples; i++)
+      {
+      this->Lookup->IndexArray->SetId(i, i);
+      }
+    vtkSortDataArray::Sort(this->Lookup->SortedArray, this->Lookup->IndexArray);
+    this->Lookup->Rebuild = false;
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+vtkIdType vtkDataArrayTemplate<T>::LookupValue(vtkVariant var)
+{
+  T* dummyPtr = 0;
+  bool valid = true;
+  T value = var.ToNumeric(&valid, dummyPtr);
+  if (valid)
+    {
+    return this->LookupValue(value);
+    }
+  return -1;
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::LookupValue(vtkVariant var, vtkIdList* ids)
+{
+  T* dummyPtr = 0;
+  bool valid = true;
+  T value = var.ToNumeric(&valid, dummyPtr);
+  ids->Reset();
+  if (valid)
+    {
+    this->LookupValue(value, ids);
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+vtkIdType vtkDataArrayTemplate<T>::LookupValue(T value)
+{
+  this->UpdateLookup();
+  int numComps = this->GetNumberOfComponents();
+  vtkIdType numTuples = this->GetNumberOfTuples();
+  T* ptr = static_cast<T*>(this->Lookup->SortedArray->GetVoidPointer(0));
+  T* ptrEnd = ptr + numComps*numTuples;
+  T* found = vtkstd::lower_bound(ptr, ptrEnd, value);
+  if (found != ptrEnd && *found == value)
+    {
+    return this->Lookup->IndexArray->GetId(static_cast<vtkIdType>(found - ptr));
+    }
+  return -1;
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::LookupValue(T value, vtkIdList* ids)
+{
+  this->UpdateLookup();
+  ids->Reset();
+  int numComps = this->GetNumberOfComponents();
+  vtkIdType numTuples = this->GetNumberOfTuples();
+  T* ptr = static_cast<T*>(this->Lookup->SortedArray->GetVoidPointer(0));
+  vtkstd::pair<T*,T*> found = 
+    vtkstd::equal_range(ptr, ptr + numComps*numTuples, value);
+  vtkIdType ind = static_cast<vtkIdType>(found.first - ptr);
+  vtkIdType endInd = static_cast<vtkIdType>(found.second - ptr);
+  for (; ind != endInd; ++ind)
+    {
+    ids->InsertNextId(this->Lookup->IndexArray->GetId(ind));
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::DataChanged()
+{
+  if (this->Lookup)
+    {
+    this->Lookup->Rebuild = true;
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::ClearLookup()
+{
+  if (this->Lookup)
+    {
+    delete this->Lookup;
+    this->Lookup = NULL;
     }
 }
 

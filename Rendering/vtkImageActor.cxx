@@ -20,7 +20,7 @@
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkImageActor, "$Revision: 1.19 $");
+vtkCxxRevisionMacro(vtkImageActor, "$Revision: 1.24 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -31,7 +31,7 @@ vtkImageActor* vtkImageActor::New()
 {
   // First try to create the object from the vtkObjectFactory
   vtkObject* ret = vtkGraphicsFactory::CreateInstance("vtkImageActor");
-  return (vtkImageActor*)ret;
+  return static_cast<vtkImageActor *>(ret);
 }
 
 vtkImageActor::vtkImageActor()
@@ -45,6 +45,12 @@ vtkImageActor::vtkImageActor()
   this->DisplayExtent[3] = 0;
   this->DisplayExtent[4] = 0;
   this->DisplayExtent[5] = 0;  
+  this->ComputedDisplayExtent[0] = 0;
+  this->ComputedDisplayExtent[1] = 0;
+  this->ComputedDisplayExtent[2] = 0;
+  this->ComputedDisplayExtent[3] = 0;
+  this->ComputedDisplayExtent[4] = 0;
+  this->ComputedDisplayExtent[5] = 0;
 
   vtkMath::UninitializeBounds(this->DisplayBounds);
 }
@@ -58,19 +64,69 @@ vtkImageActor::~vtkImageActor()
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkImageActor::GetSliceNumber()
 {
   // find the first axis with a one pixel extent and return
   // its value
-  if (this->DisplayExtent[0] == this->DisplayExtent[1])
+
+  if (this->ComputedDisplayExtent[0] == this->ComputedDisplayExtent[1])
     {
-    return this->DisplayExtent[0];
+    return this->ComputedDisplayExtent[0];
     }
-  if (this->DisplayExtent[2] == this->DisplayExtent[3])
+  if (this->ComputedDisplayExtent[2] == this->ComputedDisplayExtent[3])
     {
-    return this->DisplayExtent[2];
+    return this->ComputedDisplayExtent[2];
     }
-  return this->DisplayExtent[4];
+  return this->ComputedDisplayExtent[4];
+}
+
+//----------------------------------------------------------------------------
+int vtkImageActor::GetSliceNumberMax()
+{
+  if (!this->GetInput())
+    {
+    return 0;
+    }
+
+  this->GetInput()->UpdateInformation();
+  int *wextent = this->GetInput()->GetWholeExtent();
+
+  // find the first axis with a one pixel extent and return
+  // its value
+  if (this->ComputedDisplayExtent[0] == this->ComputedDisplayExtent[1])
+    {
+    return wextent[1];
+    }
+  if (this->ComputedDisplayExtent[2] == this->ComputedDisplayExtent[3])
+    {
+    return wextent[3];
+    }
+  return wextent[5];
+}
+
+//----------------------------------------------------------------------------
+int vtkImageActor::GetSliceNumberMin()
+{
+  if (!this->GetInput())
+    {
+    return 0;
+    }
+
+  this->GetInput()->UpdateInformation();
+  int *wextent = this->GetInput()->GetWholeExtent();
+
+  // find the first axis with a one pixel extent and return
+  // its value
+  if (this->ComputedDisplayExtent[0] == this->ComputedDisplayExtent[1])
+    {
+    return wextent[0];
+    }
+  if (this->ComputedDisplayExtent[2] == this->ComputedDisplayExtent[3])
+    {
+    return wextent[2];
+    }
+  return wextent[4];
 }
 
 //----------------------------------------------------------------------------
@@ -89,6 +145,10 @@ void vtkImageActor::SetDisplayExtent(int extent[6])
 
   if (modified)
     {
+    for (idx = 0; idx < 6; ++idx)
+      {
+      this->ComputedDisplayExtent[idx] = extent[idx];
+      }
     this->Modified();
     }
 }
@@ -117,10 +177,11 @@ void vtkImageActor::GetDisplayExtent(int extent[6])
     }
 }
 
+//-----------------------------------------------------------------------------
 // Renders an actor2D's property and then it's mapper.
-int vtkImageActor::RenderTranslucentGeometry(vtkViewport* viewport)
+int vtkImageActor::RenderTranslucentPolygonalGeometry(vtkViewport* viewport)
 {
-  vtkDebugMacro(<< "vtkImageActor::RenderTranslucentGeometry");
+  vtkDebugMacro(<< "vtkImageActor::RenderTranslucentPolygonalGeometry");
 
   vtkImageData *input = this->GetInput();
   if (!input)
@@ -141,6 +202,30 @@ int vtkImageActor::RenderTranslucentGeometry(vtkViewport* viewport)
   return 0;
 }
 
+//-----------------------------------------------------------------------------
+// Description:
+// Does this prop have some translucent polygonal geometry?
+int vtkImageActor::HasTranslucentPolygonalGeometry()
+{
+  vtkImageData *input = this->GetInput();
+  if (!input)
+    {
+    return 0;
+    }
+
+  // render the texture map
+  if ( input->GetScalarType() == VTK_UNSIGNED_CHAR )
+    {
+    if (!(this->Opacity >= 1.0 && input->GetNumberOfScalarComponents() % 2))
+      {
+      return 1;
+      }
+    }
+
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
 int vtkImageActor::RenderOpaqueGeometry(vtkViewport* viewport)
 {
   vtkDebugMacro(<< "vtkImageActor::RenderOpaqueGeometry");
@@ -157,14 +242,14 @@ int vtkImageActor::RenderOpaqueGeometry(vtkViewport* viewport)
   int *wExtent = input->GetWholeExtent();
   if (this->DisplayExtent[0] == -1)
     {
-    this->DisplayExtent[0] = wExtent[0];
-    this->DisplayExtent[1] = wExtent[1];
-    this->DisplayExtent[2] = wExtent[2];
-    this->DisplayExtent[3] = wExtent[3];
-    this->DisplayExtent[4] = wExtent[4];
-    this->DisplayExtent[5] = wExtent[4];
+    this->ComputedDisplayExtent[0] = wExtent[0];
+    this->ComputedDisplayExtent[1] = wExtent[1];
+    this->ComputedDisplayExtent[2] = wExtent[2];
+    this->ComputedDisplayExtent[3] = wExtent[3];
+    this->ComputedDisplayExtent[4] = wExtent[4];
+    this->ComputedDisplayExtent[5] = wExtent[4];
     }
-  input->SetUpdateExtent(this->DisplayExtent);
+  input->SetUpdateExtent(this->ComputedDisplayExtent);
   input->PropagateUpdateExtent();
   input->UpdateData();
 
@@ -200,42 +285,54 @@ double *vtkImageActor::GetDisplayBounds()
   int *wExtent = this->Input->GetWholeExtent();
   if (this->DisplayExtent[0] == -1)
     {
-    this->DisplayExtent[0] = wExtent[0];
-    this->DisplayExtent[1] = wExtent[1];
-    this->DisplayExtent[2] = wExtent[2];
-    this->DisplayExtent[3] = wExtent[3];
-    this->DisplayExtent[4] = wExtent[4];
-    this->DisplayExtent[5] = wExtent[4];
+    this->ComputedDisplayExtent[0] = wExtent[0];
+    this->ComputedDisplayExtent[1] = wExtent[1];
+    this->ComputedDisplayExtent[2] = wExtent[2];
+    this->ComputedDisplayExtent[3] = wExtent[3];
+    this->ComputedDisplayExtent[4] = wExtent[4];
+    this->ComputedDisplayExtent[5] = wExtent[4];
     }
   if (spacing[0] >= 0)
     {
-    this->DisplayBounds[0] = this->DisplayExtent[0]*spacing[0] + origin[0];
-    this->DisplayBounds[1] = this->DisplayExtent[1]*spacing[0] + origin[0];
+    this->DisplayBounds[0] =
+      this->ComputedDisplayExtent[0]*spacing[0] + origin[0];
+    this->DisplayBounds[1] =
+      this->ComputedDisplayExtent[1]*spacing[0] + origin[0];
     }
   else
     {
-    this->DisplayBounds[0] = this->DisplayExtent[1]*spacing[0] + origin[0];
-    this->DisplayBounds[1] = this->DisplayExtent[0]*spacing[0] + origin[0];
+    this->DisplayBounds[0] =
+      this->ComputedDisplayExtent[1]*spacing[0] + origin[0];
+    this->DisplayBounds[1] =
+      this->ComputedDisplayExtent[0]*spacing[0] + origin[0];
     }
   if (spacing[1] >= 0)
     {
-    this->DisplayBounds[2] = this->DisplayExtent[2]*spacing[1] + origin[1];
-    this->DisplayBounds[3] = this->DisplayExtent[3]*spacing[1] + origin[1];
+    this->DisplayBounds[2] =
+      this->ComputedDisplayExtent[2]*spacing[1] + origin[1];
+    this->DisplayBounds[3] =
+      this->ComputedDisplayExtent[3]*spacing[1] + origin[1];
     }
   else
     {
-    this->DisplayBounds[2] = this->DisplayExtent[3]*spacing[1] + origin[1];
-    this->DisplayBounds[3] = this->DisplayExtent[2]*spacing[1] + origin[1];
+    this->DisplayBounds[2] =
+      this->ComputedDisplayExtent[3]*spacing[1] + origin[1];
+    this->DisplayBounds[3] =
+      this->ComputedDisplayExtent[2]*spacing[1] + origin[1];
     }
   if (spacing[2] >= 0)
     {
-    this->DisplayBounds[4] = this->DisplayExtent[4]*spacing[2] + origin[2];
-    this->DisplayBounds[5] = this->DisplayExtent[5]*spacing[2] + origin[2];
+    this->DisplayBounds[4] =
+      this->ComputedDisplayExtent[4]*spacing[2] + origin[2];
+    this->DisplayBounds[5] =
+      this->ComputedDisplayExtent[5]*spacing[2] + origin[2];
     }
   else
     {
-    this->DisplayBounds[4] = this->DisplayExtent[5]*spacing[2] + origin[2];
-    this->DisplayBounds[5] = this->DisplayExtent[4]*spacing[2] + origin[2];
+    this->DisplayBounds[4] =
+      this->ComputedDisplayExtent[5]*spacing[2] + origin[2];
+    this->DisplayBounds[5] =
+      this->ComputedDisplayExtent[4]*spacing[2] + origin[2];
     }
   
   return this->DisplayBounds;

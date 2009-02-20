@@ -28,6 +28,8 @@
 
 #include "vtkImageAlgorithm.h"
 
+class vtkStringArray;
+
 #define VTK_FILE_BYTE_ORDER_BIG_ENDIAN 0
 #define VTK_FILE_BYTE_ORDER_LITTLE_ENDIAN 1
 
@@ -39,21 +41,32 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);   
 
   // Description:
-  // Specify file name for the image file. You should specify either
-  // a FileName or a FilePrefix. Use FilePrefix if the data is stored 
-  // in multiple files.
+  // Specify file name for the image file. If the data is stored in
+  // multiple files, then use SetFileNames or SetFilePrefix instead.
   virtual void SetFileName(const char *);
   vtkGetStringMacro(FileName);
 
   // Description:
-  // Specify file prefix for the image file(s).You should specify either
-  // a FileName or FilePrefix. Use FilePrefix if the data is stored
-  // in multiple files.
+  // Specify a list of file names.  Each file must be a single slice,
+  // and each slice must be of the same size. The files must be in the
+  // correct order.
+  // Use SetFileName when reading a volume (multiple slice), since
+  // DataExtent will be modified after a SetFileNames call.
+  virtual void SetFileNames(vtkStringArray *);
+  vtkGetObjectMacro(FileNames, vtkStringArray);
+
+  // Description:
+  // Specify file prefix for the image file or files.  This can be
+  // used in place of SetFileName or SetFileNames if the filenames
+  // follow a specific naming pattern, but you must explicitly set
+  // the DataExtent so that the reader will know what range of slices
+  // to load.
   virtual void SetFilePrefix(const char *);
   vtkGetStringMacro(FilePrefix);
 
   // Description:
-  // The sprintf format used to build filename from FilePrefix and number.
+  // The sprintf-style format string used to build filename from
+  // FilePrefix and slice number.
   virtual void SetFilePattern(const char *);
   vtkGetStringMacro(FilePattern);
 
@@ -199,6 +212,8 @@ public:
 protected:
   vtkImageReader2();
   ~vtkImageReader2();
+
+  vtkStringArray *FileNames;
 
   char *InternalFileName;
   char *FileName;

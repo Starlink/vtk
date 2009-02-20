@@ -18,8 +18,12 @@
 #include "vtkCriticalSection.h"
 #include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
-#include "vtkIntArray.h"
+#include "vtkInformation.h"
+#include "vtkInformationDoubleVectorKey.h"
+#include "vtkInformationInformationVectorKey.h"
+#include "vtkInformationVector.h"
 #include "vtkIdTypeArray.h"
+#include "vtkIntArray.h"
 #include "vtkIdList.h"
 #include "vtkLookupTable.h"
 #include "vtkLongArray.h"
@@ -31,19 +35,11 @@
 #include "vtkUnsignedLongArray.h"
 #include "vtkUnsignedShortArray.h"
 
-#if defined(VTK_TYPE_USE_LONG_LONG)
-# include "vtkLongLongArray.h"
-# include "vtkUnsignedLongLongArray.h"
-#endif
+vtkInformationKeyMacro(vtkDataArray, PER_COMPONENT, InformationVector);
+vtkInformationKeyRestrictedMacro(vtkDataArray, COMPONENT_RANGE, DoubleVector, 2);
+vtkInformationKeyRestrictedMacro(vtkDataArray, L2_NORM_RANGE, DoubleVector, 2);
 
-#if defined(VTK_TYPE_USE___INT64)
-# include "vtk__Int64Array.h"
-# if defined(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-#  include "vtkUnsigned__Int64Array.h"
-# endif
-#endif
-
-vtkCxxRevisionMacro(vtkDataArray, "$Revision: 1.69 $");
+vtkCxxRevisionMacro(vtkDataArray, "$Revision: 1.81 $");
 
 //----------------------------------------------------------------------------
 // Construct object with default tuple dimension (number of components) of 1.
@@ -96,7 +92,7 @@ void vtkDeepCopySwitchOnOutput(IT *input, vtkDataArray *da,
     {
     vtkTemplateMacro(
       vtkDeepCopyArrayOfDifferentType (input,
-                                       (VTK_TT*)output,
+                                       static_cast<VTK_TT*>(output),
                                        numTuples,
                                        nComp) );
 
@@ -104,6 +100,25 @@ void vtkDeepCopySwitchOnOutput(IT *input, vtkDataArray *da,
       vtkGenericWarningMacro("Unsupported data type " << da->GetDataType()
                              <<"!");
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkDataArray::DeepCopy(vtkAbstractArray* aa)
+{
+  if ( aa == NULL )
+    {
+    return;
+    }
+
+  vtkDataArray *da = vtkDataArray::SafeDownCast( aa );
+  if (da == NULL)
+    {
+    vtkErrorMacro(<< "Input array is not a vtkDataArray.  Actual data "
+      << "type: " << aa->GetDataTypeAsString() );
+    return;
+    }
+
+  this->DeepCopy(da);
 }
 
 //----------------------------------------------------------------------------
@@ -120,6 +135,8 @@ void vtkDataArray::DeepCopy(vtkDataArray *da)
 
   if ( this != da )
     {
+    this->Superclass::DeepCopy( da ); // copy Information object
+
     int numTuples = da->GetNumberOfTuples();
     this->NumberOfComponents = da->NumberOfComponents;
     this->SetNumberOfTuples(numTuples);
@@ -128,7 +145,7 @@ void vtkDataArray::DeepCopy(vtkDataArray *da)
     switch (da->GetDataType())
       {
       vtkTemplateMacro(
-        vtkDeepCopySwitchOnOutput((VTK_TT*)input,
+        vtkDeepCopySwitchOnOutput(static_cast<VTK_TT*>(input),
                                   this,
                                   numTuples,
                                   this->NumberOfComponents));
@@ -232,6 +249,169 @@ void vtkDataArray::GetData(vtkIdType tupleMin, vtkIdType tupleMax, int compMin,
       }
     }
   delete [] tuple;
+}
+
+//--------------------------------------------------------------------------
+template <class T>
+inline void vtkDataArrayRoundIfNecessary(double val, T* retVal)
+{
+  *retVal = static_cast<T>((val>=0.0)?(val + 0.5):(val - 0.5));
+}
+
+//--------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline void vtkDataArrayRoundIfNecessary(double val, double* retVal)
+{
+  *retVal = val;
+}
+
+//--------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline void vtkDataArrayRoundIfNecessary(double val, float* retVal)
+{
+  *retVal = static_cast<float>(val);
+}
+
+//--------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayInterpolateTuple(T* from, T* to, int numComp,
+  vtkIdType* ids, vtkIdType numIds, double* weights)
+{
+  for(int i=0; i < numComp; ++i)
+    {
+    double c = 0;
+    for(vtkIdType j=0; j < numIds; ++j)
+      {
+      c += weights[j]*from[ids[j]*numComp+i];
+      }
+    // Round integer types. Don't round floating point types.
+    vtkDataArrayRoundIfNecessary(c, to);
+    to++;
+    }
+}
+//----------------------------------------------------------------------------
+// Interpolate array value from other array value given the
+// indices and associated interpolation weights.
+// This method assumes that the two arrays are of the same time.
+void vtkDataArray::InterpolateTuple(vtkIdType i, vtkIdList *ptIndices,
+  vtkAbstractArray* source,  double* weights)
+{
+  if (this->GetDataType() != source->GetDataType())
+    {
+    vtkErrorMacro("Cannot InterpolateValue from array of type " 
+      << source->GetDataTypeAsString());
+    return;
+    }
+  
+  vtkDataArray* fromData = vtkDataArray::SafeDownCast(source);
+  if (fromData)
+    {
+    int numComp = fromData->GetNumberOfComponents();
+    vtkIdType j, numIds=ptIndices->GetNumberOfIds();
+    vtkIdType *ids=ptIndices->GetPointer(0);
+    vtkIdType idx= i*numComp;
+    double c;
+
+    switch (fromData->GetDataType())
+      {
+    case VTK_BIT:
+        {
+        vtkBitArray *from=static_cast<vtkBitArray *>(fromData);
+        vtkBitArray *to=static_cast<vtkBitArray *>(this);
+        for (int k=0; k<numComp; k++)
+          {
+          for (c=0, j=0; j<numIds; j++)
+            {
+            c += weights[j]*from->GetValue(ids[j]*numComp+k);
+            }
+          to->InsertValue(idx+k, static_cast<int>(c));
+          }
+        }
+      break;
+      // Note that we must call WriteVoidPointer before GetVoidPointer
+      // in case WriteVoidPointer reallocates memory and fromData ==
+      // this.
+      vtkTemplateMacro(
+        void* vto = this->WriteVoidPointer(idx, numComp);
+        void* vfrom = fromData->GetVoidPointer(0);
+        vtkDataArrayInterpolateTuple(static_cast<VTK_TT*>(vfrom),
+          static_cast<VTK_TT*>(vto),
+          numComp, ids, numIds, weights)
+      );
+    default:
+      vtkErrorMacro("Unsupported data type " << fromData->GetDataType()
+        << " during interpolation!");
+      }
+    }
+}
+
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayInterpolateTuple(T* from1, T* from2, T* to,
+  int numComp, double t)
+{
+  for(int i=0; i < numComp; ++i)
+    {
+    double c = (1.0 - t) * *from1++ + t * *from2++;
+    *to++ = static_cast<T>(c);
+    }
+}
+
+//----------------------------------------------------------------------------
+// Interpolate value from the two values, p1 and p2, and an 
+// interpolation factor, t. The interpolation factor ranges from (0,1), 
+// with t=0 located at p1. This method assumes that the three arrays are of 
+// the same type. p1 is value at index id1 in fromArray1, while, p2 is
+// value at index id2 in fromArray2.
+void vtkDataArray::InterpolateTuple(vtkIdType i, 
+  vtkIdType id1, vtkAbstractArray* source1, 
+  vtkIdType id2, vtkAbstractArray* source2, double t)
+{
+  int type = this->GetDataType();
+  
+  if (type != source1->GetDataType() || type != source2->GetDataType())
+    {
+    vtkErrorMacro("All arrays to InterpolateValue must be of same type.");
+    return;
+    } 
+
+  vtkDataArray* fromData1 = vtkDataArray::SafeDownCast(source1);
+  vtkDataArray* fromData2 = vtkDataArray::SafeDownCast(source2);
+
+  int k, numComp=fromData1->GetNumberOfComponents();
+  double c;
+  vtkIdType loc = i * numComp;
+
+  switch (fromData1->GetDataType())
+    {
+    case VTK_BIT:
+      {
+      vtkBitArray *from1=static_cast<vtkBitArray *>(fromData1);
+      vtkBitArray *from2=static_cast<vtkBitArray *>(fromData2);
+      vtkBitArray *to=static_cast<vtkBitArray *>(this);
+      for (k=0; k<numComp; k++)
+        {
+        c = from1->GetValue(id1) + t * (from2->GetValue(id2) - from1->GetValue(id1));
+        to->InsertValue(loc + k, static_cast<int>(c));
+        }
+      }
+      break;
+    // Note that we must call WriteVoidPointer before GetVoidPointer
+    // in case WriteVoidPointer reallocates memory and fromData1==this
+    // or fromData2==this.
+    vtkTemplateMacro(
+      void* vto = this->WriteVoidPointer(loc, numComp);
+      void* vfrom1 = fromData1->GetVoidPointer(id1*numComp);
+      void* vfrom2 = fromData2->GetVoidPointer(id2*numComp);
+      vtkDataArrayInterpolateTuple(static_cast<VTK_TT*>(vfrom1),
+        static_cast<VTK_TT*>(vfrom2), static_cast<VTK_TT*>(vto), numComp, t)
+      );
+    default:
+      vtkErrorMacro("Unsupported data type " << fromData1->GetDataType()
+                    << " during interpolation!");
+    }
+
 }
 
 //----------------------------------------------------------------------------
@@ -556,112 +736,31 @@ void vtkDataArray::InsertNextTuple9(double val0, double val1,
 }
 
 //----------------------------------------------------------------------------
-template <class T>
-unsigned long vtkDataArrayGetDataTypeSize(T*)
-{
-  return sizeof(T);
-}
-
-//----------------------------------------------------------------------------
-unsigned long vtkDataArray::GetDataTypeSize(int type)
-{
-  switch (type)
-    {
-    vtkTemplateMacro(
-      return vtkDataArrayGetDataTypeSize(static_cast<VTK_TT*>(0))
-      );
-    case VTK_BIT:
-      return 1;
-      break;
-    default:
-      vtkGenericWarningMacro("Unsupported data type " << type << "!");
-    }
-  return 1;
-}
-
-//----------------------------------------------------------------------------
 unsigned long vtkDataArray::GetActualMemorySize()
 {
   unsigned long numPrims;
-  double size = 0.0;
+  double size;
   // The allocated array may be larger than the number of primatives used.
   //numPrims = this->GetNumberOfTuples() * this->GetNumberOfComponents();
   numPrims = this->GetSize();
 
   size = vtkDataArray::GetDataTypeSize(this->GetDataType());
 
-  return (unsigned long)ceil((size * numPrims)/1000.0); //kilobytes
+  // kilobytes
+  return static_cast<unsigned long>(ceil((size * numPrims)/1024.0));
 }
 
 //----------------------------------------------------------------------------
 vtkDataArray* vtkDataArray::CreateDataArray(int dataType)
 {
-  switch (dataType)
+  vtkAbstractArray* aa = vtkAbstractArray::CreateArray(dataType);
+  vtkDataArray* da = vtkDataArray::SafeDownCast(aa);
+  if (!da && aa)
     {
-    case VTK_BIT:
-      return vtkBitArray::New();
-
-    case VTK_CHAR:
-      return vtkCharArray::New();
-
-    case VTK_SIGNED_CHAR:
-      return vtkSignedCharArray::New();
-
-    case VTK_UNSIGNED_CHAR:
-      return vtkUnsignedCharArray::New();
-
-    case VTK_SHORT:
-      return vtkShortArray::New();
-
-    case VTK_UNSIGNED_SHORT:
-      return vtkUnsignedShortArray::New();
-
-    case VTK_INT:
-      return vtkIntArray::New();
-
-    case VTK_UNSIGNED_INT:
-      return vtkUnsignedIntArray::New();
-
-    case VTK_LONG:
-      return vtkLongArray::New();
-
-    case VTK_UNSIGNED_LONG:
-      return vtkUnsignedLongArray::New();
-
-#if defined(VTK_TYPE_USE_LONG_LONG)
-    case VTK_LONG_LONG:
-      return vtkLongLongArray::New();
-
-    case VTK_UNSIGNED_LONG_LONG:
-      return vtkUnsignedLongLongArray::New();
-#endif
-
-#if defined(VTK_TYPE_USE___INT64)
-    case VTK___INT64:
-      return vtk__Int64Array::New();
-      break;
-
-# if defined(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-    case VTK_UNSIGNED___INT64:
-      return vtkUnsigned__Int64Array::New();
-      break;
-# endif
-#endif
-
-    case VTK_FLOAT:
-      return vtkFloatArray::New();
-
-    case VTK_DOUBLE:
-      return vtkDoubleArray::New();
-
-    case VTK_ID_TYPE:
-      return vtkIdTypeArray::New();
-
-    default:
-      vtkGenericWarningMacro("Unsupported data type " << dataType
-                             << "! Setting to VTK_DOUBLE");
-      return vtkDoubleArray::New();
+    // Requested array is not a vtkDataArray. Delete the allocated array.
+    aa->Delete();
     }
+  return da;
 }
 
 //----------------------------------------------------------------------------
@@ -686,7 +785,7 @@ void vtkCopyTuples1(IT* input, vtkDataArray* output, vtkIdList* ptIds)
   switch (output->GetDataType())
     {
     vtkTemplateMacro(vtkCopyTuples(input, 
-                                   (VTK_TT *)output->GetVoidPointer(0), 
+                                   static_cast<VTK_TT *>(output->GetVoidPointer(0)),
                                    output->GetNumberOfComponents(), ptIds) );
 
     default:
@@ -697,18 +796,25 @@ void vtkCopyTuples1(IT* input, vtkDataArray* output, vtkIdList* ptIds)
 }
 
 //----------------------------------------------------------------------------
-void vtkDataArray::GetTuples(vtkIdList *ptIds, vtkDataArray *da)
+void vtkDataArray::GetTuples(vtkIdList *ptIds, vtkAbstractArray *aa)
 {
-
+  vtkDataArray* da = vtkDataArray::SafeDownCast(aa);
+  if (!da)
+    {
+    vtkWarningMacro("Input is not a vtkDataArray.");
+    return;
+    }
+  
   if ((da->GetNumberOfComponents() != this->GetNumberOfComponents()))
     {
     vtkWarningMacro("Number of components for input and output do not match");
     return;
     }
 
+  
   switch (this->GetDataType())
     {
-    vtkTemplateMacro(vtkCopyTuples1 ((VTK_TT *)this->GetVoidPointer(0), da,
+    vtkTemplateMacro(vtkCopyTuples1 (static_cast<VTK_TT *>(this->GetVoidPointer(0)), da,
                                      ptIds ));
     // This is not supported by the template macro.
     // Switch to using the double interface.
@@ -752,7 +858,7 @@ void vtkCopyTuples1(IT* input, vtkDataArray* output,
   switch (output->GetDataType())
     {
     vtkTemplateMacro(vtkCopyTuples( input, 
-                                    (VTK_TT *)output->GetVoidPointer(0), 
+                                    static_cast<VTK_TT *>(output->GetVoidPointer(0)),
                                     output->GetNumberOfComponents(), p1, p2) );
 
     default:
@@ -764,8 +870,14 @@ void vtkCopyTuples1(IT* input, vtkDataArray* output,
 
 
 //----------------------------------------------------------------------------
-void vtkDataArray::GetTuples(vtkIdType p1, vtkIdType p2, vtkDataArray *da)
+void vtkDataArray::GetTuples(vtkIdType p1, vtkIdType p2, vtkAbstractArray *aa)
 {
+  vtkDataArray* da = vtkDataArray::SafeDownCast(aa);
+  if (!da)
+    {
+    vtkWarningMacro("Input is not a vtkDataArray.");
+    return;
+    }
 
   if ((da->GetNumberOfComponents() != this->GetNumberOfComponents()))
     {
@@ -775,7 +887,7 @@ void vtkDataArray::GetTuples(vtkIdType p1, vtkIdType p2, vtkDataArray *da)
 
   switch (this->GetDataType())
     {
-    vtkTemplateMacro(vtkCopyTuples1( (VTK_TT *)this->GetVoidPointer(0), da,
+    vtkTemplateMacro(vtkCopyTuples1( static_cast<VTK_TT *>(this->GetVoidPointer(0)), da,
                                      p1, p2 ) );
     // This is not supported by the template macro.
     // Switch to using the double interface.
@@ -872,59 +984,96 @@ void vtkDataArray::ComputeRange(int comp)
 {
   double s,t;
   vtkIdType numTuples;
+  vtkInformation* info = this->GetInformation();
 
   if (comp < 0 && this->NumberOfComponents == 1)
     {
     comp = 0;
     }
 
-  int idx = comp;
-  idx = (idx<0)?(this->NumberOfComponents):(idx);
-  
-  if (idx >= VTK_MAXIMUM_NUMBER_OF_CACHED_COMPONENT_RANGES || 
-       (this->GetMTime() > this->ComponentRangeComputeTime[idx]) )
+  vtkInformationDoubleVectorKey* rkey;
+  if ( comp < 0 )
     {
-    numTuples=this->GetNumberOfTuples();
-    this->Range[0] =  VTK_DOUBLE_MAX;
-    this->Range[1] =  VTK_DOUBLE_MIN;
-
-    for (vtkIdType i=0; i<numTuples; i++)
-      {
-      if (comp >= 0)
-        {
-        s = this->GetComponent(i,comp);
-        }
-      else
-        { // Compute range of vector magnitude.
-        s = 0.0;
-        for (int j=0; j < this->NumberOfComponents; ++j)
-          {
-          t = this->GetComponent(i,j);
-          s += t*t;
-          }
-        s = sqrt(s);
-        }
-      if ( s < this->Range[0] )
-        {
-        this->Range[0] = s;
-        }
-      if ( s > this->Range[1] )
-        {
-        this->Range[1] = s;
-        }
-      }
-    if (idx < VTK_MAXIMUM_NUMBER_OF_CACHED_COMPONENT_RANGES)
-      {
-      this->ComponentRangeComputeTime[idx].Modified();
-      this->ComponentRange[idx][0] = this->Range[0];
-      this->ComponentRange[idx][1] = this->Range[1];
-      }
+    rkey = L2_NORM_RANGE();
     }
   else
     {
-    this->Range[0] = this->ComponentRange[idx][0];
-    this->Range[1] = this->ComponentRange[idx][1];    
+    vtkInformationVector* infoVec;
+    if ( ! info->Has( PER_COMPONENT() ) )
+      {
+      infoVec = vtkInformationVector::New();
+      info->Set( PER_COMPONENT(), infoVec );
+      infoVec->Delete();
+      }
+    else
+      {
+      infoVec = info->Get( PER_COMPONENT() );
+      }
+    int vlen = infoVec->GetNumberOfInformationObjects();
+    if ( vlen < this->NumberOfComponents )
+      {
+      infoVec->SetNumberOfInformationObjects( this->NumberOfComponents );
+      double rtmp[2];
+      rtmp[0] = VTK_DOUBLE_MAX;
+      rtmp[1] = VTK_DOUBLE_MIN;
+      // Since the MTime() of these new keys will be newer than this->MTime(), we must
+      // be sure that their ranges are marked "invalid" so that we know they must be
+      // computed.
+      for ( int i = vlen; i < this->NumberOfComponents; ++i )
+        {
+        infoVec->GetInformationObject( i )->Set( COMPONENT_RANGE(), rtmp, 2 );
+        }
+      }
+    info = infoVec->GetInformationObject( comp );
+    rkey = COMPONENT_RANGE();
     }
+
+  if ( info->Has( rkey ) )
+    {
+    if ( this->GetMTime() <= info->GetMTime() )
+      {
+      info->Get( rkey, this->Range );
+      if ( this->Range[0] != VTK_DOUBLE_MAX && this->Range[1] != VTK_DOUBLE_MIN )
+        {
+        // Only accept these values if they are reasonable. Otherwise, it is an
+        // indication that they've never been computed before.
+        return;
+        }
+      }
+    }
+
+  // If we got here, we need to compute the range.
+  numTuples=this->GetNumberOfTuples();
+  this->Range[0] =  VTK_DOUBLE_MAX;
+  this->Range[1] =  VTK_DOUBLE_MIN;
+
+  for (vtkIdType i=0; i<numTuples; i++)
+    {
+    if (comp >= 0)
+      {
+      s = this->GetComponent(i,comp);
+      }
+    else
+      { // Compute range of vector magnitude.
+      s = 0.0;
+      for (int j=0; j < this->NumberOfComponents; ++j)
+        {
+        t = this->GetComponent(i,j);
+        s += t*t;
+        }
+      s = sqrt(s);
+      }
+    if ( s < this->Range[0] )
+      {
+      this->Range[0] = s;
+      }
+    if ( s > this->Range[1] )
+      {
+      this->Range[1] = s;
+      }
+    }
+
+  info->Set( rkey, this->Range, 2 );
 }
 
 //----------------------------------------------------------------------------
@@ -957,28 +1106,28 @@ double vtkDataArray::GetDataTypeMin(int type)
 {
   switch (type)
     {
-    case VTK_BIT:                return (double)VTK_BIT_MIN;
-    case VTK_SIGNED_CHAR:        return (double)VTK_SIGNED_CHAR_MIN;
-    case VTK_UNSIGNED_CHAR:      return (double)VTK_UNSIGNED_CHAR_MIN;
-    case VTK_CHAR:               return (double)VTK_CHAR_MIN;
-    case VTK_UNSIGNED_SHORT:     return (double)VTK_UNSIGNED_SHORT_MIN;
-    case VTK_SHORT:              return (double)VTK_SHORT_MIN;
-    case VTK_UNSIGNED_INT:       return (double)VTK_UNSIGNED_INT_MIN;
-    case VTK_INT:                return (double)VTK_INT_MIN;
-    case VTK_UNSIGNED_LONG:      return (double)VTK_UNSIGNED_LONG_MIN;
-    case VTK_LONG:               return (double)VTK_LONG_MIN;
+    case VTK_BIT:                return static_cast<double>(VTK_BIT_MIN);
+    case VTK_SIGNED_CHAR:        return static_cast<double>(VTK_SIGNED_CHAR_MIN);
+    case VTK_UNSIGNED_CHAR:      return static_cast<double>(VTK_UNSIGNED_CHAR_MIN);
+    case VTK_CHAR:               return static_cast<double>(VTK_CHAR_MIN);
+    case VTK_UNSIGNED_SHORT:     return static_cast<double>(VTK_UNSIGNED_SHORT_MIN);
+    case VTK_SHORT:              return static_cast<double>(VTK_SHORT_MIN);
+    case VTK_UNSIGNED_INT:       return static_cast<double>(VTK_UNSIGNED_INT_MIN);
+    case VTK_INT:                return static_cast<double>(VTK_INT_MIN);
+    case VTK_UNSIGNED_LONG:      return static_cast<double>(VTK_UNSIGNED_LONG_MIN);
+    case VTK_LONG:               return static_cast<double>(VTK_LONG_MIN);
 #if defined(VTK_TYPE_USE_LONG_LONG)
-    case VTK_UNSIGNED_LONG_LONG: return (double)VTK_UNSIGNED_LONG_LONG_MIN;
-    case VTK_LONG_LONG:          return (double)VTK_LONG_LONG_MIN;
+    case VTK_UNSIGNED_LONG_LONG: return static_cast<double>(VTK_UNSIGNED_LONG_LONG_MIN);
+    case VTK_LONG_LONG:          return static_cast<double>(VTK_LONG_LONG_MIN);
 #endif
 #if defined(VTK_TYPE_USE___INT64)
-    case VTK___INT64:            return (double)VTK___INT64_MIN;
+    case VTK___INT64:            return static_cast<double>(VTK___INT64_MIN);
 # if defined(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-    case VTK_UNSIGNED___INT64:   return (double)VTK_UNSIGNED___INT64_MIN;
+    case VTK_UNSIGNED___INT64:   return static_cast<double>(VTK_UNSIGNED___INT64_MIN);
 # endif
 #endif
-    case VTK_FLOAT:              return (double)VTK_FLOAT_MIN;
-    case VTK_DOUBLE:             return (double)VTK_DOUBLE_MIN;
+    case VTK_FLOAT:              return static_cast<double>(VTK_FLOAT_MIN);
+    case VTK_DOUBLE:             return static_cast<double>(VTK_DOUBLE_MIN);
     default: return 0;
     }
 }
@@ -988,28 +1137,28 @@ double vtkDataArray::GetDataTypeMax(int type)
 {
   switch (type)
     {
-    case VTK_BIT:                return (double)VTK_BIT_MAX;
-    case VTK_SIGNED_CHAR:        return (double)VTK_SIGNED_CHAR_MAX;
-    case VTK_UNSIGNED_CHAR:      return (double)VTK_UNSIGNED_CHAR_MAX;
-    case VTK_CHAR:               return (double)VTK_CHAR_MAX;
-    case VTK_UNSIGNED_SHORT:     return (double)VTK_UNSIGNED_SHORT_MAX;
-    case VTK_SHORT:              return (double)VTK_SHORT_MAX;
-    case VTK_UNSIGNED_INT:       return (double)VTK_UNSIGNED_INT_MAX;
-    case VTK_INT:                return (double)VTK_INT_MAX;
-    case VTK_UNSIGNED_LONG:      return (double)VTK_UNSIGNED_LONG_MAX;
-    case VTK_LONG:               return (double)VTK_LONG_MAX;
+    case VTK_BIT:                return static_cast<double>(VTK_BIT_MAX);
+    case VTK_SIGNED_CHAR:        return static_cast<double>(VTK_SIGNED_CHAR_MAX);
+    case VTK_UNSIGNED_CHAR:      return static_cast<double>(VTK_UNSIGNED_CHAR_MAX);
+    case VTK_CHAR:               return static_cast<double>(VTK_CHAR_MAX);
+    case VTK_UNSIGNED_SHORT:     return static_cast<double>(VTK_UNSIGNED_SHORT_MAX);
+    case VTK_SHORT:              return static_cast<double>(VTK_SHORT_MAX);
+    case VTK_UNSIGNED_INT:       return static_cast<double>(VTK_UNSIGNED_INT_MAX);
+    case VTK_INT:                return static_cast<double>(VTK_INT_MAX);
+    case VTK_UNSIGNED_LONG:      return static_cast<double>(VTK_UNSIGNED_LONG_MAX);
+    case VTK_LONG:               return static_cast<double>(VTK_LONG_MAX);
 #if defined(VTK_TYPE_USE_LONG_LONG)
-    case VTK_UNSIGNED_LONG_LONG: return (double)VTK_UNSIGNED_LONG_LONG_MAX;
-    case VTK_LONG_LONG:          return (double)VTK_LONG_LONG_MAX;
+    case VTK_UNSIGNED_LONG_LONG: return static_cast<double>(VTK_UNSIGNED_LONG_LONG_MAX);
+    case VTK_LONG_LONG:          return static_cast<double>(VTK_LONG_LONG_MAX);
 #endif
 #if defined(VTK_TYPE_USE___INT64)
-    case VTK___INT64:            return (double)VTK___INT64_MAX;
+    case VTK___INT64:            return static_cast<double>(VTK___INT64_MAX);
 # if defined(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-    case VTK_UNSIGNED___INT64:   return (double)VTK_UNSIGNED___INT64_MAX;
+    case VTK_UNSIGNED___INT64:   return static_cast<double>(VTK_UNSIGNED___INT64_MAX);
 # endif
 #endif
-    case VTK_FLOAT:              return (double)VTK_FLOAT_MAX;
-    case VTK_DOUBLE:             return (double)VTK_DOUBLE_MAX;
+    case VTK_FLOAT:              return static_cast<double>(VTK_FLOAT_MAX);
+    case VTK_DOUBLE:             return static_cast<double>(VTK_DOUBLE_MAX);
     default: return 1;
     }
 }

@@ -3,7 +3,7 @@
  *  Copyright 1996, University Corporation for Atmospheric Research
  *      See netcdf/COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: attr.c,v 1.1 2005/07/15 21:56:38 andy Exp $ */
+/* $Id: attr.c,v 1.7 2007-08-31 06:16:20 dcthomp Exp $ */
 
 #include "nc.h"
 #include <stdlib.h>
@@ -13,6 +13,9 @@
 #include "fbits.h"
 #include "rnd.h"
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+#  pragma warning ( disable : 4130 ) /* logical operation on address of string constant */
+#endif /* defined(_MSC_VER) && (_MSC_VER >= 1400) */
 
 /*
  * Free attr
@@ -49,6 +52,8 @@ ncx_len_NC_attrV(nc_type type, size_t nelems)
     return ncx_len_float(nelems);
   case NC_DOUBLE:
     return ncx_len_double(nelems);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   /* default */
   assert("ncx_len_NC_attr bad type" == 0);
@@ -508,7 +513,7 @@ nc_rename_att( int ncid, int varid, const char *name, const char *newname)
   if(ncap == NULL)
     return NC_ENOTVAR;
 
-  status = NC_check_name(name);
+  status = NC_check_name(newname);
   if(status != NC_NOERR)
     return status;
 
@@ -717,6 +722,8 @@ ncx_pad_putn_Iuchar(void **xpp, size_t nelems, const uchar *tp, nc_type type)
     return ncx_putn_float_uchar(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_uchar(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Iuchar invalid type" == 0);
   return NC_EBADTYPE;
@@ -738,6 +745,8 @@ ncx_pad_getn_Iuchar(const void **xpp, size_t nelems, uchar *tp, nc_type type)
     return ncx_getn_float_uchar(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_uchar(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Iuchar invalid type" == 0);
   return NC_EBADTYPE;
@@ -760,6 +769,8 @@ ncx_pad_putn_Ischar(void **xpp, size_t nelems, const schar *tp, nc_type type)
     return ncx_putn_float_schar(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_schar(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Ischar invalid type" == 0);
   return NC_EBADTYPE;
@@ -781,6 +792,8 @@ ncx_pad_getn_Ischar(const void **xpp, size_t nelems, schar *tp, nc_type type)
     return ncx_getn_float_schar(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_schar(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Ischar invalid type" == 0);
   return NC_EBADTYPE;
@@ -803,6 +816,8 @@ ncx_pad_putn_Ishort(void **xpp, size_t nelems, const short *tp, nc_type type)
     return ncx_putn_float_short(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_short(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Ishort invalid type" == 0);
   return NC_EBADTYPE;
@@ -824,6 +839,8 @@ ncx_pad_getn_Ishort(const void **xpp, size_t nelems, short *tp, nc_type type)
     return ncx_getn_float_short(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_short(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Ishort invalid type" == 0);
   return NC_EBADTYPE;
@@ -846,6 +863,8 @@ ncx_pad_putn_Iint(void **xpp, size_t nelems, const int *tp, nc_type type)
     return ncx_putn_float_int(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_int(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Iint invalid type" == 0);
   return NC_EBADTYPE;
@@ -867,6 +886,8 @@ ncx_pad_getn_Iint(const void **xpp, size_t nelems, int *tp, nc_type type)
     return ncx_getn_float_int(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_int(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Iint invalid type" == 0);
   return NC_EBADTYPE;
@@ -889,6 +910,8 @@ ncx_pad_putn_Ilong(void **xpp, size_t nelems, const long *tp, nc_type type)
     return ncx_putn_float_long(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_long(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Ilong invalid type" == 0);
   return NC_EBADTYPE;
@@ -910,6 +933,8 @@ ncx_pad_getn_Ilong(const void **xpp, size_t nelems, long *tp, nc_type type)
     return ncx_getn_float_long(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_long(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Ilong invalid type" == 0);
   return NC_EBADTYPE;
@@ -932,6 +957,8 @@ ncx_pad_putn_Ifloat(void **xpp, size_t nelems, const float *tp, nc_type type)
     return ncx_putn_float_float(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_float(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Ifloat invalid type" == 0);
   return NC_EBADTYPE;
@@ -953,6 +980,8 @@ ncx_pad_getn_Ifloat(const void **xpp, size_t nelems, float *tp, nc_type type)
     return ncx_getn_float_float(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_float(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Ifloat invalid type" == 0);
   return NC_EBADTYPE;
@@ -975,6 +1004,8 @@ ncx_pad_putn_Idouble(void **xpp, size_t nelems, const double *tp, nc_type type)
     return ncx_putn_float_double(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_putn_double_double(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_putn_Idouble invalid type" == 0);
   return NC_EBADTYPE;
@@ -996,6 +1027,8 @@ ncx_pad_getn_Idouble(const void **xpp, size_t nelems, double *tp, nc_type type)
     return ncx_getn_float_double(xpp, nelems, tp);
   case NC_DOUBLE:
     return ncx_getn_double_double(xpp, nelems, tp);
+  case NC_NAT:
+    break; /* Some compilers complain if enums are missing from a switch */
   }
   assert("ncx_pad_getn_Idouble invalid type" == 0);
   return NC_EBADTYPE;
@@ -2169,82 +2202,3 @@ nc_get_att_double(int ncid, int varid, const char *name, double *tp)
   }
 }
 
-
-
-/* deprecated, used to support the 2.x interface */
-int
-nc_put_att(
-  int ncid,
-  int varid,
-  const char *name,
-  nc_type type,
-  size_t nelems,
-  const void *value)
-{
-  switch (type) {
-  case NC_BYTE:
-    return nc_put_att_schar(ncid, varid, name, type, nelems,
-      (schar *)value);
-  case NC_CHAR:
-    return nc_put_att_text(ncid, varid, name, nelems,
-      (char *)value);
-  case NC_SHORT:
-    return nc_put_att_short(ncid, varid, name, type, nelems,
-      (short *)value);
-  case NC_INT:
-#if (SIZEOF_INT >= X_SIZEOF_INT)
-    return nc_put_att_int(ncid, varid, name, type, nelems,
-      (int *)value);
-#elif SIZEOF_LONG == X_SIZEOF_INT
-    return nc_put_att_long(ncid, varid, name, type, nelems,
-      (long *)value);
-#endif
-  case NC_FLOAT:
-    return nc_put_att_float(ncid, varid, name, type, nelems,
-      (float *)value);
-  case NC_DOUBLE:
-    return nc_put_att_double(ncid, varid, name, type, nelems,
-      (double *)value);
-  }
-  return NC_EBADTYPE;
-}
-
-
-/* deprecated, used to support the 2.x interface */
-int
-nc_get_att(int ncid, int varid, const char *name, void *value)
-{
-  int status;
-  NC_attr *attrp;
-
-  status = NC_lookupattr(ncid, varid, name, &attrp);
-  if(status != NC_NOERR)
-    return status;
-
-  switch (attrp->type) {
-  case NC_BYTE:
-    return nc_get_att_schar(ncid, varid, name,
-      (schar *)value);
-  case NC_CHAR:
-    return nc_get_att_text(ncid, varid, name,
-      (char *)value);
-  case NC_SHORT:
-    return nc_get_att_short(ncid, varid, name,
-      (short *)value);
-  case NC_INT:
-#if (SIZEOF_INT >= X_SIZEOF_INT)
-    return nc_get_att_int(ncid, varid, name,
-      (int *)value);
-#elif SIZEOF_LONG == X_SIZEOF_INT
-    return nc_get_att_long(ncid, varid, name,
-      (long *)value);
-#endif
-  case NC_FLOAT:
-    return nc_get_att_float(ncid, varid, name,
-      (float *)value);
-  case NC_DOUBLE:
-    return nc_get_att_double(ncid, varid, name,
-      (double *)value);
-  }
-  return NC_EBADTYPE;
-}

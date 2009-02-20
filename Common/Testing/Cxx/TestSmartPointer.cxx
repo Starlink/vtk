@@ -26,11 +26,11 @@ int TestSmartPointer(int,char *[])
   vtkIntArray* ia = vtkIntArray::New();
   
   // Coverage:
-  vtkSmartPointer<vtkDataArray> da1;
   vtkSmartPointer<vtkIntArray>  da2(ia);
-  vtkSmartPointer<vtkFloatArray> da3(da1);
+  vtkSmartPointer<vtkFloatArray> da3;
+  vtkSmartPointer<vtkDataArray> da1(da2);
   da1 = ia;
-  da2 = da1;
+  da1 = da2;
   da2 == da3;
   da2 != da3;
   da2 < da3;
@@ -70,6 +70,7 @@ int TestSmartPointer(int,char *[])
   da1.TakeReference(vtkIntArray::New());
   vtkSmartPointer<vtkIntArray> da4 =
     vtkSmartPointer<vtkIntArray>::Take(vtkIntArray::New());
+  (void)da4;
   ia->Delete();
   
   return 0;

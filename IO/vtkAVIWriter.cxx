@@ -18,6 +18,8 @@
 #include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkErrorCode.h"
+
 #ifdef _MSC_VER
 #pragma warning (push, 3)
 #endif
@@ -40,7 +42,7 @@ public:
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkAVIWriter);
-vtkCxxRevisionMacro(vtkAVIWriter, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkAVIWriter, "$Revision: 1.8.48.2 $");
 
 //---------------------------------------------------------------------------
 vtkAVIWriter::vtkAVIWriter()
@@ -50,8 +52,12 @@ vtkAVIWriter::vtkAVIWriter()
   this->Internals->StreamCompressed = NULL;
   this->Internals->AVIFile = NULL;
   this->Time = 0;
+  this->Quality = 2;
   this->Rate = 15;
   this->Internals->hDIB = NULL;  // handle to DIB, temp handle
+  this->PromptCompressionOptions = 0;
+  this->CompressorFourCC = NULL;
+  this->SetCompressorFourCC("msvc");
 }
 
 //---------------------------------------------------------------------------
@@ -62,6 +68,7 @@ vtkAVIWriter::~vtkAVIWriter()
     this->End();
     }
   delete this->Internals;
+  this->SetCompressorFourCC(NULL);
 }
 
 //---------------------------------------------------------------------------
@@ -72,11 +79,13 @@ void vtkAVIWriter::Start()
   if ( this->GetInput() == NULL )
     {
     vtkErrorMacro(<<"Write:Please specify an input!");
+    this->SetErrorCode(vtkGenericMovieWriter::NoInputError);
     return;
     }
   if (!this->FileName)
     {
     vtkErrorMacro(<<"Write:Please specify a FileName");
+    this->SetErrorCode(vtkErrorCode::NoFileNameError);
     return;
     }
   
@@ -95,6 +104,7 @@ void vtkAVIWriter::Start()
   if (hr != 0)
     {         
     vtkErrorMacro("Unable to open " << this->FileName);         
+    this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
     return; 
     }  
 
@@ -118,30 +128,50 @@ void vtkAVIWriter::Start()
 
   // do not want to display this dialog
   AVICOMPRESSOPTIONS opts;
-//  AVICOMPRESSOPTIONS FAR * aopts[1] = {&opts};
+  AVICOMPRESSOPTIONS FAR * aopts[1] = {&opts};
   memset(&opts, 0, sizeof(opts));  
 
   // need to setup opts
   opts.fccType = 0;
-  opts.fccHandler=mmioFOURCC('m','s','v','c');
-  opts.dwQuality = 10000;
-  opts.dwBytesPerSecond = 0;
-  opts.dwFlags = 8;
+  char fourcc[4] = {' ', ' ', ' ', ' '};
+  if (this->CompressorFourCC)
+    {
+    memcpy(fourcc, this->CompressorFourCC, strlen(this->CompressorFourCC));
+    }
+  opts.fccHandler=mmioFOURCC(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+  switch (this->GetQuality()) 
+    {
+    case 0:
+      opts.dwQuality = 2500;
+      break;
+    case 1:
+      opts.dwQuality = 5000;
+      break;
+    default:
+      opts.dwQuality = 10000;
+      break;
+    }
 
-//  if (!AVISaveOptions(NULL, 0, 
-//                      1, &this->Internals->Stream, 
-//                      (LPAVICOMPRESSOPTIONS FAR *) &aopts))
-//    {
-//    vtkErrorMacro("Unable to save " << this->FileName);         
-//    return;
-//    }
-  
-  
+  opts.dwBytesPerSecond = 0;
+  opts.dwFlags = AVICOMPRESSF_VALID;
+
+  if (this->PromptCompressionOptions)
+    {
+    if (!AVISaveOptions(NULL, 0, 
+                        1, &this->Internals->Stream, 
+                        (LPAVICOMPRESSOPTIONS FAR *) &aopts))
+      {
+      vtkErrorMacro("Unable to save " << this->FileName);         
+      return;
+      }
+    }
+    
   if (AVIMakeCompressedStream(&this->Internals->StreamCompressed, 
                               this->Internals->Stream, 
                               &opts, NULL) != AVIERR_OK)
     {
     vtkErrorMacro("Unable to compress " << this->FileName);         
+    this->SetErrorCode(vtkGenericMovieWriter::CanNotCompress);
     return;
     }  
   
@@ -166,6 +196,7 @@ void vtkAVIWriter::Start()
                          this->Internals->lpbi, this->Internals->lpbi->biSize))
     {
     vtkErrorMacro("Unable to format " << this->FileName << " Most likely this means that the video compression scheme you seleted could not handle the data. Try selecting a different compression scheme." );         
+    this->SetErrorCode(vtkGenericMovieWriter::CanNotFormat);
     return;
     }
 
@@ -249,5 +280,10 @@ void vtkAVIWriter::End()
 void vtkAVIWriter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);  
+  os << indent << "Rate: " << this->Rate << endl;
+  os << indent << "Quality: " << this->Quality << endl;
+  os << indent << "PromptCompressionOptions: " << (this->GetPromptCompressionOptions() ? "on":"off") << endl;
+  os << indent << "CompressorFourCC: " 
+     << (this->CompressorFourCC ? this->CompressorFourCC : "(None)") << endl;
 }
 

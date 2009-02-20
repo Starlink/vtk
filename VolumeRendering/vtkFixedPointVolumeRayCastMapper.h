@@ -80,9 +80,13 @@ class vtkEncodedGradientShader;
 class vtkFiniteDifferenceGradientEstimator;
 class vtkRayCastImageDisplayHelper;
 class vtkFixedPointRayCastImage;
+class vtkDataArray;
 
+//BTX
 // Forward declaration needed for use by friend declaration below.
 VTK_THREAD_RETURN_TYPE FixedPointVolumeRayCastMapper_CastRays( void *arg );
+VTK_THREAD_RETURN_TYPE vtkFPVRCMSwitchOnDataType( void *arg );
+//ETX
 
 class VTK_VOLUMERENDERING_EXPORT vtkFixedPointVolumeRayCastMapper : public vtkVolumeMapper
 {
@@ -141,6 +145,17 @@ public:
   vtkBooleanMacro( AutoAdjustSampleDistances, int );
   
   // Description:
+  // Automatically compute the sample distance from the data spacing.  When
+  // the number of voxels is 8, the sample distance will be roughly 1/200
+  // the average voxel size. The distance will grow proportionally to
+  // numVoxels^(1/3) until it reaches 1/2 average voxel size when number of
+  // voxels is 1E6. Note that ScalarOpacityUnitDistance is still taken into
+  // account and if different than 1, will effect the sample distance.
+  vtkSetClampMacro( LockSampleDistanceToInputSpacing, int, 0, 1 );
+  vtkGetMacro( LockSampleDistanceToInputSpacing, int );
+  vtkBooleanMacro( LockSampleDistanceToInputSpacing, int );
+  
+  // Description:
   // Set/Get the number of threads to use. This by default is equal to
   // the number of available processors detected.
   void SetNumberOfThreads( int num );
@@ -180,7 +195,7 @@ public:
   void GetUIntTripleFromPointer( unsigned int v[3], unsigned int *ptr );
   void ShiftVectorDown( unsigned int in[3], unsigned int out[3] );
   int CheckMinMaxVolumeFlag( unsigned int pos[3], int c );
-  int CheckMIPMinMaxVolumeFlag( unsigned int pos[3], int c, unsigned short maxIdx );
+  int CheckMIPMinMaxVolumeFlag( unsigned int pos[3], int c, unsigned short maxIdx, int flip );
   
   void LookupColorUC( unsigned short *colorTable,
                       unsigned short *scalarOpacityTable,
@@ -212,6 +227,10 @@ public:
   vtkGetVectorMacro( TableScale, float, 4 );
   vtkGetMacro( ShadingRequired, int );
   vtkGetMacro( GradientOpacityRequired, int );
+  
+  vtkGetObjectMacro( CurrentScalars, vtkDataArray );
+  vtkGetObjectMacro( PreviousScalars, vtkDataArray );
+  
   
   int             *GetRowBounds()                 {return this->RowBounds;}
   unsigned short  *GetColorTable(int c)           {return this->ColorTable[c];}
@@ -246,7 +265,47 @@ public:
   void RenderSubVolume();
   void DisplayRenderedImage( vtkRenderer *, vtkVolume * );
   void AbortRender();
+
+  void CreateCanonicalView( vtkVolume *volume,
+                            vtkImageData *image,
+                            int blend_mode,
+                            double viewDirection[3],
+                            double viewUp[3] );
   
+  // Description:
+  // Get an estimate of the rendering time for a given volume / renderer.
+  // Only valid if this mapper has been used to render that volume for
+  // that renderer previously. Estimate is good when the viewing parameters
+  // have not changed much since that last render.
+  float GetEstimatedRenderTime( vtkRenderer *ren,
+                                vtkVolume   *vol )
+    { return this->RetrieveRenderTime( ren, vol ); }
+  float GetEstimatedRenderTime( vtkRenderer *ren )
+    { return this->RetrieveRenderTime( ren ); }
+  
+
+  // Description:
+  // Set/Get the window / level applied to the final color.
+  // This allows brightness / contrast adjustments on the
+  // final image.
+  // window is the width of the window.
+  // level is the center of the window.
+  // Initial window value is 1.0
+  // Initial level value is 0.5
+  // window cannot be null but can be negative, this way
+  // values will be reversed.
+  // |window| can be larger than 1.0
+  // level can be any real value.
+  vtkSetMacro( FinalColorWindow, float );
+  vtkGetMacro( FinalColorWindow, float );
+  vtkSetMacro( FinalColorLevel,  float );
+  vtkGetMacro( FinalColorLevel,  float );
+
+  
+  // Here to be used by the mapper to tell the helper
+  // to flip the MIP comparison in order to support
+  // minimum intensity blending
+  vtkGetMacro( FlipMIPComparison, int );
   
 protected:
   vtkFixedPointVolumeRayCastMapper();
@@ -264,7 +323,8 @@ protected:
   float                        MinimumImageSampleDistance;
   float                        MaximumImageSampleDistance;
   int                          AutoAdjustSampleDistances;
-
+  int                          LockSampleDistanceToInputSpacing;
+  
   // Saved values used to restore 
   float                        OldSampleDistance;
   float                        OldImageSampleDistance;
@@ -284,6 +344,7 @@ protected:
   void CaptureZBuffer( vtkRenderer *ren );
   
   friend VTK_THREAD_RETURN_TYPE FixedPointVolumeRayCastMapper_CastRays( void *arg );
+  friend VTK_THREAD_RETURN_TYPE vtkFPVRCMSwitchOnDataType( void *arg );
   
   vtkMultiThreader  *Threader;
 
@@ -364,6 +425,9 @@ protected:
   
   int                        ShadingRequired;
   int                        GradientOpacityRequired;
+
+  vtkDataArray              *CurrentScalars;
+  vtkDataArray              *PreviousScalars;
   
   vtkRenderWindow           *RenderWindow;
   vtkVolume                 *Volume; 
@@ -424,7 +488,15 @@ protected:
   void            UpdateMinMaxVolume( vtkVolume *vol );
   void            FillInMaxGradientMagnitudes( int fullDim[3],
                                                int smallDim[3] );
+   
+  float FinalColorWindow;
+  float FinalColorLevel;
+
+  int FlipMIPComparison;
   
+  void ApplyFinalColorWindowLevel();
+  
+
 private:
   vtkFixedPointVolumeRayCastMapper(const vtkFixedPointVolumeRayCastMapper&);  // Not implemented.
   void operator=(const vtkFixedPointVolumeRayCastMapper&);  // Not implemented.
@@ -529,7 +601,7 @@ inline int vtkFixedPointVolumeRayCastMapper::CheckMinMaxVolumeFlag( unsigned int
 }
 
 inline int vtkFixedPointVolumeRayCastMapper::CheckMIPMinMaxVolumeFlag( unsigned int mmpos[3], int c, 
-                                                                       unsigned short maxIdx )
+                                                                       unsigned short maxIdx, int flip )
 {
   unsigned int offset = 
     this->MinMaxVolumeSize[3] * 
@@ -539,7 +611,14 @@ inline int vtkFixedPointVolumeRayCastMapper::CheckMIPMinMaxVolumeFlag( unsigned 
   
   if ( (*(this->MinMaxVolume + 3*offset + 2)&0x00ff) )
     {
-    return ( *(this->MinMaxVolume + 3*offset + 1) > maxIdx );
+    if (flip)
+      {
+      return ( *(this->MinMaxVolume + 3*offset) < maxIdx );
+      }
+    else
+      {
+      return ( *(this->MinMaxVolume + 3*offset + 1) > maxIdx );
+      }
     }
   else
     { 

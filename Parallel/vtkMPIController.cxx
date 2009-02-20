@@ -19,6 +19,10 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkMPI.h"
 
+#include "vtkSmartPointer.h"
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
 int vtkMPIController::Initialized = 0;
 char vtkMPIController::ProcessorName[MPI_MAX_PROCESSOR_NAME] = "";
 
@@ -31,7 +35,7 @@ public:
 
   void DisplayText(const char* t)
     {
-      if (this->Controller)
+      if (this->Controller && vtkMPIController::Initialized)
         {
         cout << "Process id: " << this->Controller->GetLocalProcessId()
              << " >> ";
@@ -65,9 +69,9 @@ void vtkMPIController::CreateOutputWindow()
   vtkOutputWindow::SetInstance(this->OutputWindow);
 }
 
-vtkCxxRevisionMacro(vtkMPIOutputWindow, "$Revision: 1.20 $");
+vtkCxxRevisionMacro(vtkMPIOutputWindow, "$Revision: 1.23 $");
 
-vtkCxxRevisionMacro(vtkMPIController, "$Revision: 1.20 $");
+vtkCxxRevisionMacro(vtkMPIController, "$Revision: 1.23 $");
 vtkStandardNewMacro(vtkMPIController);
 
 //----------------------------------------------------------------------------
@@ -104,44 +108,6 @@ void vtkMPIController::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Initialized: " << ( vtkMPIController::Initialized ? "(yes)" : "(no)" ) << endl;
 }
 
-// Set the number of processes and maximum number of processes
-// to the size obtained from MPI.
-int vtkMPIController::InitializeNumberOfProcesses()
-{
-  int err;
-
-  this->Modified();
-
-  vtkMPICommunicator* comm = (vtkMPICommunicator*)this->Communicator;
-  if ( (err = MPI_Comm_size(*(comm->MPIComm->Handle), 
-                            &(this->MaximumNumberOfProcesses))) 
-       != MPI_SUCCESS  )
-    {
-    char *msg = vtkMPIController::ErrorString(err);
-    vtkErrorMacro("MPI error occured: " << msg);
-    delete[] msg;
-    return 0;
-    }
-
-  if (this->MaximumNumberOfProcesses > MAX_PROCESSES)
-    {
-    vtkWarningMacro("Maximum of " << MAX_PROCESSES);
-    this->MaximumNumberOfProcesses = MAX_PROCESSES;
-    }
-  
-  this->NumberOfProcesses = this->MaximumNumberOfProcesses;
-  
-  if ( (err = MPI_Comm_rank(*(comm->MPIComm->Handle),&(this->LocalProcessId))) 
-       != MPI_SUCCESS)
-    {
-    char *msg = vtkMPIController::ErrorString(err);
-    vtkErrorMacro("MPI error occured: " << msg);
-    delete[] msg;
-    return 0;
-    }
-  return 1;
-}
-
 vtkMPICommunicator* vtkMPIController::WorldRMICommunicator=0;
 
 //----------------------------------------------------------------------------
@@ -161,7 +127,6 @@ void vtkMPIController::Initialize(int* argc, char*** argv,
     MPI_Init(argc, argv);
     }
   this->InitializeCommunicator(vtkMPICommunicator::GetWorldCommunicator());
-  this->InitializeNumberOfProcesses();
 
   int tmp;
   MPI_Get_processor_name(ProcessorName, &tmp);
@@ -228,10 +193,6 @@ void vtkMPIController::InitializeCommunicator(vtkMPICommunicator* comm)
       this->Communicator->Register(this); 
       } 
 
-    if (comm && comm->MPIComm->Handle)
-      {
-      this->InitializeNumberOfProcesses();
-      }
     this->Modified(); 
     }  
 
@@ -260,20 +221,6 @@ void vtkMPIController::SetCommunicator(vtkMPICommunicator* comm)
   this->InitializeRMICommunicator();
 }
 
-  
-void vtkMPIController::Barrier()
-{
-  vtkMPICommunicator* comm = (vtkMPICommunicator*)this->Communicator;
-  int err;
-  if ( (err = MPI_Barrier(*(comm->MPIComm->Handle)) ) 
-       != MPI_SUCCESS ) 
-    {
-    char *msg = vtkMPIController::ErrorString(err);
-    vtkErrorMacro("MPI error occured: " << msg);
-    delete[] msg;
-    }
-}
-
 //----------------------------------------------------------------------------
 // Execute the method set as the SingleMethod.
 void vtkMPIController::SingleMethodExecute()
@@ -284,7 +231,7 @@ void vtkMPIController::SingleMethodExecute()
     return;
     }
 
-  if (this->LocalProcessId < this->NumberOfProcesses)
+  if (this->GetLocalProcessId() < this->GetNumberOfProcesses())
     {
     if (this->SingleMethod)
       {
@@ -308,9 +255,9 @@ void vtkMPIController::MultipleMethodExecute()
     return;
     }
 
-  int i = this->LocalProcessId;
+  int i = this->GetLocalProcessId();
   
-  if (this->LocalProcessId < this->NumberOfProcesses)
+  if (i < this->GetNumberOfProcesses())
     {
     if (this->MultipleMethod[i])
       {
@@ -332,3 +279,22 @@ char* vtkMPIController::ErrorString(int err)
   return buffer;
 }
 
+//-----------------------------------------------------------------------------
+vtkMPIController *vtkMPIController::CreateSubController(vtkProcessGroup *group)
+{
+  VTK_CREATE(vtkMPICommunicator, subcomm);
+
+  if (!subcomm->Initialize(group)) return NULL;
+
+  // MPI is kind of funny in that in order to create a communicator from a
+  // subgroup of another communicator, it is a collective operation involving
+  // all of the processes in the original communicator, not just those belonging
+  // to the group.  In any process not part of the group, the communicator is
+  // created with MPI_COMM_NULL.  Check for that and return NULL ourselves,
+  // which is not really an error condition.
+  if (*(subcomm->GetMPIComm()->Handle) == MPI_COMM_NULL) return NULL;
+
+  vtkMPIController *controller = vtkMPIController::New();
+  controller->SetCommunicator(subcomm);
+  return controller;
+}

@@ -21,7 +21,7 @@
 #include "vtkTriangle.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkTriangleStrip, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkTriangleStrip, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkTriangleStrip);
 
 //----------------------------------------------------------------------------
@@ -49,6 +49,10 @@ int vtkTriangleStrip::EvaluatePosition(double x[3], double* closestPoint,
   double closest[3];
 
   pcoords[2] = 0.0;
+
+  activeWeights[0] = 0.0;
+  activeWeights[1] = 0.0;
+  activeWeights[2] = 0.0;
 
   return_status = 0;
   for (minDist2=VTK_DOUBLE_MAX,i=0; i<this->Points->GetNumberOfPoints()-2; i++)
@@ -333,6 +337,20 @@ int vtkTriangleStrip::GetParametricCenter(double pcoords[3])
 {
   pcoords[0] = pcoords[1] = 0.333333; pcoords[2] = 0.0;
   return ((this->Points->GetNumberOfPoints()-2) / 2);
+}
+
+//----------------------------------------------------------------------------
+void vtkTriangleStrip::InterpolateFunctions(double pcoords[3], double *weights)
+{
+  (void)pcoords;
+  (void)weights;
+}
+
+//----------------------------------------------------------------------------
+void vtkTriangleStrip::InterpolateDerivs(double pcoords[3], double *derivs)
+{
+  (void)pcoords;
+  (void)derivs;
 }
 
 //----------------------------------------------------------------------------

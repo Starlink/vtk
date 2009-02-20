@@ -36,7 +36,7 @@
 #include "vtkBox.h"
 #include "vtkImageActor.h"
 
-vtkCxxRevisionMacro(vtkPicker, "$Revision: 1.93 $");
+vtkCxxRevisionMacro(vtkPicker, "$Revision: 1.95 $");
 vtkStandardNewMacro(vtkPicker);
 
 // Construct object with initial tolerance of 1/40th of window. There are no
@@ -153,8 +153,10 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
   // coordinates. We need a depth value for z-buffer.
   //
   camera = renderer->GetActiveCamera();
-  camera->GetPosition((double *)cameraPos); cameraPos[3] = 1.0;
-  camera->GetFocalPoint((double *)cameraFP); cameraFP[3] = 1.0;
+  camera->GetPosition(cameraPos);
+  cameraPos[3] = 1.0;
+  camera->GetFocalPoint(cameraFP);
+  cameraFP[3] = 1.0;
 
   renderer->SetWorldPoint(cameraFP[0],cameraFP[1],cameraFP[2],cameraFP[3]);
   renderer->WorldToDisplay();
@@ -326,13 +328,13 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
       //  coordinates. 
       if ( pickable  &&  mapper != NULL )
         {
-        vtkMatrix4x4 *LastMatrix = path->GetLastNode()->GetMatrix();
-        if (LastMatrix == NULL)
+        vtkMatrix4x4 *lastMatrix = path->GetLastNode()->GetMatrix();
+        if (lastMatrix == NULL)
           {
           vtkErrorMacro (<< "Pick: Null matrix.");
           return 0;
           }
-        this->Transform->SetMatrix(LastMatrix);
+        this->Transform->SetMatrix(lastMatrix);
         this->Transform->Push();
         this->Transform->Inverse();
         this->Transform->GetScale(scale); //need to scale the tolerance
@@ -357,18 +359,18 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
         bounds[0] -= tol; bounds[1] += tol; 
         bounds[2] -= tol; bounds[3] += tol; 
         bounds[4] -= tol; bounds[5] += tol; 
-        if ( vtkBox::IntersectBox(bounds, (double *)p1Mapper, 
+        if ( vtkBox::IntersectBox(bounds, p1Mapper, 
                                   ray, hitPosition, t) )
           {
-          t = this->IntersectWithLine((double *)p1Mapper, (double *)p2Mapper, 
+          t = this->IntersectWithLine(p1Mapper, p2Mapper, 
                                       tol*0.333*(scale[0]+scale[1]+scale[2]), path, 
-                                      (vtkProp3D *)propCandidate, mapper);
+                                      static_cast<vtkProp3D *>(propCandidate), mapper);
           if ( t < VTK_DOUBLE_MAX )
             {
             picked = 1;
             if ( ! this->Prop3Ds->IsItemPresent(prop) )
               {
-              this->Prop3Ds->AddItem((vtkProp3D *)prop);
+              this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
               }
             this->PickedPositions->InsertNextPoint
               ((1.0 - t)*p1World[0] + t*p2World[0],
@@ -385,13 +387,13 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
         }
       else if ( pickable && imageActor )
         { // special case for imageActor, which has no mapper
-        vtkMatrix4x4 *LastMatrix = path->GetLastNode()->GetMatrix();
-        if (LastMatrix == NULL)
+        vtkMatrix4x4 *lastMatrix = path->GetLastNode()->GetMatrix();
+        if (lastMatrix == NULL)
           {
           vtkErrorMacro (<< "Pick: Null matrix.");
           return 0;
           }
-        this->Transform->SetMatrix(LastMatrix);
+        this->Transform->SetMatrix(lastMatrix);
         this->Transform->Push();
         this->Transform->Inverse();
 

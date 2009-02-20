@@ -129,6 +129,13 @@ public:
   vtkSetClampMacro(AttributesEncoding,int,VTK_ENCODING_NONE,VTK_ENCODING_UNKNOWN);
   vtkGetMacro(AttributesEncoding, int);
 
+  // Description:
+  // If you need the text inside XMLElements, turn IgnoreCharacterData off.
+  // This method will then be called when the file is parsed, and the text
+  // will be stored in each XMLDataElement. VTK XML Readers store the 
+  // information elsewhere, so the default is to ignore it.
+  virtual void CharacterDataHandler(const char* data, int length);
+
 protected:
   vtkXMLDataParser();
   ~vtkXMLDataParser();
@@ -138,8 +145,9 @@ protected:
   virtual int Parse(const char*, unsigned int);
 
   // Implement parsing methods.
-  void StartElement(const char* name, const char** atts);
-  void EndElement(const char*);
+  virtual void StartElement(const char* name, const char** atts);
+  virtual void EndElement(const char*);
+
   int ParsingComplete();
   int CheckPrimaryAttributes();
   void FindAppendedDataPosition();

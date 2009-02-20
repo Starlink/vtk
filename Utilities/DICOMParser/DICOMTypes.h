@@ -4,7 +4,7 @@
   Program:   DICOMParser
   Module:    $RCSfile: DICOMTypes.h,v $
   Language:  C++
-  Date:      $Date: 2005/07/26 20:02:22 $
+  Date:      $Date: 2005-07-26 20:02:22 $
   Version:   $Revision: 1.5 $
 
   Copyright (c) 2003 Matt Turek

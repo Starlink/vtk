@@ -29,7 +29,7 @@
 #include "vtkUnsignedLongArray.h"
 #include "vtkUnsignedShortArray.h"
 
-vtkCxxRevisionMacro(vtkPoints, "$Revision: 1.52 $");
+vtkCxxRevisionMacro(vtkPoints, "$Revision: 1.54 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -42,7 +42,11 @@ vtkPoints* vtkPoints::New(int dataType)
   vtkObject* ret = vtkObjectFactory::CreateInstance("vtkPoints");
   if(ret)
     {
-    return (vtkPoints*)ret;
+    if(dataType != VTK_FLOAT)
+      {
+      static_cast<vtkPoints*>(ret)->SetDataType(dataType);
+      }
+    return static_cast<vtkPoints*>(ret);
     }
   // If the factory was unable to create the object, then create it here.
   return new vtkPoints(dataType);

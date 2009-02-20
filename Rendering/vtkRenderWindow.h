@@ -16,15 +16,15 @@
 // .SECTION Description
 // vtkRenderWindow is an abstract object to specify the behavior of a
 // rendering window. A rendering window is a window in a graphical user
-// interface where renderers draw their images. Methods are provided to 
+// interface where renderers draw their images. Methods are provided to
 // synchronize the rendering process, set window size, and control double
 // buffering.  The window also allows rendering in stereo.  The interlaced
 // render stereo type is for output to a VRex stereo projector.  All of the
 // odd horizontal lines are from the left eye, and the even lines are from
-// the right eye.  The user has to make the render window aligned with the 
+// the right eye.  The user has to make the render window aligned with the
 // VRex projector, or the eye will be swapped.
 
-// .SECTION Caveats 
+// .SECTION Caveats
 // In VTK versions 4 and later, the vtkWindowToImageFilter class is
 // part of the canonical way to output an image of a window to a file
 // (replacing the obsolete SaveImageAsPPM method for vtkRenderWindows
@@ -41,6 +41,7 @@
 #include "vtkWindow.h"
 
 class vtkFloatArray;
+class vtkPainterDeviceAdapter;
 class vtkRenderWindowInteractor;
 class vtkRenderer;
 class vtkRendererCollection;
@@ -55,16 +56,39 @@ class vtkUnsignedCharArray;
 #define VTK_STEREO_DRESDEN      6
 #define VTK_STEREO_ANAGLYPH     7
 
-#define VTK_CURSOR_DEFAULT  0
-#define VTK_CURSOR_ARROW    1
-#define VTK_CURSOR_SIZENE   2
-#define VTK_CURSOR_SIZENW   3
-#define VTK_CURSOR_SIZESW   4
-#define VTK_CURSOR_SIZESE   5
-#define VTK_CURSOR_SIZENS   6
-#define VTK_CURSOR_SIZEWE   7
-#define VTK_CURSOR_SIZEALL  8
-#define VTK_CURSOR_HAND     9
+#define VTK_CURSOR_DEFAULT   0
+#define VTK_CURSOR_ARROW     1
+#define VTK_CURSOR_SIZENE    2
+#define VTK_CURSOR_SIZENW    3
+#define VTK_CURSOR_SIZESW    4
+#define VTK_CURSOR_SIZESE    5
+#define VTK_CURSOR_SIZENS    6
+#define VTK_CURSOR_SIZEWE    7
+#define VTK_CURSOR_SIZEALL   8
+#define VTK_CURSOR_HAND      9
+#define VTK_CURSOR_CROSSHAIR 10
+
+// Description:
+// This macro is used to print error message coming from the graphic library
+// (OpenGL for instance) used to actually implement the rendering algorithms.
+// It is only active in debug mode and has no cost in release mode.
+// In debug mode, if reports errors only if flag ReportGraphicError is true
+// on the render window (initial value is false).
+// Signature is:
+// void vtkGraphicErrorMacro(vtkRenderWindow *renderWindow,const char *message)
+#ifdef VTK_LEAN_AND_MEAN
+# define vtkGraphicErrorMacro(renderWindow,message)
+#else
+# define vtkGraphicErrorMacro(renderWindow,message)                     \
+  if(renderWindow->GetReportGraphicErrors())                            \
+    {                                                                   \
+    renderWindow->CheckGraphicError();                                  \
+    if(renderWindow->HasGraphicError())                                 \
+      {                                                                 \
+      vtkErrorMacro(<<message<<" "<<renderWindow->GetLastGraphicErrorString()); \
+      }                                                                 \
+    }
+#endif
 
 class VTK_RENDERING_EXPORT vtkRenderWindow : public vtkWindow
 {
@@ -73,8 +97,8 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Construct an instance of  vtkRenderWindow with its screen size 
-  // set to 300x300, borders turned on, positioned at (0,0), double 
+  // Construct an instance of  vtkRenderWindow with its screen size
+  // set to 300x300, borders turned on, positioned at (0,0), double
   // buffering turned on.
   static vtkRenderWindow *New();
 
@@ -99,18 +123,18 @@ public:
   vtkRendererCollection *GetRenderers() {return this->Renderers;};
 
   // Description:
-  // Ask each renderer owned by this RenderWindow to render its image and 
+  // Ask each renderer owned by this RenderWindow to render its image and
   // synchronize this process.
   virtual void Render();
 
   // Description:
   // Initialize the rendering process.
   virtual void Start() = 0;
-  
+
   // Description:
   // Finalize the rendering process.
   virtual void Finalize() = 0;
-  
+
   // Description:
   // A termination method performed at the end of the rendering process
   // to do things like swapping buffers (if necessary) or similar actions.
@@ -124,20 +148,20 @@ public:
   // Description:
   // Create an interactor to control renderers in this window. We need
   // to know what type of interactor to create, because we might be in
-  // X Windows or MS Windows. 
+  // X Windows or MS Windows.
   virtual vtkRenderWindowInteractor *MakeRenderWindowInteractor();
 
   // Description:
   // Hide or Show the mouse cursor, it is nice to be able to hide the
   // default cursor if you want VTK to display a 3D cursor instead.
-  // Set cursor position in window (note that (0,0) is the lower left 
+  // Set cursor position in window (note that (0,0) is the lower left
   // corner).
   virtual void HideCursor() = 0;
   virtual void ShowCursor() = 0;
   virtual void SetCursorPosition(int , int ) {};
 
   // Description:
-  // Change the shape of the cursor
+  // Change the shape of the cursor.
   vtkSetMacro(CurrentCursor,int);
   vtkGetMacro(CurrentCursor,int);
 
@@ -148,7 +172,7 @@ public:
   vtkBooleanMacro(FullScreen,int);
 
   // Description:
-  // Turn on/off window manager borders. Typically, you shouldn't turn the 
+  // Turn on/off window manager borders. Typically, you shouldn't turn the
   // borders off, because that bypasses the window manager and can cause
   // undesirable behavior.
   vtkSetMacro(Borders,int);
@@ -173,7 +197,7 @@ public:
   vtkSetMacro(AlphaBitPlanes, int);
   vtkGetMacro(AlphaBitPlanes, int);
   vtkBooleanMacro(AlphaBitPlanes, int);
-  
+
   // Description:
   // Turn on/off point smoothing. Default is off.
   // This must be applied before the first Render.
@@ -207,28 +231,28 @@ public:
   // mode is red-cyan.  Interlaced stereo mode produces a composite
   // image where horizontal lines alternate between left and right
   // views.  StereoLeft and StereoRight modes choose one or the other
-  // stereo view.  Dresden mode is yet another stereoscopic 
+  // stereo view.  Dresden mode is yet another stereoscopic
   // interleaving.
   vtkGetMacro(StereoType,int);
   vtkSetMacro(StereoType,int);
-  void SetStereoTypeToCrystalEyes() 
-    {this->SetStereoType(VTK_STEREO_CRYSTAL_EYES);};
-  void SetStereoTypeToRedBlue() 
-    {this->SetStereoType(VTK_STEREO_RED_BLUE);};
-  void SetStereoTypeToInterlaced() 
-    {this->SetStereoType(VTK_STEREO_INTERLACED);};
-  void SetStereoTypeToLeft() 
-    {this->SetStereoType(VTK_STEREO_LEFT);};
-  void SetStereoTypeToRight() 
-    {this->SetStereoType(VTK_STEREO_RIGHT);};
-  void SetStereoTypeToDresden() 
-    {this->SetStereoType(VTK_STEREO_DRESDEN);};  
-  void SetStereoTypeToAnaglyph() 
-    {this->SetStereoType(VTK_STEREO_ANAGLYPH);};
-  char *GetStereoTypeAsString();
+  void SetStereoTypeToCrystalEyes()
+    {this->SetStereoType(VTK_STEREO_CRYSTAL_EYES);}
+  void SetStereoTypeToRedBlue()
+    {this->SetStereoType(VTK_STEREO_RED_BLUE);}
+  void SetStereoTypeToInterlaced()
+    {this->SetStereoType(VTK_STEREO_INTERLACED);}
+  void SetStereoTypeToLeft()
+    {this->SetStereoType(VTK_STEREO_LEFT);}
+  void SetStereoTypeToRight()
+    {this->SetStereoType(VTK_STEREO_RIGHT);}
+  void SetStereoTypeToDresden()
+    {this->SetStereoType(VTK_STEREO_DRESDEN);}
+  void SetStereoTypeToAnaglyph()
+    {this->SetStereoType(VTK_STEREO_ANAGLYPH);}
+  const char *GetStereoTypeAsString();
 
   // Description:
-  // Update the system, if needed, due to stereo rendering. For some stereo 
+  // Update the system, if needed, due to stereo rendering. For some stereo
   // methods, subclasses might need to switch some hardware settings here.
   virtual void StereoUpdate();
 
@@ -244,11 +268,11 @@ public:
 
   //Description:
   // Set/get the anaglyph color saturation factor.  This number ranges from
-  // 0.0 to 1.0:  0.0 means that no color from the original object is 
+  // 0.0 to 1.0:  0.0 means that no color from the original object is
   // maintained, 1.0 means all of the color is maintained.  The default
   // value is 0.65.  Too much saturation can produce uncomfortable 3D
   // viewing because anaglyphs also use color to encode 3D.
-  vtkSetClampMacro(AnaglyphColorSaturation,float, 0.0, 1.0);
+  vtkSetClampMacro(AnaglyphColorSaturation,float, 0.0f, 1.0f);
   vtkGetMacro(AnaglyphColorSaturation,float);
 
   //Description:
@@ -272,25 +296,28 @@ public:
   // It is useful for changing properties that can't normally be changed
   // once the window is up.
   virtual void WindowRemap() = 0;
-  
+
   // Description:
-  // Turn on/off buffer swapping between images. 
+  // Turn on/off buffer swapping between images.
   vtkSetMacro(SwapBuffers,int);
   vtkGetMacro(SwapBuffers,int);
   vtkBooleanMacro(SwapBuffers,int);
-  
+
   // Description:
   // Set/Get the pixel data of an image, transmitted as RGBRGBRGB. The
-  // front argument indicates if the front buffer should be used or the back 
-  // buffer. It is the caller's responsibility to delete the resulting 
+  // front argument indicates if the front buffer should be used or the back
+  // buffer. It is the caller's responsibility to delete the resulting
   // array. It is very important to realize that the memory in this array
   // is organized from the bottom of the window to the top. The origin
   // of the screen is in the lower left corner. The y axis increases as
   // you go up the screen. So the storage of pixels is from left to right
   // and from bottom to top.
-  virtual int SetPixelData(int, int, int, int, unsigned char *,int) = 0;
-  virtual int SetPixelData(int, int, int, int, vtkUnsignedCharArray*,
-                           int ) = 0;
+  // (x,y) is any corner of the rectangle. (x2,y2) is its opposite corner on
+  // the diagonal.
+  virtual int SetPixelData(int x, int y, int x2, int y2, unsigned char *data,
+                           int front) = 0;
+  virtual int SetPixelData(int x, int y, int x2, int y2,
+                           vtkUnsignedCharArray *data, int front) = 0;
 
   // Description:
   // Same as Get/SetPixelData except that the image also contains an alpha
@@ -298,29 +325,42 @@ public:
   // float value. The "blend" parameter controls whether the SetRGBAPixelData
   // method blends the data with the previous contents of the frame buffer
   // or completely replaces the frame buffer data.
-  virtual float *GetRGBAPixelData(int ,int ,int ,int ,int ) = 0;
-  virtual int GetRGBAPixelData(int, int, int, int, int, vtkFloatArray* ) = 0;
-  virtual int SetRGBAPixelData(int ,int ,int ,int ,float *,int,
-                               int blend=0) = 0;
+  virtual float *GetRGBAPixelData(int x, int y, int x2, int y2, int front) = 0;
+  virtual int GetRGBAPixelData(int x, int y, int x2, int y2, int front,
+                               vtkFloatArray *data) = 0;
+  virtual int SetRGBAPixelData(int x, int y, int x2, int y2, float *,
+                               int front, int blend=0) = 0;
   virtual int SetRGBAPixelData(int, int, int, int, vtkFloatArray*,
                                int, int blend=0) = 0;
   virtual void ReleaseRGBAPixelData(float *data)=0;
-  virtual unsigned char *GetRGBACharPixelData(int ,int ,int ,int ,int ) = 0;
-  virtual int GetRGBACharPixelData(int ,int, int, int, int,
-                                   vtkUnsignedCharArray*) = 0;
-  virtual int SetRGBACharPixelData(int ,int ,int ,int ,unsigned char *, int,
+  virtual unsigned char *GetRGBACharPixelData(int x, int y, int x2, int y2,
+                                              int front) = 0;
+  virtual int GetRGBACharPixelData(int x, int y, int x2, int y2, int front,
+                                   vtkUnsignedCharArray *data) = 0;
+  virtual int SetRGBACharPixelData(int x,int y, int x2, int y2,
+                                   unsigned char *data, int front,
                                    int blend=0) = 0;
-  virtual int SetRGBACharPixelData(int, int, int, int,
-                                   vtkUnsignedCharArray *,
-                                   int, int blend=0) = 0;
+  virtual int SetRGBACharPixelData(int x, int y, int x2, int y2,
+                                   vtkUnsignedCharArray *data, int front,
+                                   int blend=0) = 0;
 
   // Description:
   // Set/Get the zbuffer data from the frame buffer.
-  virtual float *GetZbufferData(int, int, int, int ) = 0;
-  virtual int GetZbufferData( int, int, int, int, float*) = 0;
-  virtual int GetZbufferData( int, int, int, int, vtkFloatArray*) = 0;
-  virtual int SetZbufferData(int, int, int, int, float *) = 0;
-  virtual int SetZbufferData( int, int, int, int, vtkFloatArray * ) = 0;
+  // (x,y) is any corner of the rectangle. (x2,y2) is its opposite corner on
+  // the diagonal.
+  virtual float *GetZbufferData(int x, int y, int x2, int y2) = 0;
+  virtual int GetZbufferData(int x, int y, int x2, int y2, float *z) = 0;
+  virtual int GetZbufferData(int x, int y, int x2, int y2,
+                             vtkFloatArray *z) = 0;
+  virtual int SetZbufferData(int x, int y, int x2, int y2, float *z) = 0;
+  virtual int SetZbufferData(int x, int y, int x2, int y2,
+                             vtkFloatArray *z) = 0;
+  float GetZbufferDataAtPoint(int x, int y)
+    {
+    float value;
+    this->GetZbufferData(x, y, x, y, &value);
+    return value;
+    }
 
   // Description:
   // Set the number of frames for doing antialiasing. The default is
@@ -334,14 +374,14 @@ public:
   // Depending on how your scene is organized you can get away with as
   // few as four frames for focal depth or you might need thirty.
   // One thing to note is that if you are using focal depth frames,
-  // then you will not need many (if any) frames for antialiasing. 
+  // then you will not need many (if any) frames for antialiasing.
   vtkGetMacro(FDFrames,int);
   vtkSetMacro(FDFrames,int);
 
   // Description:
   // Set the number of sub frames for doing motion blur. The default is zero.
   // Once this is set greater than one, you will no longer see a new frame
-  // for every Render().  If you set this to five, you will need to do 
+  // for every Render().  If you set this to five, you will need to do
   // five Render() invocations before seeing the result. This isn't
   // very impressive unless something is changing between the Renders.
   // Changing this value may reset the current subframe count.
@@ -364,12 +404,12 @@ public:
   vtkGetMacro(IsPicking,int);
   vtkSetMacro(IsPicking,int);
   vtkBooleanMacro(IsPicking,int);
-  
+
   // Description:
   // Check to see if a mouse button has been pressed.  All other events
   // are ignored by this method.  Ideally, you want to abort the render
   // on any event which causes the DesiredUpdateRate to switch from
-  // a high-quality rate to a more interactive rate.  
+  // a high-quality rate to a more interactive rate.
   virtual int GetEventPending() = 0;
 
   // Description:
@@ -410,7 +450,7 @@ public:
   // This Method detects loops of RenderWindow<->Interactor,
   // so objects are freed properly.
   virtual void UnRegister(vtkObjectBase *o);
-  
+
   // Description:
   // Dummy stubs for vtkWindow API.
   virtual void SetDisplayId(void *) = 0;
@@ -427,7 +467,7 @@ public:
   virtual void SetParentInfo(char *) = 0;
 
   // Description:
-  // Make this the current window. 
+  // Make this the current window.
   virtual void MakeCurrent() = 0;
 
   // Description:
@@ -453,6 +493,48 @@ public:
   // precision are there in the zbuffer?
   virtual int GetDepthBufferSize() = 0;
 
+  // Description:
+  // Get the size of the color buffer.
+  // Returns 0 if not able to determine otherwise sets R G B and A into buffer.
+  virtual int GetColorBufferSizes(int *rgba) = 0;
+
+  // Description:
+  // Get the vtkPainterDeviceAdapter which can be used to paint on
+  // this render window.
+  vtkGetObjectMacro(PainterDeviceAdapter, vtkPainterDeviceAdapter);
+
+  // Description:
+  // Set / Get the number of multisamples to use for hardware antialiasing.
+  vtkSetMacro(MultiSamples,int);
+  vtkGetMacro(MultiSamples,int);
+
+  // Description:
+  // Set / Get the availability of the stencil buffer.
+  vtkSetMacro(StencilCapable, int);
+  vtkGetMacro(StencilCapable, int);
+  vtkBooleanMacro(StencilCapable, int);
+  
+  // Description:
+  // Turn on/off report of graphic errors. Initial value is false (off).
+  // This flag is used by vtkGraphicErrorMacro.
+  vtkSetMacro(ReportGraphicErrors,int);
+  vtkGetMacro(ReportGraphicErrors,int);
+  vtkBooleanMacro(ReportGraphicErrors,int);
+  
+  // Description:
+  // Update graphic error status, regardless of ReportGraphicErrors flag.
+  // It means this method can be used in any context and is not restricted to
+  // debug mode.
+  virtual void CheckGraphicError()=0;
+  
+  // Description:
+  // Return the last graphic error status. Initial value is false.
+  virtual int HasGraphicError()=0;
+  
+  // Description:
+  // Return a string matching the last graphic error status.
+  virtual const char *GetLastGraphicErrorString()=0;
+  
 protected:
   vtkRenderWindow();
   ~vtkRenderWindow();
@@ -461,6 +543,7 @@ protected:
   virtual void DoFDRender();
   virtual void DoAARender();
 
+  vtkPainterDeviceAdapter* PainterDeviceAdapter;
   vtkRendererCollection *Renderers;
   int Borders;
   int FullScreen;
@@ -493,33 +576,21 @@ protected:
   int IsPicking;
   float AnaglyphColorSaturation;
   int AnaglyphColorMask[2];
+  int MultiSamples;
+  int StencilCapable;
+  
+  // Description:
+  // Boolean flag telling if errors from the graphic library have to be
+  // reported by vtkGraphicErrorMacro. Initial value is false (off).
+  int ReportGraphicErrors;
 
+  // Description:
+  // The universal time since the last abort check occurred.
+  double AbortCheckTime;
+  
 private:
   vtkRenderWindow(const vtkRenderWindow&);  // Not implemented.
   void operator=(const vtkRenderWindow&);  // Not implemented.
 };
-
-// Description:
-// Return the stereo type as a character string.
-inline char *vtkRenderWindow::GetStereoTypeAsString(void)
-{
-  switch ( this->StereoType )
-    {
-    case VTK_STEREO_CRYSTAL_EYES:
-      return (char *)"CrystalEyes";
-    case VTK_STEREO_RED_BLUE:
-      return (char *)"RedBlue";
-    case VTK_STEREO_LEFT:
-      return (char *)"Left";
-    case VTK_STEREO_RIGHT:
-      return (char *)"Right";
-    case VTK_STEREO_DRESDEN:
-      return (char *)"DresdenDisplay";
-    case VTK_STEREO_ANAGLYPH:
-      return (char *)"Anaglyph";
-    default:
-      return (char *)"";
-    }
-}
 
 #endif

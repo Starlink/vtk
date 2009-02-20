@@ -38,9 +38,8 @@
 // normals.
 
 // .SECTION See Also
-// vtkMarchingContourFilter vtkKitwareContourFilter
-// vtkMarchingCubes vtkSliceCubes vtkDividingCubes vtkMarchingSquares
-// vtkImageMarchingCubes
+// vtkMarchingContourFilter vtkMarchingCubes vtkSliceCubes
+// vtkMarchingSquares vtkImageMarchingCubes
 
 #ifndef __vtkContourFilter_h
 #define __vtkContourFilter_h
@@ -135,6 +134,12 @@ public:
   // Currently this feature only works if the input is a vtkImageData.
   void SetArrayComponent( int );
   int  GetArrayComponent();
+
+  // Description:
+  // see vtkAlgorithm for details
+  virtual int ProcessRequest(vtkInformation*,
+                             vtkInformationVector**,
+                             vtkInformationVector*);
 
 protected:
   vtkContourFilter();

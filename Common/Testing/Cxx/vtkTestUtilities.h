@@ -24,6 +24,10 @@
 
 #include "vtkSystemIncludes.h"
 
+#if defined( _MSC_VER )      /* Visual C++ (and Intel C++) */
+#pragma warning( disable : 4996 ) // 'function': was declared deprecated
+#endif
+
 struct vtkTestUtilities
 {
   // Description:
@@ -87,9 +91,9 @@ char* vtkTestUtilities::ExpandDataFileName(int argc, char* argv[],
 }
 
 inline
-char* vtkTestUtilities::GetArgOrEnvOrDefault(const char* arg, 
-                                             int argc, char* argv[], 
-                                             const char* env, 
+char* vtkTestUtilities::GetArgOrEnvOrDefault(const char* arg,
+                                             int argc, char* argv[],
+                                             const char* env,
                                              const char *def)
 {
   int index = -1;
@@ -104,12 +108,12 @@ char* vtkTestUtilities::GetArgOrEnvOrDefault(const char* arg,
 
   char* value;
 
-  if (index != -1) 
+  if (index != -1)
     {
     value = new char[strlen(argv[index]) + 1];
     strcpy(value, argv[index]);
     }
-  else 
+  else
     {
     char *foundenv = getenv(env);
     if (foundenv)
@@ -117,15 +121,19 @@ char* vtkTestUtilities::GetArgOrEnvOrDefault(const char* arg,
       value = new char[strlen(foundenv) + 1];
       strcpy(value, foundenv);
       }
-    else
+    else if (def)
       {
       value = new char[strlen(def) + 1];
       strcpy(value, def);
       }
+    else
+      {
+      value = NULL;
+      }
     }
-  
+
   return value;
-} 
+}
 
 inline
 char* vtkTestUtilities::ExpandFileNameWithArgOrEnvOrDefault(const char* arg, 
@@ -146,7 +154,7 @@ char* vtkTestUtilities::ExpandFileNameWithArgOrEnvOrDefault(const char* arg,
     fullName = new char[strlen(value) + strlen(fname) + 2 + (slash ? 1 : 0)];
     fullName[0] = 0;
     strcat(fullName, value);
-    int len = static_cast<int>(strlen(fullName));
+    size_t len = strlen(fullName);
     fullName[len] = '/';
     fullName[len+1] = 0;
     strcat(fullName, fname);

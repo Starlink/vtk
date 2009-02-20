@@ -38,7 +38,7 @@
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper2D, "$Revision: 1.55 $");
+vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper2D, "$Revision: 1.58.2.1 $");
 vtkStandardNewMacro(vtkOpenGLPolyDataMapper2D);
 #endif
 
@@ -46,7 +46,7 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
                                               vtkActor2D* actor)
 {
   int            numPts;
-  vtkPolyData    *input= (vtkPolyData *)this->GetInput();
+  vtkPolyData    *input=static_cast<vtkPolyData *>(this->GetInput());
   int            j;
   vtkPoints      *p, *displayPts;
   vtkCellArray   *aPrim;
@@ -61,6 +61,7 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   vtkPlane           *plane;
   int                 i,numClipPlanes;
   double              planeEquation[4];
+  vtkDataArray*  t = 0;
 
   vtkDebugMacro (<< "vtkOpenGLPolyDataMapper2D::Render");
 
@@ -84,6 +85,18 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   if ( this->LookupTable == NULL )
     {
     this->CreateDefaultLookupTable();
+    }
+
+  // Texture and color by texture
+  t = input->GetPointData()->GetTCoords();
+  if ( t ) 
+    {
+    int tDim = t->GetNumberOfComponents();
+    if (tDim != 2)
+      {
+      vtkDebugMacro(<< "Currently only 2d textures are supported.\n");
+      t = 0;
+      }
     }
 
   // if something has changed regenrate colors and display lists
@@ -129,10 +142,11 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   
   // Set up the font color from the text actor
   double*  actorColor = actor->GetProperty()->GetColor();
-  color[0] = (unsigned char) (actorColor[0] * 255.0);
-  color[1] = (unsigned char) (actorColor[1] * 255.0);
-  color[2] = (unsigned char) (actorColor[2] * 255.0);
-  color[3] = (unsigned char) (255.0*actor->GetProperty()->GetOpacity());
+  color[0] = static_cast<unsigned char>(actorColor[0] * 255.0);
+  color[1] = static_cast<unsigned char>(actorColor[1] * 255.0);
+  color[2] = static_cast<unsigned char>(actorColor[2] * 255.0);
+  color[3] = static_cast<unsigned char>(
+    255.0*actor->GetProperty()->GetOpacity());
 
   // Transform the points, if necessary
   p = input->GetPoints();
@@ -173,16 +187,22 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   if(viewport->GetIsPicking())
     {
     vtkgluPickMatrix(viewport->GetPickX(), viewport->GetPickY(),
-                     1, 1, viewport->GetOrigin(), viewport->GetSize());
+                     viewport->GetPickWidth(),
+                     viewport->GetPickHeight(),
+                     viewport->GetOrigin(), viewport->GetSize());
     }
   
   glMatrixMode( GL_MODELVIEW );
   glPushMatrix();
   glLoadIdentity();
 
-  glDisable( GL_TEXTURE_2D );
+  if ( ! t)
+    {
+    glDisable( GL_TEXTURE_2D );
+    }
   glDisable( GL_LIGHTING );
-  
+   
+    
   // Assume we want to do Zbuffering for now.
   // we may turn this off later
   glDepthMask(GL_TRUE);
@@ -224,12 +244,12 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
 
   for (i = 0; i < numClipPlanes; i++)
     {
-    glEnable((GLenum)(GL_CLIP_PLANE0+i));
+    glEnable(static_cast<GLenum>(GL_CLIP_PLANE0+i));
     }
 
   for (i = 0; i < numClipPlanes; i++)
     {
-    plane = (vtkPlane *)clipPlanes->GetItemAsObject(i);
+    plane = static_cast<vtkPlane *>(clipPlanes->GetItemAsObject(i));
 
     planeEquation[0] = plane->GetNormal()[0];
     planeEquation[1] = plane->GetNormal()[1];
@@ -237,7 +257,7 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
     planeEquation[3] = -(planeEquation[0]*plane->GetOrigin()[0]+
                          planeEquation[1]*plane->GetOrigin()[1]+
                          planeEquation[2]*plane->GetOrigin()[2]);
-    glClipPlane((GLenum)(GL_CLIP_PLANE0+i),planeEquation);
+    glClipPlane(static_cast<GLenum>(GL_CLIP_PLANE0+i),planeEquation);
     }
 
   // Set the PointSize
@@ -262,6 +282,10 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
           }
         glColor4ubv(rgba);
         }
+      if (t)
+        {
+        glTexCoord2dv(t->GetTuple(pts[j]));
+        }  
       // this is done to work around an OpenGL bug, otherwise we could just
       // call glVertex2dv
       dptr = p->GetPoint(pts[j]);
@@ -317,6 +341,10 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
           }
         glColor4ubv(rgba);
         }
+      if (t)
+        {
+        glTexCoord2dv(t->GetTuple(pts[j]));
+        }  
       // this is done to work around an OpenGL bug, otherwise we could just
       // call glVertex2dv
       dptr = p->GetPoint(pts[j]);
@@ -343,6 +371,10 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
           }
         glColor4ubv(rgba);
         }
+      if (t)
+        {
+        glTexCoord2dv(t->GetTuple(pts[j]));
+        }  
       // this is done to work around an OpenGL bug, otherwise we could just
       // call glVertex2dv
       dptr = p->GetPoint(pts[j]);
@@ -358,7 +390,7 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
 
   for (i = 0; i < numClipPlanes; i++)
     {
-    glDisable((GLenum)(GL_CLIP_PLANE0+i));
+    glDisable(static_cast<GLenum>(GL_CLIP_PLANE0+i));
     }
 
   // push a 2D matrix on the stack
@@ -370,6 +402,7 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   
   // Turn it back on in case we've turned it off
   glDepthMask( GL_TRUE );
+  glDisable( GL_TEXTURE_2D );
 }
   
 //----------------------------------------------------------------------------

@@ -2,7 +2,9 @@
  *  Copyright 1996, University Corporation for Atmospheric Research
  *  See netcdf/COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: ffio.c,v 1.1 2005/07/15 21:56:38 andy Exp $ */
+/* $Id: ffio.c,v 1.5 2007-08-28 11:11:13 dcthomp Exp $ */
+/* addition by O. Heudecker, AWI-Bremerhaven, 12.3.1998 */
+/* added correction by John Sheldon and Hans Vahlenkamp 15.4.1998*/
 
 #include "ncconfig.h"
 #include <assert.h>
@@ -16,6 +18,8 @@
 #include <ffio.h>
 #include <unistd.h>
 #include <string.h>
+/* Insertion by O. R. Heudecker, AWI-Bremerhaven 12.3.98 (1 line)*/
+#include <fortran.h>
 
 #include "ncio.h"
 #include "fbits.h"
@@ -44,8 +48,13 @@ blksize(int fd)
   struct ffsw sw;
   if (fffcntl(fd, FC_STAT, &sb, &sw) > -1)
   {
+#ifdef __crayx1
+    if(sb.st_blksize > 0)
+      return (size_t) sb.st_blksize;
+#else
     if(sb.st_oblksize > 0)
       return (size_t) sb.st_oblksize;
+#endif
   }
   /* else, silent in the face of error */
   return (size_t) 32768;
@@ -81,6 +90,37 @@ fgrow(const int fd, const off_t len)
   return ENOERR;
 }
 
+
+/*
+ * Sortof like ftruncate, except won't make the file shorter.  Differs
+ * from fgrow by only writing one byte at designated seek position, if
+ * needed.
+ */
+static int
+fgrow2(const int fd, const off_t len)
+{
+  struct ffc_stat_s sb;
+  struct ffsw sw;
+  if (fffcntl(fd, FC_STAT, &sb, &sw) < 0)
+    return errno;
+  if (len <= sb.st_size)
+    return ENOERR;
+  {
+      const char dumb = 0;
+      /* we don't use ftruncate() due to problem with FAT32 file systems */
+      /* cache current position */
+      const off_t pos = ffseek(fd, 0, SEEK_CUR);
+      if(pos < 0)
+    return errno;
+      if (ffseek(fd, len-1, SEEK_SET) < 0)
+    return errno;
+      if(ffwrite(fd, (void *)&dumb, sizeof(dumb)) < 0)
+    return errno;
+      if (ffseek(fd, pos, SEEK_SET) < 0)
+    return errno;
+  }
+  return ENOERR;
+}
 /* End OS */
 /* Begin ffio */
 
@@ -155,7 +195,7 @@ ffio_pgin(ncio *const nciop,
 typedef struct ncio_ffio {
   off_t pos;
   /* buffer */
-  off_t  bf_offset; 
+  off_t bf_offset; 
   size_t  bf_extent;
   size_t  bf_cnt;
   void  *bf_base;
@@ -209,7 +249,6 @@ ncio_ffio_get(ncio *const nciop,
 
   assert(extent != 0);
   assert(extent < X_INT_MAX); /* sanity check */
-  assert(offset < X_INT_MAX); /* sanity check */
 
   assert(ffp->bf_cnt == 0);
 
@@ -278,7 +317,7 @@ ncio_ffio_move(ncio *const nciop, off_t to, off_t from,
       size_t nbytes, int rflags)
 {
   int status = ENOERR;
-  off_t lower = from;  
+  off_t lower = from; 
   off_t upper = to;
   char *base;
   size_t diff = upper - lower;
@@ -292,7 +331,7 @@ ncio_ffio_move(ncio *const nciop, off_t to, off_t from,
   if(to > from)
   {
     /* growing */
-    lower = from;  
+    lower = from; 
     upper = to;
   }
   else
@@ -321,11 +360,44 @@ ncio_ffio_move(ncio *const nciop, off_t to, off_t from,
   return status;
 }
 
+#ifdef NOFFFLUSH
+/* ncio_ffio_sync_noffflush is only needed if the FFIO global layer is
+ * used, because it currently has a bug that causes the PEs to hang
+ * RKO 06/26/98
+ */
+static int
+ncio_ffio_sync_noffflush(ncio *const nciop)
+{
+  struct ffc_stat_s si; /* for call to fffcntl() */
+  struct ffsw ffstatus; /* to return ffsw.sw_error */
+  /* run some innocuous ffio routine to get if any errno */
+  if(fffcntl(nciop->fd, FC_STAT, &si, &ffstatus) < 0)
+    return ffstatus.sw_error;
+  return ENOERR;
+}
+/* this tests to see if the global FFIO layer is being called for
+ * returns ~0 if it is, else returns 0
+ */
+static int
+ncio_ffio_global_test(const char *ControlString)
+{
+  if (strstr(ControlString,"global") != (char *) NULL) {
+    return ~0;
+  } else {
+    return 0;
+  }
+}
+#endif
 
 static int
 ncio_ffio_sync(ncio *const nciop)
 {
+#ifdef __crayx1
+  struct ffsw stat;
+  if(ffflush(nciop->fd,&stat) < 0)
+#else
   if(ffflush(nciop->fd) < 0)
+#endif
     return errno;
   return ENOERR;
 }
@@ -439,6 +511,85 @@ ncio_new(const char *path, int ioflags)
   return nciop;
 }
 
+/* put all the FFIO assign specific code here
+ * returns a pointer to an internal static char location
+ * which may change when the function is called again
+ * if the returned pointer is NULL this indicates that an error occured
+ * check errno for the netCDF error value
+ */
+/* prototype fortran subroutines */
+#ifdef __crayx1
+void ASNQFILE(const char *filename, const char *attribute, int *istat, int flen, int alen);
+void ASNFILE(const char *filename, const char *attribute, int *istat, int flen, int alen);
+#else
+void ASNQFILE(_fcd filename, _fcd attribute, int *istat);
+void ASNFILE(_fcd filename, _fcd attribute, int *istat);
+#endif
+
+#define BUFLEN 256
+static const char *
+ncio_ffio_assign(const char *filename) {
+  static char buffer[BUFLEN];
+  int istat;
+#ifndef __crayx1
+  _fcd fnp, fbp;
+#endif
+  char *envstr;
+  char *xtra_assign;
+  char emptystr='\0';
+
+/* put things into known states */
+  memset(buffer,'\0',BUFLEN);
+  errno = ENOERR;
+
+/* set up Fortran character pointers */
+#ifdef __crayx1
+  ASNQFILE(filename, buffer, &istat, strlen(filename)+1, BUFLEN);
+#else
+  fnp = _cptofcd((char *)filename, strlen(filename));
+  fbp = _cptofcd(buffer, BUFLEN);
+
+/* see if the user has "assigned" to this file */
+  ASNQFILE(fnp, fbp, &istat);
+#endif
+  if (istat == 0) { /* user has already specified an assign */
+    return buffer;
+  } else if (istat > 0 || istat < -1) { /* error occured */
+    errno = EINVAL;
+    return (const char *) NULL;
+  } /* istat = -1 -> no assign for file */
+  envstr = getenv("NETCDF_FFIOSPEC");
+  if(envstr == (char *) NULL) {
+     envstr = "bufa:336:2";   /* this should be macroized */
+  }
+  
+  /* Insertion by Olaf Heudecker, AWI-Bremerhaven, 12.8.1998
+     to allow more versatile FFIO-assigns */
+  /* this is unnecessary and could have been included
+   * into the NETCDF_FFIOSPEC environment variable */
+  xtra_assign = getenv("NETCDF_XFFIOSPEC");
+  if(xtra_assign == (char *) NULL) {
+    xtra_assign=&emptystr;
+  }
+  if (strlen(envstr)+strlen(xtra_assign) + 4 > BUFLEN) {
+  /* Error: AssignCommand too long */
+    errno=E2BIG;
+    return (const char *) NULL;
+  }
+  (void) sprintf(buffer,"-F %s %s", envstr,xtra_assign);
+#ifdef __crayx1
+  ASNFILE(filename, buffer, &istat, strlen(filename)+1, strlen(buffer)+1);
+#else
+  fbp = _cptofcd(buffer, strlen(buffer));
+  ASNFILE(fnp, fbp, &istat);
+#endif
+  if (istat == 0) { /* success */
+    return buffer;
+  } else {    /* error */
+    errno = EINVAL;
+    return (const char *) NULL;
+  }
+}
 
 /* Public below this point */
 
@@ -453,7 +604,7 @@ ncio_create(const char *path, int ioflags,
   ncio **nciopp, void **const igetvpp)
 {
   ncio *nciop;
-  char *ControlString;
+  const char *ControlString;
   int oflags = (O_RDWR|O_CREAT|O_TRUNC);
   int fd;
   int status;
@@ -471,17 +622,27 @@ ncio_create(const char *path, int ioflags,
   if(nciop == NULL)
     return ENOMEM;
 
-  /* TODO: use *sizehintp for input? */
-  ControlString = getenv("NETCDF_FFIOSPEC");
-  if(ControlString == NULL)
-  {
-     ControlString="bufa:336:2";
+  if ((ControlString = ncio_ffio_assign(path)) == (const char *)NULL) {
+    /* an error occured - just punt */
+    status = errno;
+    goto unwind_new;
   }
-
+#ifdef NOFFFLUSH
+  /* test whether the global layer is being called for
+   * this file ... if so then can't call FFIO ffflush()
+   * RKO 06/26/98
+   */
+  if (strstr(ControlString,"global") != (char *) NULL) {
+    /* use no ffflush version */
+    *((ncio_syncfunc **)&nciop->sync)
+      = ncio_ffio_sync_noffflush;
+  }
+#endif
   if(fIsSet(ioflags, NC_NOCLOBBER))
     fSet(oflags, O_EXCL);
 
-  fd = ffopens(path, oflags, 0666, 0, &stat, ControlString);
+  /* Orig: fd = ffopens(path, oflags, 0666, 0, &stat, ControlString); */
+  fd = ffopen(path, oflags, 0666, 0, &stat);
   if(fd < 0)
   {
     status = errno;
@@ -540,7 +701,7 @@ ncio_open(const char *path,
   ncio **nciopp, void **const igetvpp)
 {
   ncio *nciop;
-  char *ControlString;
+  const char *ControlString;
   int oflags = fIsSet(ioflags, NC_WRITE) ? O_RDWR : O_RDONLY;
   int fd;
   int status;
@@ -553,14 +714,26 @@ ncio_open(const char *path,
   if(nciop == NULL)
     return ENOMEM;
 
-  /* TODO: use *sizehintp for input? */
-  ControlString = getenv("NETCDF_FFIOSPEC");
-  if(ControlString == NULL)
-  {
-     ControlString="bufa:336:2";
+  if ((ControlString = ncio_ffio_assign(path)) == (const char *)NULL) {
+    /* an error occured - just punt */
+    status = errno;
+    goto unwind_new;
   }
+#ifdef NOFFFLUSH
+  /* test whether the global layer is being called for
+   * this file ... if so then can't call FFIO ffflush()
+   * RKO 06/26/98
+   */
+  if (strstr(ControlString,"global") != (char *) NULL) {
+    /* use no ffflush version */
+    *((ncio_syncfunc **)&nciop->sync)
+      = ncio_ffio_sync_noffflush;
+  }
+#endif
 
-  fd = ffopens(path, oflags, 0, 0, &stat, ControlString);
+  /* Orig: fd = ffopens(path, oflags, 0, 0, &stat, ControlString); */
+  fd = ffopen(path, oflags, 0, 0, &stat);
+
   if(fd < 0)
   {
     status = errno;
@@ -604,9 +777,67 @@ unwind_new:
 }
 
 
+/* 
+ * Get file size in bytes.  
+ * Is use of ffseek() really necessary, or could we use standard fstat() call
+ * and get st_size member?
+ */
+int
+ncio_filesize(ncio *nciop, off_t *filesizep)
+{
+    off_t filesize, current, reset;
+
+    if(nciop == NULL)
+  return EINVAL;
+
+    current = ffseek(nciop->fd, 0, SEEK_CUR);  /* save current */
+    *filesizep = ffseek(nciop->fd, 0, SEEK_END); /* get size */
+    reset = ffseek(nciop->fd, current, SEEK_SET); /* reset */ 
+
+    if(reset != current)
+  return EINVAL;
+    return ENOERR;
+}
+
+
+/*
+ * Sync any changes to disk, then extend file so its size is length.
+ * This is only intended to be called before close, if the file is
+ * open for writing and the actual size does not match the calculated
+ * size, perhaps as the result of having been previously written in
+ * NOFILL mode.
+ */
+int
+ncio_pad_length(ncio *nciop, off_t length)
+{
+  int status = ENOERR;
+
+  if(nciop == NULL)
+    return EINVAL;
+
+  if(!fIsSet(nciop->ioflags, NC_WRITE))
+          return EPERM; /* attempt to write readonly file */
+
+  status = nciop->sync(nciop);
+  if(status != ENOERR)
+          return status;
+
+  status = fgrow2(nciop->fd, length);
+  if(status != ENOERR)
+          return errno;
+  return ENOERR;
+}
+
+
 int 
 ncio_close(ncio *nciop, int doUnlink)
 {
+  /*
+         * TODO: I believe this function is lacking the de-assignment of the
+         * Fortran LUN assigned by ASNFILE in ncio_ffio_assign(...) -- SRE
+         * 2002-07-10.
+   */
+
   int status = ENOERR;
 
   if(nciop == NULL)

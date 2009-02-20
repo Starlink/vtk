@@ -13,7 +13,7 @@
 
 =========================================================================*/
 // .NAME vtkStructuredVisibilityConstraint - helper object to manage the
-// visibility of points and cells 
+// visibility of points and cells
 // .SECTION Description
 // vtkStructuredVisibilityConstraint is a general class to manage
 // a list of points/cell marked as invalid or invisible. Currently,
@@ -30,7 +30,7 @@
 
 #include "vtkUnsignedCharArray.h" // Needed for inline methods.
 
-class VTK_COMMON_EXPORT vtkStructuredVisibilityConstraint : public vtkObject 
+class VTK_COMMON_EXPORT vtkStructuredVisibilityConstraint : public vtkObject
 {
 public:
   static vtkStructuredVisibilityConstraint *New();
@@ -73,13 +73,13 @@ public:
   void ShallowCopy(vtkStructuredVisibilityConstraint* src);
 
   // Description:
-  // Copies the dimensions, the visibility array 
+  // Copies the dimensions, the visibility array
   // and the initialized flag.
   void DeepCopy(vtkStructuredVisibilityConstraint* src);
 
   // Description:
   // Returns 0 if there is no visibility array (all cells/points
-  // are visibile), 0 otherwise.
+  // are visible), 0 otherwise.
   unsigned char IsConstrained()
     {
       return this->VisibilityById ? 1 : 0;
@@ -118,7 +118,7 @@ inline void vtkStructuredVisibilityConstraint::Blank(vtkIdType id)
     {
     this->VisibilityById = vtkUnsignedCharArray::New();
     vis = this->VisibilityById;
-    this->VisibilityById->Allocate(this->NumberOfIds);
+    this->VisibilityById->SetNumberOfTuples(this->NumberOfIds);
     for (int i=0; i<this->NumberOfIds; ++i)
       {
       this->VisibilityById->SetValue(i, 1);
@@ -149,9 +149,11 @@ inline void vtkStructuredVisibilityConstraint::Initialize(int dims[3])
     {
     this->Dimensions[i] = dims[i];
     }
-  this->NumberOfIds = dims[0]*dims[1]*dims[2];
+  this->NumberOfIds = static_cast<vtkIdType>(dims[0])*
+                      static_cast<vtkIdType>(dims[1])*
+                      static_cast<vtkIdType>(dims[2]);
   this->Initialized = 1;
 }
 
-
 #endif
+

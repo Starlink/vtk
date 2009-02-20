@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994 Sandia Corporation. Under the terms of Contract
+ * Copyright (c) 2005 Sandia Corporation. Under the terms of Contract
  * DE-AC04-94AL85000 with Sandia Corporation, the U.S. Governement
  * retains certain rights in this software.
  * 
@@ -53,7 +53,7 @@
 *
 * revision history - 
 *
-*  $Id: expinf.c,v 1.1 2005/07/17 15:44:00 andy Exp $
+*  $Id: expinf.c,v 1.3 2008-04-22 21:14:53 david.cole Exp $
 *
 *****************************************************************************/
 
@@ -61,7 +61,7 @@
 #include "exodusII_int.h"
 #include <string.h>
 
-/*
+/*!
  * writes information records to the database
  */
 
@@ -165,7 +165,7 @@ int ex_put_info (int   exoid,
        start[1] = 0;
 
        count[0] = 1;
-       count[1] = strlen(info[i]) + 1;
+       count[1] = (long)strlen(info[i]) + 1;
 
        if (ncvarput (exoid, varid, start, count, (void*) info[i]) == -1)
        {

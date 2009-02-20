@@ -1,15 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCarbonRenderWindow.cxx,v $
+Program:   Visualization Toolkit
+Module:    $RCSfile: vtkCarbonRenderWindow.cxx,v $
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 #include "vtkCarbonRenderWindow.h"
@@ -28,8 +28,26 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCarbonRenderWindow, "$Revision: 1.39 $");
+//----------------------------------------------------------------------------
+vtkCxxRevisionMacro(vtkCarbonRenderWindow, "$Revision: 1.70 $");
 vtkStandardNewMacro(vtkCarbonRenderWindow);
+
+//----------------------------------------------------------------------------
+#include <AvailabilityMacros.h>
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1030
+enum
+{
+  kEventControlVisibilityChanged = 157
+};
+#endif
+
+//----------------------------------------------------------------------------
+// At runtime, AGL_MULTISAMPLE is available on Mac OS X 10.3 and later,
+// however the #define was not added until the 10.3.9 SDK, so we define it
+// here if it isn't already defined
+#ifndef AGL_MULTISAMPLE
+  #define AGL_MULTISAMPLE 59
+#endif
 
 //----------------------------------------------------------------------------
 // Dump agl errors to string, return error code
@@ -51,28 +69,28 @@ OSStatus glReportError ()
 {
   GLenum err = glGetError();
   switch (err)
-  {
-  case GL_NO_ERROR:
-    break;
-  case GL_INVALID_ENUM:
-    cout << "GL Error: Invalid enumeration\n";
-    break;
-  case GL_INVALID_VALUE:
-    cout << "GL Error: Invalid value\n";
-    break;
-  case GL_INVALID_OPERATION:
-    cout << "GL Error: Invalid operation\n";
-    break;
-  case GL_STACK_OVERFLOW:
-    cout << "GL Error: Stack overflow\n";
-    break;
-  case GL_STACK_UNDERFLOW:
-    cout << "GL Error: Stack underflow\n";
-    break;
-  case GL_OUT_OF_MEMORY:
-    cout << "GL Error: Out of memory\n";
-    break;
-  }
+    {
+    case GL_NO_ERROR:
+      break;
+    case GL_INVALID_ENUM:
+      cout << "GL Error: Invalid enumeration\n";
+      break;
+    case GL_INVALID_VALUE:
+      cout << "GL Error: Invalid value\n";
+      break;
+    case GL_INVALID_OPERATION:
+      cout << "GL Error: Invalid operation\n";
+      break;
+    case GL_STACK_OVERFLOW:
+      cout << "GL Error: Stack overflow\n";
+      break;
+    case GL_STACK_UNDERFLOW:
+      cout << "GL Error: Stack underflow\n";
+      break;
+    case GL_OUT_OF_MEMORY:
+      cout << "GL Error: Out of memory\n";
+      break;
+    }
   // ensure we are returning an OSStatus noErr if no error condition
   if (err == GL_NO_ERROR)
     return noErr;
@@ -80,251 +98,159 @@ OSStatus glReportError ()
     return (OSStatus) err;
 }
 
-//----------------------------------------------------------------------------
-// CheckRenderer
-// looks at renderer attributes it has at least the VRAM is accelerated
-// Inputs:   hGD: GDHandle to device to look at
-// pVRAM: pointer to VRAM in bytes required; out is actual VRAM if
-//     a renderer was found, otherwise it is the input parameter
-//     pTextureRAM:  pointer to texture RAM in bytes required; out is same
-//     (implementation assume VRAM returned by card is total
-//     so we add texture and VRAM)
-//   fAccelMust: do we check for acceleration
-// Returns: true if renderer for the requested device complies, false otherwise
-static Boolean CheckRenderer (GDHandle hGD, long* pVRAM, long* pTextureRAM,
-     GLint* pDepthSizeSupport, Boolean fAccelMust)
+//-----------------------------------------------------------------------------
+static void* vtkCreateOSWindow(int width, int height, int pixel_size)
 {
-  AGLRendererInfo info, head_info;
-  GLint inum;
-  GLint dAccel = 0;
-  GLint dVRAM = 0, dMaxVRAM = 0;
-  Boolean canAccel = false, found = false;
-  head_info = aglQueryRendererInfo(&hGD, 1);
-  aglReportError();
-  if(!head_info)
-    {
-    cout << "aglQueryRendererInfo error.\n";
-    return false;
-    }
-  else
-    {
-    info = head_info;
-    inum = 0;
-    // Check for accelerated renderer, if so ignore non-accelerated ones
-    // Prevents returning info on software renderer when get a hardware one
-    while (info)
-      {
-      aglDescribeRenderer(info, AGL_ACCELERATED, &dAccel);
-      aglReportError ();
-      if (dAccel)
- canAccel = true;
-      info = aglNextRendererInfo(info);
-      aglReportError ();
-      inum++;
-      }
-
-    info = head_info;
-    inum = 0;
-    while (info)
-      {
-      aglDescribeRenderer (info, AGL_ACCELERATED, &dAccel);
-      aglReportError ();
-      // if we can accel then we will choose the accelerated renderer
-      // how about compliant renderers???
-      if ((canAccel && dAccel) || (!canAccel && (!fAccelMust || dAccel)))
- {
- aglDescribeRenderer (info, AGL_VIDEO_MEMORY, &dVRAM);
- // we assume that VRAM returned is total thus add
- // texture and VRAM required
- aglReportError ();
- if (dVRAM >= (*pVRAM + *pTextureRAM))
-   {
-   if (dVRAM >= dMaxVRAM) // find card with max VRAM
-     {
-     aglDescribeRenderer (info, AGL_DEPTH_MODES, pDepthSizeSupport);
-     // which depth buffer modes are supported
-     aglReportError ();
-     dMaxVRAM = dVRAM; // store max
-     found = true;
-     }
-   }
- }
-      info = aglNextRendererInfo(info);
-      aglReportError ();
-      inum++;
-      }
-    }
-  aglDestroyRendererInfo(head_info);
-  if (found) // if found a card with enough VRAM and meets the accel criteria
-    {
-    *pVRAM = dMaxVRAM; // return VRAM
-    return true;
-    }
-  // VRAM will remain to same as it did when sent in
-  return false;
+  return malloc(width*height*pixel_size);
 }
 
-//----------------------------------------------------------------------------
-// CheckAllDeviceRenderers
-// looks at renderer attributes and each device must have at least one 
-// renderer that fits the profile.
-// Inputs:   pVRAM: pointer to VRAM in bytes required; 
-//    out is actual min VRAM of all renderers found,
-//    otherwise it is the input parameter
-//     pTextureRAM: pointer to texture RAM in bytes required; 
-//    out is same (implementation assumes VRAM returned 
-//    by card is total so we add texture and VRAM)
-//      fAccelMust: do we check fro acceleration
-// Returns: true if any renderer on each device complies (not necessarily
-//   the same renderer), false otherwise
-
-static Boolean CheckAllDeviceRenderers (long* pVRAM, long* pTextureRAM,
-   GLint* pDepthSizeSupport, 
-   Boolean fAccelMust)
+//-----------------------------------------------------------------------------
+static void vtkDestroyOSWindow(void* win)
 {
-  AGLRendererInfo info, head_info;
-  GLint inum;
-  GLint dAccel = 0;
-  GLint dVRAM = 0, dMaxVRAM = 0;
-  Boolean canAccel = false, found = false, goodCheck = true;
-  long MinVRAM = 0x8FFFFFFF; // max long
-  GDHandle hGD = GetDeviceList (); // get the first screen
-  while (hGD && goodCheck)
-    {
-    head_info = aglQueryRendererInfo(&hGD, 1);
-    aglReportError ();
-    if(!head_info)
-      {
-      cout << "aglQueryRendererInfo error";
-      return false;
-      }
-    else
-      {
-      info = head_info;
-      inum = 0;
-      // if accelerated renderer, ignore non-accelerated ones
-      // prevents returning info on software renderer when get hardware one
-      while (info)
- {
- aglDescribeRenderer(info, AGL_ACCELERATED, &dAccel);
- aglReportError ();
- if (dAccel)
-   canAccel = true;
- info = aglNextRendererInfo(info);
- aglReportError ();
- inum++;
- }
-
-      info = head_info;
-      inum = 0;
-      while (info)
- {
- aglDescribeRenderer(info, AGL_ACCELERATED, &dAccel);
- aglReportError ();
- // if we can accel then we will choose the accelerated renderer
- // how about compliant renderers???
- if ((canAccel && dAccel) || (!canAccel && (!fAccelMust || dAccel)))
-   {
-   aglDescribeRenderer(info, AGL_VIDEO_MEMORY, &dVRAM);
-   aglReportError ();
-   if (dVRAM >= (*pVRAM + *pTextureRAM))
-     {
-     if (dVRAM >= dMaxVRAM) // find card with max VRAM
-       {// which depth buffer modes are supported
-       aglDescribeRenderer(info, AGL_DEPTH_MODES, pDepthSizeSupport);
-       aglReportError ();
-       dMaxVRAM = dVRAM; // store max
-       found = true;
-       }
-     }
-   }
- info = aglNextRendererInfo(info);
- aglReportError ();
- inum++;
- }
-      }
-    aglDestroyRendererInfo(head_info);
-    if (found) // found card with enough VRAM and meets the accel criteria
-      {
-      if (MinVRAM > dMaxVRAM)
- {
- MinVRAM = dMaxVRAM; // return VRAM
- }
-      }
-    else
-      goodCheck = false; // one device failed thus entire requirement fails
-    hGD = GetNextDevice (hGD); // get next device
-    } // while
-  if (goodCheck) // we check all devices and each was good
-    {
-    *pVRAM = MinVRAM; // return VRAM
-    return true;
-    }
-  return false; //at least one device failed to have mins
+  free(win);
 }
 
-//--------------------------------------------------------------------------
-// FindGDHandleFromWindow
-// Inputs:  a valid WindowPtr
-// Outputs:  the GDHandle that that window is mostly on
-// returns the number of devices that the windows content touches
-short FindGDHandleFromWindow (WindowPtr pWindow, GDHandle * phgdOnThisDevice)
+class vtkCarbonRenderWindowInternal
 {
-  GrafPtr pgpSave;
-  Rect rectWind, rectSect;
-  long greatestArea, sectArea;
-  short numDevices = 0;
-  GDHandle hgdNthDevice;
-
-  if (!pWindow || !phgdOnThisDevice)
-    return 0;
-
-  *phgdOnThisDevice = NULL;
-
-  GetPort (&pgpSave);
-  SetPortWindowPort (pWindow);
-
-  GetWindowPortBounds (pWindow, &rectWind);
-  LocalToGlobal ((Point*)& rectWind.top);
-  LocalToGlobal ((Point*)& rectWind.bottom);
-  hgdNthDevice = GetDeviceList ();
-  greatestArea = 0;
-  // check window against all gdRects in gDevice list and remember
-  // which gdRect contains largest area of window
-  while (hgdNthDevice)
+public:
+  vtkCarbonRenderWindowInternal(vtkRenderWindow* win)
     {
-    if (TestDeviceAttribute (hgdNthDevice, screenDevice))
-      if (TestDeviceAttribute (hgdNthDevice, screenActive))
- {
- // The SectRect routine calculates the intersection
- //  of the window rectangle and this gDevice
- //  rectangle and returns TRUE if the rectangles intersect,
- //  FALSE if they don't.
- SectRect (&rectWind, &(**hgdNthDevice).gdRect, &rectSect);
- // determine which screen holds greatest window area
- //  first, calculate area of rectangle on current device
- sectArea = (long) ((rectSect.right - rectSect.left) * 
-  (rectSect.bottom - rectSect.top));
- if (sectArea > 0)
-   numDevices++;
- if (sectArea > greatestArea)
-   {
-   greatestArea = sectArea; // set greatest area so far
-   *phgdOnThisDevice = hgdNthDevice; // set zoom device
-   }
- hgdNthDevice = GetNextDevice(hgdNthDevice);
- }
+      this->OffScreenWindow = NULL;
+      this->OffScreenContextId = NULL;
+      this->ScreenMapped = win->GetMapped();
+      this->ScreenDoubleBuffer = win->GetDoubleBuffer();
     }
-    SetPort (pgpSave);
-    return numDevices;
+
+  void* OffScreenWindow;
+  AGLContext OffScreenContextId;
+  AGLPixelFormat OffScreenPixelFmt;
+  int ScreenMapped;
+  int ScreenDoubleBuffer;
+  
+  AGLPixelFormat ChoosePixelFormat(int accel, int offscreen, int doublebuff, int stereo, 
+    int multisamples, int alphaBitPlanes, int stencil);
+
+  AGLContext CreateContext(int offscreen, int& doublebuff, int& stereo, 
+    int& multisamples, int& alphaBitPlanes, int &stencil, const char*& error);
+  
+};
+
+AGLPixelFormat vtkCarbonRenderWindowInternal::ChoosePixelFormat(int accel, int offscreen, int doublebuff, 
+  int stereo, int multisamples, int alphaBitPlanes, int stencil)
+{
+  int i = 0;
+  GLint attr[64];
+
+  if(offscreen)
+    {
+    attr[i++] = AGL_OFFSCREEN;
+    }
+  if(doublebuff)
+    {
+    attr[i++] = AGL_DOUBLEBUFFER;
+    }
+  attr[i++] = AGL_RGBA;
+  attr[i++] = AGL_DEPTH_SIZE;
+  attr[i++] = 32;
+  attr[i++] = AGL_PIXEL_SIZE;
+  attr[i++] = 32;
+  if(accel)
+    {
+    attr[i++] = AGL_ACCELERATED;
+    }
+  if(multisamples)
+    {
+    attr[i++] = AGL_SAMPLE_BUFFERS_ARB;
+    attr[i++] = 1;
+    attr[i++] = AGL_SAMPLES_ARB;
+    attr[i++] = multisamples;
+    attr[i++] = AGL_MULTISAMPLE;
+    }
+  if (alphaBitPlanes)
+    {
+    attr[i++] = AGL_ALPHA_SIZE;
+    attr[i++] = 8;
+    }
+  if(stereo)
+    {
+    attr[i++] = AGL_STEREO;
+    attr[i++] = GL_TRUE;
+    }
+  if(stencil)
+    {
+    attr[i++] = AGL_STENCIL_SIZE;
+    attr[i++] = 8;    
+    }
+  attr[i++] = AGL_NO_RECOVERY;  // must choose the pixel format we want!
+  attr[i++] = AGL_NONE;
+
+  return aglChoosePixelFormat (NULL, 0, attr);
 }
+
+AGLContext vtkCarbonRenderWindowInternal::CreateContext(int offscreen, int& doublebuff, 
+  int& stereo, int& multisamples, int& alphaBitPlanes, int& stencil, const char*& error)
+{
+  error = NULL;
+  AGLContext ctx = 0;
+  AGLPixelFormat fmt = 0;
+  int noSoftwareRendering = 1;  // flip to zero if you're willing to do software
+                                // rendering to get more features.
+
+  int _db, _a, _s, _m, _stencil;
+
+  for(_stencil = stencil; !fmt && _stencil >= 0; _stencil--)
+    {
+    for(_db = doublebuff; !fmt && _db >= 0; _db--)
+      {
+      for(_a = alphaBitPlanes; !fmt && _a >= 0; _a--)
+        {
+        for(_s = stereo; !fmt && _s >= 0; _s--)
+          {
+          for(_m = multisamples; !fmt && _m >= 0; _m--)
+            {
+            for(int accel = 1; !fmt && accel >= noSoftwareRendering; accel--)
+              {
+              fmt = this->ChoosePixelFormat(accel, offscreen, _db, _s, _m, _a, _stencil);
+              if(fmt)
+                {
+                doublebuff = _db;
+                stereo = _s;
+                multisamples = _m;
+                alphaBitPlanes = _a;
+                stencil = _stencil;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  aglReportError (); // cough up any errors encountered
+  if (NULL == fmt)
+    {
+    error = "Could not find valid pixel format";
+    return NULL;
+    }
+  
+  ctx = aglCreateContext (fmt, 0); // create without sharing
+  aglDestroyPixelFormat(fmt);
+  aglReportError (); // cough up errors
+  if (NULL == ctx)
+    {
+    error = "Could not create context";
+    return NULL;
+    }
+  return ctx;
+}
+
 
 //--------------------------------------------------------------------------
 vtkCarbonRenderWindow::vtkCarbonRenderWindow()
 {
+  this->Internal = new vtkCarbonRenderWindowInternal(this);
   this->ApplicationInitialized = 0;
   this->ContextId = 0;
-  this->MultiSamples = 8;
+  this->MultiSamples = 0;
   this->WindowId = 0;
   this->ParentId = 0;
   this->RootWindow = 0;
@@ -339,17 +265,40 @@ vtkCarbonRenderWindow::vtkCarbonRenderWindow()
 vtkCarbonRenderWindow::~vtkCarbonRenderWindow()
 {
   this->Finalize();
+  
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rit;
+  this->Renderers->InitTraversal(rit);
+  while ( (ren = this->Renderers->GetNextRenderer(rit)) )
+    {
+    ren->SetRenderWindow(NULL);
+    }
+
+  delete this->Internal;
 }
 
 //--------------------------------------------------------------------------
-void vtkCarbonRenderWindow::Clean()
+void vtkCarbonRenderWindow::DestroyWindow()
 {
   GLuint txId;
+  
+  this->MakeCurrent();
+
+  // tell each of the renderers that this render window/graphics context
+  // is being removed (the RendererCollection is removed by vtkRenderWindow's
+  // destructor)
+  vtkCollectionSimpleIterator rsit;
+  vtkRenderer *ren;
+  for ( this->Renderers->InitTraversal(rsit);
+        (ren = this->Renderers->GetNextRenderer(rsit));)
+    {
+    ren->SetRenderWindow(NULL);
+    ren->SetRenderWindow(this);
+    }
 
   /* finish OpenGL rendering */
   if (this->ContextId)
     {
-    this->MakeCurrent();
 
     /* now delete all textures */
     glDisable(GL_TEXTURE_2D);
@@ -367,17 +316,6 @@ void vtkCarbonRenderWindow::Clean()
         glDeleteLists(txId,1);
         }
 #endif
-      }
-
-    // tell each of the renderers that this render window/graphics context
-    // is being removed (the RendererCollection is removed by vtkRenderWindow's
-    // destructor)
-    vtkCollectionSimpleIterator rsit;
-    vtkRenderer *ren;
-    for ( this->Renderers->InitTraversal(rsit);
-         (ren = this->Renderers->GetNextRenderer(rsit));)
-      {
-      ren->SetRenderWindow(NULL);
       }
 
     aglSetCurrentContext(this->ContextId);
@@ -421,10 +359,7 @@ void vtkCarbonRenderWindow::SetParentId(HIViewRef arg)
 void vtkCarbonRenderWindow::Start()
 {
   // if the renderer has not been initialized, do so now
-  if (!this->ContextId)
-    {
-    this->Initialize();
-    }
+  this->Initialize();
 
   // set the current window
   this->MakeCurrent();
@@ -433,10 +368,22 @@ void vtkCarbonRenderWindow::Start()
 // --------------------------------------------------------------------------
 void vtkCarbonRenderWindow::MakeCurrent()
 {
-  if (this->ContextId || this->ForceMakeCurrent)
+  if(this->OffScreenRendering && this->Internal->OffScreenContextId)
     {
-    aglSetCurrentContext(this->ContextId);
-    this->ForceMakeCurrent = 0;
+    if((this->Internal->OffScreenContextId != aglGetCurrentContext())
+       || this->ForceMakeCurrent)
+      {
+      aglSetCurrentContext(this->Internal->OffScreenContextId);
+      this->ForceMakeCurrent = 0;
+      }
+    }
+  else if (this->ContextId || this->ForceMakeCurrent)
+    {
+    if((this->ContextId != aglGetCurrentContext()) || this->ForceMakeCurrent)
+      {
+      aglSetCurrentContext(this->ContextId);
+      this->ForceMakeCurrent = 0;
+      }
     }
 }
 
@@ -522,7 +469,7 @@ void vtkCarbonRenderWindow::UpdateGLRegion()
           DiffRgn(rgn, tmp_rgn, rgn);
           }
         }
-        last = current_view;
+      last = current_view;
       }
     
     GetControlRegion(this->WindowId, kControlStructureMetaPart, tmp_rgn);
@@ -530,12 +477,16 @@ void vtkCarbonRenderWindow::UpdateGLRegion()
     if(EqualRgn(rgn,tmp_rgn))
       {
       if(aglIsEnabled(this->ContextId, AGL_CLIP_REGION))
+        {
         aglDisable(this->ContextId, AGL_CLIP_REGION);
+        }
       }
     else
       {
       if(!aglIsEnabled(this->ContextId, AGL_CLIP_REGION))
+        {
         aglEnable(this->ContextId, AGL_CLIP_REGION);
+        }
       aglSetInteger(this->ContextId, AGL_CLIP_REGION, reinterpret_cast<const GLint*>(rgn));
       }
       
@@ -551,7 +502,7 @@ void vtkCarbonRenderWindow::UpdateGLRegion()
     GetWindowBounds(this->RootWindow, kWindowContentRgn, &windowRect);
     bufRect[0] = this->Position[0];
     bufRect[1] = (int) (windowRect.bottom-windowRect.top)
-                 - (this->Position[1]+this->Size[1]);
+      - (this->Position[1]+this->Size[1]);
     bufRect[2] = this->Size[0];
     bufRect[3] = this->Size[1];
     aglEnable(this->ContextId, AGL_BUFFER_RECT);
@@ -569,27 +520,38 @@ void vtkCarbonRenderWindow::SetSize(int x, int y)
 
   if ((this->Size[0] != x) || (this->Size[1] != y))
     {
-    this->Modified();
     this->Size[0] = x;
     this->Size[1] = y;
-    if (this->Mapped)
+
+    if(this->OffScreenRendering && 
+       (this->Internal->OffScreenWindow 
+        || this->OffScreenUseFrameBuffer))
       {
-      if (!resizing)
+      this->ResizeOffScreenWindow(x,y);
+      }
+    else
+      {
+      if (this->Mapped)
         {
-        resizing = 1;
-        
-        if(this->ParentId && this->RootWindow && !this->WindowId)
+        if (!resizing)
           {
-          // backwards compatiblity with Tk and who else?
-          UpdateGLRegion();
+          resizing = 1;
+
+          if(this->ParentId && this->RootWindow && !this->WindowId)
+            {
+            // backwards compatiblity with Tk and who else?
+            UpdateGLRegion();
+            }
+          else if(this->OwnWindow || !this->WindowId)
+            {
+            SizeWindow(this->RootWindow, x, y, TRUE);
+            }
+          resizing = 0;
           }
-        else if(this->OwnWindow || !this->WindowId)
-          {
-          SizeWindow(this->RootWindow, x, y, TRUE);
-          }
-        resizing = 0;
         }
       }
+
+    this->Modified();
     }
 }
 
@@ -636,11 +598,26 @@ void vtkCarbonRenderWindow::SetPosition(int x, int y)
 // End the rendering process and display the image.
 void vtkCarbonRenderWindow::Frame()
 {
-  if (!this->AbortRender && this->DoubleBuffer)
+  this->MakeCurrent();
+  if (!this->AbortRender && this->DoubleBuffer && this->SwapBuffers)
     {
     aglSwapBuffers(this->ContextId);
-    vtkDebugMacro(<< " SwapBuffers\n");
+    vtkDebugMacro(<< " aglSwapBuffers\n");
     }
+  else
+    {
+    glFlush();
+    }
+}
+
+//--------------------------------------------------------------------------
+AGLContext vtkCarbonRenderWindow::GetContextId()
+{
+  if(this->OffScreenRendering)
+    {
+    return this->Internal->OffScreenContextId;
+    }
+  return this->ContextId;
 }
 
 //--------------------------------------------------------------------------
@@ -651,25 +628,13 @@ void vtkCarbonRenderWindow::WindowConfigure()
 }
 
 //--------------------------------------------------------------------------
-void vtkCarbonRenderWindow::SetupPixelFormat(void*, void*, int, int, int)
-{
-  cout << "vtkCarbonRenderWindow::SetupPixelFormat - IMPLEMENT\n";
-}
-
-//--------------------------------------------------------------------------
-void vtkCarbonRenderWindow::SetupPalette(void*)
-{
-  cout << "vtkCarbonRenderWindow::SetupPalette - IMPLEMENT\n";
-}
-
-//--------------------------------------------------------------------------
 void vtkCarbonRenderWindow::InitializeApplication()
 {
   if (!this->ApplicationInitialized)
     {
     if (this->OwnWindow)
-      { // Initialize the Toolbox managers if we are running the show
-      InitCursor();
+      {
+      // Initialize the Toolbox managers if we are running the show
       DrawMenuBar();
       this->ApplicationInitialized=1;
       }
@@ -678,66 +643,55 @@ void vtkCarbonRenderWindow::InitializeApplication()
 
 //--------------------------------------------------------------------------
 // Initialize the window for rendering.
-void vtkCarbonRenderWindow::CreateAWindow(int vtkNotUsed(x), int vtkNotUsed(y),
-                              int vtkNotUsed(width), int vtkNotUsed(height))
+void vtkCarbonRenderWindow::CreateAWindow()
 {
-  GDHandle hGD = NULL;
-  GLint depthSizeSupport;
   static int count = 1;
-  short i;
   char *windowName;
-  short numDevices;     // number of graphics devices our window covers
-
-  if ((this->Size[0]+this->Size[1])==0)
-    {
-    this->Size[0]=300;
-    this->Size[1]=300;
-    }
-  if ((this->Position[0]+this->Position[1])==0)
-    {
-    this->Position[0]=50;
-    this->Position[1]=50;
-    }
-
-  // Rect is defined as {top, left, bottom, right} (really)
-  Rect rectWin = {this->Position[1], this->Position[0],
-                  this->Position[1]+this->Size[1],
-                  this->Position[0]+this->Size[0]};
   
   // if a Window and HIView wasn't given, make a Window and HIView
   if (!this->WindowId && !this->RootWindow)
     {
-      WindowAttributes windowAttrs = (kWindowStandardDocumentAttributes | 
-                                      kWindowLiveResizeAttribute |
-                                      kWindowStandardHandlerAttribute |
-                                      kWindowCompositingAttribute);
-
-      if (noErr != CreateNewWindow (kDocumentWindowClass,
-                                    windowAttrs,
-                                    &rectWin, &(this->RootWindow)))
-        {
-        vtkErrorMacro("Could not create window, serious error!");
-        return;
-        }
-      
-      // get the content view
-      HIViewFindByID(HIViewGetRoot(this->RootWindow),
-                     kHIViewWindowContentID,
-                     &this->WindowId);
-
-      int len = (strlen("vtkX - Carbon #")
-                 + (int) ceil((double)log10((double)(count+1)))
-                 + 1);
-      windowName = new char [ len ];
-      sprintf(windowName,"vtkX - Carbon #%i",count++);
-      this->SetWindowName(windowName);
-      delete [] windowName;
-      this->OwnWindow = 1;
-
-      ShowWindow(this->RootWindow);
+    this->Position[0] = ((this->Position[0] >= 0) ? this->Position[0] : 5);
+    this->Position[1] = ((this->Position[1] >= 0) ? this->Position[1] : 5);
+    this->Size[0] = ((this->Size[0] > 0) ? this->Size[0] : 300);
+    this->Size[1] = ((this->Size[1] > 0) ? this->Size[1] : 300);
+    
+    // Rect is defined as {top, left, bottom, right} (really)
+    Rect rectWin = {this->Position[1], this->Position[0],
+                    this->Position[1]+this->Size[1],
+                    this->Position[0]+this->Size[0]};
+    
+    WindowAttributes windowAttrs = (kWindowStandardDocumentAttributes | 
+                                    kWindowLiveResizeAttribute |
+                                    kWindowStandardHandlerAttribute |
+                                    kWindowCompositingAttribute);
+    
+    if (noErr != CreateNewWindow (kDocumentWindowClass,
+                                  windowAttrs,
+                                  &rectWin, &(this->RootWindow)))
+      {
+      vtkErrorMacro("Could not create window, serious error!");
+      return;
+      }
+    
+    // get the content view
+    HIViewFindByID(HIViewGetRoot(this->RootWindow),
+                   kHIViewWindowContentID,
+                   &this->WindowId);
+    
+    int len = (strlen("Visualization Toolkit - Carbon #")
+               + (int) ceil((double)log10((double)(count+1)))
+               + 1);
+    windowName = new char [ len ];
+    sprintf(windowName,"Visualization Toolkit - Carbon #%i",count++);
+    this->OwnWindow = 1;
+    this->SetWindowName(windowName);
+    delete [] windowName;
+    
+    ShowWindow(this->RootWindow);
     }
-
-
+  
+  
   // install event handler for updating gl region
   // this works for a supplied HIView and an HIView made here
   if(this->WindowId && !this->RegionEventHandler)
@@ -755,88 +709,30 @@ void vtkCarbonRenderWindow::CreateAWindow(int vtkNotUsed(x), int vtkNotUsed(y),
     }
   
   SetPortWindowPort(this->GetRootWindow());
-  this->fAcceleratedMust = false;  //must renderer be accelerated?
-  this->VRAM = 0 * 1048576;    // minimum VRAM
-  this->textureRAM = 0 * 1048576;  // minimum texture RAM
-  this->fmt = 0;      // output pixel format
-  i = 0;
-  this->aglAttributes [i++] = AGL_RGBA;
-  this->aglAttributes [i++] = AGL_DOUBLEBUFFER;
-  this->aglAttributes [i++] = AGL_DEPTH_SIZE;
-  this->aglAttributes [i++] = 32;
-  this->aglAttributes [i++] = AGL_PIXEL_SIZE;
-  this->aglAttributes [i++] = 32;
-  this->aglAttributes [i++] = AGL_ACCELERATED;
-  if (this->AlphaBitPlanes)
-    {
-    this->aglAttributes [i++] = AGL_ALPHA_SIZE;
-    this->aglAttributes [i++] = 8;
-    }
-  this->aglAttributes [i++] = AGL_NONE;
-  this->draggable = true;
 
-  numDevices = FindGDHandleFromWindow(this->GetRootWindow(), &hGD);
-  if (!this->draggable)
-    {
-    if ((numDevices > 1) || (numDevices == 0)) // multiple or no devices
-      {
-      // software renderer
-      // infinite VRAM, infinite textureRAM, not accelerated
-      if (this->fAcceleratedMust)
-        {
-        vtkErrorMacro ("Window spans multiple devices-no HW accel");
-        return;
-        }
-      }
-    else // not draggable on single device
-      {
-      if (!CheckRenderer (hGD, &(this->VRAM), &(this->textureRAM),
-                          &depthSizeSupport, this->fAcceleratedMust))
-        {
-        vtkErrorMacro ("Renderer check failed");
-        return;
-        }
-      }
-    }
-  // else if draggable - must check all devices for presence of
-  // at least one renderer that meets the requirements
-  else if(!CheckAllDeviceRenderers(&(this->VRAM), &(this->textureRAM),
-   &depthSizeSupport, this->fAcceleratedMust))
-    {
-    vtkErrorMacro ("Renderer check failed");
-    return;
-    }
-
-  // do agl
-  if ((Ptr) kUnresolvedCFragSymbolAddress == (Ptr) aglChoosePixelFormat)
-    {
-    vtkErrorMacro ("OpenGL not installed");
-    return;
-    }
-  // we successfully passed the renderer checks!
-  
-  if ((!this->draggable && (numDevices == 1)))
-    {// not draggable on a single device
-    this->fmt = aglChoosePixelFormat (&hGD, 1, this->aglAttributes);
-    }
-  else
-    {
-    this->fmt = aglChoosePixelFormat (NULL, 0, this->aglAttributes);
-    }  
-  aglReportError (); // cough up any errors encountered
-  if (NULL == this->fmt)
-    {
-    vtkErrorMacro("Could not find valid pixel format");
-    return;
-    }
-  
-  this->ContextId = aglCreateContext (this->fmt, 0); // create without sharing
-  aglReportError (); // cough up errors
+  const char* error = NULL;
+  this->ContextId = this->Internal->CreateContext(0, this->DoubleBuffer,
+                                this->StereoCapableWindow, this->MultiSamples, 
+                                this->AlphaBitPlanes, this->StencilCapable, 
+                                error);
   if (NULL == this->ContextId)
     {
-    vtkErrorMacro ("Could not create context");
+    if(error)
+      {
+      vtkErrorMacro(<<error);
+      }
     return;
     }
+
+  // This syncs the OpenGL context to the VBL to prevent tearing
+  GLint one = 1;
+  GLboolean res = aglSetInteger (this->ContextId, AGL_SWAP_INTERVAL, &one);
+  if (GL_FALSE == res)
+    {
+    vtkErrorMacro ("Could not set context option");
+    return;
+    }
+
   // attach the CGrafPtr to the context
   if (!aglSetDrawable (this->ContextId, GetWindowPort (this->GetRootWindow())))
     {
@@ -859,18 +755,12 @@ void vtkCarbonRenderWindow::CreateAWindow(int vtkNotUsed(x), int vtkNotUsed(y),
 //--------------------------------------------------------------------------
 // Initialize the window for rendering.
 void vtkCarbonRenderWindow::WindowInitialize()
-{
-  int x, y, width, height;
-  x = ((this->Position[0] >= 0) ? this->Position[0] : 5);
-  y = ((this->Position[1] >= 0) ? this->Position[1] : 5);
-  height = ((this->Size[1] > 0) ? this->Size[1] : 300);
-  width = ((this->Size[0] > 0) ? this->Size[0] : 300);
-  
+{ 
   // create our own window if not already set
-  this->OwnWindow = 0;
   this->InitializeApplication();
-  this->CreateAWindow(x,y,width,height);
-
+  this->OwnWindow = 0;
+  this->CreateAWindow();
+  
   // tell our renderers about us
   vtkRenderer* ren;
   for (this->Renderers->InitTraversal(); 
@@ -884,33 +774,38 @@ void vtkCarbonRenderWindow::WindowInitialize()
   this->SetDPI(72); // this may need to be more clever some day
 }
 
-//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Initialize the rendering window.
 void vtkCarbonRenderWindow::Initialize ()
 {
   // make sure we havent already been initialized
 
-  if (this->ContextId)
+  if(!this->OffScreenRendering && !this->ContextId)
     {
-    return;
+    this->WindowInitialize();
     }
-
-  this->WindowInitialize();
+  else if(this->OffScreenRendering &&
+          !(this->Internal->OffScreenContextId
+            || this->OffScreenUseFrameBuffer))
+    {
+    // initialize offscreen window
+    int width = ((this->Size[0] > 0) ? this->Size[0] : 300);
+    int height = ((this->Size[1] > 0) ? this->Size[1] : 300);
+    this->CreateOffScreenWindow(width, height);
+    }
 }
 
+//-----------------------------------------------------------------------------
 void vtkCarbonRenderWindow::Finalize(void)
 {
   if (this->CursorHidden)
     {
-      this->ShowCursor();
+    this->ShowCursor();
     }
 
-  if (this->OffScreenRendering) // does not exist yet
-    {
-      //this->CleanUpOffScreenRendering()
-    }
+  this->SetOffScreenRendering(0);
 
-  this->Clean();
+  this->DestroyWindow();
 
   // remove event filters if we have them
   if(this->RegionEventHandler)
@@ -923,13 +818,123 @@ void vtkCarbonRenderWindow::Finalize(void)
 
   if (this->RootWindow && this->OwnWindow)
     {
-      DisposeWindow(this->RootWindow);
+    DisposeWindow(this->RootWindow);
     }
 }
 
+//-----------------------------------------------------------------------------
+void vtkCarbonRenderWindow::SetOffScreenRendering(int i)
+{
+  if (this->OffScreenRendering == i)
+    {
+    return;
+    }
+  
+  Superclass::SetOffScreenRendering(i);
+  
+  // setup the offscreen area
+  if(i)
+    {
+    this->Internal->ScreenDoubleBuffer = this->DoubleBuffer;
+    this->DoubleBuffer = 0;
+    this->Internal->ScreenMapped = this->Mapped;
+    this->Mapped = 0;
+    }
+  else
+    {
+    this->DestroyOffScreenWindow();
+    
+    this->DoubleBuffer = this->Internal->ScreenDoubleBuffer;
+    this->Mapped = this->Internal->ScreenMapped;
+    // reset the size based on the screen window
+    this->GetSize();
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkCarbonRenderWindow::CreateOffScreenWindow(int width, int height)
+{
+  if(!this->CreateHardwareOffScreenWindow(width,height))
+    {
+    const char* error = NULL;
+    int doubleBuf = 0;
+    this->Internal->OffScreenContextId = 
+      this->Internal->CreateContext(1, doubleBuf,
+         this->StereoCapableWindow, this->MultiSamples, 
+         this->AlphaBitPlanes, this->StencilCapable, error);
+    
+    this->Internal->OffScreenWindow = vtkCreateOSWindow(width, height, 4);
+    this->Size[0] = width;
+    this->Size[1] = height;
+      
+    aglSetOffScreen(this->Internal->OffScreenContextId, 
+                    width, height, width*4,
+                    this->Internal->OffScreenWindow);
+      
+    aglSetCurrentContext(this->Internal->OffScreenContextId);
+    } // if not hardware
+  this->Mapped = 0;
+  
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rit;
+  this->Renderers->InitTraversal(rit);
+  while ( (ren = this->Renderers->GetNextRenderer(rit)) )
+    {
+    ren->SetRenderWindow(NULL);
+    ren->SetRenderWindow(this);
+    }
+
+  this->OpenGLInit();
+}
+
+//-----------------------------------------------------------------------------
+void vtkCarbonRenderWindow::DestroyOffScreenWindow()
+{
+  // release graphic resources.
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rit;
+  this->Renderers->InitTraversal(rit);
+  while ( (ren = this->Renderers->GetNextRenderer(rit)) )
+    {
+    ren->SetRenderWindow(NULL);
+    ren->SetRenderWindow(this);
+    }
+
+  if(this->OffScreenUseFrameBuffer)
+    {
+    this->DestroyHardwareOffScreenWindow();
+    }
+  else
+    {
+    if(this->Internal->OffScreenContextId)
+      {
+      aglDestroyContext(this->Internal->OffScreenContextId);
+      this->Internal->OffScreenContextId = NULL;
+      vtkDestroyOSWindow(this->Internal->OffScreenWindow);
+      this->Internal->OffScreenWindow = NULL;
+      }
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkCarbonRenderWindow::ResizeOffScreenWindow(int width, int height)
+{
+  if(!this->OffScreenRendering)
+    {
+    return;
+    }
+
+  if(this->OffScreenUseFrameBuffer || this->Internal->OffScreenContextId)
+    {
+    this->DestroyOffScreenWindow();
+    this->CreateOffScreenWindow(width, height);
+    }
+}
+
+
 //--------------------------------------------------------------------------
 void vtkCarbonRenderWindow::UpdateSizeAndPosition(int xPos, int yPos, 
- int xSize, int ySize)
+                                                  int xSize, int ySize)
 {
   this->Size[0]=xSize;
   this->Size[1]=ySize;
@@ -942,13 +947,7 @@ void vtkCarbonRenderWindow::UpdateSizeAndPosition(int xPos, int yPos,
 // Get the current size of the window.
 int *vtkCarbonRenderWindow::GetSize()
 {
-  // if we aren't mapped then just return the ivar
-  if (!this->Mapped)
-    {
-    return this->Superclass::GetSize();
-    }
-
-  if(this->WindowId)
+  if(this->WindowId && this->Mapped)
     {
     HIRect viewBounds;
     HIViewGetBounds(this->WindowId, &viewBounds);
@@ -963,10 +962,9 @@ int *vtkCarbonRenderWindow::GetSize()
 // Get the current size of the screen.
 int *vtkCarbonRenderWindow::GetScreenSize()
 {
-  cout << "Inside vtkCarbonRenderWindow::GetScreenSize - MUST IMPLEMENT\n";
-  this->Size[0] = 0;
-  this->Size[1] = 0;
-
+  CGRect r = CGDisplayBounds(CGMainDisplayID());
+  this->Size[0] = (int)r.size.width;
+  this->Size[1] = (int)r.size.height;
   return this->Size;
 }
 
@@ -1053,14 +1051,14 @@ void vtkCarbonRenderWindow::SetFullScreen(int arg)
 // be created. This method can only be called before a window is realized.
 void vtkCarbonRenderWindow::SetStereoCapableWindow(int capable)
 {
-  if (this->WindowId == 0)
+  if (!this->ContextId && !this->Internal->OffScreenContextId)
     {
     vtkRenderWindow::SetStereoCapableWindow(capable);
     }
   else
     {
     vtkWarningMacro(<< "Requesting a StereoCapableWindow must be performed "
-      << "before the window is realized, i.e. before a render.");
+                    << "before the window is realized, i.e. before a render.");
     }
 }
 
@@ -1145,7 +1143,13 @@ WindowPtr vtkCarbonRenderWindow::GetRootWindow()
   // if not, then WindowId is set and we're using HIViews.
   // Instead of storing the RootWindow, we ask for it in case of a dynamic 
   // GUI where the root window can change
-  return this->RootWindow ? this->RootWindow : HIViewGetWindow(this->WindowId);
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1030
+  if(HIViewGetWindow != NULL && !this->RootWindow)
+    {
+    return HIViewGetWindow(this->WindowId);
+    }
+#endif
+  return this->RootWindow;
 }
 
 //----------------------------------------------------------------------------
@@ -1173,26 +1177,26 @@ void vtkCarbonRenderWindow::ShowCursor()
 OSStatus vtkCarbonRenderWindow::RegionEventProcessor(EventHandlerCallRef, 
                                                      EventRef event, void* win)
 {
-  vtkCarbonRenderWindow* vtk_win = reinterpret_cast<vtkCarbonRenderWindow*>(win);
+  vtkCarbonRenderWindow *vtk_win=reinterpret_cast<vtkCarbonRenderWindow*>(win);
   UInt32 event_kind = GetEventKind(event);
   UInt32 event_class = GetEventClass(event);
 
   switch(event_class)
     {
     case kEventClassControl:
+    {
+    switch (event_kind)
       {
-      switch (event_kind)
-        {
-        case kEventControlVisibilityChanged:
-        case kEventControlOwningWindowChanged:
-        case kEventControlBoundsChanged:
-          vtk_win->UpdateGLRegion();
-          break;
-        default:
-          break;
-        }
+      case kEventControlVisibilityChanged:
+      case kEventControlOwningWindowChanged:
+      case kEventControlBoundsChanged:
+        vtk_win->UpdateGLRegion();
+        break;
+      default:
+        break;
       }
-      break;
+    }
+    break;
     default:
       break;
     }

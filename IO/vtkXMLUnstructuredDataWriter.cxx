@@ -35,7 +35,7 @@
 
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkXMLUnstructuredDataWriter, "$Revision: 1.19 $");
+vtkCxxRevisionMacro(vtkXMLUnstructuredDataWriter, "$Revision: 1.22 $");
 
 //----------------------------------------------------------------------------
 vtkXMLUnstructuredDataWriter::vtkXMLUnstructuredDataWriter()
@@ -200,7 +200,7 @@ int vtkXMLUnstructuredDataWriter::ProcessRequest(vtkInformation* request,
       {
       request->Remove(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING());
       this->CurrentPiece = 0;
-      // We are done writting all the pieces, lets loop over time now:
+      // We are done writing all the pieces, lets loop over time now:
       this->CurrentTimeIndex++;
 
       if( this->UserContinueExecuting != 1 )
@@ -568,7 +568,7 @@ void vtkXMLUnstructuredDataWriter::WriteCellsInline(const char* name,
   this->SetProgressRange(progressRange, 0, fractions);
   
   // Write the connectivity array.
-  this->WriteDataArrayInline(this->CellPoints, indent.GetNextIndent());
+  this->WriteArrayInline(this->CellPoints, indent.GetNextIndent());
   if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
     {
     return;
@@ -578,7 +578,7 @@ void vtkXMLUnstructuredDataWriter::WriteCellsInline(const char* name,
   this->SetProgressRange(progressRange, 1, fractions);
   
   // Write the offsets array.
-  this->WriteDataArrayInline(this->CellOffsets, indent.GetNextIndent());
+  this->WriteArrayInline(this->CellOffsets, indent.GetNextIndent());
   if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
     {
     return;
@@ -590,7 +590,7 @@ void vtkXMLUnstructuredDataWriter::WriteCellsInline(const char* name,
     this->SetProgressRange(progressRange, 2, fractions);
     
     // Write the types array.
-    this->WriteDataArrayInline(types, indent.GetNextIndent(), "types");
+    this->WriteArrayInline(types, indent.GetNextIndent(), "types");
     if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
       {
       return;
@@ -626,8 +626,8 @@ void vtkXMLUnstructuredDataWriter::WriteCellsAppended(const char* name,
       {
       if(allcells[i])
         {
-        cellsManager->GetElement(i).GetPosition(t) =
-          this->WriteDataArrayAppended(allcells[i], indent.GetNextIndent(),names[i],0,t);
+        this->WriteArrayAppended(allcells[i], indent.GetNextIndent(),
+          cellsManager->GetElement(i), names[i], 0, t);
         if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
           {
           return;
@@ -680,7 +680,7 @@ vtkXMLUnstructuredDataWriter::WriteCellsAppendedData(vtkCellArray* cells,
         {
         cellsMTime = mtime;
         // Write the connectivity array.
-        this->WriteDataArrayAppendedData(allcells[i], 
+        this->WriteArrayAppendedData(allcells[i], 
           cellsManager->GetElement(i).GetPosition(timestep),
           cellsManager->GetElement(i).GetOffsetValue(timestep));
         if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)

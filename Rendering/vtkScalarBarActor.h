@@ -60,6 +60,7 @@ class vtkPolyDataMapper2D;
 class vtkScalarsToColors;
 class vtkTextMapper;
 class vtkTextProperty;
+class vtkTexture;
 
 #define VTK_ORIENT_HORIZONTAL 0
 #define VTK_ORIENT_VERTICAL 1
@@ -79,9 +80,13 @@ public:
   // Description:
   // Draw the scalar bar and annotation text to the screen.
   int RenderOpaqueGeometry(vtkViewport* viewport);
-  int RenderTranslucentGeometry(vtkViewport*) { return 0; };
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport*) { return 0; };
   int RenderOverlay(vtkViewport* viewport);
 
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // Release any graphics resources that are being consumed by this actor.
   // The parameter window could be used to determine which graphic
@@ -94,6 +99,16 @@ public:
   // range.
   virtual void SetLookupTable(vtkScalarsToColors*);
   vtkGetObjectMacro(LookupTable,vtkScalarsToColors);
+
+  // Description:
+  // Should be display the opacity as well. This is displayed by changing
+  // the opacity of the scalar bar in accordance with the opacity of the
+  // given color. For clarity, a texture grid is placed in the background
+  // if Opacity is ON. You might also want to play with SetTextureGridWith
+  // in that case. [Default: off]
+  vtkSetMacro( UseOpacity, int );
+  vtkGetMacro( UseOpacity, int );
+  vtkBooleanMacro( UseOpacity, int );
 
   // Description:
   // Set/Get the maximum number of scalar bar segments to show. This may
@@ -140,6 +155,31 @@ public:
   // Shallow copy of a scalar bar actor. Overloads the virtual vtkProp method.
   void ShallowCopy(vtkProp *prop);
 
+  // Description:
+  // Set the width of the texture grid. Used only if UseOpacity is ON.
+  vtkSetMacro( TextureGridWidth, double );
+  vtkGetMacro( TextureGridWidth, double );
+
+  // Description:
+  // Get the texture actor.. you may want to change some properties on it
+  vtkGetObjectMacro( TextureActor, vtkActor2D );
+
+//BTX
+  enum { PrecedeScalarBar = 0, SucceedScalarBar };
+//ETX
+
+  // Description:
+  // Have the text preceding the scalar bar or suceeding it ?
+  // Succeed implies the that the text is Above scalar bar if orientation 
+  // is horizontal or Right of scalar bar if orientation is vertical.
+  // Precede is the opposite
+  vtkSetClampMacro( TextPosition, int, PrecedeScalarBar, SucceedScalarBar);
+  vtkGetMacro( TextPosition, int );
+  virtual void SetTextPositionToPrecedeScalarBar()
+    { this->SetTextPosition( vtkScalarBarActor::PrecedeScalarBar ); }
+  virtual void SetTextPositionToSucceedScalarBar()
+    { this->SetTextPosition( vtkScalarBarActor::SucceedScalarBar ); }
+
 protected:
   vtkScalarBarActor();
   ~vtkScalarBarActor();
@@ -154,26 +194,31 @@ protected:
   int   Orientation;
   char  *Title;
   char  *LabelFormat;
+  int   UseOpacity; // off by default
+  double TextureGridWidth;
+  int TextPosition;
 
   vtkTextMapper **TextMappers;
+  vtkActor2D    **TextActors;
   virtual void AllocateAndSizeLabels(int *labelSize, int *size,
                                      vtkViewport *viewport, double *range);
 
-private:
   vtkTextMapper *TitleMapper;
   vtkActor2D    *TitleActor;
-
-  vtkActor2D    **TextActors;
+  virtual void SizeTitle(int *titleSize, int *size, vtkViewport *viewport);
 
   vtkPolyData         *ScalarBar;
   vtkPolyDataMapper2D *ScalarBarMapper;
   vtkActor2D          *ScalarBarActor;
 
+  vtkPolyData         *TexturePolyData;
+  vtkTexture          *Texture;
+  vtkActor2D          *TextureActor;
+
   vtkTimeStamp  BuildTime;
   int LastSize[2];
   int LastOrigin[2];
 
-  void SizeTitle(int *titleSize, int *size, vtkViewport *viewport);
 
 private:
   vtkScalarBarActor(const vtkScalarBarActor&);  // Not implemented.

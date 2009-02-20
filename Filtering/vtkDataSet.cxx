@@ -28,7 +28,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkDataSet, "$Revision: 1.3.12.1 $");
+vtkCxxRevisionMacro(vtkDataSet, "$Revision: 1.14 $");
 
 //----------------------------------------------------------------------------
 // Constructor with default bounds (0,1, 0,1, 0,1).
@@ -61,6 +61,13 @@ void vtkDataSet::Initialize()
 }
 
 //----------------------------------------------------------------------------
+void vtkDataSet::CopyAttributes(vtkDataSet *ds)
+{
+  this->GetPointData()->PassData(ds->GetPointData());
+  this->GetCellData()->PassData(ds->GetCellData());
+}
+
+//----------------------------------------------------------------------------
 // Compute the data bounding box from data points.
 void vtkDataSet::ComputeBounds()
 {
@@ -73,12 +80,9 @@ void vtkDataSet::ComputeBounds()
     if (this->GetNumberOfPoints())
       {
       x = this->GetPoint(0);
-      this->Bounds[0] = x[0];
-      this->Bounds[2] = x[1];
-      this->Bounds[4] = x[2];
-      this->Bounds[1] = x[0];
-      this->Bounds[3] = x[1];
-      this->Bounds[5] = x[2];
+      this->Bounds[0] = this->Bounds[1] = x[0];
+      this->Bounds[2] = this->Bounds[3] = x[1];
+      this->Bounds[4] = this->Bounds[5] = x[2];
       for (i=1; i<this->GetNumberOfPoints(); i++)
         {
         x = this->GetPoint(i);
@@ -104,39 +108,54 @@ void vtkDataSet::ComputeBounds()
 }
 
 //----------------------------------------------------------------------------
+// Description:
+// Compute the range of the scalars and cache it into ScalarRange
+// only if the cache became invalid (ScalarRangeComputeTime).
+void vtkDataSet::ComputeScalarRange()
+{
+  if ( this->GetMTime() > this->ScalarRangeComputeTime )
+    {
+    vtkDataArray *ptScalars, *cellScalars;
+    ptScalars = this->PointData->GetScalars();
+    cellScalars = this->CellData->GetScalars();
+    
+    if ( ptScalars && cellScalars)
+      {
+      double r1[2], r2[2];
+      ptScalars->GetRange(r1,0);
+      cellScalars->GetRange(r2,0);
+      this->ScalarRange[0] = (r1[0] < r2[0] ? r1[0] : r2[0]);
+      this->ScalarRange[1] = (r1[1] > r2[1] ? r1[1] : r2[1]);
+      }
+    else if ( ptScalars )
+      {
+      ptScalars->GetRange(this->ScalarRange,0);
+      }
+    else if ( cellScalars )
+      {
+      cellScalars->GetRange(this->ScalarRange,0);
+      }
+    else
+      {
+      this->ScalarRange[0] = 0.0;
+      this->ScalarRange[1] = 1.0;
+      }
+    this->ScalarRangeComputeTime.Modified();
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkDataSet::GetScalarRange(double range[2])
 {
-  vtkDataArray *ptScalars, *cellScalars;
-  ptScalars = this->PointData->GetScalars();
-  cellScalars = this->CellData->GetScalars();
-  
-  if ( ptScalars && cellScalars)
-    {
-    double r1[2], r2[2];
-    ptScalars->GetRange(r1,0);
-    cellScalars->GetRange(r2,0);
-    range[0] = (r1[0] < r2[0] ? r1[0] : r2[0]);
-    range[1] = (r1[1] > r2[1] ? r1[1] : r2[1]);
-    }
-  else if ( ptScalars )
-    {
-    ptScalars->GetRange(range,0);
-    }
-  else if ( cellScalars )
-    {
-    cellScalars->GetRange(range,0);
-    }
-  else
-    {
-    range[0] = 0.0;
-    range[1] = 1.0;
-    }
+  this->ComputeScalarRange();
+  range[0]=this->ScalarRange[0];
+  range[1]=this->ScalarRange[1];
 }
 
 //----------------------------------------------------------------------------
 double *vtkDataSet::GetScalarRange()
 {
-  this->GetScalarRange(this->ScalarRange);
+  this->ComputeScalarRange();
   return this->ScalarRange;
 }
 
@@ -185,6 +204,11 @@ void vtkDataSet::GetCenter(double center[3])
 // Return the length of the diagonal of the bounding box.
 double vtkDataSet::GetLength()
 {
+  if (this->GetNumberOfPoints() == 0)
+    {
+    return 0;
+    }
+
   double diff, l=0.0;
   int i;
 
@@ -218,7 +242,7 @@ vtkCell *vtkDataSet::FindAndGetCell (double x[3], vtkCell *cell,
                                      vtkIdType cellId, double tol2, int& subId,
                                      double pcoords[3], double *weights)
 {
-  int newCell = this->FindCell(x,cell,cellId,tol2,subId,pcoords,weights);
+  vtkIdType newCell = this->FindCell(x,cell,cellId,tol2,subId,pcoords,weights);
   if (newCell >= 0 )
     {
     cell = this->GetCell (newCell);
@@ -295,7 +319,7 @@ void vtkDataSet::Squeeze()
 //----------------------------------------------------------------------------
 unsigned long vtkDataSet::GetActualMemorySize()
 {
-  unsigned long size=this->vtkDataObject::GetActualMemorySize();
+  unsigned long size = this->vtkDataObject::GetActualMemorySize();
   size += this->PointData->GetActualMemorySize();
   size += this->CellData->GetActualMemorySize();
   return size;
@@ -338,9 +362,11 @@ void vtkDataSet::InternalDataSetCopy(vtkDataSet *src)
 {
   int idx;
 
-  this->ComputeTime = src->ComputeTime;
+  this->ScalarRangeComputeTime = src->ScalarRangeComputeTime;
   this->ScalarRange[0] = src->ScalarRange[0];
   this->ScalarRange[1] = src->ScalarRange[1];
+  
+  this->ComputeTime = src->ComputeTime;
   for (idx = 0; idx < 3; ++idx)
     {
     this->Bounds[2*idx] = src->Bounds[2*idx];
@@ -354,67 +380,75 @@ int vtkDataSet::CheckAttributes()
 {
   int numPts, numCells;
   int numArrays, idx;
-  vtkDataArray *array;
+  vtkAbstractArray *array;
   int numTuples;
   const char* name;
 
-  numPts = this->GetNumberOfPoints();
-  numCells = this->GetNumberOfCells();
-
   numArrays = this->GetPointData()->GetNumberOfArrays();
-  for (idx = 0; idx < numArrays; ++idx)
+  if (numArrays > 0)
     {
-    array = this->GetPointData()->GetArray(idx);
-    numTuples = array->GetNumberOfTuples();
-    name = array->GetName();
-    if (name == NULL)
+    // This call can be expensive.
+    numPts = this->GetNumberOfPoints();
+    for (idx = 0; idx < numArrays; ++idx)
       {
-      name = "";
-      }
-    if (numTuples < numPts)
-      {
-      vtkErrorMacro("Point array " << name << " with " 
-                    << array->GetNumberOfComponents()
-                    << " components, only has " << numTuples << " tuples but there are " 
-                    << numPts << " points");
-      return 1;
-      }
-    if (numTuples > numPts)
-      {
-      vtkWarningMacro("Point array " << name << " with " 
-                    << array->GetNumberOfComponents()
-                    << " components, has " << numTuples << " tuples but there are only " 
-                    << numPts << " points");
+      array = this->GetPointData()->GetAbstractArray(idx);
+      numTuples = array->GetNumberOfTuples();
+      name = array->GetName();
+      if (name == NULL)
+        {
+        name = "";
+        }
+      if (numTuples < numPts)
+        {
+        vtkErrorMacro("Point array " << name << " with " 
+                      << array->GetNumberOfComponents()
+                      << " components, only has " << numTuples << " tuples but there are " 
+                      << numPts << " points");
+        return 1;
+        }
+      if (numTuples > numPts)
+        {
+        vtkWarningMacro("Point array " << name << " with " 
+                        << array->GetNumberOfComponents()
+                        << " components, has " << numTuples << " tuples but there are only " 
+                        << numPts << " points");
+        }
       }
     }
-
+  
   numArrays = this->GetCellData()->GetNumberOfArrays();
-  for (idx = 0; idx < numArrays; ++idx)
+  if (numArrays > 0)
     {
-    array = this->GetCellData()->GetArray(idx);
-    numTuples = array->GetNumberOfTuples();
-    name = array->GetName();
-    if (name == NULL)
+    // This call can be expensive.  
+    numCells = this->GetNumberOfCells();
+    
+    for (idx = 0; idx < numArrays; ++idx)
       {
-      name = "";
-      }
-    if (numTuples < numCells)
-      {
-      vtkErrorMacro("Cell array " << name << " with " 
-                    << array->GetNumberOfComponents()
-                    << " components, has only " << numTuples << " tuples but there are "
-                    << numCells << " cells");
-      return 1;
-      }
-    if (numTuples > numCells)
-      {
-      vtkWarningMacro("Cell array " << name << " with " 
-                    << array->GetNumberOfComponents() 
-                    << " components, has " << numTuples << " tuples but there are only " 
-                    << numCells << " cells");
+      array = this->GetCellData()->GetAbstractArray(idx);
+      numTuples = array->GetNumberOfTuples();
+      name = array->GetName();
+      if (name == NULL)
+        {
+        name = "";
+        }
+      if (numTuples < numCells)
+        {
+        vtkErrorMacro("Cell array " << name << " with " 
+                      << array->GetNumberOfComponents()
+                      << " components, has only " << numTuples << " tuples but there are "
+                      << numCells << " cells");
+        return 1;
+        }
+      if (numTuples > numCells)
+        {
+        vtkWarningMacro("Cell array " << name << " with " 
+                        << array->GetNumberOfComponents() 
+                        << " components, has " << numTuples << " tuples but there are only " 
+                        << numCells << " cells");
+        }
       }
     }
-
+  
   return 0;
 }
 
@@ -433,6 +467,14 @@ void vtkDataSet::GenerateGhostLevelArray()
     // or the whole image was requested.
     return;
     }
+
+  // Only generate ghost call levels if zero levels are requested.
+  // (Although we still need ghost points.)
+  if (this->GetUpdateGhostLevel() == 0)
+    {
+    return;
+    }
+    
 
   // Avoid generating these if the producer has generated them.
   if(!this->PointData->GetArray("vtkGhostLevels"))
@@ -457,13 +499,6 @@ void vtkDataSet::GenerateGhostLevelArray()
     levels->Allocate((extent[1]-extent[0] + 1) *
                      (extent[3]-extent[2] + 1) *
                      (extent[5]-extent[4] + 1));
-    
-    //cerr << "max: " << extent[0] << ", " << extent[1] << ", " 
-    //   << extent[2] << ", " << extent[3] << ", " 
-    //   << extent[4] << ", " << extent[5] << endl;
-    //cerr << "zero: " << zeroExt[0] << ", " << zeroExt[1] << ", " 
-    //   << zeroExt[2] << ", " << zeroExt[3] << ", "
-    //   << zeroExt[4] << ", " << zeroExt[5] << endl;
     
     int wholeExtent[6] = {0,-1,0,-1,0,-1};
     this->GetWholeExtent(wholeExtent);
@@ -516,7 +551,7 @@ void vtkDataSet::GenerateGhostLevelArray()
           //cerr << "   " << di << ", " << dj << ", " << dk << endl;
           //cerr << dist << endl;
           
-          levels->InsertNextValue((unsigned char)dist);
+          levels->InsertNextValue(static_cast<unsigned char>(dist));
           }
         }
       }
@@ -524,13 +559,6 @@ void vtkDataSet::GenerateGhostLevelArray()
     this->PointData->AddArray(levels);
     levels->Delete();
   
-    // Only generate ghost call levels if zero levels are requested.
-    // (Although we still need ghost points.)
-    if (this->GetUpdateGhostLevel() == 0)
-      {
-      return;
-      }
-    
     // ---- CELLS ----
     // Allocate the appropriate number levels (number of cells).
     levels = vtkUnsignedCharArray::New();
@@ -601,7 +629,7 @@ void vtkDataSet::GenerateGhostLevelArray()
             dist = dk;
             }
 
-          levels->InsertNextValue((unsigned char)dist);
+          levels->InsertNextValue(static_cast<unsigned char>(dist));
           }
         }
       }

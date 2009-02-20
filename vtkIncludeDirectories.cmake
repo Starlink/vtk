@@ -40,9 +40,9 @@ IF(VTK_USE_PARALLEL)
   ENDIF(VTK_USE_MPI)
 ENDIF(VTK_USE_PARALLEL)
 
-IF(VTK_WRAP_TCL)
+IF(VTK_INCLUDE_NEED_TCL)
   SET(VTK_INCLUDE_DIRS_SYSTEM ${VTK_INCLUDE_DIRS_SYSTEM} ${TCL_INCLUDE_PATH})
-ENDIF(VTK_WRAP_TCL)
+ENDIF(VTK_INCLUDE_NEED_TCL)
 
 IF(VTK_WRAP_PYTHON)
   # Python include directory.
@@ -57,6 +57,25 @@ IF(VTK_INCLUDE_NEED_TK)
   IF (WIN32)
     SET(VTK_INCLUDE_DIRS_SYSTEM ${VTK_INCLUDE_DIRS_SYSTEM} ${TK_XLIB_PATH})
   ENDIF (WIN32)
+  
+  # Need Tk internal headers for Tk initialization.
+  SET (try_file "tkInt.h")
+  IF (WIN32)
+    SET (try_file "tkWinPort.h")
+  ENDIF (WIN32)
+  IF (APPLE)
+    SET (try_file "tkMacOSXDefault.h")
+  ENDIF (APPLE)
+  IF (try_file)
+    VTK_GET_TCL_TK_VERSION ("TCL_TK_MAJOR_VERSION" "TCL_TK_MINOR_VERSION")
+    SET (TCL_TK_VERSIOND "${TCL_TK_MAJOR_VERSION}.${TCL_TK_MINOR_VERSION}")
+    FIND_PATH(
+       TK_INTERNAL_PATH 
+       ${try_file} 
+       "${VTK_SOURCE_DIR}/Utilities/TclTk/internals/tk${TCL_TK_VERSIOND}"
+       DOC "The path to the Tk internal headers (${try_file}).")
+    MARK_AS_ADVANCED(TK_INTERNAL_PATH)
+  ENDIF (try_file)
 ENDIF(VTK_INCLUDE_NEED_TK)
 
 IF(VTK_WRAP_JAVA)
@@ -65,17 +84,33 @@ IF(VTK_WRAP_JAVA)
       ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2} ${JAVA_AWT_INCLUDE_PATH})
 ENDIF(VTK_WRAP_JAVA)
 
+IF(VTK_USE_BOOST)
+  # Boost include directories.
+  SET(VTK_INCLUDE_DIRS_SYSTEM ${VTK_INCLUDE_DIRS_SYSTEM} ${Boost_INCLUDE_DIR})
+ENDIF(VTK_USE_BOOST)
+
 #-----------------------------------------------------------------------------
 # Include directories from the build tree.
+# ${VTK_BINARY_DIR}/Utilities is needed to access vtksys, which is prefixed
+# (i.e. include "vtksys/DynamicLoader.hxx")
 SET(VTK_INCLUDE_DIRS_BUILD_TREE
   ${VTK_BINARY_DIR}
+  ${VTK_BINARY_DIR}/Common
   ${VTK_BINARY_DIR}/Utilities
   )
-
 
 #-----------------------------------------------------------------------------
 # Include directories from the source tree.
 SET(VTK_INCLUDE_DIRS_SOURCE_TREE "")
+
+IF(VTK_USE_INFOVIS)
+  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE} ${VTK_SOURCE_DIR}/Infovis)
+ENDIF(VTK_USE_INFOVIS)
+
+IF(VTK_USE_VIEWS)
+  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE} ${VTK_SOURCE_DIR}/Views)
+ENDIF(VTK_USE_VIEWS)
+
 IF(VTK_USE_PARALLEL)
   SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE} ${VTK_SOURCE_DIR}/Parallel)
 ENDIF(VTK_USE_PARALLEL)
@@ -115,8 +150,6 @@ SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
 # Include directories needed for .cxx files in VTK.  These include
 # directories will NOT be available to user projects.
 SET(VTK_INCLUDE_DIRS_BUILD_TREE_CXX
-  ${VTK_SOURCE_DIR}/Utilities/vtkfreetype/include
-  ${VTK_BINARY_DIR}/Utilities/vtkfreetype
   ${VTK_SOURCE_DIR}/Utilities/ftgl/src
   ${VTK_BINARY_DIR}/Utilities/ftgl
 )
@@ -125,6 +158,11 @@ IF(VTK_USE_TK)
   # Need access to internal Tk headers for the vtkTk... widget .cxx files.
   SET(VTK_INCLUDE_DIRS_BUILD_TREE_CXX ${VTK_INCLUDE_DIRS_BUILD_TREE_CXX}
       ${TK_INTERNAL_PATH})
+      
+  #-----------------------------------------------------------------------------
+  # Configure the Tk library for vtkRendering.
+  INCLUDE(${VTK_SOURCE_DIR}/Wrapping/Tcl/vtkDetermineTkResources.cmake)
+    
 ENDIF(VTK_USE_TK)
 
 IF (VTK_USE_MATROX_IMAGING)
@@ -140,20 +178,27 @@ VTK_THIRD_PARTY_INCLUDE2(JPEG)
 VTK_THIRD_PARTY_INCLUDE2(PNG)
 VTK_THIRD_PARTY_INCLUDE2(TIFF)
 VTK_THIRD_PARTY_INCLUDE2(EXPAT)
+VTK_THIRD_PARTY_INCLUDE2(LIBXML2)
 VTK_THIRD_PARTY_INCLUDE(DICOMParser DICOMParser)
 VTK_THIRD_PARTY_INCLUDE(FREETYPE vtkfreetype/include)
 VTK_THIRD_PARTY_INCLUDE(NetCDF vtknetcdf)
 VTK_THIRD_PARTY_INCLUDE(Exodus2 vtkexodus2/include)
+VTK_THIRD_PARTY_INCLUDE(MATERIALLIBRARY MaterialLibrary)
+VTK_THIRD_PARTY_INCLUDE(VERDICT verdict)
 
 # Include GUI support
 IF(VTK_USE_GUISUPPORT)
   IF(VTK_USE_QVTK)
-  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+    SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
       ${VTK_SOURCE_DIR}/GUISupport/Qt)
+    SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+      ${VTK_BINARY_DIR}/GUISupport/Qt)
   ENDIF(VTK_USE_QVTK)
   IF(VTK_USE_MFC)
-  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+    SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
       ${VTK_SOURCE_DIR}/GUISupport/MFC)
+    SET(VTK_INCLUDE_DIRS_BUILD_TREE ${VTK_INCLUDE_DIRS_BUILD_TREE}
+      ${VTK_BINARY_DIR}/GUISupport/MFC)
   ENDIF(VTK_USE_MFC)
 ENDIF(VTK_USE_GUISUPPORT)
 
@@ -164,3 +209,17 @@ IF(VTK_USE_RENDERING)
         ${VTK_SOURCE_DIR}/Utilities/gl2ps)
   ENDIF(VTK_USE_GL2PS)
 ENDIF(VTK_USE_RENDERING)
+
+# Infovis support
+IF(VTK_USE_INFOVIS)
+  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+    ${VTK_SOURCE_DIR}/Infovis
+    )
+ENDIF(VTK_USE_INFOVIS)
+
+# Views support
+IF(VTK_USE_VIEWS)
+  SET(VTK_INCLUDE_DIRS_SOURCE_TREE ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+    ${VTK_SOURCE_DIR}/Views
+    )
+ENDIF(VTK_USE_VIEWS)

@@ -18,8 +18,9 @@
 #include "vtkDebugLeaks.h"
 
 #include <sys/stat.h>
+#include <vtksys/SystemTools.hxx>
 
-vtkCxxRevisionMacro(vtkDirectory, "$Revision: 1.25.12.2 $");
+vtkCxxRevisionMacro(vtkDirectory, "$Revision: 1.33 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -152,6 +153,15 @@ const char* vtkDirectory::GetCurrentWorkingDirectory(char* buf,
 #include <dirent.h>
 #include <unistd.h>
 
+/* There is a problem with the Portland compiler, large file
+support and glibc/Linux system headers: 
+             http://www.pgroup.com/userforum/viewtopic.php?
+             p=1992&sid=f16167f51964f1a68fe5041b8eb213b6
+*/
+#if defined(__PGI) && defined(__USE_FILE_OFFSET64)
+# define dirent dirent64
+#endif
+
 int vtkDirectory::Open(const char* name)
 {
   // clean up from any previous open
@@ -188,12 +198,7 @@ const char* vtkDirectory::GetCurrentWorkingDirectory(char* buf,
 //----------------------------------------------------------------------------
 int vtkDirectory::MakeDirectory(const char* dir)
 {
-#if defined(_WIN32) && (defined(_MSC_VER) || defined(__BORLANDC__) \
-                        || defined(__MINGW32__))
-  return _mkdir(dir) == 0;
-#else 
-  return mkdir(dir, 00777) == 0;
-#endif
+  return vtksys::SystemTools::MakeDirectory(dir);
 }
 
 
@@ -217,88 +222,93 @@ int vtkDirectory::GetNumberOfFiles()
 //----------------------------------------------------------------------------
 int vtkDirectory::FileIsDirectory(const char *name)
 {
-  if (name == 0)
+  // The vtksys::SystemTools::FileIsDirectory()
+  // does not equal the following code (it probably should),
+  // and it will broke KWWidgets. Reverse back to 1.30
+  // return vtksys::SystemTools::FileIsDirectory(name);
+   
+  if (name == 0)   
     {
-    return 0;
-    }
+    return 0;   
+    }   
+   
+  int absolutePath = 0;   
+#if defined(_WIN32)   
+  if (name[0] == '/' || name[0] == '\\')   
+    {   
+    absolutePath = 1;   
+    }   
+  else   
+    {   
+    for (int i = 0; name[i] != '\0'; i++)   
+      {   
+      if (name[i] == ':')   
+        {   
+        absolutePath = 1;   
+        break;   
+        }   
+      else if (name[i] == '/' || name[i] == '\\')   
+        {   
+        break;   
+        }   
+      }   
+    }   
+#else   
+  if (name[0] == '/')   
+    {   
+    absolutePath = 1;   
+    }   
+#endif   
+   
+  char *fullPath;   
+   
+  int n = 0;   
+  if (!absolutePath && this->Path)   
+    {   
+    n = static_cast<int>(strlen(this->Path));
+    }   
+   
+  int m = static_cast<int>(strlen(name));
 
-  int absolutePath = 0;
-#if defined(_WIN32)
-  if (name[0] == '/' || name[0] == '\\')
-    {
-    absolutePath = 1;
-    }
-  else
-    {
-    for (int i = 0; name[i] != '\0'; i++)
-      {
-      if (name[i] == ':')
-        {
-        absolutePath = 1;
-        break;
-        }
-      else if (name[i] == '/' || name[i] == '\\')
-        {
-        break;
-        }
-      }
-    }
-#else
-  if (name[0] == '/')
-    {
-    absolutePath = 1;
-    }
-#endif
-
-  char *fullPath;
-
-  int n = 0;
-  if (!absolutePath && this->Path)
-    {
-    n = strlen(this->Path);
-    }
-
-  int m = strlen(name);
-
-  fullPath = new char[n+m+2];
-    
-  if (!absolutePath && this->Path)
-    {
-    strcpy(fullPath, this->Path);
-#if defined(_WIN32)
-    if (fullPath[n-1] != '/'
-        && fullPath[n-1] != '\\')
-      {
-#if !defined(__CYGWIN__)
-      fullPath[n++] = '\\';
-#else
-      fullPath[n++] = '/';
-#endif
-      }
-#else
-    if (fullPath[n-1] != '/')
-      {
-      fullPath[n++] = '/';
-      }
-#endif
-    }
-
-  strcpy(&fullPath[n], name);
-
-  int result = 0;
-  struct stat fs;
-  if(stat(fullPath, &fs) == 0)
-    {
-#if _WIN32
-    result = ((fs.st_mode & _S_IFDIR) != 0);
-#else
-    result = S_ISDIR(fs.st_mode);
-#endif
-    }
-
-  delete [] fullPath;
-
-  return result;
+  fullPath = new char[n+m+2];   
+   
+  if (!absolutePath && this->Path)   
+    {   
+    strcpy(fullPath, this->Path);   
+#if defined(_WIN32)   
+    if (fullPath[n-1] != '/'   
+        && fullPath[n-1] != '\\')   
+      {   
+#if !defined(__CYGWIN__)   
+      fullPath[n++] = '\\';   
+#else   
+      fullPath[n++] = '/';   
+#endif   
+      }   
+#else   
+    if (fullPath[n-1] != '/')   
+      {   
+      fullPath[n++] = '/';   
+      }   
+#endif   
+    }   
+   
+  strcpy(&fullPath[n], name);   
+   
+  int result = 0;   
+  struct stat fs;   
+  if(stat(fullPath, &fs) == 0)   
+    {   
+#if _WIN32   
+    result = ((fs.st_mode & _S_IFDIR) != 0);   
+#else   
+    result = S_ISDIR(fs.st_mode);   
+#endif   
+    }   
+   
+  delete [] fullPath;   
+   
+  return result; 
 }
 
 //----------------------------------------------------------------------------
@@ -325,3 +335,15 @@ int vtkDirectory::CreateDirectory(const char* dir)
   return vtkDirectory::MakeDirectory(dir);
 }
 #endif
+  
+int vtkDirectory::DeleteDirectory(const char* dir)
+{
+  return vtksys::SystemTools::RemoveADirectory(dir);
+}
+
+int vtkDirectory::Rename(const char* oldname, const char* newname)
+{
+  return 0 == rename(oldname, newname);
+}
+
+

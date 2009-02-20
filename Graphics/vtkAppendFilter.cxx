@@ -25,7 +25,7 @@
 #include "vtkPointData.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkAppendFilter, "$Revision: 1.73 $");
+vtkCxxRevisionMacro(vtkAppendFilter, "$Revision: 1.76 $");
 vtkStandardNewMacro(vtkAppendFilter);
 
 //----------------------------------------------------------------------------
@@ -84,7 +84,7 @@ vtkDataSetCollection *vtkAppendFilter::GetInputList()
     {
     if (this->GetInput(idx))
       {
-      this->InputList->AddItem((vtkDataSet*)(this->GetInput(idx)));
+      this->InputList->AddItem(this->GetInput(idx));
       }
     }  
   
@@ -117,7 +117,6 @@ int vtkAppendFilter::RequestData(
   vtkIdType ptId, cellId, newCellId;
   vtkPointData *outputPD = output->GetPointData();
   vtkCellData *outputCD = output->GetCellData();
-  int numInputs = this->GetNumberOfInputConnections(0);
 
   vtkDebugMacro(<<"Appending data together");
 
@@ -131,6 +130,7 @@ int vtkAppendFilter::RequestData(
   numPts = 0;
   numCells = 0;
 
+  int numInputs = inputVector[0]->GetNumberOfInformationObjects();
   vtkDataSetAttributes::FieldList ptList(numInputs);
   vtkDataSetAttributes::FieldList cellList(numInputs);
   int firstPD=1;
@@ -186,7 +186,9 @@ int vtkAppendFilter::RequestData(
   
   // Now can allocate memory
   output->Allocate(numCells); //allocate storage for geometry/topology
+  outputPD->CopyGlobalIdsOn();
   outputPD->CopyAllocate(ptList,numPts);
+  outputCD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(cellList,numCells);
 
   newPts = vtkPoints::New();

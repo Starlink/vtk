@@ -29,7 +29,7 @@
 
 #include <float.h>
 
-vtkCxxRevisionMacro(vtkBandedPolyDataContourFilter, "$Revision: 1.54 $");
+vtkCxxRevisionMacro(vtkBandedPolyDataContourFilter, "$Revision: 1.56.2.1 $");
 vtkStandardNewMacro(vtkBandedPolyDataContourFilter);
 
 // Construct object.
@@ -170,7 +170,7 @@ inline int vtkBandedPolyDataContourFilter::InsertCell(vtkCellArray *cells,
   int idx = this->ComputeScalarIndex(s+this->ClipTolerance);
 
   if ( !this->Clipping || 
-       idx >= this->ClipIndex[0] && idx < this->ClipIndex[1] )
+       (idx >= this->ClipIndex[0] && idx < this->ClipIndex[1]) )
     {
     cells->InsertNextCell(npts,pts);
 
@@ -260,7 +260,7 @@ int vtkBandedPolyDataContourFilter::RequestData(
     this->ClipValues[i] = this->ContourValues->GetValue(i-1);
     }
 
-  qsort((void *)this->ClipValues, this->NumberOfClipValues, sizeof(double), 
+  qsort(this->ClipValues, this->NumberOfClipValues, sizeof(double), 
         vtkCompareClipValues);
 
   // toss out values which are too close together, currently within FLT_EPSILON%
@@ -286,7 +286,7 @@ int vtkBandedPolyDataContourFilter::RequestData(
   //
   // Estimate allocation size, stolen from vtkContourGrid...
   //
-  estimatedSize = (vtkIdType) pow ((double) numCells, .9);
+  estimatedSize=static_cast<vtkIdType>(pow(static_cast<double>(numCells),.9));
   estimatedSize *= this->NumberOfClipValues;
   estimatedSize = estimatedSize / 1024 * 1024; // multiple of 1024
   if (estimatedSize < 1024)
@@ -307,6 +307,7 @@ int vtkBandedPolyDataContourFilter::RequestData(
   vtkDoubleArray *outScalars = vtkDoubleArray::New();
   outScalars->Allocate(3*numPts,numPts);
   outPD->SetScalars(outScalars);
+  outScalars->Delete();
   
   for (i=0; i<numPts; i++)
     {
@@ -509,7 +510,7 @@ int vtkBandedPolyDataContourFilter::RequestData(
       {
       if  ( ! (++count % updateCount) )
         {
-        this->UpdateProgress(0.1 + 0.45*((double)count/numPolys));
+        this->UpdateProgress(0.1 + 0.45*(static_cast<double>(count)/numPolys));
         }
 
       for (i=0; i<npts; i++)
@@ -558,7 +559,8 @@ int vtkBandedPolyDataContourFilter::RequestData(
       {
       if  ( ! (++count % updateCount) )
         {
-        this->UpdateProgress(0.55 + 0.45*((double)count/numPolys));
+        this->UpdateProgress(0.55 +
+                             0.45*(static_cast<double>(count)/numPolys));
         }
 
       //Create a new polygon that includes all the points including the
@@ -740,7 +742,6 @@ int vtkBandedPolyDataContourFilter::RequestData(
     delete [] isContourValue;
     delete [] isOriginalVertex;
     delete [] fullPoly;
-    outScalars->Delete();
 
     output->SetPolys(newPolys);
     newPolys->Delete();

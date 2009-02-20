@@ -33,7 +33,7 @@
 #include <ctype.h>
 
 
-vtkCxxRevisionMacro(vtkExodusModel, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkExodusModel, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkExodusModel);
 
 vtkExodusModel::vtkExodusModel()
@@ -1151,14 +1151,13 @@ int vtkExodusModel::MergeExodusModel(vtkExodusModel *em)
 
   return (fail != 0);
 }
-vtkExodusModel *vtkExodusModel::ExtractExodusModel(vtkIntArray *globalCellIdList,
-   vtkUnstructuredGrid *grid, const char *globalCellIdArrayName,
-   const char *globalNodeIdArrayName)
+vtkExodusModel *vtkExodusModel::ExtractExodusModel(vtkIdTypeArray *globalCellIdList,
+                                                   vtkUnstructuredGrid *grid)
 {
   vtkExodusModel *em = vtkExodusModel::New();
 
   vtkModelMetadata *mmd = this->GetModelMetadata()->ExtractModelMetadata(
-        globalCellIdList, grid, globalCellIdArrayName, globalNodeIdArrayName);
+    globalCellIdList, grid);
 
   if (mmd == NULL)
     {
@@ -1200,7 +1199,8 @@ void vtkExodusModel::SetElementVariableInfo(int numOrigNames, char **origNames,
 
   emd->SetElementVariableInfo(numOrigNames, origNames,
                      numNames, names, numComp, map);
-}     
+}
+
 //-------------------------------------------------
 // Node variables
 //-------------------------------------------------
@@ -1232,12 +1232,12 @@ void vtkExodusModel::SetNodeVariableInfo(int numOrigNames, char **origNames,
 }     
 void vtkExodusModel::RemoveBeginningAndTrailingSpaces(char **names, int len)
 {
-  int i, j;
+  size_t i, j;
 
-  for (i=0; i<len; i++)
+  for (i=0; i<static_cast<size_t>(len); i++)
     {
     char *c = names[i];
-    int nmlen = strlen(c);
+    size_t nmlen = strlen(c);
 
     char *cbegin = c;
     char *cend = c + nmlen - 1;
@@ -1258,11 +1258,11 @@ void vtkExodusModel::RemoveBeginningAndTrailingSpaces(char **names, int len)
 
     if (cend < cbegin)
       {
-      sprintf(names[i], "null_%d", i);
+      sprintf(names[i], "null_%u", static_cast<unsigned int>(i));
       continue;
       }
 
-    int newlen = cend - cbegin + 1;
+    size_t newlen = cend - cbegin + 1;
 
     if (newlen < nmlen)
       {

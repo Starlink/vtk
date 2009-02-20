@@ -1,6 +1,6 @@
 package require vtk
 
-# This script calculates the luminanace of an image
+# This script calculates the luminance of an image
 
 vtkRenderWindow imgWin
 imgWin SetSize 512 256
@@ -9,6 +9,14 @@ imgWin SetSize 512 256
 
 vtkTIFFReader image1
   image1 SetFileName "$VTK_DATA_ROOT/Data/beach.tif"
+
+# "beach.tif" image contains ORIENTATION tag which is 
+# ORIENTATION_TOPLEFT (row 0 top, col 0 lhs) type. The TIFF 
+# reader parses this tag and sets the internal TIFF image 
+# orientation accordingly.  To overwrite this orientation with a vtk
+# convention of ORIENTATION_BOTLEFT (row 0 bottom, col 0 lhs ), invoke
+# SetOrientationType method with parameter value of 4.
+  image1 SetOrientationType 4
 
 vtkBMPReader image2
   image2 SetFileName "$VTK_DATA_ROOT/Data/masonry.bmp"
@@ -75,10 +83,10 @@ foreach background $backgrounds {
 	mapper${row}${column} SetInputConnection [blend${row}${column} GetOutputPort]
 	mapper${row}${column} SetColorWindow 255
 	mapper${row}${column} SetColorLevel 127.5
-	
+
 	vtkActor2D actor${row}${column}
 	actor${row}${column} SetMapper mapper${row}${column}
-	
+
 	vtkRenderer imager${row}${column}
 	imager${row}${column} AddActor2D actor${row}${column}
 

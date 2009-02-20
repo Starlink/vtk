@@ -1,3 +1,8 @@
+#ifndef __VTK_SYSTEM_INCLUDES__INSIDE
+#  define __VTK_SYSTEM_INCLUDES__INSIDE
+#  include "vtkWin32Header.h"
+#  undef __VTK_SYSTEM_INCLUDES__INSIDE
+#endif
 
 #if defined (__digital__) && defined (__unix__) || defined(__IBMCPP__)
 #define HAVE_ALLOCA_H 1
@@ -512,9 +517,7 @@ VrmlNodeType::has(const vtkVRMLVectorType<NameTypeRec*> &recs, const char *nodeN
 
 #define YYDEBUG 1
 
-#ifndef __APPLE__
-#include <malloc.h>
-#endif
+#include <stdlib.h>
 
 #ifdef USE_STD_NAMESPACE
 using namespace std;
@@ -4257,7 +4260,7 @@ YY_MALLOC_DECL
 #define YY_BREAK break;
 #endif
 
-vtkCxxRevisionMacro(vtkVRMLImporter, "$Revision: 1.71 $");
+vtkCxxRevisionMacro(vtkVRMLImporter, "$Revision: 1.73 $");
 vtkStandardNewMacro(vtkVRMLImporter);
 
 vtkPoints* vtkVRMLImporter::PointsNew()

@@ -19,9 +19,9 @@ INCLUDE_DIRECTORIES (
 # Source files
 #
 SET (FREETYPE_SRCS
-  src/autohint/autohint.c
   src/base/ftbase.c
   src/base/ftbbox.c
+  src/base/ftbitmap.c
   src/base/ftglyph.c
   src/base/ftinit.c
   src/base/ftmm.c
@@ -63,9 +63,6 @@ IF (WIN32)
     BEFORE
     ${VTKFREETYPE_SOURCE_DIR}/builds/win32
   )
-  IF (BORLAND)
-    SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w-8004")
-  ENDIF (BORLAND)
 ELSE (WIN32)
   SET (FREETYPE_SRCS ${FREETYPE_SRCS} src/base/ftdebug.c)
 ENDIF (WIN32)
@@ -92,20 +89,26 @@ ELSE (UNIX)
 ENDIF (UNIX)
 
 #
-# Apple flags and specific drivers
+# freetype can be optionally built with support for resource
+# fork-based Mac fonts. That support requires linking against
+# Mac OS X frameworks, and so is disabled if using X11.
 #
-IF (APPLE)
-  SET (VTKFREETYPE_USE_CARBON 0)
-#  SET (FREETYPE_SRCS ${FREETYPE_SRCS} src/base/ftmac.c)
-ENDIF (APPLE)
+IF (APPLE AND NOT VTK_USE_X)
+  SET (VTKFREETYPE_MAC_FONT_SUPPORT 1)
+ENDIF (APPLE AND NOT VTK_USE_X)
 
 #
 # Define the library (and install it)
 #
 ADD_LIBRARY (vtkfreetype ${FREETYPE_SRCS})
-IF (APPLE)
-  TARGET_LINK_LIBRARIES (vtkfreetype "-framework AppKit")
-ENDIF (APPLE)
+
+#
+# If we want freetype's Mac font support we need to link against
+# a couple of Mac OS X frameworks.
+#
+IF (APPLE AND VTKFREETYPE_MAC_FONT_SUPPORT)
+    TARGET_LINK_LIBRARIES (vtkfreetype "-framework ApplicationServices -framework CoreServices")
+ENDIF (APPLE AND VTKFREETYPE_MAC_FONT_SUPPORT)
 
 # Apply user-defined properties to the library target.
 IF(VTK_LIBRARY_PROPERTIES)
@@ -113,7 +116,10 @@ IF(VTK_LIBRARY_PROPERTIES)
 ENDIF(VTK_LIBRARY_PROPERTIES)
 
 IF(NOT VTK_INSTALL_NO_LIBRARIES)
-  INSTALL_TARGETS (${VTK_INSTALL_LIB_DIR} vtkfreetype)
+  INSTALL(TARGETS vtkfreetype
+    RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeLibraries
+    LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries
+    ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development)
 ENDIF(NOT VTK_INSTALL_NO_LIBRARIES)
 
 #
@@ -129,3 +135,35 @@ ADD_DEFINITIONS (-DVTKFREETYPE)
 CONFIGURE_FILE (${VTKFREETYPE_SOURCE_DIR}/include/vtkFreeTypeConfig.h.in
                 ${VTKFREETYPE_BINARY_DIR}/include/vtkFreeTypeConfig.h)
 
+
+#
+# Install headers
+#
+#
+IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+  INSTALL(FILES
+    ${VTKFREETYPE_SOURCE_DIR}/include/ft2build.h
+    ${VTKFREETYPE_SOURCE_DIR}/include/vtk_freetype_mangle.h
+    ${VTKFREETYPE_SOURCE_DIR}/include/vtk_ftmodule.h
+    ${VTKFREETYPE_BINARY_DIR}/include/vtkFreeTypeConfig.h
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkfreetype/include
+    COMPONENT Development)
+
+  file(GLOB freetype_headers 
+    "${VTKFREETYPE_SOURCE_DIR}/include/freetype/*.h")
+  INSTALL(FILES ${freetype_headers}
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkfreetype/include/freetype
+    COMPONENT Development)
+
+  file(GLOB freetype_config_headers 
+    "${VTKFREETYPE_SOURCE_DIR}/include/freetype/config/*.h")
+  INSTALL(FILES ${freetype_config_headers}
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkfreetype/include/freetype/config
+    COMPONENT Development)
+
+  file(GLOB freetype_internal_headers 
+    "${VTKFREETYPE_SOURCE_DIR}/include/freetype/internal/*.h")
+  INSTALL(FILES ${freetype_internal_headers}
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkfreetype/include/freetype/internal
+    COMPONENT Development)
+ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)

@@ -30,6 +30,8 @@
 
 class vtkPointData;
 class vtkPoints;
+class vtkIdTypeArray;
+
 //BTX
 struct vtkFastGeomQuadStruct;
 typedef struct vtkFastGeomQuadStruct vtkFastGeomQuad;
@@ -57,6 +59,20 @@ public:
   vtkSetMacro(PieceInvariant, int);
   vtkGetMacro(PieceInvariant, int);
 
+  // Description:
+  // If on, the output polygonal dataset will have a celldata array that 
+  // holds the cell index of the original 3D cell that produced each output
+  // cell. This is useful for cell picking. The default is off to conserve 
+  // memory. Note that PassThroughCellIds will be ignored if UseStrips is on,
+  // since in that case each tringle strip can represent more than on of the
+  // input cells.
+  vtkSetMacro(PassThroughCellIds,int);
+  vtkGetMacro(PassThroughCellIds,int);
+  vtkBooleanMacro(PassThroughCellIds,int);
+  vtkSetMacro(PassThroughPointIds,int);
+  vtkGetMacro(PassThroughPointIds,int);
+  vtkBooleanMacro(PassThroughPointIds,int);
+
 protected:
   vtkDataSetSurfaceFilter();
   ~vtkDataSetSurfaceFilter();
@@ -67,18 +83,18 @@ protected:
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   virtual int FillInputPortInformation(int port, vtkInformation *info);
-  int StructuredExecute(vtkDataSet *input, vtkPolyData *output, int *ext,
+  int StructuredExecute(vtkDataSet *input, vtkPolyData *output, vtkIdType *ext,
                          vtkInformation *inInfo);
   int UnstructuredGridExecute(vtkDataSet *input, vtkPolyData *output);
   int DataSetExecute(vtkDataSet *input, vtkPolyData *output);
 
   // Helper methods.
   void ExecuteFaceStrips(vtkDataSet *input, vtkPolyData *output,
-                         int maxFlag, int *ext,
+                         int maxFlag, vtkIdType *ext,
                          int aAxis, int bAxis, int cAxis,
                          vtkInformation *inInfo);
   void ExecuteFaceQuads(vtkDataSet *input, vtkPolyData *output,
-                        int maxFlag, int *ext,
+                        int maxFlag, vtkIdType *ext,
                         int aAxis, int bAxis, int cAxis,
                         vtkInformation *inInfo);
 
@@ -123,6 +139,14 @@ protected:
   int NextQuadIndex;
 
   int PieceInvariant;
+
+  int PassThroughCellIds;
+  void RecordOrigCellId(vtkIdType newIndex, vtkIdType origId);
+  vtkIdTypeArray *OriginalCellIds;
+
+  int PassThroughPointIds;
+  void RecordOrigPointId(vtkIdType newIndex, vtkIdType origId);
+  vtkIdTypeArray *OriginalPointIds;
 
 private:
   vtkDataSetSurfaceFilter(const vtkDataSetSurfaceFilter&);  // Not implemented.

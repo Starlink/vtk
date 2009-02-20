@@ -1,15 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWin32OpenGLRenderWindow.cxx,v $
+Program:   Visualization Toolkit
+Module:    $RCSfile: vtkWin32OpenGLRenderWindow.cxx,v $
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 #include "vtkWin32OpenGLRenderWindow.h"
@@ -28,25 +28,14 @@
 #include "vtkWin32RenderWindowInteractor.h"
 
 #include <math.h>
+#include <vtksys/ios/sstream>
 
 #include "vtkOpenGL.h"
 
-vtkCxxRevisionMacro(vtkWin32OpenGLRenderWindow, "$Revision: 1.130.4.1 $");
+vtkCxxRevisionMacro(vtkWin32OpenGLRenderWindow, "$Revision: 1.154.2.2 $");
 vtkStandardNewMacro(vtkWin32OpenGLRenderWindow);
 
 #define VTK_MAX_LIGHTS 8
-
-#if ( _MSC_VER >= 1300 ) // Visual studio .NET
-#pragma warning ( disable : 4311 )
-#pragma warning ( disable : 4312 )
-#  define vtkGWLP_HINSTANCE GWLP_HINSTANCE
-#  define vtkGetWindowLong GetWindowLongPtr
-#  define vtkSetWindowLong SetWindowLongPtr
-#else // regular Visual studio 
-#  define vtkGWLP_HINSTANCE GWL_HINSTANCE
-#  define vtkGetWindowLong GetWindowLong
-#  define vtkSetWindowLong SetWindowLong
-#endif // 
 
 vtkWin32OpenGLRenderWindow::vtkWin32OpenGLRenderWindow()
 {
@@ -59,23 +48,33 @@ vtkWin32OpenGLRenderWindow::vtkWin32OpenGLRenderWindow()
   this->NextWindowId = 0;
   this->DeviceContext = (HDC)0;         // hsr
   this->MFChandledWindow = FALSE;       // hsr
-  this->StereoType = VTK_STEREO_CRYSTAL_EYES;  
+  this->StereoType = VTK_STEREO_CRYSTAL_EYES;
   this->CursorHidden = 0;
   this->Capabilities = 0;
 
   this->ScreenDeviceContext = (HDC)0;
   this->MemoryHdc = (HDC)0;
+  this->CreatingOffScreenWindow = 0;
+  this->WindowIdReferenceCount = 0;
 }
 
 vtkWin32OpenGLRenderWindow::~vtkWin32OpenGLRenderWindow()
 {
   this->Finalize();
+  
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rsit;
+  for (this->Renderers->InitTraversal(rsit); 
+       (ren = this->Renderers->GetNextRenderer(rsit));)
+    {
+    ren->SetRenderWindow(NULL);
+    }
+
   delete[] this->Capabilities;
 }
 
 void vtkWin32OpenGLRenderWindow::Clean()
 {
-  vtkRenderer *ren;
   GLuint id;
   
   /* finish OpenGL rendering */
@@ -106,18 +105,8 @@ void vtkWin32OpenGLRenderWindow::Clean()
         }
 #endif
       }
-    
-    // tell each of the renderers that this render window/graphics context
-    // is being removed (the RendererCollection is removed by vtkRenderWindow's
-    // destructor)
-    vtkCollectionSimpleIterator rsit;
-    this->Renderers->InitTraversal(rsit);
-    for ( ren = (vtkOpenGLRenderer *) this->Renderers->GetNextRenderer(rsit);
-          ren != NULL;
-          ren = (vtkOpenGLRenderer *) this->Renderers->GetNextRenderer(rsit) )
-      {
-      ren->SetRenderWindow(NULL);
-      }
+
+    this->CleanUpRenderers();
     
     if (wglMakeCurrent(NULL, NULL) != TRUE) 
       {
@@ -137,20 +126,42 @@ void vtkWin32OpenGLRenderWindow::Clean()
     }
 }
 
+void vtkWin32OpenGLRenderWindow::CleanUpRenderers()
+{
+  // tell each of the renderers that this render window/graphics context
+  // is being removed (the RendererCollection is removed by vtkRenderWindow's
+  // destructor)
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rsit;
+  for (this->Renderers->InitTraversal(rsit); 
+       (ren = this->Renderers->GetNextRenderer(rsit));)
+    {
+    ren->SetRenderWindow(NULL);
+    ren->SetRenderWindow(this);
+    }
+}
+
 LRESULT APIENTRY vtkWin32OpenGLRenderWindow::WndProc(HWND hWnd, UINT message, 
                                                      WPARAM wParam, 
                                                      LPARAM lParam)
 {
-  vtkWin32OpenGLRenderWindow *me = 
-    (vtkWin32OpenGLRenderWindow *)vtkGetWindowLong(hWnd,4);
+  LRESULT res;
 
-  // forward to actual object
-  if (me)
+  vtkWin32OpenGLRenderWindow *me = 
+    (vtkWin32OpenGLRenderWindow *)vtkGetWindowLong(hWnd,sizeof(vtkLONG));
+
+  if (me && me->GetReferenceCount()>0)
     {
-      return me->MessageProc(hWnd, message, wParam, lParam);
+    me->Register(me);
+    res = me->MessageProc(hWnd, message, wParam, lParam);
+    me->UnRegister(me);
+    }
+  else
+    {
+    res = DefWindowProc(hWnd, message, wParam, lParam);
     }
 
-  return DefWindowProc(hWnd, message, wParam, lParam);
+  return res;
 }
 
 void vtkWin32OpenGLRenderWindow::SetWindowName( const char * _arg )
@@ -159,12 +170,12 @@ void vtkWin32OpenGLRenderWindow::SetWindowName( const char * _arg )
   if (this->WindowId)
     {
 #ifdef UNICODE
-                wchar_t *wname = new wchar_t [mbstowcs(NULL, this->WindowName, 32000)+1];
-                mbstowcs(wname, this->WindowName, 32000);
-                SetWindowText(this->WindowId, wname);
-                delete [] wname;
+    wchar_t *wname = new wchar_t [mbstowcs(NULL, this->WindowName, 32000)+1];
+    mbstowcs(wname, this->WindowName, 32000);
+    SetWindowText(this->WindowId, wname);
+    delete [] wname;
 #else
-                SetWindowText(this->WindowId, this->WindowName);
+    SetWindowText(this->WindowId, this->WindowName);
 #endif
     }
 }
@@ -218,22 +229,22 @@ void vtkWin32OpenGLRenderWindow::MakeCurrent()
           0,
           NULL 
           );
-          if(lpMsgBuf)
-            {
+        if(lpMsgBuf)
+          {
 #ifdef UNICODE
-            wchar_t *wmsg = new wchar_t [mbstowcs(NULL, (const char*)lpMsgBuf, 32000)+1];
-            wchar_t *wtemp = new wchar_t [mbstowcs(NULL, "wglMakeCurrent failed in MakeCurrent(), error: ", 32000)+1];
-            mbstowcs(wmsg, (const char*)lpMsgBuf, 32000);
-            mbstowcs(wtemp, "wglMakeCurrent failed in MakeCurrent(), error: ", 32000);
-            vtkErrorMacro(<< wcscat(wtemp, wmsg));
-            delete [] wmsg;
-            delete [] wtemp;
+          wchar_t *wmsg = new wchar_t [mbstowcs(NULL, (const char*)lpMsgBuf, 32000)+1];
+          wchar_t *wtemp = new wchar_t [mbstowcs(NULL, "wglMakeCurrent failed in MakeCurrent(), error: ", 32000)+1];
+          mbstowcs(wmsg, (const char*)lpMsgBuf, 32000);
+          mbstowcs(wtemp, "wglMakeCurrent failed in MakeCurrent(), error: ", 32000);
+          vtkErrorMacro(<< wcscat(wtemp, wmsg));
+          delete [] wmsg;
+          delete [] wtemp;
 #else
-            vtkErrorMacro("wglMakeCurrent failed in MakeCurrent(), error: " 
-                          << (LPCTSTR)lpMsgBuf);
+          vtkErrorMacro("wglMakeCurrent failed in MakeCurrent(), error: " 
+                        << (LPCTSTR)lpMsgBuf);
 #endif
-            ::LocalFree( lpMsgBuf );
-            }
+          ::LocalFree( lpMsgBuf );
+          }
         }
       }
     }
@@ -248,20 +259,23 @@ void vtkWin32OpenGLRenderWindow::SetSize(int x, int y)
     this->Modified();
     this->Size[0] = x;
     this->Size[1] = y;
+
+    if (this->Interactor)
+      {
+      this->Interactor->SetSize(x, y);
+      }
+
     if (this->OffScreenRendering)
       {
-      if (!resizing)
+      if(!this->CreatingOffScreenWindow)
         {
-        resizing = 1;
-        this->CleanUpOffScreenRendering();
-#ifdef UNICODE
-        HDC dc = CreateDC(L"DISPLAY", 0, 0, 0);
-#else
-        HDC dc = CreateDC("DISPLAY", 0, 0, 0);
-#endif
-        this->CreateOffScreenDC(x, y, dc);
-        DeleteDC(dc);
-        resizing = 0;
+        if (!resizing)
+          {
+          resizing = 1;
+          this->CleanUpOffScreenRendering();
+          this->CreateOffScreenWindow(x,y);
+          resizing = 0;
+          }
         }
       }
     
@@ -337,13 +351,14 @@ int vtkWin32OpenGLRenderWindow::SupportsOpenGL()
   MakeCurrent();
   if (!this->DeviceContext)
     {
-      return 0;
+    return 0;
     }
 
   int pixelFormat = GetPixelFormat(this->DeviceContext);
   PIXELFORMATDESCRIPTOR pfd;
 
-  DescribePixelFormat(this->DeviceContext, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+  DescribePixelFormat(this->DeviceContext, pixelFormat,
+                      sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
   return (pfd.dwFlags & PFD_SUPPORT_OPENGL) ? 1:0;
 
@@ -356,13 +371,14 @@ int vtkWin32OpenGLRenderWindow::IsDirect()
   MakeCurrent();
   if (!this->DeviceContext)
     {
-      return 0;
+    return 0;
     }
 
   int pixelFormat = GetPixelFormat(this->DeviceContext);
   PIXELFORMATDESCRIPTOR pfd;
 
-  DescribePixelFormat(this->DeviceContext, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+  DescribePixelFormat(this->DeviceContext, pixelFormat,
+                      sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
   return (pfd.dwFlags & PFD_GENERIC_FORMAT) ? 0:1;
 
@@ -375,20 +391,21 @@ const char* vtkWin32OpenGLRenderWindow::ReportCapabilities()
 
   if (!this->DeviceContext)
     {
-      return "no device context";
+    return "no device context";
     }
 
   int pixelFormat = GetPixelFormat(this->DeviceContext);
   PIXELFORMATDESCRIPTOR pfd;
 
-  DescribePixelFormat(this->DeviceContext, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+  DescribePixelFormat(this->DeviceContext, pixelFormat,
+                      sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
   const char *glVendor = (const char *) glGetString(GL_VENDOR);
   const char *glRenderer = (const char *) glGetString(GL_RENDERER);
   const char *glVersion = (const char *) glGetString(GL_VERSION);
   const char *glExtensions = (const char *) glGetString(GL_EXTENSIONS);
 
-  ostrstream strm;
+  vtksys_ios::ostringstream strm;
   strm << "OpenGL vendor string:  " << glVendor << endl;
   strm << "OpenGL renderer string:  " << glRenderer << endl;
   strm << "OpenGL version string:  " << glVersion << endl;
@@ -397,11 +414,11 @@ const char* vtkWin32OpenGLRenderWindow::ReportCapabilities()
   strm << "depth:  " << static_cast<int>(pfd.cDepthBits) << endl;
   if (pfd.cColorBits <= 8)
     {
-      strm << "class:  PseudoColor" << endl;
+    strm << "class:  PseudoColor" << endl;
     } 
   else
     {
-      strm << "class:  TrueColor" << endl;
+    strm << "class:  TrueColor" << endl;
     }
   strm << "buffer size:  " << static_cast<int>(pfd.cColorBits) << endl;
   strm << "level:  " << static_cast<int>(pfd.bReserved) << endl;
@@ -414,19 +431,19 @@ const char* vtkWin32OpenGLRenderWindow::ReportCapabilities()
     strm <<"renderType:  ci" << endl;
     }
   if (pfd.dwFlags & PFD_DOUBLEBUFFER) {
-    strm << "double buffer:  True" << endl;
+  strm << "double buffer:  True" << endl;
   } else {
-    strm << "double buffer:  False" << endl;
+  strm << "double buffer:  False" << endl;
   }
   if (pfd.dwFlags & PFD_STEREO) {
-    strm << "stereo:  True" << endl;  
+  strm << "stereo:  True" << endl;  
   } else {
-    strm << "stereo:  False" << endl;
+  strm << "stereo:  False" << endl;
   }
   if (pfd.dwFlags & PFD_GENERIC_FORMAT) {
-    strm << "hardware acceleration:  False" << endl; 
+  strm << "hardware acceleration:  False" << endl; 
   } else {
-    strm << "hardware acceleration:  True" << endl; 
+  strm << "hardware acceleration:  True" << endl; 
   }
   strm << "rgba:  redSize=" << static_cast<int>(pfd.cRedBits) << " greenSize=" << static_cast<int>(pfd.cGreenBits) << "blueSize=" << static_cast<int>(pfd.cBlueBits) << "alphaSize=" << static_cast<int>(pfd.cAlphaBits) << endl;
   strm << "aux buffers:  " << static_cast<int>(pfd.cAuxBuffers)<< endl;
@@ -434,9 +451,12 @@ const char* vtkWin32OpenGLRenderWindow::ReportCapabilities()
   strm << "stencil size:  " << static_cast<int>(pfd.cStencilBits) << endl;
   strm << "accum:  redSize=" << static_cast<int>(pfd.cAccumRedBits) << " greenSize=" << static_cast<int>(pfd.cAccumGreenBits) << "blueSize=" << static_cast<int>(pfd.cAccumBlueBits) << "alphaSize=" << static_cast<int>(pfd.cAccumAlphaBits) << endl;
 
-  strm << ends;
   delete[] this->Capabilities;
-  this->Capabilities = strm.str();
+  
+  size_t len = strm.str().length() + 1;
+  this->Capabilities = new char[len];
+  strncpy(this->Capabilities, strm.str().c_str(), len);
+  
   return this->Capabilities;
 }
 
@@ -457,7 +477,7 @@ void vtkWin32OpenGLRenderWindow::SetupPixelFormat(HDC hDC, DWORD dwFlags,
     0,                              /* no accumulation buffer */
     0, 0, 0, 0,                     /* accum bits (ignored) */
     zbpp,                           /* depth buffer */
-    0,                              /* no stencil buffer */
+    this->StencilCapable,           /* stencil buffer */
     0,                              /* no auxiliary buffers */
     PFD_MAIN_PLANE,                 /* main layer */
     0,                              /* reserved */
@@ -470,80 +490,80 @@ void vtkWin32OpenGLRenderWindow::SetupPixelFormat(HDC hDC, DWORD dwFlags,
   // supports OpenGL
   if (currentPixelFormat != 0)
     {
-      DescribePixelFormat(hDC, currentPixelFormat,sizeof(pfd), &pfd);
-      if (!(pfd.dwFlags & PFD_SUPPORT_OPENGL))
-        {
+    DescribePixelFormat(hDC, currentPixelFormat,sizeof(pfd), &pfd);
+    if (!(pfd.dwFlags & PFD_SUPPORT_OPENGL))
+      {
 #ifdef UNICODE
-          MessageBox(WindowFromDC(hDC), 
-                     L"Invalid pixel format, no OpenGL support",
-                     L"Error",
-                     MB_ICONERROR | MB_OK);
+      MessageBox(WindowFromDC(hDC), 
+                 L"Invalid pixel format, no OpenGL support",
+                 L"Error",
+                 MB_ICONERROR | MB_OK);
 #else
-          MessageBox(WindowFromDC(hDC), 
-                     "Invalid pixel format, no OpenGL support",
-                     "Error",
-                     MB_ICONERROR | MB_OK);
+      MessageBox(WindowFromDC(hDC), 
+                 "Invalid pixel format, no OpenGL support",
+                 "Error",
+                 MB_ICONERROR | MB_OK);
 #endif
-                  if (this->HasObserver(vtkCommand::ExitEvent))
-            {
-              this->InvokeEvent(vtkCommand::ExitEvent, NULL);
-              return;
-            }
-          else
-            {
-              exit(1);
-            }
-        }         
+      if (this->HasObserver(vtkCommand::ExitEvent))
+        {
+        this->InvokeEvent(vtkCommand::ExitEvent, NULL);
+        return;
+        }
+      else
+        {
+        exit(1);
+        }
+      }         
     }
   else
     {
-      // hDC has no current PixelFormat, so 
-      pixelFormat = ChoosePixelFormat(hDC, &pfd);
-      if (pixelFormat == 0)
-        {
+    // hDC has no current PixelFormat, so 
+    pixelFormat = ChoosePixelFormat(hDC, &pfd);
+    if (pixelFormat == 0)
+      {
 #ifdef UNICODE
-          MessageBox(WindowFromDC(hDC), L"ChoosePixelFormat failed.", L"Error",
-                     MB_ICONERROR | MB_OK);
+      MessageBox(WindowFromDC(hDC), L"ChoosePixelFormat failed.", L"Error",
+                 MB_ICONERROR | MB_OK);
 #else
-          MessageBox(WindowFromDC(hDC), "ChoosePixelFormat failed.", "Error",
-                     MB_ICONERROR | MB_OK);
+      MessageBox(WindowFromDC(hDC), "ChoosePixelFormat failed.", "Error",
+                 MB_ICONERROR | MB_OK);
 #endif
-          if (this->HasObserver(vtkCommand::ExitEvent))
-            {
-              this->InvokeEvent(vtkCommand::ExitEvent, NULL);
-              return;
-            }
-          else
-            {
-              exit(1);
-            }
-        }
-      DescribePixelFormat(hDC, pixelFormat,sizeof(pfd), &pfd); 
-      if (SetPixelFormat(hDC, pixelFormat, &pfd) != TRUE) 
+      if (this->HasObserver(vtkCommand::ExitEvent))
         {
-          // int err = GetLastError();
-#ifdef UNICODE
-          MessageBox(WindowFromDC(hDC), L"SetPixelFormat failed.", L"Error",
-                     MB_ICONERROR | MB_OK);
-#else
-          MessageBox(WindowFromDC(hDC), "SetPixelFormat failed.", "Error",
-                     MB_ICONERROR | MB_OK);
-#endif
-                        if (this->HasObserver(vtkCommand::ExitEvent))
-            {
-              this->InvokeEvent(vtkCommand::ExitEvent, NULL);
-              return;
-            }
-          else
-            {
-              exit(1);
-            }
+        this->InvokeEvent(vtkCommand::ExitEvent, NULL);
+        return;
         }
+      else
+        {
+        exit(1);
+        }
+      }
+    DescribePixelFormat(hDC, pixelFormat,sizeof(pfd), &pfd); 
+    if (SetPixelFormat(hDC, pixelFormat, &pfd) != TRUE) 
+      {
+      // int err = GetLastError();
+#ifdef UNICODE
+      MessageBox(WindowFromDC(hDC), L"SetPixelFormat failed.", L"Error",
+                 MB_ICONERROR | MB_OK);
+#else
+      MessageBox(WindowFromDC(hDC), "SetPixelFormat failed.", "Error",
+                 MB_ICONERROR | MB_OK);
+#endif
+      if (this->HasObserver(vtkCommand::ExitEvent))
+        {
+        this->InvokeEvent(vtkCommand::ExitEvent, NULL);
+        return;
+        }
+      else
+        {
+        exit(1);
+        }
+      }
     }
   if (debug && (dwFlags & PFD_STEREO) && !(pfd.dwFlags & PFD_STEREO))
     {
-      vtkGenericWarningMacro("No Stereo Available!");
-      this->StereoCapableWindow = 0;
+    vtkGenericWarningMacro("No Stereo Available!");
+    this->StereoCapableWindow = 0;
     }
 }
 
@@ -557,9 +577,9 @@ void vtkWin32OpenGLRenderWindow::SetupPalette(HDC hDC)
   DescribePixelFormat(hDC, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
   if (pfd.dwFlags & PFD_NEED_PALETTE) {
-    paletteSize = 1 << pfd.cColorBits;
+  paletteSize = 1 << pfd.cColorBits;
   } else {
-    return;
+  return;
   }
 
   pPal = (LOGPALETTE*)
@@ -569,28 +589,28 @@ void vtkWin32OpenGLRenderWindow::SetupPalette(HDC hDC)
 
   /* build a simple RGB color palette */
   {
-    int redMask = (1 << pfd.cRedBits) - 1;
-    int greenMask = (1 << pfd.cGreenBits) - 1;
-    int blueMask = (1 << pfd.cBlueBits) - 1;
-    int i;
+  int redMask = (1 << pfd.cRedBits) - 1;
+  int greenMask = (1 << pfd.cGreenBits) - 1;
+  int blueMask = (1 << pfd.cBlueBits) - 1;
+  int i;
 
-    for (i=0; i<paletteSize; ++i) {
-      pPal->palPalEntry[i].peRed =
-        (((i >> pfd.cRedShift) & redMask) * 255) / redMask;
-      pPal->palPalEntry[i].peGreen =
-        (((i >> pfd.cGreenShift) & greenMask) * 255) / greenMask;
-      pPal->palPalEntry[i].peBlue =
-        (((i >> pfd.cBlueShift) & blueMask) * 255) / blueMask;
-      pPal->palPalEntry[i].peFlags = 0;
-    }
+  for (i=0; i<paletteSize; ++i) {
+  pPal->palPalEntry[i].peRed =
+    (((i >> pfd.cRedShift) & redMask) * 255) / redMask;
+  pPal->palPalEntry[i].peGreen =
+    (((i >> pfd.cGreenShift) & greenMask) * 255) / greenMask;
+  pPal->palPalEntry[i].peBlue =
+    (((i >> pfd.cBlueShift) & blueMask) * 255) / blueMask;
+  pPal->palPalEntry[i].peFlags = 0;
+  }
   }
 
   this->Palette = CreatePalette(pPal);
   free(pPal);
 
   if (this->Palette) {
-    this->OldPalette = SelectPalette(hDC, this->Palette, FALSE);
-    RealizePalette(hDC);
+  this->OldPalette = SelectPalette(hDC, this->Palette, FALSE);
+  RealizePalette(hDC);
   }
 }
 
@@ -601,66 +621,73 @@ LRESULT vtkWin32OpenGLRenderWindow::MessageProc(HWND hWnd, UINT message,
   switch (message) 
     {
     case WM_CREATE:
-      {
-        // nothing to be done here, opengl is initilized after the call to
-        // create now
-        return 0;
-      }
+    {
+    // nothing to be done here, opengl is initilized after the call to
+    // create now
+    return 0;
+    }
     case WM_DESTROY:
       this->Clean();
       if (this->DeviceContext)
         {
-          ReleaseDC(this->WindowId, this->DeviceContext);
-          this->DeviceContext = NULL;
-          this->WindowId = NULL;
+        ReleaseDC(this->WindowId, this->DeviceContext);
+        this->DeviceContext = NULL;
+        this->WindowId = NULL;
         }
       return 0;
     case WM_SIZE:
       /* track window size changes */
       if (this->ContextId) 
         {
-          this->SetSize((int) LOWORD(lParam),(int) HIWORD(lParam));
-          return 0;
+        this->SetSize((int) LOWORD(lParam),(int) HIWORD(lParam));
+        return 0;
         }
     case WM_PALETTECHANGED:
       /* realize palette if this is *not* the current window */
       if (this->ContextId && this->Palette && (HWND) wParam != hWnd) 
         {
-          SelectPalette(this->DeviceContext, this->OldPalette, FALSE);
-          UnrealizeObject(this->Palette);
-          this->OldPalette = SelectPalette(this->DeviceContext, 
-                                           this->Palette, FALSE);
-          RealizePalette(this->DeviceContext);
-          this->Render();
+        SelectPalette(this->DeviceContext, this->OldPalette, FALSE);
+        UnrealizeObject(this->Palette);
+        this->OldPalette = SelectPalette(this->DeviceContext, 
+                                         this->Palette, FALSE);
+        RealizePalette(this->DeviceContext);
+        this->Render();
         }
       break;
     case WM_QUERYNEWPALETTE:
       /* realize palette if this is the current window */
       if (this->ContextId && this->Palette) 
         {
-          SelectPalette(this->DeviceContext, this->OldPalette, FALSE);
-          UnrealizeObject(this->Palette);
-          this->OldPalette = SelectPalette(this->DeviceContext, 
-                                           this->Palette, FALSE);
-          RealizePalette(this->DeviceContext);
-          this->Render();
-          return TRUE;
+        SelectPalette(this->DeviceContext, this->OldPalette, FALSE);
+        UnrealizeObject(this->Palette);
+        this->OldPalette = SelectPalette(this->DeviceContext, 
+                                         this->Palette, FALSE);
+        RealizePalette(this->DeviceContext);
+        this->Render();
+        return TRUE;
         }
       break;
     case WM_PAINT:
+    {
+    PAINTSTRUCT ps;
+    BeginPaint(hWnd, &ps);
+    if (this->ContextId) 
       {
-        PAINTSTRUCT ps;
-        BeginPaint(hWnd, &ps);
-        if (this->ContextId) 
-          {
-            this->Render();
-          }
-        EndPaint(hWnd, &ps);
-        return 0;
+      this->Render();
       }
-      break;
+    EndPaint(hWnd, &ps);
+    return 0;
+    }
+    break;
     case WM_ERASEBKGND:
       return TRUE;
+    case WM_SETCURSOR:
+      if (HTCLIENT == LOWORD(lParam))
+        {
+        this->SetCurrentCursor(this->GetCurrentCursor());
+        return TRUE;
+        }
+      break;
     default:
       this->InvokeEvent(vtkCommand::RenderWindowMessageEvent, &message);
       break;
@@ -677,7 +704,7 @@ void vtkWin32OpenGLRenderWindow::InitializeApplication()
     // if we have a parent window get the app instance from it
     if (this->ParentId)
       {
-      this->ApplicationInstance = (HINSTANCE)vtkGetWindowLong(this->ParentId,vtkGWLP_HINSTANCE);
+      this->ApplicationInstance = (HINSTANCE)vtkGetWindowLong(this->ParentId,vtkGWL_HINSTANCE);
       }
     else
       {
@@ -686,173 +713,183 @@ void vtkWin32OpenGLRenderWindow::InitializeApplication()
     }
 }
 
-void vtkWin32OpenGLRenderWindow::CreateAWindow(int x, int y, int width,
-                                               int height)
+void vtkWin32OpenGLRenderWindow::CreateAWindow()
 {
-  static int count=1;
-  char *windowName;
-  
-  if (!this->WindowId)
+  if(this->WindowIdReferenceCount == 0)
     {
-    WNDCLASS wndClass;
-    this->DeviceContext = 0;
+    static int count = 1;
+    char *windowName;
     
-    int len = static_cast<int>(strlen("Visualization Toolkit - Win32OpenGL #")) 
-      + (int)ceil( (double) log10( (double)(count+1) ) )
-      + 1; 
-    windowName = new char [ len ];
-    sprintf(windowName,"Visualization Toolkit - Win32OpenGL #%i",count++);
-        this->SetWindowName(windowName);
-    delete [] windowName;
-    
-    // has the class been registered ?
-#ifdef UNICODE
-    if (!GetClassInfo(this->ApplicationInstance,L"vtkOpenGL",&wndClass))
-#else
-    if (!GetClassInfo(this->ApplicationInstance,"vtkOpenGL",&wndClass))
-#endif
+    if (!this->WindowId)
       {
-      wndClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-      wndClass.lpfnWndProc = vtkWin32OpenGLRenderWindow::WndProc;
-      wndClass.cbClsExtra = 0;
-      wndClass.hInstance = this->ApplicationInstance;
-      wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-      wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-      wndClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-      wndClass.lpszMenuName = NULL;
+      WNDCLASS wndClass;
+      this->DeviceContext = 0;
+      
+      int len = static_cast<int>(strlen("Visualization Toolkit - Win32OpenGL #")) 
+        + (int)ceil( (double) log10( (double)(count+1) ) )
+        + 1; 
+      windowName = new char [ len ];
+      sprintf(windowName,"Visualization Toolkit - Win32OpenGL #%i",count++);
+      this->SetWindowName(windowName);
+      delete [] windowName;
+      
+      // has the class been registered ?
 #ifdef UNICODE
-      wndClass.lpszClassName = L"vtkOpenGL";
+      if (!GetClassInfo(this->ApplicationInstance,L"vtkOpenGL",&wndClass))
 #else
-      wndClass.lpszClassName = "vtkOpenGL";
+        if (!GetClassInfo(this->ApplicationInstance,"vtkOpenGL",&wndClass))
 #endif
-      // vtk doesn't use the first extra 4 bytes, but app writers
-      // may want them, so we provide them. VTK does use the second 
-      // four bytes of extra space.
-      wndClass.cbWndExtra = 8;
-      RegisterClass(&wndClass);
-      }
-    
+          {
+          wndClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+          wndClass.lpfnWndProc = vtkWin32OpenGLRenderWindow::WndProc;
+          wndClass.cbClsExtra = 0;
+          wndClass.hInstance = this->ApplicationInstance;
+          wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+          wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+          wndClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+          wndClass.lpszMenuName = NULL;
+#ifdef UNICODE
+          wndClass.lpszClassName = L"vtkOpenGL";
+#else
+          wndClass.lpszClassName = "vtkOpenGL";
+#endif
+          // vtk doesn't use the first extra vtkLONG's worth of bytes,
+          // but app writers may want them, so we provide them. VTK
+          // does use the second vtkLONG's worth of bytes of extra space.
+          wndClass.cbWndExtra = 2 * sizeof(vtkLONG);
+          RegisterClass(&wndClass);
+          }
+      
 #ifdef UNICODE
       wchar_t *wname = new wchar_t [mbstowcs(NULL, this->WindowName, 32000)+1];
       mbstowcs(wname, this->WindowName, 32000);
 #endif
-
-        /* create window */
-    if (this->ParentId)
-      {
-#ifdef UNICODE
-      this->WindowId = CreateWindow(
-        L"vtkOpenGL", wname,
-        WS_CHILD | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/,
-        x, y, width, height,
-        this->ParentId, NULL, this->ApplicationInstance, NULL);
-#else
-      this->WindowId = CreateWindow(
-        "vtkOpenGL", this->WindowName,
-        WS_CHILD | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/,
-        x, y, width, height,
-        this->ParentId, NULL, this->ApplicationInstance, NULL);
-#endif
-      }
-    else
-      {
-      DWORD style;
-      if (this->Borders)
+      int x = ((this->Position[0] >= 0) ? this->Position[0] : 5);
+      int y = ((this->Position[1] >= 0) ? this->Position[1] : 5);
+      int height = ((this->Size[1] > 0) ? this->Size[1] : 300);
+      int width = ((this->Size[0] > 0) ? this->Size[0] : 300);
+      
+      /* create window */
+      if (this->ParentId)
         {
-        style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/;
+#ifdef UNICODE
+        this->WindowId = CreateWindow(
+          L"vtkOpenGL", wname,
+          WS_CHILD | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/,
+          x, y, width, height,
+          this->ParentId, NULL, this->ApplicationInstance, NULL);
+#else
+        this->WindowId = CreateWindow(
+          "vtkOpenGL", this->WindowName,
+          WS_CHILD | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/,
+          x, y, width, height,
+          this->ParentId, NULL, this->ApplicationInstance, NULL);
+#endif
         }
       else
         {
-        style = WS_POPUP | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/;
+        DWORD style;
+        if (this->Borders)
+          {
+          style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/;
+          }
+        else
+          {
+          style = WS_POPUP | WS_CLIPCHILDREN /*| WS_CLIPSIBLINGS*/;
+          }
+#ifdef UNICODE
+        this->WindowId = CreateWindow(
+          L"vtkOpenGL", wname, style,
+          x,y, width+2*GetSystemMetrics(SM_CXFRAME),
+          height+2*GetSystemMetrics(SM_CYFRAME) 
+          +GetSystemMetrics(SM_CYCAPTION),
+          NULL, NULL, this->ApplicationInstance, NULL);
+#else
+        this->WindowId = CreateWindow(
+          "vtkOpenGL", this->WindowName, style,
+          x,y, width+2*GetSystemMetrics(SM_CXFRAME),
+          height+2*GetSystemMetrics(SM_CYFRAME)
+          +GetSystemMetrics(SM_CYCAPTION),
+          NULL, NULL, this->ApplicationInstance, NULL);
+#endif
         }
 #ifdef UNICODE
-      this->WindowId = CreateWindow(
-        L"vtkOpenGL", wname, style,
-        x,y, width+2*GetSystemMetrics(SM_CXFRAME),
-        height+2*GetSystemMetrics(SM_CYFRAME) +GetSystemMetrics(SM_CYCAPTION),
-        NULL, NULL, this->ApplicationInstance, NULL);
-#else
-      this->WindowId = CreateWindow(
-        "vtkOpenGL", this->WindowName, style,
-        x,y, width+2*GetSystemMetrics(SM_CXFRAME),
-        height+2*GetSystemMetrics(SM_CYFRAME) +GetSystemMetrics(SM_CYCAPTION),
-        NULL, NULL, this->ApplicationInstance, NULL);
+      delete [] wname;
 #endif
+      
+      if (!this->WindowId)
+        {
+        vtkErrorMacro("Could not create window, error:  " << GetLastError());
+        return;
+        }
+      // extract the create info
+      
+      /* display window */
+      if(!this->OffScreenRendering)
+        {
+        ShowWindow(this->WindowId, SW_SHOW);
+        }
+      //UpdateWindow(this->WindowId);
+      this->OwnWindow = 1;
+      vtkSetWindowLong(this->WindowId,sizeof(vtkLONG),(vtkLONG)this);
       }
-#ifdef UNICODE
-    delete [] wname;
-#endif
-
-    if (!this->WindowId)
+    if (!this->DeviceContext)
       {
-      vtkErrorMacro("Could not create window, error:  " << GetLastError());
-      return;
+      this->DeviceContext = GetDC(this->WindowId);
       }
-    // extract the create info
+    if (this->StereoCapableWindow)
+      {
+      this->SetupPixelFormat(this->DeviceContext, PFD_SUPPORT_OPENGL |
+                             PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER |
+                             PFD_STEREO, this->GetDebug(), 32, 32);
+      }
+    else
+      {
+      this->SetupPixelFormat(this->DeviceContext, PFD_SUPPORT_OPENGL |
+                             PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER,
+                             this->GetDebug(), 32, 32);
+      }
+    this->SetupPalette(this->DeviceContext);
+    this->ContextId = wglCreateContext(this->DeviceContext);
+    if (this->ContextId == NULL) 
+      {
+      vtkErrorMacro("wglCreateContext failed in CreateAWindow(), error: " << GetLastError());
+      }
+    this->MakeCurrent();
     
-    /* display window */
-    ShowWindow(this->WindowId, SW_SHOW);
-    //UpdateWindow(this->WindowId);
-    this->OwnWindow = 1;
-    vtkSetWindowLong(this->WindowId,4,(LONG)this);
-    }
-  if (!this->DeviceContext)
-    {
-    this->DeviceContext = GetDC(this->WindowId);
-    }
-  if (this->StereoCapableWindow)
-    {
-    this->SetupPixelFormat(this->DeviceContext, PFD_SUPPORT_OPENGL |
-                           PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER |
-                           PFD_STEREO, this->GetDebug(), 32, 32);
+    // wipe out any existing display lists
+    vtkRenderer* ren;
+    vtkCollectionSimpleIterator rsit;
+    for (this->Renderers->InitTraversal(rsit); 
+         (ren = this->Renderers->GetNextRenderer(rsit));)
+      {
+      ren->SetRenderWindow(0);
+      ren->SetRenderWindow(this);
+      }
+    this->OpenGLInit();
+    this->Mapped = 1;
+    this->WindowIdReferenceCount = 1;
     }
   else
     {
-    this->SetupPixelFormat(this->DeviceContext, PFD_SUPPORT_OPENGL |
-                           PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER,
-                           this->GetDebug(), 32, 32);
+    ++this->WindowIdReferenceCount;
     }
-  this->SetupPalette(this->DeviceContext);
-  this->ContextId = wglCreateContext(this->DeviceContext);
-  if (this->ContextId == NULL) 
-    {
-    vtkErrorMacro("wglCreateContext failed in CreateAWindow(), error: " << GetLastError());
-    }
-  this->MakeCurrent();
-  
-  // wipe out any existing display lists
-  vtkRenderer* ren;
-  vtkCollectionSimpleIterator rsit;
-  for (this->Renderers->InitTraversal(rsit); 
-       (ren = this->Renderers->GetNextRenderer(rsit));)
-    {
-    ren->SetRenderWindow(0);
-    ren->SetRenderWindow(this);
-    }
-  this->OpenGLInit();
-  this->Mapped = 1;
 }
 
 // Initialize the window for rendering.
 void vtkWin32OpenGLRenderWindow::WindowInitialize()
-{
-  int x, y, width, height;
-  x = ((this->Position[0] >= 0) ? this->Position[0] : 5);
-  y = ((this->Position[1] >= 0) ? this->Position[1] : 5);
-  height = ((this->Size[1] > 0) ? this->Size[1] : 300);
-  width = ((this->Size[0] > 0) ? this->Size[0] : 300);
-  
+{ 
   // create our own window if not already set
   this->OwnWindow = 0;
   if (!this->MFChandledWindow)
     {
-      this->InitializeApplication();
-      this->CreateAWindow(x,y,width,height);
+    this->InitializeApplication();
+    this->CreateAWindow();
     }   
   else 
     {
-      this->MakeCurrent(); // hsr
-      this->OpenGLInit();
+    this->MakeCurrent(); // hsr
+    this->OpenGLInit();
     }
   
   // set the DPI
@@ -863,19 +900,20 @@ void vtkWin32OpenGLRenderWindow::WindowInitialize()
 void vtkWin32OpenGLRenderWindow::Initialize (void)
 {
   // make sure we havent already been initialized 
-  if (this->ContextId)
+  if (!this->OffScreenRendering && !this->ContextId)
     {
-      return;
-    }
-
-  // now initialize the window
-  if (this->OffScreenRendering)
-    {
-      this->InitializeApplication();
+    this->WindowInitialize();
     }
   else
     {
-      this->WindowInitialize();
+    if(this->OffScreenRendering && !(this->ContextId ||
+                                     this->OffScreenUseFrameBuffer))
+      {
+      this->InitializeApplication();
+      int width = ((this->Size[0] > 0) ? this->Size[0] : 300);
+      int height = ((this->Size[1] > 0) ? this->Size[1] : 300);
+      this->CreateOffScreenWindow(width,height);
+      }
     }
 }
 
@@ -883,30 +921,41 @@ void vtkWin32OpenGLRenderWindow::Finalize (void)
 {
   if (this->CursorHidden)
     {
-      this->ShowCursor();
+    this->ShowCursor();
     }
 
   if (this->OffScreenRendering)
     {
-      this->CleanUpOffScreenRendering();
+    this->CleanUpOffScreenRendering();
     }
-
-  if (this->WindowId)
-    {
-      this->Clean();
-      ReleaseDC(this->WindowId, this->DeviceContext);
-      // can't set WindowId=NULL, needed for DestroyWindow
-      this->DeviceContext = NULL;
-    
-      // clear the extra data before calling destroy
-      vtkSetWindowLong(this->WindowId,4,(LONG)0);
-      if(this->OwnWindow)
-        {
-        DestroyWindow(this->WindowId);
-        }
-    }
+  this->DestroyWindow();
 }
 
+void vtkWin32OpenGLRenderWindow::DestroyWindow()
+{
+  if(this->WindowIdReferenceCount > 0)
+    {
+    --this->WindowIdReferenceCount;
+    if(this->WindowIdReferenceCount == 0)
+      {
+      this->Clean();
+      if (this->WindowId)
+        {
+        ReleaseDC(this->WindowId, this->DeviceContext);
+        // can't set WindowId=NULL, needed for DestroyWindow
+        this->DeviceContext = NULL;
+        
+        // clear the extra data before calling destroy
+        vtkSetWindowLong(this->WindowId,sizeof(vtkLONG),(vtkLONG)0);
+        if(this->OwnWindow)
+          {
+          ::DestroyWindow(this->WindowId);
+          this->WindowId=0;
+          }
+        }
+      }
+    }
+}
 
 // Get the current size of the window.
 int *vtkWin32OpenGLRenderWindow::GetSize(void)
@@ -914,19 +963,19 @@ int *vtkWin32OpenGLRenderWindow::GetSize(void)
   // if we aren't mapped then just return the ivar 
   if (this->Mapped)
     {
-      RECT rect;
+    RECT rect;
 
-      //  Find the current window size 
-      if (GetClientRect(this->WindowId, &rect))
-         {    
-         this->Size[0] = rect.right;
-         this->Size[1] = rect.bottom;
-         }
-      else 
-         {
-         this->Size[0] = 0;
-         this->Size[1] = 0;
-         }
+    //  Find the current window size 
+    if (GetClientRect(this->WindowId, &rect))
+      {    
+      this->Size[0] = rect.right;
+      this->Size[1] = rect.bottom;
+      }
+    else 
+      {
+      this->Size[0] = 0;
+      this->Size[1] = 0;
+      }
 
     }
 
@@ -952,7 +1001,7 @@ int *vtkWin32OpenGLRenderWindow::GetPosition(void)
   // if we aren't mapped then just return the ivar 
   if (!this->Mapped)
     {
-      return this->Position;
+    return this->Position;
     }
 
   //  Find the current window position 
@@ -968,37 +1017,37 @@ void vtkWin32OpenGLRenderWindow::SetFullScreen(int arg)
   
   if (this->FullScreen == arg)
     {
-      return;
+    return;
     }
   
   if (!this->Mapped)
     {
-      this->PrefFullScreen();
-      return;
+    this->PrefFullScreen();
+    return;
     }
 
   // set the mode 
   this->FullScreen = arg;
   if (this->FullScreen <= 0)
     {
-      this->Position[0] = this->OldScreen[0];
-      this->Position[1] = this->OldScreen[1];
-      this->Size[0] = this->OldScreen[2]; 
-      this->Size[1] = this->OldScreen[3];
-      this->Borders = this->OldScreen[4];
+    this->Position[0] = this->OldScreen[0];
+    this->Position[1] = this->OldScreen[1];
+    this->Size[0] = this->OldScreen[2]; 
+    this->Size[1] = this->OldScreen[3];
+    this->Borders = this->OldScreen[4];
     }
   else
     {
-      // if window already up get its values 
-      if (this->WindowId)
-        {
-          temp = this->GetPosition();      
-          this->OldScreen[0] = temp[0];
-          this->OldScreen[1] = temp[1];
+    // if window already up get its values 
+    if (this->WindowId)
+      {
+      temp = this->GetPosition();      
+      this->OldScreen[0] = temp[0];
+      this->OldScreen[1] = temp[1];
 
-          this->OldScreen[4] = this->Borders;
-          this->PrefFullScreen();
-        }
+      this->OldScreen[4] = this->Borders;
+      this->PrefFullScreen();
+      }
     }
   
   // remap the window 
@@ -1013,14 +1062,14 @@ void vtkWin32OpenGLRenderWindow::SetFullScreen(int arg)
 //
 void vtkWin32OpenGLRenderWindow::SetStereoCapableWindow(int capable)
 {
-  if (this->WindowId == 0)
+  if (this->ContextId == 0)
     {
-      vtkRenderWindow::SetStereoCapableWindow(capable);
+    vtkRenderWindow::SetStereoCapableWindow(capable);
     }
   else
     {
-      vtkWarningMacro(<< "Requesting a StereoCapableWindow must be performed "
-                      << "before the window is realized, i.e. before a render.");
+    vtkWarningMacro(<< "Requesting a StereoCapableWindow must be performed "
+                    << "before the window is realized, i.e. before a render.");
     }
 }
 
@@ -1117,15 +1166,15 @@ void vtkWin32OpenGLRenderWindow::SetDisplayId(void * arg)
 }
 
 void vtkWin32OpenGLRenderWindow::SetContextId(HGLRC arg)
-{                                                                                                 
+{
   this->ContextId = arg;
-}                                                                                                 
+}
 
 void vtkWin32OpenGLRenderWindow::SetDeviceContext(HDC arg) 
-{                                                                                                 
+{
   this->DeviceContext = arg;
   this->MFChandledWindow = TRUE;
-}                                                                                                 
+}
 
 // Sets the HWND id of the window that WILL BE created.
 void vtkWin32OpenGLRenderWindow::SetParentInfo(char *info)
@@ -1156,7 +1205,7 @@ void vtkWin32OpenGLRenderWindow::SetNextWindowId(HWND arg)
 
 void vtkWin32OpenGLRenderWindow::SetNextWindowId(void *arg)
 {
-   this->SetNextWindowId((HWND)arg);
+  this->SetNextWindowId((HWND)arg);
 }
 
 // Begin the rendering process.
@@ -1165,7 +1214,7 @@ void vtkWin32OpenGLRenderWindow::Start(void)
   // if the renderer has not been initialized, do so now
   if (!this->ContextId)
     {
-      this->Initialize();
+    this->Initialize();
     }
 
   // set the current window 
@@ -1177,51 +1226,66 @@ void vtkWin32OpenGLRenderWindow::SetOffScreenRendering(int offscreen)
 {
   if (offscreen == this->OffScreenRendering)
     {
-      return;
+    return;
     }
 
   this->vtkRenderWindow::SetOffScreenRendering(offscreen);
 
   if (offscreen)
     {
-      int size[2];
-      size[0] = (this->Size[0] > 0) ? this->Size[0] : 300;
-      size[1] = (this->Size[1] > 0) ? this->Size[1] : 300;
-
-#ifdef UNICODE
-      HDC dc = CreateDC(L"DISPLAY", 0, 0, 0);
-#else
-      HDC dc = CreateDC("DISPLAY", 0, 0, 0);
-#endif
-      this->SetupMemoryRendering(size[0], size[1], dc);
-      DeleteDC(dc); 
+    int size[2];
+    size[0] = (this->Size[0] > 0) ? this->Size[0] : 300;
+    size[1] = (this->Size[1] > 0) ? this->Size[1] : 300;
+    this->SaveScreenRendering();
+    this->CreateOffScreenWindow(size[0],size[1]);
     }
   else
     {
-      if (!this->WindowId)
+    this->CleanUpOffScreenRendering();
+    if (!this->WindowId)
+      {
+      this->WindowInitialize();
+      this->OpenGLInit();
+      if (this->Interactor)
         {
-          vtkRenderer* ren;
-          this->CleanUpOffScreenRendering();
-          this->WindowInitialize();
-          vtkCollectionSimpleIterator rsit;
-          for (this->Renderers->InitTraversal(rsit); 
-               (ren = this->Renderers->GetNextRenderer(rsit));)
-            {
-              ren->SetRenderWindow(this);
-            }
-          this->OpenGLInit();
-          if (this->Interactor)
-            {
-              this->Interactor->ReInitialize();
-            }
-          this->DoubleBuffer = 1;
+        this->Interactor->ReInitialize();
         }
-      else
-        {
-          this->ResumeScreenRendering();
-        }
+      this->DoubleBuffer = 1;
+      }
+    else
+      {
+      this->ResumeScreenRendering();
+      }
     }
 }
+
+void vtkWin32OpenGLRenderWindow::SaveScreenRendering()
+{
+  this->ScreenMapped = this->Mapped;
+  this->ScreenWindowSize[0] = this->Size[0];
+  this->ScreenWindowSize[1] = this->Size[1];
+  this->ScreenDeviceContext = this->DeviceContext;
+  this->ScreenDoubleBuffer = this->DoubleBuffer;
+  this->ScreenContextId = this->ContextId;
+}
+
+void vtkWin32OpenGLRenderWindow::CreateOffScreenWindow(int width,
+                                                       int height)
+{
+  int status = this->CreatingOffScreenWindow;
+  this->CreatingOffScreenWindow = 1;
+  if(!this->CreateHardwareOffScreenWindow(width,height))
+    {
+#ifdef UNICODE
+    HDC dc = CreateDC(L"DISPLAY", 0, 0, 0);
+#else
+    HDC dc = CreateDC("DISPLAY", 0, 0, 0);
+#endif
+    this->CreateOffScreenDC(width,height,dc);
+    DeleteDC(dc);
+    }
+  this->CreatingOffScreenWindow = status;
+} 
 
 void vtkWin32OpenGLRenderWindow::CreateOffScreenDC(int xsize, int ysize,
                                                    HDC aHdc)
@@ -1263,13 +1327,7 @@ void vtkWin32OpenGLRenderWindow::CreateOffScreenDC(HBITMAP hbmp, HDC aHdc)
   SelectObject(this->MemoryHdc, this->MemoryBuffer);
   
   // Renderers will need to redraw anything cached in display lists
-  vtkRenderer *ren;
-  vtkCollectionSimpleIterator rsit;
-  for (this->Renderers->InitTraversal(rsit); 
-       (ren = this->Renderers->GetNextRenderer(rsit));)
-    {
-      ren->SetRenderWindow(NULL);
-    }
+  this->CleanUpRenderers();
 
   // adjust settings for renderwindow
   this->Mapped =0;
@@ -1285,17 +1343,9 @@ void vtkWin32OpenGLRenderWindow::CreateOffScreenDC(HBITMAP hbmp, HDC aHdc)
   this->ContextId = wglCreateContext(this->DeviceContext);
   if (this->ContextId == NULL) 
     {
-      vtkErrorMacro("wglCreateContext failed in CreateOffScreenDC(), error: " << GetLastError());
+    vtkErrorMacro("wglCreateContext failed in CreateOffScreenDC(), error: " << GetLastError());
     }
   this->MakeCurrent();
-  
-  // Renderers will need to redraw anything cached in display lists
-  for (this->Renderers->InitTraversal(rsit); 
-       (ren = this->Renderers->GetNextRenderer(rsit));)
-    {
-      ren->SetRenderWindow(this);
-    }
-  
   this->OpenGLInit();
 }
 
@@ -1340,33 +1390,41 @@ HDC vtkWin32OpenGLRenderWindow::GetMemoryDC()
 
 void vtkWin32OpenGLRenderWindow::CleanUpOffScreenRendering(void)
 {
-  if (!this->MemoryHdc)
+  if(this->OffScreenUseFrameBuffer)
     {
-    return;
+    this->DestroyHardwareOffScreenWindow();
     }
-
-  GdiFlush();
-  
-  // we need to release resources
-  vtkRenderer *ren;
-  vtkCollectionSimpleIterator rsit;
-  for (this->Renderers->InitTraversal(rsit); 
-       (ren = this->Renderers->GetNextRenderer(rsit));)
+  else
     {
-      ren->SetRenderWindow(NULL);
-    }
-  DeleteDC(this->MemoryHdc);
-  this->MemoryHdc = (HDC)0;
-  DeleteObject(this->MemoryBuffer);
-  if (wglDeleteContext(this->ContextId) != TRUE) 
-    {
+    if (!this->MemoryHdc)
+      {
+      return;
+      }
+      
+    GdiFlush();
+      
+    // we need to release resources
+    this->CleanUpRenderers();
+    DeleteDC(this->MemoryHdc);
+    this->MemoryHdc = (HDC)0;
+    DeleteObject(this->MemoryBuffer);
+    if (wglDeleteContext(this->ContextId) != TRUE) 
+      {
       vtkErrorMacro("wglDeleteContext failed in CleanUpOffScreenRendering(), error: " << GetLastError());
+      }
+    this->ContextId=0;
     }
 }
 
 void vtkWin32OpenGLRenderWindow::ResumeScreenRendering(void)
 {
-  this->CleanUpOffScreenRendering();
+  // release OpenGL graphics resources before switch back to on-screen. 
+  if(this->ContextId!=0)
+    {
+      this->MakeCurrent();
+      this->CleanUpRenderers();
+    }
+
   this->Mapped = this->ScreenMapped;
   this->Size[0] = this->ScreenWindowSize[0];
   this->Size[1] = this->ScreenWindowSize[1];
@@ -1374,14 +1432,6 @@ void vtkWin32OpenGLRenderWindow::ResumeScreenRendering(void)
   this->DoubleBuffer = this->ScreenDoubleBuffer;
   this->ContextId = this->ScreenContextId;
   this->MakeCurrent();
-
-  vtkRenderer* ren;
-  vtkCollectionSimpleIterator rsit;
-  for (this->Renderers->InitTraversal(rsit);
-       (ren = this->Renderers->GetNextRenderer(rsit));)
-    {
-      ren->SetRenderWindow(this);
-    }
 }
 
 //----------------------------------------------------------------------------
@@ -1389,7 +1439,7 @@ void vtkWin32OpenGLRenderWindow::HideCursor()
 {
   if (this->CursorHidden)
     {
-      return;
+    return;
     }
   this->CursorHidden = 1;
 
@@ -1401,7 +1451,7 @@ void vtkWin32OpenGLRenderWindow::ShowCursor()
 {
   if (!this->CursorHidden)
     {
-      return;
+    return;
     }
   this->CursorHidden = 0;
 
@@ -1419,15 +1469,16 @@ void vtkWin32OpenGLRenderWindow::SetCursorPosition(int x, int y)
 
   if (ClientToScreen(this->WindowId, &point))
     {
-      SetCursorPos(point.x, point.y);
+    SetCursorPos(point.x, point.y);
     }
 };
 
+//----------------------------------------------------------------------------
 void vtkWin32OpenGLRenderWindow::SetCurrentCursor(int shape)
 {
   if ( this->InvokeEvent(vtkCommand::CursorChangedEvent,&shape) )
     {
-      return;
+    return;
     }
   this->Superclass::SetCurrentCursor(shape);
   LPCTSTR cursorName = 0;
@@ -1461,12 +1512,15 @@ void vtkWin32OpenGLRenderWindow::SetCurrentCursor(int shape)
       cursorName = IDC_ARROW;
 #endif
       break;
+    case VTK_CURSOR_CROSSHAIR:
+      cursorName = IDC_CROSS;
+      break;
     }
   
   if (cursorName)
     {
-      HANDLE cursor = 
-        LoadImage(0,cursorName,IMAGE_CURSOR,0,0,LR_SHARED | LR_DEFAULTSIZE);
-      SetCursor((HCURSOR)cursor);
+    HANDLE cursor = 
+      LoadImage(0,cursorName,IMAGE_CURSOR,0,0,LR_SHARED | LR_DEFAULTSIZE);
+    SetCursor((HCURSOR)cursor);
     }
 }

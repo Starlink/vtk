@@ -1,22 +1,27 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCocoaRenderWindow.h,v $
+Program:   Visualization Toolkit
+Module:    $RCSfile: vtkCocoaRenderWindow.h,v $
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 // .NAME vtkCocoaRenderWindow - Cocoa OpenGL rendering window
 //
 // .SECTION Description
 // vtkCocoaRenderWindow is a concrete implementation of the abstract
-// class vtkOpenGLRenderWindow. It uses Objective-C++, and the OpenGL and
+// class vtkOpenGLRenderWindow. It is only available on Mac OS X 10.3
+// and later.
+// To use this class, build VTK with VTK_USE_COCOA turned ON.
+// This class can be used by 32 and 64 bit processes, and either in
+// garbage collected or reference counted modes.
+// vtkCocoaRenderWindow uses Objective-C++, and the OpenGL and
 // Cocoa APIs. This class's default behaviour is to create an NSWindow and
 // a vtkCocoaGLView which are used together to draw all vtk stuff into.
 // If you already have an NSWindow and vtkCocoaGLView and you want this
@@ -57,7 +62,7 @@ public:
 
   // Description:
   // Initialize the window for rendering.
-  virtual void WindowInitialize();
+  //  virtual void WindowInitialize();
 
   // Description:
   // Initialize the rendering window.
@@ -76,12 +81,12 @@ public:
   virtual void PrefFullScreen();
 
   // Description:
-  // Set the size of the window.
+  // Set the size of the window in pixels.
   virtual void SetSize(int*);
   virtual void SetSize(int,int);
 
   // Description:
-  // Get the current size of the window.
+  // Get the current size of the window in pixels.
   virtual int *GetSize();
 
   // Description:
@@ -90,7 +95,7 @@ public:
   virtual void SetPosition(int,int);
   
   // Description:
-  // Return the scrren size.
+  // Get the current size of the screen in pixels.
   virtual int *GetScreenSize();
 
   // Description:
@@ -104,67 +109,33 @@ public:
   
   void SetNextWindowInfo(char *)
     {
-    vtkWarningMacro("SetNextWindowInfo not implemented (WindowRemap not implemented).");
+      vtkWarningMacro("SetNextWindowInfo not implemented (WindowRemap not implemented).");
     }
-
-  virtual void *GetGenericDisplayId() {return this->NSViewId;}
-  virtual void *GetGenericWindowId()  {return this->WindowId;}
-  virtual void *GetGenericContext()   {return this->ContextId;}
-  
-  // Description:
-  // Returns the NSView* associated with this vtkRenderWindow.
-  virtual void* GetDisplayId();
-
-  // Description:
-  // Sets the NSView* associated with this vtkRenderWindow. This class' default
-  // behaviour, that is, if you never call this SetDisplayId()/SetWindowId() is
-  // to create an NSWindow and a vtkCocoaGLView (NSView subclass) which are used
-  // together to draw all vtk stuff into. If you already have an NSWindow and
-  // NSView and you want this class to use them you must call both SetWindowId()
-  // and SetDisplayId() early on (before WindowInitialize() is executed). In the
-  // case of Java, you should call only SetDisplayId().
-  virtual void SetDisplayId(void *);
-  
   virtual void SetParentId(void *) 
     {
-    vtkWarningMacro("Method not implemented.");
+      vtkWarningMacro("Method not implemented.");
     }
   virtual void* GetGenericParentId()
     {
-    vtkWarningMacro("Method not implemented.");
-    return 0;
+      vtkWarningMacro("Method not implemented.");
+      return 0;
     }
   virtual void* GetGenericDrawable()
     {
-    vtkWarningMacro("Method not implemented.");
-    return 0;
+      vtkWarningMacro("Method not implemented.");
+      return 0;
     }
   virtual void SetWindowInfo(char*)
     {
-    vtkWarningMacro("Method not implemented.");
+      vtkWarningMacro("Method not implemented.");
     }
   virtual void SetParentInfo(char*)
     {
-    vtkWarningMacro("Method not implemented.");
+      vtkWarningMacro("Method not implemented.");
     }
-
-  // Description:
-  // Returns the NSWindow* associated with this vtkRenderWindow.
-  virtual void *GetWindowId();
-
-  // Description:
-  // Sets the NSWindow* associated with this vtkRenderWindow. This class' default
-  // behaviour, that is, if you never call this SetDisplayId()/SetWindowId() is
-  // to create an NSWindow and a vtkCocoaGLView (NSView subclass) which are used
-  // together to draw all vtk stuff into. If you already have an NSWindow and
-  // NSView and you want this class to use them you must call both SetWindowId()
-  // and SetDisplayId() early on (before WindowInitialize() is executed). In the
-  // case of Java, you should call only SetDisplayId().
-  virtual void SetWindowId(void *);
-
   void SetNextWindowId(void*)
     {
-    vtkWarningMacro("SetNextWindowId not implemented (WindowRemap not implemented).");
+      vtkWarningMacro("SetNextWindowId not implemented (WindowRemap not implemented).");
     }
 
 
@@ -234,6 +205,51 @@ public:
   virtual void HideCursor();
   virtual void ShowCursor();
   
+  // Description:
+  // Get the WindowCreated flag. It is 1 if this object created an instance
+  // of NSWindow, 0 otherwise.
+  virtual int GetWindowCreated();
+  
+  // Description:
+  // Accessors for the OpenGL context (Really an NSOpenGLContext*).
+  void SetContextId(void *);
+  void *GetContextId();
+  virtual void *GetGenericContext()   {return this->GetContextId();}
+
+  // Description:
+  // Sets the NSWindow* associated with this vtkRenderWindow. This class' default
+  // behaviour, that is, if you never call this SetDisplayId()/SetWindowId() is
+  // to create an NSWindow and a vtkCocoaGLView (NSView subclass) which are used
+  // together to draw all vtk stuff into. If you already have an NSWindow and
+  // NSView and you want this class to use them you must call both SetWindowId()
+  // and SetDisplayId() early on (before WindowInitialize() is executed). In the
+  // case of Java, you should call only SetDisplayId().
+  virtual void SetWindowId(void *);
+  
+  // Description:
+  // Returns the NSWindow* associated with this vtkRenderWindow.
+  virtual void *GetWindowId();
+  virtual void *GetGenericWindowId()  {return this->GetWindowId();}
+
+  // Description:
+  // Sets the NSView* associated with this vtkRenderWindow. This class' default
+  // behaviour, that is, if you never call this SetDisplayId()/SetWindowId() is
+  // to create an NSWindow and a vtkCocoaGLView (NSView subclass) which are used
+  // together to draw all vtk stuff into. If you already have an NSWindow and
+  // NSView and you want this class to use them you must call both SetWindowId()
+  // and SetDisplayId() early on (before WindowInitialize() is executed). In the
+  // case of Java, you should call only SetDisplayId().
+  virtual void SetDisplayId(void *);
+
+  // Description:
+  // Returns the NSView* associated with this vtkRenderWindow.
+  virtual void *GetDisplayId();
+  virtual void *GetGenericDisplayId() {return this->GetDisplayId();}
+  
+  // Description:
+  // Returns the scaling factor for 'resolution independence', to convert
+  // between points and pixels.
+  vtkGetMacro(ScaleFactor, double);
 
 protected:
   vtkCocoaRenderWindow();
@@ -241,21 +257,43 @@ protected:
 
   void CreateGLContext();
 
+  void CreateAWindow();
+  void DestroyWindow();
+  void DestroyOffScreenWindow();
+
+  int OffScreenInitialized;
+  int OnScreenInitialized;
+  
+  double ScaleFactor;
+  
+  // Description:
+  // Accessors for the pixel format object (Really an NSOpenGLPixelFormat*).
+  void SetPixelFormat(void *pixelFormat);
+  void *GetPixelFormat();
+  
+  // Description:
+  // Accessors for the cocoa manager (Really an NSMutableDictionary*).
+  // It manages all Cocoa objects in this C++ class.
+  void SetCocoaManager(void *manager);
+  void *GetCocoaManager();
+
 private:
   vtkCocoaRenderWindow(const vtkCocoaRenderWindow&);  // Not implemented.
   void operator=(const vtkCocoaRenderWindow&);  // Not implemented.
 
 private:
-  void     *ContextId;    // really an NSOpenGLContext*
-  void     *WindowId;     // really an NSWindow*
-  void     *NSViewId;     // really an NSView* (usually but not necessarily a vtkCocoaGLView*)
-  void     *PixelFormat;  // really an NSOpenGLPixelFormat*
+  // Important: this class cannot contain Objective-C instance
+  // variables for 2 reasons:
+  // 1) C++ files include this header
+  // 2) because of garbage collection
+  // Instead, use the CocoaManager dictionary to keep a collection
+  // of what would otherwise be Objective-C instance variables.
+  void     *CocoaManager; // Really an NSMutableDictionary*
 
   int      WindowCreated;
   int      ViewCreated;
   int      CursorHidden;
 
-  void     *AutoreleasePool; // really an NSAutoreleasePool*
   int      ForceMakeCurrent;
   char     *Capabilities;
 };

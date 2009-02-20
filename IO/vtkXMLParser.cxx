@@ -33,7 +33,7 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
-vtkCxxRevisionMacro(vtkXMLParser, "$Revision: 1.25 $");
+vtkCxxRevisionMacro(vtkXMLParser, "$Revision: 1.27.2.2 $");
 vtkStandardNewMacro(vtkXMLParser);
 
 //----------------------------------------------------------------------------
@@ -42,9 +42,11 @@ vtkXMLParser::vtkXMLParser()
   this->Stream            = 0;
   this->Parser            = 0;
   this->FileName          = 0;
+  this->Encoding          = 0;
   this->InputString       = 0;
   this->InputStringLength = 0;
   this->ParseError        = 0;
+  this->IgnoreCharacterData = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -52,6 +54,7 @@ vtkXMLParser::~vtkXMLParser()
 {
   this->SetStream(0);
   this->SetFileName(0);
+  this->SetEncoding(0);
 }
 
 //----------------------------------------------------------------------------
@@ -67,6 +70,11 @@ void vtkXMLParser::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "Stream: (none)\n";
     }
   os << indent << "FileName: " << (this->FileName? this->FileName : "(none)")
+     << "\n";
+  os << indent << "IgnoreCharacterData: " 
+     << (this->IgnoreCharacterData?"On":"Off")
+     << endl;
+  os << indent << "Encoding: " << (this->Encoding? this->Encoding : "(none)")
      << "\n";
 }
 
@@ -180,7 +188,7 @@ int vtkXMLParser::Parse(const char* inputString)
 {
   this->InputString = inputString;
   this->InputStringLength = -1;
-  int result = this->vtkXMLParser::Parse();
+  int result = this->Parse();
   this->InputString = 0;
   return result;
 }
@@ -190,7 +198,7 @@ int vtkXMLParser::Parse(const char* inputString, unsigned int length)
 {
   this->InputString = inputString;
   this->InputStringLength = length;
-  int result = this->vtkXMLParser::Parse();
+  int result = this->Parse();
   this->InputString = 0;
   this->InputStringLength = -1;
   return result;
@@ -225,12 +233,20 @@ int vtkXMLParser::Parse()
     }
 
   // Create the expat XML parser.
-  this->Parser = XML_ParserCreate(0);
+  this->CreateParser();
+
   XML_SetElementHandler(static_cast<XML_Parser>(this->Parser),
                         &vtkXMLParserStartElement,
                         &vtkXMLParserEndElement);
-  XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser),
-                              &vtkXMLParserCharacterDataHandler);
+  if (!this->IgnoreCharacterData)   
+    {
+    XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser),
+                                &vtkXMLParserCharacterDataHandler);
+    }
+  else
+    {
+    XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser), NULL);
+    }
   XML_SetUserData(static_cast<XML_Parser>(this->Parser), this);
 
   // Parse the input.
@@ -260,21 +276,41 @@ int vtkXMLParser::Parse()
 }
 
 //----------------------------------------------------------------------------
+int vtkXMLParser::CreateParser()
+{
+  if (this->Parser)
+    {
+    vtkErrorMacro("Parser already created");
+    return 0;
+    }
+  // Create the expat XML parser.
+  this->Parser = XML_ParserCreate(this->Encoding);
+  return this->Parser ? 1 : 0;
+}
+
+//----------------------------------------------------------------------------
 int vtkXMLParser::InitializeParser()
 {
-  if ( this->Parser )
+  // Create the expat XML parser.
+  if (!this->CreateParser())
     {
     vtkErrorMacro("Parser already initialized");
     this->ParseError = 1;
     return 0;
     }
-  // Create the expat XML parser.
-  this->Parser = XML_ParserCreate(0);
+
   XML_SetElementHandler(static_cast<XML_Parser>(this->Parser),
                         &vtkXMLParserStartElement,
                         &vtkXMLParserEndElement);
-  XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser),
-                              &vtkXMLParserCharacterDataHandler);
+  if (!this->IgnoreCharacterData)   
+    {
+    XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser),
+                                &vtkXMLParserCharacterDataHandler);
+    }
+  else
+    {
+    XML_SetCharacterDataHandler(static_cast<XML_Parser>(this->Parser), NULL);
+    }
   XML_SetUserData(static_cast<XML_Parser>(this->Parser), this);
   this->ParseError = 0;
   return 1;
@@ -437,9 +473,15 @@ void vtkXMLParser::ReportUnknownElement(const char* element)
 //----------------------------------------------------------------------------
 void vtkXMLParser::ReportXmlParseError()
 {
-  vtkErrorMacro("Error parsing XML in stream at line "
-                << XML_GetCurrentLineNumber(static_cast<XML_Parser>(this->Parser))
-                << ": " << XML_ErrorString(XML_GetErrorCode(static_cast<XML_Parser>(this->Parser))));
+  vtkErrorMacro(
+    "Error parsing XML in stream at line "
+    << XML_GetCurrentLineNumber(static_cast<XML_Parser>(this->Parser))
+    << ", column "
+    << XML_GetCurrentColumnNumber(static_cast<XML_Parser>(this->Parser))
+    << ", byte index "
+    << XML_GetCurrentByteIndex(static_cast<XML_Parser>(this->Parser))
+    << ": " 
+    << XML_ErrorString(XML_GetErrorCode(static_cast<XML_Parser>(this->Parser))));
 }
 
 //----------------------------------------------------------------------------

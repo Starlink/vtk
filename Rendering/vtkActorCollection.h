@@ -21,8 +21,8 @@
 // .SECTION see also
 // vtkActor vtkCollection 
 
-#ifndef __vtkActorC_h
-#define __vtkActorC_h
+#ifndef __vtkActorCollection_h
+#define __vtkActorCollection_h
 
 #include "vtkPropCollection.h"
 #include "vtkActor.h" // For inline methods
@@ -84,7 +84,7 @@ private:
 
 inline void vtkActorCollection::AddItem(vtkActor *a) 
 {
-  this->vtkCollection::AddItem((vtkObject *)a);
+  this->vtkCollection::AddItem(a);
 }
 
 inline vtkActor *vtkActorCollection::GetNextActor() 

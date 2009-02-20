@@ -45,12 +45,13 @@
 
 #include "vtkObject.h"
 
-class vtkRenderWindow;
-class vtkRenderer;
-class vtkUnsignedCharArray;
 class vtkDoubleArray;
-class vtkTimerLog;
 class vtkMultiProcessController;
+class vtkRenderer;
+class vtkRendererCollection;
+class vtkRenderWindow;
+class vtkTimerLog;
+class vtkUnsignedCharArray;
 
 class VTK_PARALLEL_EXPORT vtkParallelRenderManager : public vtkObject
 {
@@ -202,6 +203,21 @@ public:
   vtkGetMacro(ImageProcessingTime, double);
 
   // Description:
+  // By default, the state of all renderers in the root's render window is
+  // propagated to the rest of the processes.  In order for this to work, all
+  // render windows must have the same renderers in the same order.  If this is
+  // not the case, you can turn off the SyncRenderWindowRenderers.  When this
+  // flag is off, the list of renderers held by this parallel render manager
+  // (initially empty) is synced.  You can modify the list of renderers with the
+  // AddRenderer, RemoveRenderer, and RemoveAllRenderers methods.
+  vtkGetMacro(SyncRenderWindowRenderers, int);
+  vtkSetMacro(SyncRenderWindowRenderers, int);
+  vtkBooleanMacro(SyncRenderWindowRenderers, int);
+  virtual void AddRenderer(vtkRenderer *);
+  virtual void RemoveRenderer(vtkRenderer *);
+  virtual void RemoveAllRenderers();
+
+  // Description:
   // If on (the default), the result of any image space manipulations are
   // written back to the render window frame buffer.  If off, the image
   // stored in the frame buffer may not be correct.  Either way, the
@@ -237,6 +253,27 @@ public:
   void SetMagnifyImageMethodToLinear() {
     this->SetMagnifyImageMethod(LINEAR);
   }
+
+  // Description:
+  // Convenience functions for magnifying images.
+  virtual void MagnifyImage(vtkUnsignedCharArray *fullImage,
+                            const int fullImageSize[2],
+                            vtkUnsignedCharArray *reducedImage,
+                            const int reducedImageSize[2],
+                            const int fullImageViewport[4] = NULL,
+                            const int reducedImageViewport[4] = NULL);
+  static void MagnifyImageNearest(vtkUnsignedCharArray *fullImage,
+                                  const int fullImageSize[2],
+                                  vtkUnsignedCharArray *reducedImage,
+                                  const int reducedImageSize[2],
+                                  const int fullImageViewport[4] = NULL,
+                                  const int reducedImageViewport[4] = NULL);
+  static void MagnifyImageLinear(vtkUnsignedCharArray *fullImage,
+                                 const int fullImageSize[2],
+                                 vtkUnsignedCharArray *reducedImage,
+                                 const int reducedImageSize[2],
+                                 const int fullImageViewport[4] = NULL,
+                                 const int reducedImageViewport[4] = NULL);
 
   // Description:
   // The most appropriate way to retrieve full size image data after a
@@ -276,6 +313,18 @@ public:
   vtkSetMacro(UseRGBA, int);
   vtkGetMacro(UseRGBA, int);
 
+  // Description:
+  // If ForceRenderWindowSize is set to true, the render manager will use
+  // the RenderWindowSize ivar instead of getting the size from the render window.
+  vtkSetMacro(ForceRenderWindowSize, int);
+  vtkGetMacro(ForceRenderWindowSize, int);
+
+  // Description:
+  // If ForceRenderWindowSize is set to true, the render manager will use
+  // the Size ivar instead of getting the size from the render window.
+  vtkSetVector2Macro(ForcedRenderWindowSize, int);
+  vtkGetVector2Macro(ForcedRenderWindowSize, int);
+
 //BTX
   enum Tags {
     RENDER_RMI_TAG=34532,
@@ -310,14 +359,14 @@ public:
   // Description:
   // @deprecated Replaced by vtkParallelRenderManager::StartServices()
   // as of VTK 5.0.
-  VTK_LEGACY(virtual void const StartService());
+  VTK_LEGACY(virtual void StartService());
 
 #ifdef VTK_WORKAROUND_WINDOWS_MANGLE
 # undef StartServiceW
 # undef StartServiceA
   //BTX
-  VTK_LEGACY(virtual void const StartServiceA());
-  VTK_LEGACY(virtual void const StartServiceW());
+  VTK_LEGACY(virtual void StartServiceA());
+  VTK_LEGACY(virtual void StartServiceW());
   //ETX
 #endif
 
@@ -329,12 +378,34 @@ public:
 # pragma reset woff 3303
 #endif
 
+  //Description:
+  //The default is to allow the use of the back buffer for compositing.
+  //If set to false, this will prevent to manager from swapping buffers.
+  //This allows something else (for instance VisibleCellSelection) to
+  //control front/back buffer swapping.
+  vtkSetMacro(UseBackBuffer, int);
+  vtkGetMacro(UseBackBuffer, int);
+  vtkBooleanMacro(UseBackBuffer, int);
+
+  // Description:
+  // When set the render manager will synchronize the TileViewport and TileScale
+  // properties. This may not be desirable in cases where there's some other
+  // mechanism to set the tile dimensions eg. Tile displays.
+  vtkSetMacro(SynchronizeTileProperties, int);
+  vtkGetMacro(SynchronizeTileProperties, int);
+  vtkBooleanMacro(SynchronizeTileProperties, int);
 protected:
   vtkParallelRenderManager();
   ~vtkParallelRenderManager();
 
   vtkRenderWindow *RenderWindow;
   vtkMultiProcessController *Controller;
+  vtkRendererCollection *Renderers;
+
+  virtual vtkRendererCollection *GetRenderers();
+
+  int ForceRenderWindowSize;
+  int ForcedRenderWindowSize[2];
 
   // Description:
   // The "root" node's process id.  This is the node which is listening for
@@ -346,7 +417,6 @@ protected:
   int RootProcessId;
 
   int ObservingRenderWindow;
-  int ObservingRenderer;
   int ObservingAbort;
 
   unsigned long StartRenderTag;
@@ -364,7 +434,7 @@ protected:
   int MagnifyImageMethod;
 
   int UseRGBA;
-
+  int SynchronizeTileProperties;
   int FullImageSize[2];
   int ReducedImageSize[2];
 
@@ -381,6 +451,7 @@ protected:
   int ParallelRendering;
   int RenderEventPropagation;
   int UseCompositing;
+  int SyncRenderWindowRenderers;
 
   vtkTimerLog *Timer;
 
@@ -407,7 +478,7 @@ protected:
 
   // Description:
   // Called in satellites to set the render window size to the current
-  // FullImageSize and ReducedImageSize (or vice versa)
+  // FullImageSize and ReducedImageSize (or vice versa).
   virtual void SetRenderWindowSize();
 
   // Description:
@@ -442,6 +513,13 @@ protected:
   virtual void SetRenderWindowPixelData(vtkUnsignedCharArray *pixels,
           const int pixelDimensions[2]);
 
+  // Description:
+  // Returns true if the image for the given renderer should be rendered at a
+  // reduced size to be magnified later.  This method always returns true, but
+  // subclasses may render some renderers at a reduced size, magnify them, and
+  // then render the other renderers at full resolution.
+  virtual int ImageReduceRenderer(vtkRenderer *) { return 1; }
+
 //BTX
   struct RenderWindowInfoInt
   {
@@ -449,16 +527,19 @@ protected:
     int ReducedSize[2];
     int NumberOfRenderers;
     int UseCompositing;
+    int TileScale[2];
   };
 
   struct RenderWindowInfoDouble
   {
     double ImageReductionFactor;
     double DesiredUpdateRate;
+    double TileViewport[4];
   };
   
   struct RendererInfoInt
   {
+    int Draw;
     int NumberOfLights;
   };
 
@@ -490,6 +571,9 @@ protected:
 //ETX
 
   int AddedRMIs;
+  unsigned long RenderRMIId;
+  unsigned long BoundsRMIId;
+  int UseBackBuffer;
 private:
   vtkParallelRenderManager(const vtkParallelRenderManager &); //Not implemented
   void operator=(const vtkParallelRenderManager &);  //Not implemented

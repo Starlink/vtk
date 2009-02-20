@@ -44,24 +44,28 @@ public:
   int GetLocalProcessId() { return 0; }
 
   // Description:
-  // Does nothing.
-  virtual void SingleMethodExecute() {}
+  // Directly calls the single method.
+  virtual void SingleMethodExecute();
   
   // Description:
-  // Does nothing.
-  virtual void MultipleMethodExecute() {}
-
-  // Description:
-  // Does nothing.
-  virtual void Barrier() {}
+  // Directly calls multiple method 0.
+  virtual void MultipleMethodExecute();
 
   // Description:
   // Does nothing.
   virtual void CreateOutputWindow() {}
 
+  // Description:
+  // If you don't need any special functionality from the controller, you
+  // can swap out the dummy communicator for another one.
+  vtkGetObjectMacro(Communicator, vtkCommunicator);
+  vtkGetObjectMacro(RMICommunicator, vtkCommunicator);
+  virtual void SetCommunicator(vtkCommunicator *);
+  virtual void SetRMICommunicator(vtkCommunicator *);
+
 protected:
-  vtkDummyController() {}
-  ~vtkDummyController() {}
+  vtkDummyController();
+  ~vtkDummyController();
   
 private:
   vtkDummyController(const vtkDummyController&);  // Not implemented.

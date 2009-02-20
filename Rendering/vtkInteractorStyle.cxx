@@ -31,28 +31,30 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
 #include "vtkTextProperty.h"
+#include "vtkEventForwarderCommand.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyle, "$Revision: 1.99 $");
+vtkCxxRevisionMacro(vtkInteractorStyle, "$Revision: 1.103 $");
 vtkStandardNewMacro(vtkInteractorStyle);
 
 //----------------------------------------------------------------------------
-vtkInteractorStyle::vtkInteractorStyle() 
+vtkInteractorStyle::vtkInteractorStyle()
 {
   this->State               = VTKIS_NONE;
-  this->AnimState           = VTKIS_ANIM_OFF; 
+  this->AnimState           = VTKIS_ANIM_OFF;
 
   this->HandleObservers     = 1;
   this->UseTimers           = 0;
+  this->TimerId             = 1;
 
   this->AutoAdjustCameraClippingRange = 1;
-  
+
   this->Interactor          = NULL;
 
   this->EventCallbackCommand->SetCallback(vtkInteractorStyle::ProcessEvents);
 
   // These widgets are not activated with a key
 
-  this->KeyPressActivation  = 0; 
+  this->KeyPressActivation  = 0;
 
   this->Outline             = vtkOutlineSource::New();
   this->OutlineActor        = NULL;
@@ -70,6 +72,9 @@ vtkInteractorStyle::vtkInteractorStyle()
   this->PickedActor2D       = NULL;
 
   this->MouseWheelMotionFactor = 1.0;
+  
+  this->TimerDuration = 10;
+  this->EventForwarder = vtkEventForwarderCommand::New();
 }
 
 //----------------------------------------------------------------------------
@@ -97,6 +102,7 @@ vtkInteractorStyle::~vtkInteractorStyle()
   this->Outline = NULL;
 
   this->SetCurrentRenderer(NULL);
+  this->EventForwarder->Delete();
 }
 
 //----------------------------------------------------------------------------
@@ -233,8 +239,18 @@ void vtkInteractorStyle::SetInteractor(vtkRenderWindowInteractor *i)
                    this->EventCallbackCommand, 
                    this->Priority);
     }
+  
+  this->EventForwarder->SetTarget(this->Interactor);
+  if (this->Interactor)
+    {
+    this->AddObserver(vtkCommand::StartInteractionEvent, this->EventForwarder);
+    this->AddObserver(vtkCommand::EndInteractionEvent, this->EventForwarder);
+    }
+  else
+    {
+    this->RemoveObserver(this->EventForwarder);
+    }
 }
-
 
 //----------------------------------------------------------------------------
 void vtkInteractorStyle::FindPokedRenderer(int x,int y) 
@@ -371,7 +387,7 @@ void vtkInteractorStyle::StartState(int newstate)
     vtkRenderWindowInteractor *rwi = this->Interactor;
     rwi->GetRenderWindow()->SetDesiredUpdateRate(rwi->GetDesiredUpdateRate());
     this->InvokeEvent(vtkCommand::StartInteractionEvent, NULL);
-    if (this->UseTimers && !rwi->CreateTimer(VTKI_TIMER_FIRST)) 
+    if ( this->UseTimers && !(this->TimerId=rwi->CreateRepeatingTimer(this->TimerDuration)) ) 
       {
       vtkErrorMacro(<< "Timer start failed");
       this->State = VTKIS_NONE;
@@ -388,7 +404,7 @@ void vtkInteractorStyle::StopState()
     vtkRenderWindowInteractor *rwi = this->Interactor;
     vtkRenderWindow *renwin = rwi->GetRenderWindow();
     renwin->SetDesiredUpdateRate(rwi->GetStillUpdateRate());
-    if (this->UseTimers && !rwi->DestroyTimer()) 
+    if (this->UseTimers && !rwi->DestroyTimer(this->TimerId)) 
       {
       vtkErrorMacro(<< "Timer stop failed");
       }
@@ -406,7 +422,7 @@ void vtkInteractorStyle::StartAnimate()
   if (this->State == VTKIS_NONE) 
     {   
     rwi->GetRenderWindow()->SetDesiredUpdateRate(rwi->GetDesiredUpdateRate());
-    if (this->UseTimers && !rwi->CreateTimer(VTKI_TIMER_FIRST) ) 
+    if ( this->UseTimers && !(this->TimerId=rwi->CreateRepeatingTimer(this->TimerDuration)) ) 
       {
       vtkErrorMacro(<< "Timer start failed");
       }
@@ -422,7 +438,7 @@ void vtkInteractorStyle::StopAnimate()
   if (this->State == VTKIS_NONE) 
     {   
     rwi->GetRenderWindow()->SetDesiredUpdateRate(rwi->GetStillUpdateRate());
-    if (this->UseTimers && !rwi->DestroyTimer() ) 
+    if (this->UseTimers && !rwi->DestroyTimer(this->TimerId) ) 
       {
       vtkErrorMacro(<< "Timer stop failed");
       }
@@ -585,70 +601,42 @@ void vtkInteractorStyle::OnTimer()
         {
         if (this->UseTimers)
           {
-          rwi->DestroyTimer();
+          rwi->DestroyTimer(this->TimerId);
           }
         rwi->Render();
         if (this->UseTimers)
           {
-          rwi->CreateTimer(VTKI_TIMER_FIRST);
+          this->TimerId = rwi->CreateRepeatingTimer(this->TimerDuration);
           }
         }
       break;
 
     case VTKIS_ROTATE:
       this->Rotate();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_PAN:
       this->Pan();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_SPIN:
       this->Spin();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_DOLLY:
       this->Dolly();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_ZOOM:
       this->Zoom();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_USCALE:
       this->UniformScale();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_TIMER:
       rwi->Render();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     default:
@@ -733,7 +721,7 @@ void vtkInteractorStyle::OnChar()
         {
         for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); ) 
           {
-          aPart=(vtkActor *)path->GetLastNode()->GetViewProp();
+          aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
           aPart->GetProperty()->SetRepresentationToWireframe();
           }
         }
@@ -755,7 +743,7 @@ void vtkInteractorStyle::OnChar()
         {
         for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); ) 
           {
-          aPart=(vtkActor *)path->GetLastNode()->GetViewProp();
+          aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
           aPart->GetProperty()->SetRepresentationToSurface();
           }
         }
@@ -845,13 +833,15 @@ void vtkInteractorStyle::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "UseTimers: " << this->UseTimers << endl;
   os << indent << "HandleObservers: " << this->HandleObservers << endl;
   os << indent << "MouseWheelMotionFactor: " << this->MouseWheelMotionFactor << endl;
+
+  os << indent << "Timer Duration: " << this->TimerDuration << endl;
 }
 
 //----------------------------------------------------------------------------
 void vtkInteractorStyle::ProcessEvents(vtkObject* vtkNotUsed(object), 
                                        unsigned long event,
                                        void* clientdata, 
-                                       void* vtkNotUsed(calldata))
+                                       void* calldata)
 {
   vtkInteractorStyle* self 
     = reinterpret_cast<vtkInteractorStyle *>( clientdata );
@@ -907,15 +897,20 @@ void vtkInteractorStyle::ProcessEvents(vtkObject* vtkNotUsed(object),
       break;
 
     case vtkCommand::TimerEvent: 
+      {
+      // The calldata should be a timer id, but because of legacy we check
+      // and make sure that it is non-NULL.
+      int timerId = (calldata ? *(reinterpret_cast<int*>(calldata)) : 1);
       if (self->HandleObservers && 
           self->HasObserver(vtkCommand::TimerEvent)) 
         {
-        self->InvokeEvent(vtkCommand::TimerEvent,NULL);
+        self->InvokeEvent(vtkCommand::TimerEvent,&timerId);
         }
       else 
         {
         self->OnTimer();
         }
+      }
       break;
 
     case vtkCommand::MouseMoveEvent: 

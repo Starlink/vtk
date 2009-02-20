@@ -26,16 +26,16 @@
 // created after this need not call Initialize().
 // At the end of the program Finalize() must be called by all
 // processes. 
-// The use of user-defined communicators are supported with 
-// vtkMPICommunicator and vtkMPIGroup. Note that a duplicate of
-// the user defined communicator is used for internal communications (RMIs).
-// This communicator has the same properties as the user one except that
-// it has a new context which prevents the two communicators from
-// interfering with each other.
+//
+// The use of user-defined communicators are supported with the
+// CreateSubController method.  Note that a duplicate of the user defined
+// communicator is used for internal communications (RMIs).  This communicator
+// has the same properties as the user one except that it has a new context
+// which prevents the two communicators from interfering with each other.
 
 // .SECTION see also
 // vtkOutputPort vtkInputPort  vtkMultiProcessController
-// vtkMPICommunicator vtkMPIGroup
+// vtkMPICommunicator vtkProcessGroup
 
 #ifndef __vtkMPIController_h
 #define __vtkMPIController_h
@@ -91,11 +91,6 @@ public:
   virtual void MultipleMethodExecute();
 
   // Description:
-  // This method can be used to synchronize MPI processes in the
-  // current communicator. This uses the user communicator.
-  void Barrier();
-
-  // Description:
   // This method can be used to tell the controller to create
   // a special output window in which all messages are preceded
   // by the process id.
@@ -117,6 +112,8 @@ public:
   // LEAD TO A CRASH.
   void SetCommunicator(vtkMPICommunicator* comm);
 
+  virtual vtkMPIController *CreateSubController(vtkProcessGroup *group);
+
 //BTX
 
   // Description:
@@ -126,19 +123,19 @@ public:
   // vtkMPICommunicator::Request& req can later be used (with
   // req.Test() ) to test the success of the message.
   // Note: These methods delegate to the communicator
-  int NoBlockSend(int* data, int length, int remoteProcessId, int tag,
+  int NoBlockSend(const int* data, int length, int remoteProcessId, int tag,
                   vtkMPICommunicator::Request& req)
     { return ((vtkMPICommunicator*)this->Communicator)->NoBlockSend
         (data ,length, remoteProcessId, tag, req); }
-  int NoBlockSend(unsigned long* data, int length, int remoteProcessId,
+  int NoBlockSend(const unsigned long* data, int length, int remoteProcessId,
                   int tag, vtkMPICommunicator::Request& req)
     { return ((vtkMPICommunicator*)this->Communicator)->NoBlockSend
         (data, length, remoteProcessId, tag, req); }
-  int NoBlockSend(char* data, int length, int remoteProcessId, 
+  int NoBlockSend(const char* data, int length, int remoteProcessId, 
                   int tag, vtkMPICommunicator::Request& req)
     { return ((vtkMPICommunicator*)this->Communicator)->NoBlockSend
         (data, length, remoteProcessId, tag, req); }
-  int NoBlockSend(float* data, int length, int remoteProcessId, 
+  int NoBlockSend(const float* data, int length, int remoteProcessId, 
                   int tag, vtkMPICommunicator::Request& req)
     { return ((vtkMPICommunicator*)this->Communicator)->NoBlockSend
         (data, length, remoteProcessId, tag, req); }
@@ -166,6 +163,12 @@ public:
                      int tag, vtkMPICommunicator::Request& req)
     { return ((vtkMPICommunicator*)this->Communicator)->NoBlockReceive
         (data, length, remoteProcessId, tag, req); }
+#ifdef VTK_USE_64BIT_IDS
+  int NoBlockReceive(vtkIdType* data, int length, int remoteProcessId, 
+                     int tag, vtkMPICommunicator::Request& req)
+    { return ((vtkMPICommunicator*)this->Communicator)->NoBlockReceive
+        (data, length, remoteProcessId, tag, req); }
+#endif
 
 //ETX
 
@@ -174,12 +177,6 @@ public:
 protected:
   vtkMPIController();
   ~vtkMPIController();
-
-  // Given a communicator, obtain size and rank
-  // setting NumberOfProcesses and LocalProcessId
-  // Should not be called if the current communicator
-  // does not include this process
-  int InitializeNumberOfProcesses();
 
   // Set the communicator to comm and call InitializeNumberOfProcesses()
   void InitializeCommunicator(vtkMPICommunicator* comm);
@@ -193,6 +190,10 @@ protected:
   // RMI messages will not interfere with user level
   // messages.
   static vtkMPICommunicator* WorldRMICommunicator;
+
+  //BTX
+  friend class vtkMPIOutputWindow;
+  //ETX
 
   // Initialize only once.
   static int Initialized;

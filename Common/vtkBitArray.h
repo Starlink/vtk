@@ -24,6 +24,8 @@
 
 #include "vtkDataArray.h"
 
+class vtkBitArrayLookup;
+
 class VTK_COMMON_EXPORT vtkBitArray : public vtkDataArray
 {
 public:
@@ -49,6 +51,24 @@ public:
   void SetNumberOfTuples(vtkIdType number);
 
   // Description:
+  // Set the tuple at the ith location using the jth tuple in the source array.
+  // This method assumes that the two arrays have the same type
+  // and structure. Note that range checking and memory allocation is not 
+  // performed; use in conjunction with SetNumberOfTuples() to allocate space.
+  virtual void SetTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source);
+
+  // Description:
+  // Insert the jth tuple in the source array, at ith location in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  virtual void InsertTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source);
+
+  // Description:
+  // Insert the jth tuple in the source array, at the end in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  // Returns the location at which the data was inserted.
+  virtual vtkIdType InsertNextTuple(vtkIdType j, vtkAbstractArray* source);
+  
+  // Description:
   // Get a pointer to a tuple at the ith location. This is a dangerous method
   // (it is not thread safe since a pointer is returned).
   double *GetTuple(vtkIdType i);
@@ -72,6 +92,14 @@ public:
   // Insert (memory allocation performed) the tuple onto the end of the array.
   vtkIdType InsertNextTuple(const float * tuple);
   vtkIdType InsertNextTuple(const double * tuple);
+
+  // Description:
+  // These methods remove tuples from the data array. They shift data and
+  // resize array, so the data array is still valid after this operation. Note,
+  // this operation is fairly slow.
+  virtual void RemoveTuple(vtkIdType id);
+  virtual void RemoveFirstTuple();
+  virtual void RemoveLastTuple();
 
   // Description:
   // Set the data component at the ith tuple and jth component location.
@@ -127,11 +155,15 @@ public:
   void* WriteVoidPointer(vtkIdType id, vtkIdType number)
     { return this->WritePointer(id, number); }
   void *GetVoidPointer(vtkIdType id)
-    {return (void *)this->GetPointer(id);};
+    {
+      return static_cast<void *>(this->GetPointer(id));
+    }
 
   // Description:
   // Deep copy of another bit array.
   void DeepCopy(vtkDataArray *da);
+  void DeepCopy(vtkAbstractArray* aa)
+    { this->Superclass::DeepCopy(aa); }
 
   // Description:
   // This method lets the user specify data to be held by the array.  The 
@@ -139,12 +171,42 @@ public:
   // the array supplied by the user.  Set save to 1 to keep the class
   // from deleting the array when it cleans up or reallocates memory.
   // The class uses the actual array provided; it does not copy the data 
-  // from the suppled array.
+  // from the suppled array. If save 0, the array must have been allocated
+  // with new[] not malloc.
   void SetArray(unsigned char* array, vtkIdType size, int save);
   void SetVoidArray(void *array, vtkIdType size, int save) 
-    {this->SetArray((unsigned char *)array, size, save);};
+    {
+      this->SetArray(static_cast<unsigned char *>(array), size, save);
+    }
 
- 
+  // Description:
+  // Returns a new vtkBitArrayIterator instance.
+  vtkArrayIterator* NewIterator();
+  
+  //BTX
+  // Description:
+  // Return the indices where a specific value appears.
+  virtual vtkIdType LookupValue(vtkVariant value);
+  virtual void LookupValue(vtkVariant value, vtkIdList* ids);
+  //ETX
+  vtkIdType LookupValue(int value);
+  void LookupValue(int value, vtkIdList* ids);
+  
+  // Description:
+  // Tell the array explicitly that the data has changed.
+  // This is only necessary to call when you modify the array contents
+  // without using the array's API (i.e. you retrieve a pointer to the
+  // data and modify the array contents).  You need to call this so that
+  // the fast lookup will know to rebuild itself.  Otherwise, the lookup
+  // functions will give incorrect results.
+  virtual void DataChanged();
+  
+  // Description:
+  // Delete the associated fast lookup data structure on this array,
+  // if it exists.  The lookup will be rebuilt on the next call to a lookup
+  // function.
+  virtual void ClearLookup();
+  
 protected:
   vtkBitArray(vtkIdType numComp=1);
   ~vtkBitArray();
@@ -165,12 +227,18 @@ private:
 private:
   vtkBitArray(const vtkBitArray&);  // Not implemented.
   void operator=(const vtkBitArray&);  // Not implemented.
+  
+  //BTX
+  vtkBitArrayLookup* Lookup;
+  void UpdateLookup();
+  //ETX
 };
 
 inline void vtkBitArray::SetNumberOfValues(vtkIdType number) 
 {
   this->Allocate(number);
   this->MaxId = number - 1;
+  this->DataChanged();
 }
 
 inline void vtkBitArray::SetValue(vtkIdType id, int value) 
@@ -183,6 +251,7 @@ inline void vtkBitArray::SetValue(vtkIdType id, int value)
     {
     this->Array[id/8] &= (~(0x80 >> id%8));
     }
+  this->DataChanged();
 }
 
 inline void vtkBitArray::InsertValue(vtkIdType id, int i)
@@ -203,11 +272,14 @@ inline void vtkBitArray::InsertValue(vtkIdType id, int i)
     {
     this->MaxId = id;
     }
+  this->DataChanged();
 }
 
 inline vtkIdType vtkBitArray::InsertNextValue(int i)
 {
-  this->InsertValue (++this->MaxId,i); return this->MaxId;
+  this->InsertValue (++this->MaxId,i);
+  this->DataChanged();
+  return this->MaxId;
 }
 
 inline void vtkBitArray::Squeeze() {this->ResizeAndExtend (this->MaxId+1);}

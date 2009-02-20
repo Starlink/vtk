@@ -14,7 +14,8 @@
 =========================================================================*/
 #include "vtkPProbeFilter.h"
 
-#include "vtkIdTypeArray.h"
+#include "vtkCompositeDataPipeline.h"
+#include "vtkCharArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMultiProcessController.h"
@@ -24,7 +25,7 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPProbeFilter, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkPProbeFilter, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkPProbeFilter);
 
 vtkCxxSetObjectMacro(vtkPProbeFilter, Controller, vtkMultiProcessController);
@@ -43,10 +44,11 @@ vtkPProbeFilter::~vtkPProbeFilter()
 }
 
 //----------------------------------------------------------------------------
-int vtkPProbeFilter::RequestInformation(vtkInformation *,
-                                        vtkInformationVector **,
+int vtkPProbeFilter::RequestInformation(vtkInformation *request,
+                                        vtkInformationVector **inputVector,
                                         vtkInformationVector *outputVector)
 {
+  this->Superclass::RequestInformation(request, inputVector, outputVector);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(),
                -1);
@@ -58,11 +60,15 @@ int vtkPProbeFilter::RequestData(vtkInformation *request,
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
 {
+  if (!this->Superclass::RequestData(request, inputVector, outputVector))
+    {
+    return 0;
+    }
+
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
   vtkDataSet *output = vtkDataSet::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
-  this->vtkProbeFilter::RequestData(request, inputVector, outputVector);
+
   int procid = 0;
   int numProcs = 1;
   if ( this->Controller )
@@ -71,56 +77,60 @@ int vtkPProbeFilter::RequestData(vtkInformation *request,
     numProcs = this->Controller->GetNumberOfProcesses();
     }
 
-  vtkIdType numPoints = this->GetValidPoints()->GetMaxId() + 1;
+  vtkIdType numPoints = this->NumberOfValidPoints;
   if ( procid )
     {
     // Satellite node
-    this->Controller->Send(&numPoints, 1, 0, 1970);
+    this->Controller->Send(&numPoints, 1, 0, PROBE_COMMUNICATION_TAG);
     if ( numPoints > 0 )
       {
-      this->Controller->Send(this->GetValidPoints(), 0, 1971);
-      this->Controller->Send(output, 0, 1972);      
+      this->Controller->Send(output, 0, PROBE_COMMUNICATION_TAG);
       }
     output->ReleaseData();
     }
   else if ( numProcs > 1 )
     {
-    vtkIdType numRemotePoints = 0;
-    vtkIdTypeArray *validPoints = vtkIdTypeArray::New();
+    vtkIdType numRemoteValidPoints = 0;
     vtkDataSet *remoteProbeOutput = output->NewInstance();
     vtkPointData *remotePointData;
     vtkPointData *pointData = output->GetPointData();
     vtkIdType i;
-    vtkIdType j;
     vtkIdType k;
     vtkIdType pointId;
-    vtkIdType numComponents = pointData->GetNumberOfComponents();
-    double *tuple = new double[numComponents];
     for (i = 1; i < numProcs; i++)
       {
-      this->Controller->Receive(&numRemotePoints, 1, i, 1970);
-      if (numRemotePoints > 0)
+      this->Controller->Receive(&numRemoteValidPoints, 1, i, PROBE_COMMUNICATION_TAG);
+      if (numRemoteValidPoints > 0)
         {
-        this->Controller->Receive(validPoints, i, 1971);
-        this->Controller->Receive(remoteProbeOutput, i, 1972);
+        this->Controller->Receive(remoteProbeOutput, i, PROBE_COMMUNICATION_TAG);
       
         remotePointData = remoteProbeOutput->GetPointData();
-        for (j = 0; j < numRemotePoints; j++)
+
+        vtkCharArray* maskArray = vtkCharArray::SafeDownCast(
+          remotePointData->GetArray(this->ValidPointMaskArrayName));
+
+        // Iterate over all point data in the output gathered from the remove
+        // and copy array values from all the pointIds which have the mask array
+        // bit set to 1.
+        vtkIdType numRemotePoints = remoteProbeOutput->GetNumberOfPoints();
+        for (pointId=0; (pointId < numRemotePoints) && maskArray; pointId++)
           {
-          pointId = validPoints->GetValue(j);
-        
-          remotePointData->GetTuple(pointId, tuple);
-        
-          for (k = 0; k < numComponents; k++)
+          if (maskArray->GetValue(pointId) == 1)
             {
-            output->GetPointData()->SetComponent(pointId, k, tuple[k]);
+            for (k = 0; k < pointData->GetNumberOfArrays(); k++)
+              {
+              vtkAbstractArray *oaa = pointData->GetArray(k);
+              vtkAbstractArray *raa = remotePointData->GetArray(oaa->GetName());
+              if (raa != NULL)
+                {
+                oaa->SetTuple(pointId, pointId, raa);
+                }            
+              }
             }
           }
         }
       }
-    validPoints->Delete();
     remoteProbeOutput->Delete();
-    delete [] tuple;
     }
 
   return 1;
@@ -139,13 +149,31 @@ int vtkPProbeFilter::RequestUpdateExtent(vtkInformation *,
   inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(), 1);
   inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
               0);
-  sourceInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(),
-                  outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()));
-  sourceInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
-                  outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()));
-  sourceInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
-                  outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS()));
+  sourceInfo->Set(
+    vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(),
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()));
+  sourceInfo->Set(
+    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()));
+  sourceInfo->Set(
+    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS()));
 
+  return 1;
+}
+
+//----------------------------------------------------------------------------
+int vtkPProbeFilter::FillInputPortInformation(int port, vtkInformation *info)
+{
+  if (!this->Superclass::FillInputPortInformation(port, info))
+    {
+    return 0;
+    }
+
+  if (port == 1)
+    {
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataObject");
+    }
   return 1;
 }
 

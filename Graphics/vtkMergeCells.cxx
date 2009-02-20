@@ -41,7 +41,7 @@
 #include <vtkstd/map>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkMergeCells, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkMergeCells, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkMergeCells);
 
 vtkCxxSetObjectMacro(vtkMergeCells, UnstructuredGrid, vtkUnstructuredGrid);
@@ -61,8 +61,6 @@ vtkMergeCells::vtkMergeCells()
   this->NumberOfCells = 0;
   this->NumberOfPoints = 0;
 
-  this->GlobalIdArrayName = NULL;
-  this->GlobalCellIdArrayName = NULL;
   this->PointMergeTolerance = 10e-4;
   this->MergeDuplicatePoints = 1;
 
@@ -76,6 +74,9 @@ vtkMergeCells::vtkMergeCells()
 
   this->GlobalIdMap = new vtkMergeCellsSTLCloak;
   this->GlobalCellIdMap = new vtkMergeCellsSTLCloak;
+
+  this->UseGlobalIds = 0;
+  this->UseGlobalCellIds = 0;
 
   this->nextGrid = 0;
 }
@@ -92,18 +93,6 @@ vtkMergeCells::~vtkMergeCells()
 
 void vtkMergeCells::FreeLists()
 {
-  if (this->GlobalIdArrayName)
-    {
-    delete [] this->GlobalIdArrayName;
-    this->GlobalIdArrayName = NULL;
-    }
-
-  if (this->GlobalCellIdArrayName)
-    {
-    delete [] this->GlobalCellIdArrayName;
-    this->GlobalCellIdArrayName = NULL;
-    }
-
   if (this->ptList)
     {
     delete this->ptList;
@@ -207,7 +196,7 @@ int vtkMergeCells::MergeDataSet(vtkDataSet *set)
 
   if (this->MergeDuplicatePoints)
     {
-    if (this->GlobalIdArrayName)   // faster by far
+    if (this->UseGlobalIds)   // faster by far
       {
       // Note:  It has been observed that an input dataset may
       // have an invalid global ID array.  Using the array to
@@ -294,7 +283,7 @@ vtkIdType vtkMergeCells::AddNewCellsDataSet(vtkDataSet *set, vtkIdType *idMap)
 
   int duplicateCellTest = 0;
 
-  if (this->GlobalCellIdArrayName)
+  if (this->UseGlobalCellIds)
     {
     int success = this->GlobalCellIdAccessStart(set);
 
@@ -383,7 +372,7 @@ vtkIdType vtkMergeCells::AddNewCellsUnstructuredGrid(vtkDataSet *set,
   int numDuplicateCells = 0;
   int numDuplicateConnections = 0;
 
-  if (this->GlobalCellIdArrayName)
+  if (this->UseGlobalCellIds)
     {
     int success = this->GlobalCellIdAccessStart(set);
 
@@ -566,8 +555,6 @@ void vtkMergeCells::StartUGrid(vtkDataSet *set)
 
   vtkUnstructuredGrid *ugrid = this->UnstructuredGrid;
 
-  ugrid->Initialize();
-
   if (!this->InputIsUGrid)
     {
     ugrid->Allocate(this->TotalNumberOfCells);
@@ -601,7 +588,15 @@ void vtkMergeCells::StartUGrid(vtkDataSet *set)
   this->ptList->InitializeFieldList(PD);
   this->cellList->InitializeFieldList(CD);
 
+  if (this->UseGlobalIds)
+    {
+    ugrid->GetPointData()->CopyGlobalIdsOn();
+    }
   ugrid->GetPointData()->CopyAllocate(*ptList, this->TotalNumberOfPoints);
+  if (this->UseGlobalCellIds)
+    {
+    ugrid->GetCellData()->CopyGlobalIdsOn();
+    }
   ugrid->GetCellData()->CopyAllocate(*cellList, this->TotalNumberOfCells);
 
   return;
@@ -885,18 +880,19 @@ vtkIdType vtkMergeCells::GlobalCellIdAccessGetId(vtkIdType idx)
 }
 int vtkMergeCells::GlobalCellIdAccessStart(vtkDataSet *set)
 {
-  if(vtkDataArray* da =
-     set->GetPointData()->GetArray(this->GlobalCellIdArrayName))
+  if(this->UseGlobalCellIds)
     {
-    this->GlobalCellIdArray = da->GetVoidPointer(0);
-    this->GlobalCellIdArrayType = da->GetDataType();
-    return 1;
+    vtkDataArray* da = set->GetCellData()->GetGlobalIds();
+    if (da)
+      {
+      this->GlobalCellIdArray = da->GetVoidPointer(0);
+      this->GlobalCellIdArrayType = da->GetDataType();
+      return 1;
+      }
     }
-  else
-    {
-    this->GlobalCellIdArray = 0;
-    return 0;
-    }
+
+  this->GlobalCellIdArray = 0;
+  return 0;
 }
 
 vtkIdType vtkMergeCells::GlobalNodeIdAccessGetId(vtkIdType idx)
@@ -913,19 +909,22 @@ vtkIdType vtkMergeCells::GlobalNodeIdAccessGetId(vtkIdType idx)
     }
   return 0;
 }
+
 int vtkMergeCells::GlobalNodeIdAccessStart(vtkDataSet *set)
 {
-  if(vtkDataArray* da = set->GetPointData()->GetArray(this->GlobalIdArrayName))
+  if(this->UseGlobalIds)
     {
-    this->GlobalIdArray = da->GetVoidPointer(0);
-    this->GlobalIdArrayType = da->GetDataType();
-    return 1;
+    vtkDataArray* da = set->GetPointData()->GetGlobalIds();
+    if (da)
+      {
+      this->GlobalIdArray = da->GetVoidPointer(0);
+      this->GlobalIdArrayType = da->GetDataType();
+      return 1;
+      }
     }
-  else
-    {
-    this->GlobalIdArray = 0;
-    return 0;
-    }
+
+  this->GlobalIdArray = 0;
+  return 0;
 }
 
 
@@ -940,16 +939,6 @@ void vtkMergeCells::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "NumberOfCells: " << this->NumberOfCells << endl;
   os << indent << "NumberOfPoints: " << this->NumberOfPoints << endl;
 
-  if (this->GlobalIdArrayName)
-    {
-    os << indent << "GlobalIdArrayName: " << this->GlobalIdArrayName << endl;
-    }
-
-  if (this->GlobalCellIdArrayName)
-    {
-    os << indent << "GlobalCellIdArrayName: " << this->GlobalCellIdArrayName << endl;
-    }
-
   os << indent << "GlobalIdMap: " << this->GlobalIdMap->IdTypeMap.size() << endl;
   os << indent << "GlobalCellIdMap: " << this->GlobalCellIdMap->IdTypeMap.size() << endl;
 
@@ -960,5 +949,7 @@ void vtkMergeCells::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "UnstructuredGrid: " << this->UnstructuredGrid << endl;
   os << indent << "ptList: " << this->ptList << endl;
   os << indent << "cellList: " << this->cellList << endl;
+  os << indent << "UseGlobalIds: " << this->UseGlobalIds << endl;
+  os << indent << "UseGlobalCellIds: " << this->UseGlobalCellIds << endl;
 }
 

@@ -15,12 +15,12 @@
 
 /* Minimal main program -- everything is loaded from the library */
 
-#include "vtkPython.h"
-
 #ifdef VTK_COMPILED_USING_MPI
 # include <mpi.h>
 # include "vtkMPIController.h"
 #endif // VTK_COMPILED_USING_MPI
+
+#include "vtkPython.h"
 
 #include "vtkVersion.h"
 #include "Wrapping/Python/vtkPythonAppInitConfigure.h"
@@ -42,6 +42,8 @@
 #include "vtkImagingInstantiator.h"
 #include "vtkGraphicsInstantiator.h"
 
+#include "vtkpythonmodules.h"
+
 #ifdef VTK_USE_RENDERING
 #include "vtkRenderingInstantiator.h"
 #include "vtkVolumeRenderingInstantiator.h"
@@ -50,6 +52,14 @@
 
 #ifdef VTK_USE_PARALLEL
 #include "vtkParallelInstantiator.h"
+#endif
+
+#ifdef VTK_USE_INFOVIS
+#include "vtkInfovisInstantiator.h"
+#endif
+
+#ifdef VTK_USE_VIEWS
+#include "vtkViewsInstantiator.h"
 #endif
 
 #include <vtkstd/string>
@@ -149,8 +159,16 @@ int main(int argc, char **argv)
   strcpy(argv0, av0.c_str());
   Py_SetProgramName(argv0);
 
+  CMakeLoadAllPythonModules();
+
   // Initialize interpreter.
   Py_Initialize();
+
+  // Initialize python thread support. This function should first be
+  // called from the main thread, after Py_Initialize.
+#ifndef VTK_NO_PYTHON_THREADS
+  PyEval_InitThreads();
+#endif
 
   // Compute the directory containing this executable.  The python
   // sys.executable variable contains the full path to the interpreter

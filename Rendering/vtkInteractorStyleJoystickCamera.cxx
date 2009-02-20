@@ -15,13 +15,13 @@
 #include "vtkInteractorStyleJoystickCamera.h"
 
 #include "vtkCamera.h"
-#include "vtkCommand.h"
+#include "vtkCallbackCommand.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindowInteractor.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleJoystickCamera, "$Revision: 1.30 $");
+vtkCxxRevisionMacro(vtkInteractorStyleJoystickCamera, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkInteractorStyleJoystickCamera);
 
 //----------------------------------------------------------------------------
@@ -67,6 +67,7 @@ void vtkInteractorStyleJoystickCamera::OnLeftButtonDown()
     return;
     }
 
+  this->GrabFocus(this->EventCallbackCommand);
   if (this->Interactor->GetShiftKey()) 
     {
     if (this->Interactor->GetControlKey()) 
@@ -112,6 +113,10 @@ void vtkInteractorStyleJoystickCamera::OnLeftButtonUp()
       this->EndRotate();
       break;
     }
+  if ( this->Interactor )
+    {
+    this->ReleaseFocus();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -124,6 +129,7 @@ void vtkInteractorStyleJoystickCamera::OnMiddleButtonDown()
     return;
     }
   
+  this->GrabFocus(this->EventCallbackCommand);
   this->StartPan();
 }
 
@@ -135,6 +141,10 @@ void vtkInteractorStyleJoystickCamera::OnMiddleButtonUp()
     case VTKIS_PAN:
       this->EndPan();
       break;
+    }
+  if ( this->Interactor )
+    {
+    this->ReleaseFocus();
     }
 }
 
@@ -148,6 +158,7 @@ void vtkInteractorStyleJoystickCamera::OnRightButtonDown()
     return;
     }
   
+  this->GrabFocus(this->EventCallbackCommand);
   this->StartDolly();
 }
 
@@ -159,6 +170,10 @@ void vtkInteractorStyleJoystickCamera::OnRightButtonUp()
     case VTKIS_DOLLY:
       this->EndDolly();
       break;
+    }
+  if ( this->Interactor )
+    {
+    this->ReleaseFocus();
     }
 }
 
@@ -172,10 +187,12 @@ void vtkInteractorStyleJoystickCamera::OnMouseWheelForward()
     return;
     }
   
+  this->GrabFocus(this->EventCallbackCommand);
   this->StartDolly();
   double factor = 10.0 * 0.2 * this->MouseWheelMotionFactor;
-  this->Dolly(pow((double)1.1, factor));
+  this->Dolly(pow(1.1, factor));
   this->EndDolly();
+  this->ReleaseFocus();
 }
 
 //----------------------------------------------------------------------------
@@ -188,10 +205,12 @@ void vtkInteractorStyleJoystickCamera::OnMouseWheelBackward()
     return;
     }
   
+  this->GrabFocus(this->EventCallbackCommand);
   this->StartDolly();
   double factor = 10.0 * -0.2 * this->MouseWheelMotionFactor;
-  this->Dolly(pow((double)1.1, factor));
+  this->Dolly(pow(1.1, factor));
   this->EndDolly();
+  this->ReleaseFocus();
 }
 
 //----------------------------------------------------------------------------
@@ -206,8 +225,8 @@ void vtkInteractorStyleJoystickCamera::Rotate()
 
   double *center = this->CurrentRenderer->GetCenter();
 
-  double dx = (double)rwi->GetEventPosition()[0] - center[0];
-  double dy = (double)rwi->GetEventPosition()[1] - center[1];
+  double dx = rwi->GetEventPosition()[0] - center[0];
+  double dy = rwi->GetEventPosition()[1] - center[1];
   
   double *vp = this->CurrentRenderer->GetViewport();
   int *size = rwi->GetSize();
@@ -215,8 +234,8 @@ void vtkInteractorStyleJoystickCamera::Rotate()
   double delta_elevation = -20.0/((vp[3] - vp[1])*size[1]);
   double delta_azimuth = -20.0/((vp[2] - vp[0])*size[0]);
   
-  double rxf = (double)dx * delta_azimuth;
-  double ryf = (double)dy * delta_elevation;
+  double rxf = dx * delta_azimuth;
+  double ryf = dy * delta_elevation;
 
   vtkCamera* camera = this->CurrentRenderer->GetActiveCamera();
   camera->Azimuth(rxf);
@@ -250,8 +269,7 @@ void vtkInteractorStyleJoystickCamera::Spin()
 
   // Spin is based on y value
 
-  double yf = ((double)rwi->GetEventPosition()[1] - (double)center[1]) 
-    / (double)(center[1]);
+  double yf = (rwi->GetEventPosition()[1] - center[1]) / center[1];
 
   if (yf > 1)
     {
@@ -292,8 +310,8 @@ void vtkInteractorStyleJoystickCamera::Pan()
                               ViewFocus);
   double focalDepth = ViewFocus[2];
 
-  this->ComputeDisplayToWorld((double)rwi->GetEventPosition()[0], 
-                              (double)rwi->GetEventPosition()[1],
+  this->ComputeDisplayToWorld(rwi->GetEventPosition()[0], 
+                              rwi->GetEventPosition()[1],
                               focalDepth, 
                               NewPickPoint);
 
@@ -336,9 +354,9 @@ void vtkInteractorStyleJoystickCamera::Dolly()
   
   vtkRenderWindowInteractor *rwi = this->Interactor;
   double *center = this->CurrentRenderer->GetCenter();
-  double dy = (double)rwi->GetEventPosition()[1] - (double)center[1];
-  double dyf = 0.5 * dy / (double)center[1];
-  this->Dolly(pow((double)1.1, dyf));
+  double dy = rwi->GetEventPosition()[1] - center[1];
+  double dyf = 0.5 * dy / center[1];
+  this->Dolly(pow(1.1, dyf));
 }
 
 //----------------------------------------------------------------------------

@@ -1,14 +1,11 @@
 INCLUDE(${VTK_SOURCE_DIR}/Utilities/vtkTclTest2Py/vtkConvertTclTestToPy.cmake)
 IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
 
-  #
-  # Add tests, with the data
-  #
   IF (VTK_PYTHON_EXE)
     SET(tests)
     
     IF (VTK_DATA_ROOT)
-      # Older tests
+      # Tests written in Python
       FOREACH ( tfile
                 cameraWarpedCone
                 glyphComb
@@ -18,14 +15,17 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
                 streamSurface2
                 )
         ADD_TEST(${tfile}Python-image ${VTK_PYTHON_EXE}
+          ${VTK_BINARY_DIR}/Utilities/vtkTclTest2Py/rtImageTest.py
           ${VTK_SOURCE_DIR}/Graphics/Testing/Python/${tfile}.py
           -D ${VTK_DATA_ROOT}
+          -T ${VTK_BINARY_DIR}/Testing/Temporary
           -V Baseline/Graphics/${tfile}.png
-          -A ${VTK_SOURCE_DIR}/Utilities/vtkTclTest2Py
-          -A ${LIBRARY_OUTPUT_PATH})
+          -A "${VTK_BINARY_DIR}/Utilities/vtkTclTest2Py" 
+          -A "${VTK_LIBRARY_DIR}"
+          )
       ENDFOREACH( tfile )
 
-      # Add test converted from Tcl
+      # Add tests converted from Tcl
       SET( tests ${tests}
           AutomaticPlaneGeneration
           Canny
@@ -49,6 +49,8 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           EnSightIronProtASCII
           EnSightIronProtBin
           EnSightMandelbrot
+          EnSightNfacedASCII
+          EnSightNfacedBin
           EnSightOfficeASCII
           EnSightOfficeBin
           EnSightRectGridASCII
@@ -59,7 +61,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           Hyper
           HyperScalarBar
           KlineBottle
-          LineIntersectQuadraticCells 
+          LineIntersectQuadraticCells
           MatrixToTransform
           MultidimensionalSolution
           NoLightGeneration
@@ -103,6 +105,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           TransformConcatenation
           TransformCoverage
           TransformPolyData
+
           blankGrid
           capCow
           capSphere
@@ -127,8 +130,8 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           createBFont
           cursor3D
           cutLoop
-          cylMap
           cylindrical
+          cylMap
           dataSetSurfaceFilter
           #deciPlane  -- complex use of string eval
           dicer
@@ -151,7 +154,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           headBone
           hull
           iceCream
-          #imageMCAll --  sunstitution in method call.
+          #imageMCAll -- substitution in method call.
           mcubes
           mergeFilter
           motor
@@ -182,9 +185,9 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           stereoDresdenMace
           streamTracer
           stripF
+          subdividePointData
           subDivideTetra
           subPixelPositionMin
-          subdividePointData
           #sync3dAll -- substitution in method call.
           teapotHulls
           testDataSetTriangleFilter
@@ -196,7 +199,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           triangularTexture
           warplens
           )
-      
+
       # Newer tests using vtk.test.Testing.
       FOREACH ( tfile
                 TestTensorGlyph
@@ -208,54 +211,11 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
           -B ${VTK_DATA_ROOT}/Baseline/Graphics)
       ENDFOREACH( tfile )
     ELSE (VTK_DATA_ROOT)
-      # Add test converted from Tcl
-      SET(tests ${tests}
-          capSphere
-          CellDataToPointData
-          clipVolume
-          clipVolume2
-          clipVolume3
-          coneResolution
-          constrainedDelaunay
-          contourCells
-          contoursToSurface
-          cutLoop
-          Delaunay2D
-          Delaunay2DAlpha
-          Delaunay2DTransform
-          Disk
-          extractPolyData
-          glyph2D
-          Hyper
-          KlineBottle
-          MatrixToTransform
-          OBBCylinder
-          progGlyphs
-          progGlyphsBySource
-          quadricCut
-          scalarConn
-          schwarz
-          shepards
-          smoothCyl
-          smoothCyl2
-          subdividePointData
-          subDivideTetra
-          TestBoxFunction
-          TestGraphLayoutFilter
-          testQuadricDecimation
-          triangularTCoords
-          triangularTexture
-          warplens
-          TestGraphLayoutFilter
-          TransformConcatenation
-          TransformCoverage
-          TransformPolyData
-          )
+      # All Graphics tests require VTKData - no tests should be in this block...
     ENDIF (VTK_DATA_ROOT)
-    
-    CONVERT_TCL_TEST_TO_PY (
+
+    CONVERT_TCL_TEST_TO_PY(
       tests
       Graphics)
   ENDIF (VTK_PYTHON_EXE)
 ENDIF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
-

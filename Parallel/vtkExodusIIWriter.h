@@ -76,6 +76,7 @@ class vtkDoubleArray;
 class vtkDataArray;
 class vtkUnsignedCharArray;
 class vtkIntArray;
+class vtkIdTypeArray;
 class vtkModelMetadata;
 
 class VTK_PARALLEL_EXPORT vtkExodusIIWriter : public vtkWriter
@@ -162,15 +163,6 @@ public:
   vtkBooleanMacro(WriteOutBlockIdArray, int);
 
   // Description:
-  //   The name of a point array that gives the global node IDs.
-  //   We will look for an array called "GlobalNodeId" if you
-  //   don't provide a different name here.  It must be an integer
-  //   array.  This array is optional.
-
-  vtkSetStringMacro(GlobalNodeIdArrayName);
-  vtkGetStringMacro(GlobalNodeIdArrayName);
-
-  // Description:
   //   By default, the integer array containing the global Node Ids 
   //   is not included when the new Exodus II file is written out.  If
   //   you do want to include this array, set WriteOutGlobalNodeIdArray to ON.
@@ -178,15 +170,6 @@ public:
   vtkSetMacro(WriteOutGlobalNodeIdArray, int);
   vtkGetMacro(WriteOutGlobalNodeIdArray, int);
   vtkBooleanMacro(WriteOutGlobalNodeIdArray, int);
-
-  // Description:
-  //   The name of a cell array that gives the global cell IDs.
-  //   We will look for an array called "GlobalElementId" if you
-  //   don't provide a different name here.  It must be an integer array.
-  //   This array is optional.
-
-  vtkSetStringMacro(GlobalElementIdArrayName);
-  vtkGetStringMacro(GlobalElementIdArrayName);
 
   // Description:
   //   By default, the integer array containing the global Element Ids 
@@ -198,30 +181,13 @@ public:
   vtkBooleanMacro(WriteOutGlobalElementIdArray, int);
 
   // Description:
-  //   If there is no vtkModelMetadata object, then you can
-  //   input time step values here.  We copy your array.  This is
-  //   not required, the writer can use sensible defaults.  If you
-  //   only give one time step value (say 1.0), we'll increment
-  //   each successive time step by that amount (2.0, 3.0, ...).
+  //   When WriteAllTimeSteps is turned ON, the writer is executed once for
+  //    each timestep available from the reader.
 
-  void SetTimeStepValues(int NumberOfTimeSteps, float *v);
-  float *GetTimeStepValues(){return this->InputTimeStepValues;}
-  int GetNumberOfTimeSteps(){return this->InputNumberOfTimeSteps;}
+  vtkSetMacro(WriteAllTimeSteps, int);
+  vtkGetMacro(WriteAllTimeSteps, int);
+  vtkBooleanMacro(WriteAllTimeSteps, int);
 
-  // Description:
-  //   You can set the time step index for the next write with
-  //   SetCurrentTimeStep.  If this is not set, the writer will
-  //   use the time step index found in the vtkModelMetadata object,
-  //   or else a sensible default (one more than the last time step
-  //   written).  (You may want to set a different
-  //   time step index when you have a vtkModelMetadata object if,
-  //   for example, you are writing out only every tenth time
-  //   step.  The input to the writer may be time step 10, but you
-  //   want it written out as time step 1.)
-  //   The first index is 0.
-
-  void SetCurrentTimeStep(int ts);
-  int GetCurrentTimeStep(){return this->InputCurrentTimeStep;}
 
   // Description:
   //   Provide a list of all blockIds that appear in the file.  If
@@ -247,6 +213,16 @@ protected:
   vtkExodusIIWriter();
   ~vtkExodusIIWriter();
 
+  virtual int ProcessRequest(vtkInformation *request,
+                             vtkInformationVector **inputVector,
+                             vtkInformationVector *outputVector);
+  virtual int RequestData(vtkInformation *request,
+                          vtkInformationVector **inputVector,
+                          vtkInformationVector *outputVector);
+  virtual int RequestInformation( vtkInformation *request,
+                                  vtkInformationVector **inputVector, 
+                                  vtkInformationVector *outputVector);
+
   virtual int FillInputPortInformation(int port, vtkInformation* info);
 
   void WriteData();     
@@ -263,6 +239,8 @@ protected:
   //   responsible for writing.
   vtkSetMacro(MyRank, int);
   vtkGetMacro(MyRank, int);
+
+  void StringUppercase(const char* str, char* upperstr);
 
 private:
   static char *StrDupWithNew(const char *s);
@@ -313,8 +291,6 @@ private:
   int WriteSideSetInformation();
   int WriteProperties();
 
-  int GetTimeStepIndex();
-  float GetTimeStepValue(int timeStepIndex);
   int WriteNextTimeStep();
   float *ExtractComponentF(vtkDataArray *da, int comp, int *idx);
   double *ExtractComponentD(vtkDataArray *da, int comp, int *idx);
@@ -338,29 +314,22 @@ private:
   int *InputBlockIds;
   int InputBlockIdsLength;
 
-  int InputNumberOfTimeSteps;
-  float *InputTimeStepValues;
-  int InputCurrentTimeStep;   
-  int LastTimeStepWritten;
-
   // List of the global element ID of each cell in input
 
-  char *GlobalElementIdArrayName;
-  int *GlobalElementIdList;
+  vtkIdType *GlobalElementIdList;
 //BTX
-  vtkstd::map<int, int> *LocalElementIdMap;
+  vtkstd::map<vtkIdType, vtkIdType> *LocalElementIdMap;
 //ETX
-  int GetElementLocalId(int i);
+  vtkIdType GetElementLocalId(vtkIdType i);
   int WriteOutGlobalElementIdArray;
 
   // List of the global node ID of each cell in input
 
-  char *GlobalNodeIdArrayName;
-  int *GlobalNodeIdList;
+  vtkIdType *GlobalNodeIdList;
 //BTX
-  vtkstd::map<int, int> *LocalNodeIdMap;
+  vtkstd::map<vtkIdType, vtkIdType> *LocalNodeIdMap;
 //ETX
-  int GetNodeLocalId(int i);
+  vtkIdType GetNodeLocalId(vtkIdType i);
   int WriteOutGlobalNodeIdArray;
 
   // Exodus II element blocks
@@ -422,6 +391,11 @@ private:
   int GhostLevel;
 
   int ErrorStatus;
+
+  int CurrentTimeIndex;
+  int NumberOfTimeSteps;
+  int WriteAllTimeSteps;
+  vtkDoubleArray *TimeValues;
 };
 
 #endif

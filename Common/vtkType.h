@@ -52,8 +52,14 @@
    VTK_TYPE_CONVERT_UI64_TO_DOUBLE are both defined.  */
 #define VTK_UNSIGNED___INT64   19
 
+/* These types are required by vtkVariant and vtkVariantArray */
+#define VTK_VARIANT 20
+#define VTK_OBJECT 21
+
 /*--------------------------------------------------------------------------*/
-/* Define a unique integer identifier for each vtkDataObject type.  */
+/* Define a unique integer identifier for each vtkDataObject type.          */
+/* When adding a new data type here, make sure to update                    */
+/* vtkDataObjectTypes as well.                                              */
 #define VTK_POLY_DATA                       0
 #define VTK_STRUCTURED_POINTS               1
 #define VTK_STRUCTURED_GRID                 2
@@ -66,9 +72,21 @@
 #define VTK_POINT_SET                       9
 #define VTK_UNIFORM_GRID                   10
 #define VTK_COMPOSITE_DATA_SET             11
-#define VTK_HIERARCHICAL_DATA_SET          12
-#define VTK_HIERARCHICAL_BOX_DATA_SET      13
-#define VTK_GENERIC_DATA_SET               14
+#define VTK_MULTIGROUP_DATA_SET            12
+#define VTK_MULTIBLOCK_DATA_SET            13
+#define VTK_HIERARCHICAL_DATA_SET          14
+#define VTK_HIERARCHICAL_BOX_DATA_SET      15
+#define VTK_GENERIC_DATA_SET               16
+#define VTK_HYPER_OCTREE                   17
+#define VTK_TEMPORAL_DATA_SET              18
+#define VTK_TABLE                          19
+#define VTK_GRAPH                          20
+#define VTK_TREE                           21
+#define VTK_SELECTION                      22
+#define VTK_DIRECTED_GRAPH                 23
+#define VTK_UNDIRECTED_GRAPH               24
+#define VTK_MULTIPIECE_DATA_SET            25
+#define VTK_DIRECTED_ACYCLIC_GRAPH         26
 
 /*--------------------------------------------------------------------------*/
 /* Define a casting macro for use by the constants below.  */
@@ -175,16 +193,16 @@ typedef signed long   vtkTypeInt32;
 #endif
 
 /* Select a 64-bit integer type.  */
-#if VTK_SIZEOF_LONG == 8
-typedef unsigned long vtkTypeUInt64;
-typedef signed long   vtkTypeInt64;
-# define VTK_TYPE_UINT64 VTK_UNSIGNED_LONG
-# define VTK_TYPE_INT64 VTK_LONG
-#elif defined(VTK_TYPE_USE_LONG_LONG) && VTK_SIZEOF_LONG_LONG == 8
+#if defined(VTK_TYPE_USE_LONG_LONG) && VTK_SIZEOF_LONG_LONG == 8
 typedef unsigned long long vtkTypeUInt64;
 typedef signed long long   vtkTypeInt64;
 # define VTK_TYPE_UINT64 VTK_UNSIGNED_LONG_LONG
 # define VTK_TYPE_INT64 VTK_LONG_LONG
+#elif VTK_SIZEOF_LONG == 8
+typedef unsigned long vtkTypeUInt64;
+typedef signed long   vtkTypeInt64;
+# define VTK_TYPE_UINT64 VTK_UNSIGNED_LONG
+# define VTK_TYPE_INT64 VTK_LONG
 #elif defined(VTK_TYPE_USE___INT64) && VTK_SIZEOF___INT64 == 8
 typedef unsigned __int64 vtkTypeUInt64;
 typedef signed __int64   vtkTypeInt64;

@@ -18,9 +18,9 @@
 // represent a three-dimensional, 15-node isoparametric parabolic
 // wedge. The interpolation is the standard finite element, quadratic
 // isoparametric shape function. The cell includes a mid-edge node. The
-// ordering of the fifteen points defining the cell is point ids (0-5,6-15)
+// ordering of the fifteen points defining the cell is point ids (0-5,6-14)
 // where point ids 0-5 are the six corner vertices of the wedge; followed by
-// nine midedge nodes (6-15). Note that these midedge nodes correspond lie
+// nine midedge nodes (6-14). Note that these midedge nodes correspond lie
 // on the edges defined by (0,1), (1,2), (2,0), (3,4), (4,5), (5,3), (0,3),
 // (1,4), (2,5).
 
@@ -47,7 +47,7 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Implement the vtkCell API. See the vtkCell API for descriptions 
+  // Implement the vtkCell API. See the vtkCell API for descriptions
   // of these methods.
   int GetCellType() {return VTK_QUADRATIC_WEDGE;}
   int GetCellDimension() {return 3;}
@@ -57,26 +57,26 @@ public:
   vtkCell *GetFace(int faceId);
 
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
-  void Contour(double value, vtkDataArray *cellScalars, 
-               vtkPointLocator *locator, vtkCellArray *verts, 
-               vtkCellArray *lines, vtkCellArray *polys, 
+  void Contour(double value, vtkDataArray *cellScalars,
+               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   int EvaluatePosition(double x[3], double* closestPoint,
-                       int& subId, double pcoords[3], 
+                       int& subId, double pcoords[3],
                        double& dist2, double *weights);
   void EvaluateLocation(int& subId, double pcoords[3], double x[3],
                         double *weights);
   int Triangulate(int index, vtkIdList *ptIds, vtkPoints *pts);
-  void Derivatives(int subId, double pcoords[3], double *values, 
+  void Derivatives(int subId, double pcoords[3], double *values,
                    int dim, double *derivs);
   virtual double *GetParametricCoords();
 
   // Description:
-  // Clip this quadratic hexahedron using scalar value provided. Like 
-  // contouring, except that it cuts the hex to produce linear 
+  // Clip this quadratic hexahedron using scalar value provided. Like
+  // contouring, except that it cuts the hex to produce linear
   // tetrahedron.
-  void Clip(double value, vtkDataArray *cellScalars, 
+  void Clip(double value, vtkDataArray *cellScalars,
             vtkPointLocator *locator, vtkCellArray *tetras,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
@@ -88,15 +88,33 @@ public:
   int IntersectWithLine(double p1[3], double p2[3], double tol, double& t,
                         double x[3], double pcoords[3], int& subId);
 
-  
+
   // Description:
   // Return the center of the quadratic wedge in parametric coordinates.
   int GetParametricCenter(double pcoords[3]);
 
   // Description:
-  // Quadratic hexahedron specific methods. 
+  // @deprecated Replaced by vtkQuadraticWedge::InterpolateFunctions as of VTK 5.2
   static void InterpolationFunctions(double pcoords[3], double weights[15]);
+  // Description:
+  // @deprecated Replaced by vtkQuadraticWedge::InterpolateDerivs as of VTK 5.2
   static void InterpolationDerivs(double pcoords[3], double derivs[45]);
+  // Description:
+  // Compute the interpolation functions/derivatives
+  // (aka shape functions/derivatives)
+  virtual void InterpolateFunctions(double pcoords[3], double weights[15])
+    {
+    vtkQuadraticWedge::InterpolationFunctions(pcoords,weights);
+    }
+  virtual void InterpolateDerivs(double pcoords[3], double derivs[45])
+    {
+    vtkQuadraticWedge::InterpolationDerivs(pcoords,derivs);
+    }
+  // Description:
+  // Return the ids of the vertices defining edge/face (`edgeId`/`faceId').
+  // Ids are related to the cell, not to the dataset.
+  static int *GetEdgeArray(int edgeId);
+  static int *GetFaceArray(int faceId);
 
   // Description:
   // Given parametric coordinates compute inverse Jacobian transformation
@@ -116,8 +134,9 @@ protected:
   vtkCellData      *CellData;
   vtkDoubleArray   *CellScalars;
   vtkDoubleArray   *Scalars; //used to avoid New/Delete in contouring/clipping
-  
-  void Subdivide(vtkPointData *inPd, vtkCellData *inCd, vtkIdType cellId, vtkDataArray *cellScalars);
+
+  void Subdivide(vtkPointData *inPd, vtkCellData *inCd, vtkIdType cellId,
+    vtkDataArray *cellScalars);
 
 private:
   vtkQuadraticWedge(const vtkQuadraticWedge&);  // Not implemented.

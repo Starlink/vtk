@@ -22,6 +22,34 @@
 @implementation vtkCocoaGLView
 
 //----------------------------------------------------------------------------
+- (void)emptyMethod:(id)sender
+{
+  (void)sender;
+}
+
+//----------------------------------------------------------------------------
+// designated initializer
+- (id)initWithFrame:(NSRect)frameRect
+{
+  self = [super initWithFrame:frameRect];
+  if (self)
+    {
+    // Force Cocoa into "multi threaded mode" because VTK spawns pthreads.
+    // Apple's docs say: "If you intend to use Cocoa calls, you must force
+    // Cocoa into its multithreaded mode before detaching any POSIX threads.
+    // To do this, simply detach an NSThread and have it promptly exit.
+    // This is enough to ensure that the locks needed by the Cocoa
+    // frameworks are put in place" 
+    if ([NSThread isMultiThreaded] == NO)
+      {
+      [NSThread detachNewThreadSelector:@selector(emptyMethod:)
+        toTarget:self withObject:nil];
+      }
+    }
+  return self;
+}
+
+//----------------------------------------------------------------------------
 - (vtkCocoaRenderWindow *)getVTKRenderWindow
 {
   return myVTKRenderWindow;
@@ -71,41 +99,12 @@
   if (!interactor)
     return;
   
-  // Get the location of the mouse event relative to this NSView's bottom left corner
-  // Since this is a NOT mouseevent, we can not use locationInWindow
-  // Instead we get the mouse location at this instant, which may not be the exact
-  // location of the mouse at the time of the keypress, but should be quite close.
-  // There seems to be no better way.  And, yes, vtk does sometimes need the mouse
-  // location even for key events, example: pressing 'p' to pick the actor under
-  // the mouse. Also note that 'mouseLoc' may have nonsense values if a key is
-  // pressed while the mouse in not actually in the vtk view but the view is
-  // first responder.
-  NSPoint mouseLoc = [[self window] mouseLocationOutsideOfEventStream];
-  mouseLoc = [self convertPoint:mouseLoc fromView:nil];
-
-  int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
-  int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
-
-  // Get the characters associated with the key event as a utf8 string.
-  // This pointer is only valid for the duration of the current autorelease context!
-  const char* keyedChars = [[theEvent characters] UTF8String];
-
-  // Since vtk only supports ascii, we just blindly pass the first element
-  // of the above string, hoping it's ascii
-  interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown,
-    (unsigned short)keyedChars[0], 1, keyedChars);
-
-  interactor->InvokeEvent(vtkCommand::KeyPressEvent, NULL);
-  interactor->InvokeEvent(vtkCommand::CharEvent, NULL);
-}
-
-//----------------------------------------------------------------------------
-- (void)keyUp:(NSEvent *)theEvent
-{
-  vtkCocoaRenderWindowInteractor *interactor = [self getInteractor];
-  if (!interactor)
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
     return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
   
   // Get the location of the mouse event relative to this NSView's bottom left corner
   // Since this is a NOT mouseevent, we can not use locationInWindow
@@ -128,8 +127,53 @@
 
   // Since vtk only supports ascii, we just blindly pass the first element
   // of the above string, hoping it's ascii
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown,
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown,
+    (unsigned short)keyedChars[0], 1, keyedChars);
+
+  interactor->InvokeEvent(vtkCommand::KeyPressEvent, NULL);
+  interactor->InvokeEvent(vtkCommand::CharEvent, NULL);
+}
+
+//----------------------------------------------------------------------------
+- (void)keyUp:(NSEvent *)theEvent
+{
+  vtkCocoaRenderWindowInteractor *interactor = [self getInteractor];
+  if (!interactor)
+    return;
+  
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
+  // Get the location of the mouse event relative to this NSView's bottom left corner
+  // Since this is a NOT mouseevent, we can not use locationInWindow
+  // Instead we get the mouse location at this instant, which may not be the exact
+  // location of the mouse at the time of the keypress, but should be quite close.
+  // There seems to be no better way.  And, yes, vtk does sometimes need the mouse
+  // location even for key events, example: pressing 'p' to pick the actor under
+  // the mouse. Also note that 'mouseLoc' may have nonsense values if a key is
+  // pressed while the mouse in not actually in the vtk view but the view is
+  // first responder.
+  NSPoint mouseLoc = [[self window] mouseLocationOutsideOfEventStream];
+  mouseLoc = [self convertPoint:mouseLoc fromView:nil];
+
+  int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
+  int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
+
+  // Get the characters associated with the key event as a utf8 string.
+  // This pointer is only valid for the duration of the current autorelease context!
+  const char* keyedChars = [[theEvent characters] UTF8String];
+
+  // Since vtk only supports ascii, we just blindly pass the first element
+  // of the above string, hoping it's ascii
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
+  interactor->SetEventInformation(
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown,
     (unsigned short)keyedChars[0], 1, keyedChars);
 
   interactor->InvokeEvent(vtkCommand::KeyReleaseEvent, NULL);
@@ -147,6 +191,13 @@
   if (!interactor)
     return;
   
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
   // Get the location of the mouse event relative to this NSView's bottom left corner
   // Since this is a mouseevent, we can use locationInWindow
   NSPoint mouseLoc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
@@ -154,8 +205,9 @@
   int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
   int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
 
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
   interactor->InvokeEvent(vtkCommand::MouseMoveEvent, NULL);
 }
 
@@ -166,14 +218,22 @@
   if (!interactor)
     return;
   
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
   // Get the location of the mouse event relative to this NSView's bottom left corner
   // Since this is a mouseevent, we can use locationInWindow
   NSPoint mouseLoc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
   int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
   int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
 
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
   if( [theEvent deltaY] > 0)
     {
     interactor->InvokeEvent(vtkCommand::MouseWheelForwardEvent, NULL);
@@ -192,6 +252,13 @@
   if (!interactor)
     return;
   
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
   BOOL keepOn = YES;
 
   // Get the location of the mouse event relative to this NSView's bottom left corner
@@ -201,8 +268,9 @@
   int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
   int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
 
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
 
   interactor->InvokeEvent(vtkCommand::LeftButtonPressEvent,NULL);
     
@@ -217,8 +285,10 @@
     if (theEvent)
       {
       mouseLoc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+      
+      // The mouse location is in points, we must convert to pixels using the scaling factor.
       interactor->SetEventInformation(
-        (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+        (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
       switch ([theEvent type])
         {
       case NSLeftMouseDragged:
@@ -246,6 +316,13 @@
   if (!interactor)
     return;
   
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
   BOOL keepOn = YES;
 
   // Get the location of the mouse event relative to this NSView's bottom left corner
@@ -255,8 +332,9 @@
   int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
   int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
 
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
 
   interactor->InvokeEvent(vtkCommand::RightButtonPressEvent,NULL);
 
@@ -271,8 +349,10 @@
     if (theEvent)
       {
       mouseLoc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+
+      // The mouse location is in points, we must convert to pixels using the scaling factor.
       interactor->SetEventInformation(
-        (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+        (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
       switch ([theEvent type])
         {
       case NSRightMouseDragged:
@@ -300,6 +380,13 @@
   if (!interactor)
     return;
   
+  vtkCocoaRenderWindow* renWin = vtkCocoaRenderWindow::SafeDownCast([self getVTKRenderWindow]);
+  if (!renWin)
+    return;
+  
+  // Retrieve the scaling factor.
+  double factor = renWin->GetScaleFactor();
+  
   BOOL keepOn = YES;
 
   // Get the location of the mouse event relative to this NSView's bottom left corner
@@ -309,8 +396,9 @@
   int shiftDown = ([theEvent modifierFlags] & NSShiftKeyMask);
   int controlDown = ([theEvent modifierFlags] & NSControlKeyMask);
 
+  // The mouse location is in points, we must convert to pixels using the scaling factor.
   interactor->SetEventInformation(
-    (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+    (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
 
   interactor->InvokeEvent(vtkCommand::MiddleButtonPressEvent,NULL);
   
@@ -325,8 +413,10 @@
     if (theEvent)
       {
       mouseLoc = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+
+      // The mouse location is in points, we must convert to pixels using the scaling factor.
       interactor->SetEventInformation(
-        (int)mouseLoc.x, (int)mouseLoc.y, controlDown, shiftDown);
+        (int)round(mouseLoc.x * factor), (int)round(mouseLoc.y * factor), controlDown, shiftDown);
       switch ([theEvent type])
         {
       case NSOtherMouseDragged:

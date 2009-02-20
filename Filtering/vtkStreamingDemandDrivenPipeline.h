@@ -26,10 +26,13 @@
 #include "vtkDemandDrivenPipeline.h"
 
 class vtkExtentTranslator;
+class vtkInformationDoubleKey;
 class vtkInformationDoubleVectorKey;
 class vtkInformationIntegerKey;
 class vtkInformationIntegerVectorKey;
 class vtkInformationObjectBaseKey;
+class vtkInformationStringKey;
+class vtkInformationIdTypeKey;
 
 class VTK_FILTERING_EXPORT vtkStreamingDemandDrivenPipeline : public vtkDemandDrivenPipeline
 {
@@ -63,7 +66,9 @@ public:
   // unstructured data sets.  It gets set by the source during the
   // update information call.  A value of -1 indicates that there is
   // no maximum.
+  int SetMaximumNumberOfPieces(int port, int n);
   int SetMaximumNumberOfPieces(vtkInformation *, int n);
+  int GetMaximumNumberOfPieces(int port);
   int GetMaximumNumberOfPieces(vtkInformation *);
 
   // Description:
@@ -79,10 +84,12 @@ public:
   // extent, this method can be called to set the input update extent to the
   // whole input extent. This method assumes that the whole extent is known
   // (that UpdateInformation has been called)
+  int SetUpdateExtentToWholeExtent(int port);
   int SetUpdateExtentToWholeExtent(vtkInformation *);
   
   // Description:
   // Get/Set the update extent for output ports that use 3D extents.
+  int SetUpdateExtent(int port, int extent[6]);
   int SetUpdateExtent(vtkInformation *, int extent[6]);
   void GetUpdateExtent(vtkInformation *, int extent[6]);
   int* GetUpdateExtent(vtkInformation *);
@@ -91,6 +98,8 @@ public:
   // Set/Get the update piece, update number of pieces, and update
   // number of ghost levels for an output port.  Similar to update
   // extent in 3D.
+  int SetUpdateExtent(int port, 
+                      int piece, int numPieces, int ghostLevel);
   int SetUpdateExtent(vtkInformation *, 
                       int piece, int numPieces, int ghostLevel);
   int SetUpdatePiece(vtkInformation *, int piece);
@@ -99,6 +108,13 @@ public:
   int GetUpdateNumberOfPieces(vtkInformation *);
   int SetUpdateGhostLevel(vtkInformation *, int n);
   int GetUpdateGhostLevel(vtkInformation *);
+
+  // Description:
+  // Get/Set the update extent for output ports that use Temporal Extents
+  int SetUpdateTimeSteps(int port, double *times, int length);
+  int SetUpdateTimeSteps(vtkInformation *, double *times, int length);
+  int SetUpdateTimeStep(int port, double time);
+  //void GetUpdateTimeSteps(vtkInformation *, int extent[6]);
 
   // Description:
   // This request flag indicates whether the requester can handle more
@@ -113,7 +129,9 @@ public:
   // Description:
   // Get/Set the object that will translate pieces into structured
   // extents for an output port.
+  int SetExtentTranslator(int port, vtkExtentTranslator* translator);
   int SetExtentTranslator(vtkInformation *, vtkExtentTranslator* translator);
+  vtkExtentTranslator* GetExtentTranslator(int port);
   vtkExtentTranslator* GetExtentTranslator(vtkInformation *info);
 
   // Description:
@@ -127,6 +145,11 @@ public:
   // Description:
   // Key defining a request to propagate the update extent upstream.
   static vtkInformationRequestKey* REQUEST_UPDATE_EXTENT();
+
+  // Description:
+  // Key defining a request to propagate information about the update
+  // extent downstream.
+  static vtkInformationRequestKey* REQUEST_UPDATE_EXTENT_INFORMATION();
 
   // Description:
   // Key for an algorithm to store in a request to tell this executive
@@ -144,6 +167,11 @@ public:
   static vtkInformationIntegerKey* UPDATE_PIECE_NUMBER();
   static vtkInformationIntegerKey* UPDATE_NUMBER_OF_PIECES();
   static vtkInformationIntegerKey* UPDATE_NUMBER_OF_GHOST_LEVELS();
+
+  // Description:
+  // This is set if the extent was set through extent translation.
+  // GenerateGhostLevelArray() is called only when this is set.
+  static vtkInformationIntegerKey* UPDATE_EXTENT_TRANSLATED();
 
   // Description:
   // Key to store the whole extent provided in pipeline information.
@@ -168,12 +196,63 @@ public:
   static vtkInformationDoubleVectorKey* TIME_STEPS();
 
   // Description:
-  // Update time requested by the pipeline.
-  static vtkInformationIntegerKey* UPDATE_TIME_INDEX();
+  // Key to store available time range for continuous sources.
+  static vtkInformationDoubleVectorKey* TIME_RANGE();
+
+  // Description:
+  // Update time steps requested by the pipeline.
+  static vtkInformationDoubleVectorKey* UPDATE_TIME_STEPS();
+
+  // Description:
+  // Key to specify from 0 to 1 the priority of this update extent
+  static vtkInformationDoubleKey* PRIORITY();
+
+  // Description:
+  // The following keys are meant to be used by an algorithm that 
+  // works with temporal data. Rather than re-executing the pipeline
+  // for each timestep, if the reader, as part of its API, contains
+  // a faster way to read temporal data, algorithms may use these
+  // keys to request temporal data from the reader.
+  // See also: vtkExtractArraysOverTime. 
+
+  // Key to allow a reader to advertise that it supports a fast-path
+  // for reading data over time.
+  static vtkInformationIntegerKey* FAST_PATH_FOR_TEMPORAL_DATA();
+  // The type of data being requested.
+  // Possible values: POINT, CELL, EDGE, FACE
+  static vtkInformationStringKey* FAST_PATH_OBJECT_TYPE();
+  // Possible values: INDEX, GLOBAL
+  static vtkInformationStringKey* FAST_PATH_ID_TYPE();
+  // The id (either index or global id) being requested
+  static vtkInformationIdTypeKey* FAST_PATH_OBJECT_ID();
 
 protected:
   vtkStreamingDemandDrivenPipeline();
   ~vtkStreamingDemandDrivenPipeline();
+
+  // Keep track of the update time request corresponding to the
+  // previous executing. If the previous update request did not
+  // correspond to an existing time step and the reader chose 
+  // a time step with it's own logic, the data time step will
+  // be different than the request. If the same time step is
+  // requested again, there is no need to re-execute the algorithm.
+  // We know that it does not have this time step.
+  static vtkInformationDoubleVectorKey* PREVIOUS_UPDATE_TIME_STEPS();
+
+  // Keep track of the fast path keys corresponding to the 
+  // previous executing. If all key values are the same as their
+  // counterparts in the previous request, we do not need to re-execute.
+  static vtkInformationIdTypeKey* PREVIOUS_FAST_PATH_OBJECT_ID();
+  static vtkInformationStringKey* PREVIOUS_FAST_PATH_OBJECT_TYPE();
+  static vtkInformationStringKey* PREVIOUS_FAST_PATH_ID_TYPE();
+
+  // Does the time request correspond to what is in the data?
+  // Returns 0 if yes, 1 otherwise.
+  virtual int NeedToExecuteBasedOnTime(vtkInformation* outInfo,
+                                       vtkDataObject* dataObject);
+
+  // If the request contains a fast path key for temporal data, always execute
+  virtual int NeedToExecuteBasedOnFastPathData(vtkInformation* outInfo);
 
   // Setup default information on the output after the algorithm
   // executes information.

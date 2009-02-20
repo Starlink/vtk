@@ -31,7 +31,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkClipPolyData, "$Revision: 1.56.10.1 $");
+vtkCxxRevisionMacro(vtkClipPolyData, "$Revision: 1.59 $");
 vtkStandardNewMacro(vtkClipPolyData);
 vtkCxxSetObjectMacro(vtkClipPolyData,ClipFunction,vtkImplicitFunction);
 
@@ -148,31 +148,6 @@ int vtkClipPolyData::RequestData(
     return 1;
     }
 
-  // Create objects to hold output of clip operation
-  //
-  estimatedSize = numCells;
-  estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
-  if (estimatedSize < 1024)
-    {
-    estimatedSize = 1024;
-    }
-
-  newPoints = vtkPoints::New();
-  newPoints->Allocate(numPts,numPts/2);
-  newVerts = vtkCellArray::New();
-  newVerts->Allocate(estimatedSize,estimatedSize/2);
-  newLines = vtkCellArray::New();
-  newLines->Allocate(estimatedSize,estimatedSize/2);
-  newPolys = vtkCellArray::New();
-  newPolys->Allocate(estimatedSize,estimatedSize/2);
-
-  // locator used to merge potentially duplicate points
-  if ( this->Locator == NULL )
-    {
-    this->CreateDefaultLocator();
-    }
-  this->Locator->InitPointInsertion (newPoints, input->GetBounds());
-
   // Determine whether we're clipping with input scalars or a clip function
   // and to necessary setup.
   if ( this->ClipFunction )
@@ -201,7 +176,32 @@ int vtkClipPolyData::RequestData(
       return 1;
       }
     }
-    
+
+  // Create objects to hold output of clip operation
+  //
+  estimatedSize = numCells;
+  estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
+  if (estimatedSize < 1024)
+    {
+    estimatedSize = 1024;
+    }
+
+  newPoints = vtkPoints::New();
+  newPoints->Allocate(numPts,numPts/2);
+  newVerts = vtkCellArray::New();
+  newVerts->Allocate(estimatedSize,estimatedSize/2);
+  newLines = vtkCellArray::New();
+  newLines->Allocate(estimatedSize,estimatedSize/2);
+  newPolys = vtkCellArray::New();
+  newPolys->Allocate(estimatedSize,estimatedSize/2);
+
+  // locator used to merge potentially duplicate points
+  if ( this->Locator == NULL )
+    {
+    this->CreateDefaultLocator();
+    }
+  this->Locator->InitPointInsertion (newPoints, input->GetBounds());
+ 
   if ( !this->GenerateClipScalars && !input->GetPointData()->GetScalars())
     {
     outPD->CopyScalarsOff();
@@ -278,7 +278,7 @@ int vtkClipPolyData::RequestData(
 
     if ( !(cellId % updateTime) )
       {
-      this->UpdateProgress((double)cellId / numCells);
+      this->UpdateProgress(static_cast<double>(cellId) / numCells);
       abort = this->GetAbortExecute();
       }
     } //for each cell

@@ -1,3 +1,5 @@
+# this file is used directly from VTK/CMakeLists.txt, not from VTK/Wrapping/CMakeLists.txt
+
 # Defined local options to add to VTK Tcl interpreter
 # 
 # Example of such options are:
@@ -31,11 +33,14 @@ ENDIF (NOT TCL_LIBRARY)
 IF (WIN32)
   IF (NOT BORLAND)
     IF(NOT CYGWIN)
+      IF(VTK_USE_TK)
+        INCLUDE_DIRECTORIES("${VTK_TK_RESOURCES_DIR}")
+      ENDIF(VTK_USE_TK)
+
       CONFIGURE_FILE(
         ${CMAKE_CURRENT_SOURCE_DIR}/resources/vtk.rc.in
         ${CMAKE_CURRENT_BINARY_DIR}/resources/vtk.rc)
       INCLUDE_DIRECTORIES(
-        "${VTK_TK_RESOURCES_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/resources"
         "${CMAKE_CURRENT_BINARY_DIR}/resources"
         )
@@ -78,16 +83,33 @@ IF (VTK_USE_PARALLEL)
   TARGET_LINK_LIBRARIES(vtk vtkParallelTCL)
 ENDIF (VTK_USE_PARALLEL)
 
+IF (VTK_USE_INFOVIS)
+  TARGET_LINK_LIBRARIES(vtk vtkInfovisTCL)
+ENDIF (VTK_USE_INFOVIS)
+
+IF (VTK_USE_VIEWS)
+  TARGET_LINK_LIBRARIES(vtk vtkViewsTCL)
+ENDIF (VTK_USE_VIEWS)
+
 # Link to extra TCL libraries
 FOREACH(lib ${VTK_EXTRA_TCL_LIBRARIES})
   TARGET_LINK_LIBRARIES(vtk ${lib})
 ENDFOREACH(lib)
 
+IF (VTK_USE_TK)
+  TARGET_LINK_LIBRARIES(vtk ${VTK_TK_LIBRARIES})
+ENDIF (VTK_USE_TK)
+
 # Setup install location for vtk tcl scripts.
 SET(VTK_TCL_INSTALL_DIR ${VTK_INSTALL_TCL_DIR}/tcl)
+SET(VTK_TCL_INSTALL_DIR_CM24 ${VTK_INSTALL_TCL_DIR_CM24}/tcl)
 
 IF(NOT VTK_INSTALL_NO_RUNTIME)
-  INSTALL_TARGETS(${VTK_INSTALL_BIN_DIR} vtk)
+  INSTALL(TARGETS vtk
+    RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeExecutables # .exe, .dll
+    LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries # .so, mod.dll
+    ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development      # .a, .lib
+    )
 ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
 
 # Create the pvtk Tcl wrapper executable with MPI support.
@@ -121,8 +143,20 @@ IF (VTK_USE_PARALLEL)
       TARGET_LINK_LIBRARIES(pvtk vtkVolumeRenderingTCL)
     ENDIF (VTK_USE_RENDERING)
 
+    IF (VTK_USE_INFOVIS)
+      TARGET_LINK_LIBRARIES(pvtk vtkInfovisTCL)
+    ENDIF (VTK_USE_INFOVIS)
+
+    IF (VTK_USE_VIEWS)
+      TARGET_LINK_LIBRARIES(pvtk vtkViewsTCL)
+    ENDIF (VTK_USE_VIEWS)
+
     IF(NOT VTK_INSTALL_NO_RUNTIME)
-      INSTALL_TARGETS(${VTK_INSTALL_BIN_DIR} pvtk)
+      INSTALL(TARGETS pvtk
+        RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeExecutables # .exe, .dll
+        LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries # .so, mod.dll
+        ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development      # .a, .lib
+        )
     ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
   ENDIF (VTK_USE_MPI)
 ENDIF (VTK_USE_PARALLEL)
@@ -131,10 +165,14 @@ ENDIF (VTK_USE_PARALLEL)
 SUBDIRS(vtk vtkbase vtkcommon vtkfiltering vtkgraphics vtkimaging vtkinteraction vtkio vtktesting)
 
 IF(NOT VTK_INSTALL_NO_DOCUMENTATION)
-  INSTALL_FILES(${VTK_TCL_INSTALL_DIR} "" README)
+  INSTALL(FILES "${CMAKE_CURRENT_SOURCE_DIR}/README"
+    DESTINATION ${VTK_TCL_INSTALL_DIR_CM24}
+    COMPONENT RuntimeLibraries)
 ENDIF(NOT VTK_INSTALL_NO_DOCUMENTATION)
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-  INSTALL_FILES(${VTK_TCL_INSTALL_DIR} .c vtktcl)
+  INSTALL(FILES "${CMAKE_CURRENT_SOURCE_DIR}/vtktcl.c"
+    DESTINATION ${VTK_TCL_INSTALL_DIR_CM24}
+    COMPONENT Development)
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
 SET(VTK_TCL_RENDERING_CONFIG "")
@@ -142,11 +180,23 @@ SET(VTK_TCL_VOLUMERENDERING_CONFIG "")
 SET(VTK_TCL_HYBRID_CONFIG "")
 SET(VTK_TCL_WIDGETS_CONFIG "")
 SET(VTK_TCL_PARALLEL_CONFIG "")
+SET(VTK_TCL_INFOVIS_CONFIG "")
+SET(VTK_TCL_VIEWS_CONFIG "")
 
 IF (VTK_USE_PARALLEL)
   SET(VTK_TCL_PARALLEL_CONFIG "Parallel")
   SUBDIRS(vtkparallel)
 ENDIF (VTK_USE_PARALLEL)
+
+IF (VTK_USE_INFOVIS)
+  SET(VTK_TCL_INFOVIS_CONFIG "Infovis")
+  SUBDIRS(vtkinfovis)
+ENDIF (VTK_USE_INFOVIS)
+
+IF (VTK_USE_VIEWS)
+  SET(VTK_TCL_VIEWS_CONFIG "Views")
+  SUBDIRS(vtkviews)
+ENDIF (VTK_USE_VIEWS)
 
 IF (VTK_USE_RENDERING)
   SET(VTK_TCL_WIDGETS_CONFIG "Widgets")
@@ -182,7 +232,7 @@ ENDIF(VTK_TCL_CONFIGURATION_TYPES)
 # Configure the Tcl package index file for the install tree.
 SET(VTK_TCL_SCRIPT_DIR "[file dirname [info script]]/tcl")
 IF(UNIX)
-  SET(VTK_TCL_LIBRARY_DIR "[file dirname [file dirname [info script]]]")
+  SET(VTK_TCL_LIBRARY_DIR "[file dirname [info script]]")
 ELSE(UNIX)
   SET(VTK_TCL_LIBRARY_DIR
       "[file join [file dirname [file dirname [file dirname [info script]]]] bin]")
@@ -191,8 +241,10 @@ CONFIGURE_FILE(${VTK_SOURCE_DIR}/Wrapping/Tcl/pkgIndex.tcl.in
                ${VTK_BINARY_DIR}/Wrapping/Tcl/Install/Hide/pkgIndex.tcl
                @ONLY IMMEDIATE)
 IF(NOT VTK_INSTALL_NO_RUNTIME)
-  INSTALL_FILES(${VTK_INSTALL_TCL_DIR} FILES
-                ${VTK_BINARY_DIR}/Wrapping/Tcl/Install/Hide/pkgIndex.tcl)
+  INSTALL(FILES
+    ${VTK_BINARY_DIR}/Wrapping/Tcl/Install/Hide/pkgIndex.tcl
+    DESTINATION ${VTK_INSTALL_TCL_DIR_CM24}
+    COMPONENT RuntimeLibraries)
 ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
 
 # Allow the user to customize their build with some local options

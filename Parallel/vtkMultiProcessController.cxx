@@ -15,6 +15,8 @@
 // This will be the default.
 #include "vtkMultiProcessController.h"
 #include "vtkDummyController.h"
+#include "vtkProcessGroup.h"
+#include "vtkSubCommunicator.h"
 #include "vtkToolkits.h"
 
 #ifdef VTK_USE_MPI
@@ -42,6 +44,8 @@ public:
   int Tag;
   vtkRMIFunctionType Function;
   void *LocalArgument;
+
+  unsigned long Id;
   
 protected:
   vtkMultiProcessControllerRMI() {};
@@ -49,10 +53,10 @@ protected:
   void operator=(const vtkMultiProcessControllerRMI&);
 };
 
-vtkCxxRevisionMacro(vtkMultiProcessControllerRMI, "$Revision: 1.23 $");
+vtkCxxRevisionMacro(vtkMultiProcessControllerRMI, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkMultiProcessControllerRMI);
 
-vtkCxxRevisionMacro(vtkMultiProcessController, "$Revision: 1.23 $");
+vtkCxxRevisionMacro(vtkMultiProcessController, "$Revision: 1.29 $");
 
 //----------------------------------------------------------------------------
 // An RMI function that will break the "ProcessRMIs" loop.
@@ -74,9 +78,7 @@ vtkMultiProcessController::vtkMultiProcessController()
 {
   int i;
 
-  this->LocalProcessId = 0;
-  this->NumberOfProcesses = 1;
-  this->MaximumNumberOfProcesses = MAX_PROCESSES;
+  this->RMICount = 1;
   
   this->RMIs = vtkCollection::New();
   
@@ -129,10 +131,6 @@ void vtkMultiProcessController::PrintSelf(ostream& os, vtkIndent indent)
   vtkMultiProcessControllerRMI *rmi;
   vtkIndent nextIndent = indent.GetNextIndent();
   
-  os << indent << "MaximumNumberOfProcesses: " 
-     << this->MaximumNumberOfProcesses << endl;
-  os << indent << "NumberOfProcesses: " << this->NumberOfProcesses << endl;
-  os << indent << "LocalProcessId: " << this->LocalProcessId << endl;
   os << indent << "Break flag: " << (this->BreakFlag ? "(yes)" : "(no)") 
      << endl;
   os << indent << "Force deep copy: " << (this->ForceDeepCopy ? "(yes)" : "(no)") 
@@ -180,23 +178,43 @@ void vtkMultiProcessController::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkMultiProcessController::SetNumberOfProcesses(int num)
 {
-  if (num == this->NumberOfProcesses)
+  if(this->Communicator)
     {
-    return;
+    this->Communicator->SetNumberOfProcesses(num);
     }
-  
-  if (num < 1 || num > this->MaximumNumberOfProcesses)
+  else
     {
-    vtkErrorMacro( << num 
-          << " is an invalid number of processes try a number from 1 to " 
-          << this->NumberOfProcesses );
-    return;
+    vtkErrorMacro("Communicator not set.");
     }
-  
-  this->NumberOfProcesses = num;
-  this->Modified();
 }
 
+//----------------------------------------------------------------------------
+int vtkMultiProcessController::GetNumberOfProcesses()
+{
+  if(this->Communicator)
+    {
+    return this->Communicator->GetNumberOfProcesses();
+    }
+  else
+    {
+    vtkErrorMacro("Communicator not set.");
+    return 0;
+    }
+}
+
+//----------------------------------------------------------------------------
+int vtkMultiProcessController::GetLocalProcessId()
+{
+  if(this->Communicator)
+    {
+    return this->Communicator->GetLocalProcessId();
+    }
+  else
+    {
+    vtkErrorMacro("Communicator not set.");
+    return -1;
+    }
+}
 
 //----------------------------------------------------------------------------
 void vtkMultiProcessController::SetSingleMethod( vtkProcessFunctionType f, 
@@ -215,16 +233,48 @@ void vtkMultiProcessController::SetMultipleMethod( int index,
                                  vtkProcessFunctionType f, void *data )
 { 
   // You can only set the method for 0 through NumberOfProcesses-1
-  if ( index >= this->NumberOfProcesses )
+  if ( index >= this->GetNumberOfProcesses() )
     {
     vtkErrorMacro( << "Can't set method " << index << 
-      " with a processes count of " << this->NumberOfProcesses );
+      " with a processes count of " << this->GetNumberOfProcesses() );
     }
   else
     {
     this->MultipleMethod[index] = f;
     this->MultipleData[index]   = data;
     }
+}
+
+//-----------------------------------------------------------------------------
+vtkMultiProcessController *vtkMultiProcessController::CreateSubController(
+                                                         vtkProcessGroup *group)
+{
+  if (group->GetCommunicator() != this->Communicator)
+    {
+    vtkErrorMacro(<< "Invalid group for creating a sub controller.");
+    return NULL;
+    }
+
+  if (group->FindProcessId(this->GetLocalProcessId()) < 0)
+    {
+    // The group does not contain this process.  Just return NULL.
+    return NULL;
+    }
+
+  vtkSubCommunicator *subcomm = vtkSubCommunicator::New();
+  subcomm->SetGroup(group);
+
+  // We only need a basic implementation of vtkMultiProcessController for the
+  // subgroup, so we just use vtkDummyController here.  It's a bit of a misnomer
+  // and may lead to confusion, but I think it's better than creating yet
+  // another class we have to maintain.
+  vtkDummyController *subcontroller = vtkDummyController::New();
+  subcontroller->SetCommunicator(subcomm);
+  subcontroller->SetRMICommunicator(subcomm);
+
+  subcomm->Delete();
+
+  return subcontroller;
 }
 
 //----------------------------------------------------------------------------
@@ -244,16 +294,41 @@ int vtkMultiProcessController::RemoveFirstRMI(int tag)
 }
 
 //----------------------------------------------------------------------------
-void vtkMultiProcessController::AddRMI(vtkRMIFunctionType f, 
+int vtkMultiProcessController::RemoveRMI(unsigned long id)
+{
+  vtkMultiProcessControllerRMI *rmi = NULL;
+  this->RMIs->InitTraversal();
+  while ( (rmi = (vtkMultiProcessControllerRMI*)(this->RMIs->GetNextItemAsObject())) )
+    {
+    if (rmi->Id == id)
+      {
+      this->RMIs->RemoveItem(rmi);
+      return 1;
+      }
+    }
+
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+unsigned long vtkMultiProcessController::AddRMI(vtkRMIFunctionType f, 
                                        void *localArg, int tag)
 {
   vtkMultiProcessControllerRMI *rmi = vtkMultiProcessControllerRMI::New();
 
+  // Remove any previously registered RMI handler for the tag.
+  this->RemoveFirstRMI(tag);
+
   rmi->Tag = tag;
   rmi->Function = f;
   rmi->LocalArgument = localArg;
+  rmi->Id = this->RMICount;
+  this->RMICount++;
+
   this->RMIs->AddItem(rmi);
   rmi->Delete();
+
+  return rmi->Id;
 }
 
 //----------------------------------------------------------------------------
@@ -307,17 +382,17 @@ void vtkMultiProcessController::TriggerBreakRMIs()
 //----------------------------------------------------------------------------
 int vtkMultiProcessController::ProcessRMIs()
 {
-  return this->ProcessRMIs(1);
+  return this->ProcessRMIs(1, 0);
 }
 
 //----------------------------------------------------------------------------
-int vtkMultiProcessController::ProcessRMIs(int reportErrors)
+int vtkMultiProcessController::ProcessRMIs(int reportErrors, int dont_loop)
 {
   int triggerMessage[3];
   unsigned char *arg = NULL;
   int error = RMI_NO_ERROR;
   
-  while (1)
+  do 
     {
     if (!this->RMICommunicator->Receive(triggerMessage, 3, ANY_SOURCE, RMI_TAG))
       {
@@ -332,7 +407,7 @@ int vtkMultiProcessController::ProcessRMIs(int reportErrors)
       {
       arg = new unsigned char[triggerMessage[1]];
       if (!this->RMICommunicator->Receive((char*)(arg), triggerMessage[1], 
-                                          triggerMessage[2], RMI_ARG_TAG))
+          triggerMessage[2], RMI_ARG_TAG))
         {
         if (reportErrors)
           {
@@ -343,20 +418,20 @@ int vtkMultiProcessController::ProcessRMIs(int reportErrors)
         }
       }
     this->ProcessRMI(triggerMessage[2], arg, triggerMessage[1], 
-                     triggerMessage[0]);
+      triggerMessage[0]);
     if (arg)
       {
       delete [] arg;
       arg = NULL;
       }
-    
+
     // check for break
     if (this->BreakFlag)
       {
       this->BreakFlag = 0;
       return error;
       }
-    }
+    } while (!dont_loop);
 
   return error;
 }

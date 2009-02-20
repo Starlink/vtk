@@ -15,7 +15,9 @@
 // .NAME vtkFreeTypeUtilities - FreeType library support
 // .SECTION Description
 // vtkFreeTypeUtilities provides low-level interface to the FreeType library,
-// including font-cache, rasterizing and vectorizing. Internal use only.
+// including font-cache, rasterizing and vectorizing. FreeType cache-subsystem
+// is supported only when FreeType version is greater than 2.1.9. 
+// Internal use only.
 // EXPERIMENTAL for the moment. Also include the old cache.
 
 #ifndef __vtkFreeTypeUtilities_h
@@ -32,11 +34,13 @@ class vtkTextProperty;
 
 #include "vtk_freetype.h"  //since ft2build.h could be in the path
 #include FT_FREETYPE_H
-#include FT_CACHE_H
-#include FT_CACHE_IMAGE_H
-#include FT_CACHE_CHARMAP_H
+#include FT_GLYPH_H
 
-// FTGL
+#if (FREETYPE_MAJOR >2 ||(FREETYPE_MAJOR == 2 && ( FREETYPE_MINOR > 1 || (FREETYPE_MINOR == 1 && FREETYPE_PATCH >= 9))))
+# include FT_CACHE_H
+// This flag will be used to check if Caching support is to be compiled.
+# define VTK_FREETYPE_CACHING_SUPPORTED
+#endif
 
 class FTFont;
 
@@ -92,18 +96,16 @@ public:
   vtkSetClampMacro(MaximumNumberOfBytes,unsigned long,1,VTK_UNSIGNED_LONG_MAX);
   vtkGetMacro(MaximumNumberOfBytes, unsigned long);
 
-  // Description:
-  // Get the FreeType cache manager, image cache and charmap cache
-  FTC_Manager* GetCacheManager();
-  FTC_ImageCache* GetImageCache();
-  FTC_CMapCache* GetCMapCache();
+
 
   // Description:
   // Given a text property, get the corresponding FreeType size object
   // (a structure storing both a face and a specific size metric).
   // The size setting of the text property is used to set the size's face
   // to the corresponding size.
-  // Return true on success, false otherwise
+  // Return true on success, false otherwise. 
+  // This method is successful
+  // only when FreeType version is >= 2.1.9
   int GetSize(vtkTextProperty *tprop, FT_Size *size);
 
   // Description:
@@ -111,12 +113,16 @@ public:
   // The size parameter of the text property is ignored and a face with 
   // unknown current size is returned. Use GetSize() to get a specific size.
   // Return true on success, false otherwise
+  // This method is successful
+  // only when FreeType version is >= 2.1.9
   int GetFace(vtkTextProperty *tprop, FT_Face *face);
 
   // Description:
   // Given a text property and a character, get the corresponding FreeType
   // glyph index.
   // Return true on success, false otherwise
+  // This method is successful
+  // only when FreeType version is >= 2.1.9
   int GetGlyphIndex(vtkTextProperty *tprop, char c, FT_UInt *gindex);
 
   // Description:
@@ -130,6 +136,8 @@ public:
   // pre-rendered "strike" is considered, the glyph is an outline and can be
   // safely cast to a FT_OutlineGlyph.
   // Return true on success, false otherwise
+  // This method is successful
+  // only when FreeType version is >= 2.1.9
   //BTX
   enum 
   {
@@ -159,11 +167,14 @@ public:
   int IsBoundingBoxValid(int bbox[4]);
 
   // Description:
-  // Given a text property and a string, render it at coordinates (x, y) in
-  // an vtkImageData. 
-  // WARNING: writing to a L,A or RGB,A vtkImageData needs to be fixed.
-  // Also, *no* bounds checking are performed for the moment, i.e. no
-  // cropping, the text has to fit in the buffer (use GetBoundingBox()).
+  // Given a text property and a string, this function initializes the
+  // vtkImageData *data and renders it in a vtkImageData. 
+  int RenderString(vtkTextProperty *tprop, 
+                   const char *str, 
+                   vtkImageData *data);
+
+  // Description:
+  // Deprecated function signature.  int x, y are ignored.
   int RenderString(vtkTextProperty *tprop, 
                    const char *str, 
                    int x, int y, 
@@ -184,6 +195,8 @@ public:
 
   // Description:
   // For internal use only.
+  // These methods are successful
+  // only when FreeType version is >= 2.1.9
   int GetSize(unsigned long tprop_cache_id, int font_size, FT_Size *size);
   int GetFace(unsigned long tprop_cache_id, FT_Face *face);
   int GetGlyphIndex(unsigned long tprop_cache_id, char c, FT_UInt *gindex);
@@ -192,6 +205,38 @@ public:
                FT_UInt gindex, 
                FT_Glyph *glyph, 
                int request = GLYPH_REQUEST_DEFAULT);
+
+  // Description:
+  // Given a string and a TextProperty this function will calculate the height
+  // and width of a rectangle that can encompass the text.  Unlike
+  // GetBoundingBox this function does not consider the text's orientation.
+  // Calculated width, height, and greatest descender are stored in the last
+  // three parameters of the function signature
+  void GetWidthHeightDescender(const char *str,
+                               vtkTextProperty *tprop,
+                               int *width,
+                               int *height,
+                               float *descender);
+
+  // Description:
+  // This function initializes the extent of the ImageData to eventually
+  // receive the text stored in str
+  void PrepareImageData(vtkImageData *data,
+                        vtkTextProperty *tprop,
+                        const char *str,
+                        int *x, int *y);
+
+  // Description:
+  // This function returns the font size required to fit the string in the
+  // target rectangle
+  int GetConstrainedFontSize(const char *str, vtkTextProperty *tprop,
+                             double orientation, int targetWidth,
+                             int targetHeight);
+
+  // Description:
+  // Internal method that justifies individual lines of text
+  void JustifyLine(const char *str, vtkTextProperty *tprop,
+                   int totalWidth, int *x, int *y);
 
   // Old Code
   // Cache entry
@@ -208,6 +253,9 @@ public:
                                        double override_color[3] = NULL);
 
 protected:
+  //Internal helper method called by RenderString
+  int PopulateImageData(vtkTextProperty *tprop, const char *str,
+                        int x, int y, vtkImageData *data, int use_shadow_color);
   vtkFreeTypeUtilities();
   virtual ~vtkFreeTypeUtilities();
 
@@ -222,9 +270,17 @@ private:
 
   // The cache manager, image cache and charmap cache
 
+#ifdef VTK_FREETYPE_CACHING_SUPPORTED 
   FTC_Manager *CacheManager;
   FTC_ImageCache *ImageCache;
   FTC_CMapCache  *CMapCache;
+
+  // Description:
+  // Get the FreeType cache manager, image cache and charmap cache
+  FTC_Manager* GetCacheManager();
+  FTC_ImageCache* GetImageCache();
+  FTC_CMapCache* GetCMapCache();
+#endif
 
   unsigned int MaximumNumberOfFaces;
   unsigned int MaximumNumberOfSizes;

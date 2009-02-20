@@ -38,7 +38,7 @@
 #include "vtkSphereSource.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkPlaneWidget, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkPlaneWidget, "$Revision: 1.2.32.1 $");
 vtkStandardNewMacro(vtkPlaneWidget);
 
 vtkCxxSetObjectMacro(vtkPlaneWidget,PlaneProperty,vtkProperty);
@@ -158,10 +158,15 @@ vtkPlaneWidget::vtkPlaneWidget() : vtkPolyDataSourceWidget()
   
   this->CurrentHandle = NULL;
 
+  this->LastPickValid = 0;
+  this->HandleSizeFactor = 1.25;
+  this->SetHandleSize( 0.05 );
+  
   // Set up the initial properties
   this->CreateDefaultProperties();
   
   this->SelectRepresentation();
+
 }
 
 vtkPlaneWidget::~vtkPlaneWidget()
@@ -200,11 +205,30 @@ vtkPlaneWidget::~vtkPlaneWidget()
   this->HandlePicker->Delete();
   this->PlanePicker->Delete();
 
-  this->HandleProperty->Delete();
-  this->SelectedHandleProperty->Delete();
-  this->PlaneProperty->Delete();
-  this->SelectedPlaneProperty->Delete();
-  
+  if (this->HandleProperty)
+    {
+    this->HandleProperty->Delete();
+    this->HandleProperty = 0;
+    }
+
+  if (this->SelectedHandleProperty)
+    {
+    this->SelectedHandleProperty->Delete();
+    this->SelectedHandleProperty = 0;
+    }
+
+  if (this->PlaneProperty)
+    {
+    this->PlaneProperty->Delete();
+    this->PlaneProperty = 0;
+    }
+
+  if (this->SelectedPlaneProperty)
+    {
+    this->SelectedPlaneProperty->Delete();
+    this->SelectedPlaneProperty = 0;
+    }
+
   this->Transform->Delete();
 }
 
@@ -1327,7 +1351,20 @@ void vtkPlaneWidget::PlaceWidget(double bds[6])
 
 void vtkPlaneWidget::SizeHandles()
 {
-  double radius = this->vtk3DWidget::SizeHandles(1.25);
+  double radius = this->vtk3DWidget::SizeHandles(this->HandleSizeFactor);
+  
+  if (this->ValidPick && !this->LastPickValid)
+    {
+    // Adjust factor to preserve old radius.
+    double oldradius = this->HandleGeometry[0]->GetRadius();
+    if (oldradius != 0 && radius != 0)
+      {
+      this->HandleSizeFactor = oldradius / radius;
+      radius = oldradius;
+      }
+    }
+
+  this->LastPickValid = this->ValidPick;
   
   for(int i=0; i<4; i++)
     {
@@ -1339,6 +1376,7 @@ void vtkPlaneWidget::SizeHandles()
   this->ConeSource->SetRadius(radius);
   this->ConeSource2->SetHeight(2.0*radius);
   this->ConeSource2->SetRadius(radius);
+  
 }
 
 

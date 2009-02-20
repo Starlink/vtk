@@ -22,7 +22,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCursor3D, "$Revision: 1.45 $");
+vtkCxxRevisionMacro(vtkCursor3D, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkCursor3D);
 
 // Construct with model bounds = (-1,1,-1,1,-1,1), focal point = (0,0,0),
@@ -33,10 +33,15 @@ vtkCursor3D::vtkCursor3D()
 
   this->Focus = vtkPolyData::New();
   pts = vtkPoints::New();
-  pts->Allocate(1);
   pts->vtkPoints::InsertPoint(0, 0.0, 0.0, 0.0);
   this->Focus->SetPoints(pts);
   pts->Delete();
+  vtkCellArray* vert = vtkCellArray::New();
+  vert->InsertNextCell(1);
+  vert->InsertCellPoint(0);
+  this->Focus->SetVerts(vert);
+  vert->Delete();
+
 
   this->ModelBounds[0] = -1.0;
   this->ModelBounds[1] = 1.0;
@@ -91,8 +96,10 @@ int vtkCursor3D::RequestData(
     for (i=0; i<3; i++)
       {
       this->FocalPoint[i] = this->ModelBounds[2*i] + 
-             fmod((double)(this->FocalPoint[i]-this->ModelBounds[2*i]), 
-                  (double)(this->ModelBounds[2*i+1]-this->ModelBounds[2*i]));
+             fmod(static_cast<double>(
+                    this->FocalPoint[i]-this->ModelBounds[2*i]), 
+                  static_cast<double>(
+                    this->ModelBounds[2*i+1]-this->ModelBounds[2*i]));
       }
     } 
   else 
@@ -450,8 +457,10 @@ void vtkCursor3D::SetFocalPoint(double x[3])
     else if ( this->Wrap ) //wrap
       {
       this->FocalPoint[i] = this->ModelBounds[2*i] + 
-             fmod((double)(this->FocalPoint[i]-this->ModelBounds[2*i]), 
-                  (double)(this->ModelBounds[2*i+1]-this->ModelBounds[2*i]));
+             fmod(static_cast<double>(
+                    this->FocalPoint[i]-this->ModelBounds[2*i]), 
+                  static_cast<double>(
+                    this->ModelBounds[2*i+1]-this->ModelBounds[2*i]));
       }
     else //clamp
       {

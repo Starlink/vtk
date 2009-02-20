@@ -160,6 +160,18 @@ public:
   // coordinates). 
   vtkSetClampMacro(TickLength, int, 0, 100);
   vtkGetMacro(TickLength, int);
+
+  // Description:
+  // Number of minor ticks to be displayed between each tick. Default
+  // is 0.
+  vtkSetClampMacro(NumberOfMinorTicks, int, 0, 20);
+  vtkGetMacro(NumberOfMinorTicks, int);
+
+  // Description:
+  // Set/Get the length of the minor tick marks (expressed in pixels or
+  // display coordinates).
+  vtkSetClampMacro(MinorTickLength, int, 0, 100);
+  vtkGetMacro(MinorTickLength, int);
   
   // Description:
   // Set/Get the offset of the labels (expressed in pixels or display
@@ -193,6 +205,12 @@ public:
   vtkBooleanMacro(TitleVisibility, int);
 
   // Description:
+  // Set/Get position of the axis title. 0 is at the start of the
+  // axis whereas 1 is at the end.
+  vtkSetMacro(TitlePosition, double);
+  vtkGetMacro(TitlePosition, double);
+
+  // Description:
   // Set/Get the factor that controls the overall size of the fonts used
   // to label and title the axes. This ivar used in conjunction with
   // the LabelFactor can be used to control font sizes.
@@ -209,8 +227,12 @@ public:
   // Draw the axis. 
   int RenderOverlay(vtkViewport* viewport);
   int RenderOpaqueGeometry(vtkViewport* viewport);
-  int RenderTranslucentGeometry(vtkViewport *) {return 0;}
-
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport *) {return 0;}
+  
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // Release any graphics resources that are being consumed by this actor.
   // The parameter window could be used to determine which graphic
@@ -239,17 +261,19 @@ public:
   // instance of vtkTextMapper provided. The factor is used when you're trying
   // to create text of different size-factor (it is usually = 1 but you can
   // adjust the font size by making factor larger or smaller).
-  static int SetFontSize(vtkViewport *viewport, 
-                         vtkTextMapper *textMapper, 
-                         int *targetSize, 
-                         double factor, 
-                         int *stringSize);
   static int SetMultipleFontSize(vtkViewport *viewport, 
                                  vtkTextMapper **textMappers, 
                                  int nbOfMappers, 
                                  int *targetSize,
                                  double factor, 
                                  int *stringSize);
+
+  // Description:
+  // Specify whether to size the fonts relative to the viewport or relative to
+  // length of the axis. By default, fonts are resized relative to the axis.
+  vtkSetMacro(SizeFontRelativeToAxis,int);
+  vtkGetMacro(SizeFontRelativeToAxis,int);
+  vtkBooleanMacro(SizeFontRelativeToAxis,int);
 
   // Description:
   // Shallow copy of an axis actor. Overloads the virtual vtkProp method.
@@ -264,13 +288,16 @@ protected:
 
   char  *Title;
   double Range[2];
+  double TitlePosition;
   int   NumberOfLabels;
   char  *LabelFormat;
   int   AdjustLabels;
   double FontFactor;
   double LabelFactor;
   int   TickLength;
+  int   MinorTickLength;
   int   TickOffset;
+  int NumberOfMinorTicks;
 
   double AdjustedRange[2];
   int   AdjustedNumberOfLabels;
@@ -287,6 +314,8 @@ protected:
   int   LastSize[2];
   int   LastMaxLabelSize[2];
   
+  int  SizeFontRelativeToAxis;
+
   virtual void BuildAxis(vtkViewport *viewport);
   static double ComputeStringOffset(double width, double height, double theta);
   static void SetOffsetPosition(double xTick[3], double theta, 

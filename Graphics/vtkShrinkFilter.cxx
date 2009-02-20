@@ -24,7 +24,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkShrinkFilter, "$Revision: 1.64.12.2 $");
+vtkCxxRevisionMacro(vtkShrinkFilter, "$Revision: 1.69 $");
 vtkStandardNewMacro(vtkShrinkFilter);
 
 //----------------------------------------------------------------------------

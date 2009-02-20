@@ -25,10 +25,11 @@
 #ifndef QVTK_WIDGET_PLUGIN
 #define QVTK_WIDGET_PLUGIN
 
-#include <QtDesigner/QDesignerCustomWidgetInterface>
-#include <QtDesigner/QDesignerCustomWidgetCollectionInterface>
-#include <QtCore/qplugin.h>
-#include "qobject.h"
+#include <QDesignerCustomWidgetInterface>
+#include <QDesignerCustomWidgetCollectionInterface>
+#include <QtPlugin>
+#include <QObject>
+#include <QWidget>
 
 
 // implement Designer Custom Widget interface
@@ -61,6 +62,14 @@ class QVTKPlugin : public QObject, public QDesignerCustomWidgetCollectionInterfa
   virtual QList<QDesignerCustomWidgetInterface*> customWidgets() const;
   private:
     QVTKWidgetPlugin* mQVTKWidgetPlugin;
+};
+
+// fake QVTKWidget class to satisfy the designer
+class QVTKWidget : public QWidget
+{
+  Q_OBJECT
+public:
+  QVTKWidget(QWidget* p) : QWidget(p) {}
 };
 
 

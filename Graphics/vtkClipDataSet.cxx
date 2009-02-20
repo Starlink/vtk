@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkClipDataSet.h"
 
+#include "vtkCallbackCommand.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkClipVolume.h"
@@ -28,12 +29,13 @@
 #include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkSmartPointer.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkClipDataSet, "$Revision: 1.41 $");
+vtkCxxRevisionMacro(vtkClipDataSet, "$Revision: 1.50 $");
 vtkStandardNewMacro(vtkClipDataSet);
 vtkCxxSetObjectMacro(vtkClipDataSet,ClipFunction,vtkImplicitFunction);
 
@@ -46,6 +48,7 @@ vtkClipDataSet::vtkClipDataSet(vtkImplicitFunction *cf)
   this->InsideOut = 0;
   this->Locator = NULL;
   this->Value = 0.0;
+  this->UseValueAsOffset = true;
   this->GenerateClipScalars = 0;
 
   this->GenerateClippedOutput = 0;
@@ -59,6 +62,13 @@ vtkClipDataSet::vtkClipDataSet(vtkImplicitFunction *cf)
   // by default process active point scalars
   this->SetInputArrayToProcess(0,0,0,vtkDataObject::FIELD_ASSOCIATION_POINTS,
                                vtkDataSetAttributes::SCALARS);
+
+  // Setup a callback for the internal readers to report progress.
+  this->InternalProgressObserver = vtkCallbackCommand::New();
+  this->InternalProgressObserver->SetCallback(
+    &vtkClipDataSet::InternalProgressCallbackFunction);
+  this->InternalProgressObserver->SetClientData(this);
+
 }
 
 //----------------------------------------------------------------------------
@@ -70,7 +80,30 @@ vtkClipDataSet::~vtkClipDataSet()
     this->Locator = NULL;
     }
   this->SetClipFunction(NULL);
+  this->InternalProgressObserver->Delete();
 }
+
+//----------------------------------------------------------------------------
+void vtkClipDataSet::InternalProgressCallbackFunction(vtkObject* arg,
+                                                      unsigned long,
+                                                      void* clientdata,
+                                                      void*)
+{
+  reinterpret_cast<vtkClipDataSet*>(clientdata)
+    ->InternalProgressCallback(static_cast<vtkAlgorithm *>(arg));
+}
+
+//----------------------------------------------------------------------------
+void vtkClipDataSet::InternalProgressCallback(vtkAlgorithm *algorithm)
+{
+  float progress = algorithm->GetProgress();
+  this->UpdateProgress(progress);
+  if (this->AbortExecute)
+    {
+    algorithm->SetAbortExecute(1);
+    }
+}
+
 
 //----------------------------------------------------------------------------
 // Overload standard modified time function. If Clip functions is modified,
@@ -118,8 +151,22 @@ int vtkClipDataSet::RequestData(
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
   // get the input and ouptut
-  vtkDataSet *input = vtkDataSet::SafeDownCast(
+  vtkDataSet *realInput = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  // We have to create a copy of the input because clip requires being
+  // able to InterpolateAllocate point data from the input that is
+  // exactly the same as output. If the input arrays and output arrays
+  // are different vtkCell3D's Clip will fail. By calling InterpolateAllocate
+  // here, we make sure that the output will look exactly like the output
+  // (unwanted arrays will be eliminated in InterpolateAllocate). The
+  // last argument of InterpolateAllocate makes sure that arrays are shallow
+  // copied from realInput to input.
+  vtkSmartPointer<vtkDataSet> input;
+  input.TakeReference(realInput->NewInstance());
+  input->CopyStructure(realInput);
+  input->GetCellData()->PassData(realInput->GetCellData());
+  input->GetPointData()->InterpolateAllocate(realInput->GetPointData(), 0, 0, 1);
+
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -147,7 +194,10 @@ int vtkClipDataSet::RequestData(
   vtkIdTypeArray *locs[2];
   locs[0] = locs[1] = 0;
   int numOutputs = 1;
-  
+
+  outCD[0] = 0;
+  outCD[1] = 0;
+
   vtkDebugMacro(<< "Clipping dataset");
   
   int inputObjectType = input->GetDataObjectType();
@@ -184,6 +234,11 @@ int vtkClipDataSet::RequestData(
     {
     vtkErrorMacro(<<"Cannot generate clip scalars if no clip function defined");
     return 1;
+    }
+
+  if ( numCells < 1 )
+    {
+    return this->ClipPoints(input, output, inputVector);
     }
 
   // allocate the output and associated helper classes
@@ -272,7 +327,8 @@ int vtkClipDataSet::RequestData(
       }
     }
     
-  if ( !this->GenerateClipScalars && !this->GetInputArrayToProcess(0,inputVector))
+  if ( !this->GenerateClipScalars && 
+       !this->GetInputArrayToProcess(0,inputVector))
     {
     outPD->CopyScalarsOff();
     }
@@ -280,7 +336,10 @@ int vtkClipDataSet::RequestData(
     {
     outPD->CopyScalarsOn();
     }
+  vtkDataSetAttributes* tempDSA = vtkDataSetAttributes::New();
+  tempDSA->InterpolateAllocate(inPD, 1, 2);
   outPD->InterpolateAllocate(inPD,estimatedSize,estimatedSize/2);
+  tempDSA->Delete();
   outCD[0] = output->GetCellData();
   outCD[0]->CopyAllocate(inCD,estimatedSize,estimatedSize/2);
   if ( this->GenerateClippedOutput )
@@ -300,7 +359,7 @@ int vtkClipDataSet::RequestData(
     {
     if ( !(cellId % updateTime) )
       {
-      this->UpdateProgress((double)cellId / numCells);
+      this->UpdateProgress(static_cast<double>(cellId) / numCells);
       abort = this->GetAbortExecute();
       }
 
@@ -316,15 +375,21 @@ int vtkClipDataSet::RequestData(
       cellScalars->InsertTuple(i, &s);
       }
 
+    double value = 0.0;
+    if (this->UseValueAsOffset || !this->ClipFunction)
+      {
+      value = this->Value;
+      }
+
     // perform the clipping
-    cell->Clip(this->Value, cellScalars, this->Locator, conn[0],
+    cell->Clip(value, cellScalars, this->Locator, conn[0],
                inPD, outPD, inCD, cellId, outCD[0], this->InsideOut);
     numNew[0] = conn[0]->GetNumberOfCells() - num[0];
     num[0] = conn[0]->GetNumberOfCells();
  
     if ( this->GenerateClippedOutput )
       {
-      cell->Clip(this->Value, cellScalars, this->Locator, conn[1],
+      cell->Clip(value, cellScalars, this->Locator, conn[1],
                  inPD, outPD, inCD, cellId, outCD[1], !this->InsideOut);
       numNew[1] = conn[1]->GetNumberOfCells() - num[1];
       num[1] = conn[1]->GetNumberOfCells();
@@ -395,6 +460,92 @@ int vtkClipDataSet::RequestData(
 }
 
 //----------------------------------------------------------------------------
+int vtkClipDataSet::ClipPoints(vtkDataSet* input, 
+                               vtkUnstructuredGrid* output,
+                               vtkInformationVector** inputVector)
+{
+  vtkPoints* outPoints = vtkPoints::New();
+
+  vtkPointData* inPD=input->GetPointData();
+  vtkPointData* outPD = output->GetPointData();
+
+  vtkIdType numPts = input->GetNumberOfPoints();
+
+  outPD->CopyAllocate(inPD, numPts/2, numPts/4);
+
+  double value = 0.0;
+  if (this->UseValueAsOffset || !this->ClipFunction)
+    {
+    value = this->Value;
+    }
+  if (this->ClipFunction)
+    {
+    for(vtkIdType i=0; i<numPts; i++)
+      {
+      double* pt = input->GetPoint(i);
+      double fv = this->ClipFunction->FunctionValue(pt);
+      int addPoint = 0;
+      if (this->InsideOut)
+        {
+        if (fv <= value)
+          {
+          addPoint = 1;
+          }
+        }
+      else
+        {
+        if (fv > value)
+          {
+          addPoint = 1;
+          }
+        }
+      if (addPoint)
+        {
+        vtkIdType id = outPoints->InsertNextPoint(input->GetPoint(i));
+        outPD->CopyData(inPD, i, id);
+        }
+      }
+    }
+  else
+    {
+    vtkDataArray* clipScalars = 
+      this->GetInputArrayToProcess(0,inputVector);
+    if (clipScalars)
+      {
+      for(vtkIdType i=0; i<numPts; i++)
+        {
+        int addPoint = 0;
+        double fv = clipScalars->GetTuple1(i);
+        if (this->InsideOut)
+          {
+          if (fv <= value)
+            {
+            addPoint = 1;
+            }
+          }
+        else
+          {
+          if (fv > value)
+            {
+            addPoint = 1;
+            }
+          }
+        if (addPoint)
+          {
+          vtkIdType id = outPoints->InsertNextPoint(input->GetPoint(i));
+          outPD->CopyData(inPD, i, id);
+          }
+        }
+      }
+    }
+
+  output->SetPoints(outPoints);
+  outPoints->Delete();
+
+  return 1;
+}
+
+//----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
 void vtkClipDataSet::SetLocator(vtkPointLocator *locator)
@@ -434,21 +585,32 @@ void vtkClipDataSet::CreateDefaultLocator()
 void vtkClipDataSet::ClipVolume(vtkDataSet *input, vtkUnstructuredGrid *output)
 {
   vtkClipVolume *clipVolume = vtkClipVolume::New();
-  
+
+  clipVolume->AddObserver(vtkCommand::ProgressEvent, 
+                          this->InternalProgressObserver);
+
   // We cannot set the input directly.  This messes up the partitioning.
   // output->UpdateNumberOfPieces gets set to 1.
   vtkImageData* tmp = vtkImageData::New();
   tmp->ShallowCopy(vtkImageData::SafeDownCast(input));
   
   clipVolume->SetInput(tmp);
-  clipVolume->SetValue(this->Value);
+  double value = 0.0;
+  if (this->UseValueAsOffset || !this->ClipFunction)
+    {
+    value = this->Value;
+    }
+  clipVolume->SetValue(value);
   clipVolume->SetInsideOut(this->InsideOut);
   clipVolume->SetClipFunction(this->ClipFunction);
   clipVolume->SetGenerateClipScalars(this->GenerateClipScalars);
   clipVolume->SetGenerateClippedOutput(this->GenerateClippedOutput);
   clipVolume->SetMergeTolerance(this->MergeTolerance);
   clipVolume->SetDebug(this->Debug);
+  clipVolume->SetInputArrayToProcess(0, this->GetInputArrayInformation(0));
   clipVolume->Update();
+
+  clipVolume->RemoveObserver(this->InternalProgressObserver);
   vtkUnstructuredGrid *clipOutput = clipVolume->GetOutput();
 
   output->CopyStructure(clipOutput);
@@ -495,4 +657,7 @@ void vtkClipDataSet::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Generate Clipped Output: " 
      << (this->GenerateClippedOutput ? "On\n" : "Off\n");
+
+  os << indent << "UseValueAsOffset: " 
+     << (this->UseValueAsOffset ? "On\n" : "Off\n");
 }

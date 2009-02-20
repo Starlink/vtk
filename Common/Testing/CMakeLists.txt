@@ -16,12 +16,16 @@ IF(PYTHON_EXECUTABLE)
     vtkAbstractIterator.h
     vtkAbstractList.h
     vtkAbstractMap.h
+    vtkArrayIteratorIncludes.h
+    vtkArrayIteratorTemplate.h
     vtkArrayMap.h
     vtkArrayMapIterator.h
     vtkAssemblyPaths.h
+    vtkBoundingBox.h
     vtkByteSwap.h
     vtkCallbackCommand.h
     vtkCommand.h
+    vtkCommonInformationKeyManager.h
     vtkContainer.h
     vtkDataArrayCollection.h
     vtkDataArrayTemplate.h
@@ -30,6 +34,7 @@ IF(PYTHON_EXECUTABLE)
     vtkDynamicLoader.h
     vtkEventForwarderCommand.h
     vtkErrorCode.h
+    vtkFloatingPointExceptions.h
     vtkGarbageCollector.h
     vtkGarbageCollectorManager.h
     vtkHashMap.h
@@ -39,18 +44,20 @@ IF(PYTHON_EXECUTABLE)
     vtkIOStream.h
     vtkIOStreamFwd.h
     vtkIndent.h
+    vtkInformation.h
+    vtkInformationInternals.h
     vtkJavaAwt.h
     vtkJavaUtil.h
     vtkLargeInteger.h
     vtkLinkedList.h
     vtkLinkedListIterator.h
-    vtkMultiPartExtentTranslator.h
     vtkOStrStreamWrapper.h
     vtkOStreamWrapper.h
     vtkObject.h
     vtkObjectBase.h
     vtkObjectFactoryCollection.h
     vtkOldStyleCallbackCommand.h
+    vtkOnePieceExtentTranslator.h
     vtkOverrideInformationCollection.h
     vtkPlaneCollection.h
     vtkProcessStatistics.h
@@ -78,7 +85,10 @@ IF(PYTHON_EXECUTABLE)
     vtkWindows.h
     vtkTcl.h
     vtkTk.h
+    vtkVariant.h
     vtkVersion.h
+    vtkWeakPointerBase.h
+    vtkWeakPointer.h
     vtkXMLFileOutputWindow.h
     )
 ENDIF(PYTHON_EXECUTABLE)
@@ -100,20 +110,11 @@ ENDIF(WIN32 OR APPLE)
 STRING(COMPARE EQUAL "${VTK_TEST_INSTALL_LEFT}" "${VTK_TEST_INSTALL_RIGHT}"
   VTK_TEST_INSTALL)
 
-# No install when using rpaths.
-IF(VTK_USE_RPATH)
+# We cannot safely implement the install test unless the configuration
+# type is known when the test is run.
+IF(NOT VTK_TEST_CONFIG_TYPE_KNOWN)
   SET(VTK_TEST_INSTALL 0)
-ENDIF(VTK_USE_RPATH)
-
-# We cannot safely implement the install test when there are multiple
-# configuration types unless tests are run by CTest 2.2 or higher.
-# See VTK/Examples/CMakeLists.txt where it adds the Example-vtkLocal
-# test for an explanation.
-IF(CMAKE_CONFIGURATION_TYPES)
-  IF(NOT VTK_TEST_WITH_CTEST)
-    SET(VTK_TEST_INSTALL 0)
-  ENDIF(NOT VTK_TEST_WITH_CTEST)
-ENDIF(CMAKE_CONFIGURATION_TYPES)
+ENDIF(NOT VTK_TEST_CONFIG_TYPE_KNOWN)
 
 IF(VTK_TEST_INSTALL)
   IF(CMAKE_CONFIGURATION_TYPES)

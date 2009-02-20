@@ -34,8 +34,10 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkQuad.h"
 #include "vtkHexahedron.h"
+#include "vtkWedge.h"
+#include "vtkPyramid.h"
 
-vtkCxxRevisionMacro(vtkGenericAdaptorCell, "$Revision: 1.21 $");
+vtkCxxRevisionMacro(vtkGenericAdaptorCell, "$Revision: 1.25 $");
 
 vtkGenericAdaptorCell::vtkGenericAdaptorCell()
 {
@@ -45,9 +47,11 @@ vtkGenericAdaptorCell::vtkGenericAdaptorCell()
   this->Vertex = vtkVertex::New();
   this->Hexa=vtkHexahedron::New();
   this->Quad=vtkQuad::New();
+  this->Wedge=vtkWedge::New();
+  this->Pyramid=vtkPyramid::New();
   
   this->Scalars = vtkDoubleArray::New();
-  this->Scalars->SetNumberOfTuples(4);
+  this->Scalars->SetNumberOfTuples(8); // up to 8 points with a linear hexa
   this->PointData = vtkPointData::New();
   this->CellData = vtkCellData::New();
   
@@ -76,7 +80,9 @@ vtkGenericAdaptorCell::~vtkGenericAdaptorCell()
   this->Vertex->Delete();
   this->Hexa->Delete();
   this->Quad->Delete();
-  
+  this->Wedge->Delete();
+  this->Pyramid->Delete();
+   
   this->Scalars->Delete();
   this->PointData->Delete();
   this->CellData->Delete();
@@ -253,6 +259,9 @@ void vtkGenericAdaptorCell::Contour(vtkContourValues *contourValues,
   vtkCell *linearCell;
   vtkIdType ptsCount;
  
+  range[0]=0; // to fix warning
+  range[1]=0; // on some compilers
+  
   this->Reset();
   
   // for each cell-centered attribute: copy the value in the secondary
@@ -291,6 +300,14 @@ void vtkGenericAdaptorCell::Contour(vtkContourValues *contourValues,
       case VTK_HIGHER_ORDER_HEXAHEDRON:
         linearCell=this->Hexa;
         ptsCount=8;
+        break;
+      case VTK_HIGHER_ORDER_WEDGE:
+        linearCell=this->Wedge;
+        ptsCount=6;
+        break;
+      case VTK_HIGHER_ORDER_PYRAMID:
+        linearCell=this->Pyramid;
+        ptsCount=5;
         break;
       default:
         assert("check: impossible case" && 0);
@@ -531,6 +548,14 @@ void vtkGenericAdaptorCell::Clip(double value,
         linearCell=this->Hexa;
         ptsCount=8;
         break;
+      case VTK_HIGHER_ORDER_WEDGE:
+        linearCell=this->Wedge;
+        ptsCount=6;
+        break;
+      case VTK_HIGHER_ORDER_PYRAMID:
+        linearCell=this->Pyramid;
+        ptsCount=5;
+        break;
       default:
         assert("check: impossible case" && 0);
         linearCell=0; // just to fix warning of some compilers
@@ -712,7 +737,7 @@ void vtkGenericAdaptorCell::Tessellate(vtkGenericAttributeCollection *attributes
   int linearCellType;
   this->Reset();
 
-  assert("check: TODO: Tessellate only works with 2D and 3D cells" && this->GetDimension() == 3 ||  this->GetDimension() == 2);
+  assert("check: TODO: Tessellate only works with 2D and 3D cells" && (this->GetDimension() == 3 ||  this->GetDimension() == 2));
   
   int attribute=this->GetHighestOrderAttribute(attributes);
   if(this->IsGeometryLinear() &&(attribute==-1 || this->IsAttributeLinear(attributes->GetAttribute(attribute))))
@@ -751,6 +776,14 @@ void vtkGenericAdaptorCell::Tessellate(vtkGenericAttributeCollection *attributes
       case VTK_HIGHER_ORDER_HEXAHEDRON:
         linearCellType=VTK_HEXAHEDRON;
         numVerts=8;
+        break;
+      case VTK_HIGHER_ORDER_WEDGE:
+        linearCellType=VTK_WEDGE;
+        numVerts=6;
+        break;
+      case VTK_HIGHER_ORDER_PYRAMID:
+        linearCellType=VTK_PYRAMID;
+        numVerts=5;
         break;
       default:
         assert("check: impossible case" && 0);

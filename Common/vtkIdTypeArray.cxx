@@ -27,7 +27,7 @@
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkIdTypeArray, "$Revision: 1.11.6.1 $");
+vtkCxxRevisionMacro(vtkIdTypeArray, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkIdTypeArray);
 
 //----------------------------------------------------------------------------

@@ -22,7 +22,7 @@
 #include "vtkDoubleArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkExtractDataOverTime, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkExtractDataOverTime, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkExtractDataOverTime);
 
 //----------------------------------------------------------------------------
@@ -46,19 +46,32 @@ void vtkExtractDataOverTime::PrintSelf(ostream& os, vtkIndent indent)
 
 //----------------------------------------------------------------------------
 int vtkExtractDataOverTime::RequestInformation(
-  vtkInformation *vtkNotUsed(request),
-  vtkInformationVector **vtkNotUsed(inputVector),
-  vtkInformationVector *outputVector)
+  vtkInformation* vtkNotUsed(request),
+  vtkInformationVector** inputVector,
+  vtkInformationVector* outputVector)
 {
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-  if ( outInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_STEPS()) )
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  if ( inInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_STEPS()) )
     {
     this->NumberOfTimeSteps = 
-      outInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
+      inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
     }
   else
     {
     this->NumberOfTimeSteps = 0;
+    }
+  // The output of this filter does not contain a specific time, rather 
+  // it contains a collection of time steps. Also, this filter does not
+  // respond to time requests. Therefore, we remove all time information
+  // from the output.
+  vtkInformation* outInfo = outputVector->GetInformationObject(0);
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_STEPS()))
+    {
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    }
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_RANGE()))
+    {
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
     }
 
   return 1;
@@ -77,10 +90,17 @@ int vtkExtractDataOverTime::ProcessRequest(vtkInformation* request,
   else if(request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT()))
     {
     // get the requested update extent
-    inputVector[0]->GetInformationObject(0)->Set( 
-      vtkStreamingDemandDrivenPipeline::UPDATE_TIME_INDEX(), this->CurrentTimeIndex );
-
-     return 1;
+    double *inTimes = inputVector[0]->GetInformationObject(0)
+      ->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    if (inTimes)
+      {
+      double timeReq[1];
+      timeReq[0] = inTimes[this->CurrentTimeIndex];
+      inputVector[0]->GetInformationObject(0)->Set
+        ( vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS(), 
+          timeReq, 1);
+      }
+    return 1;
     }
   
   // generate the data
@@ -117,15 +137,15 @@ int vtkExtractDataOverTime::ProcessRequest(vtkInformation* request,
       this->CurrentTimeIndex);
     if (input->GetPointData()->GetArray("Time"))
       {
-      output->GetPointData()->GetArray("TimeData")->SetTuple1(
-        this->CurrentTimeIndex, 
-        input->GetInformation()->Get(vtkDataObject::DATA_TIME()) );
+      output->GetPointData()->GetArray("TimeData")->SetTuple1
+        (this->CurrentTimeIndex, 
+         input->GetInformation()->Get(vtkDataObject::DATA_TIME_STEPS())[0]);
       }
     else
       {
-      output->GetPointData()->GetArray("Time")->SetTuple1(
-        this->CurrentTimeIndex, 
-        input->GetInformation()->Get(vtkDataObject::DATA_TIME()) );
+      output->GetPointData()->GetArray("Time")->SetTuple1
+        (this->CurrentTimeIndex, 
+         input->GetInformation()->Get(vtkDataObject::DATA_TIME_STEPS())[0]);
       }
 
 

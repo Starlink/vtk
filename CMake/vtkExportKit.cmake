@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-MACRO(VTK_EXPORT_KIT kit ukit sources)
+MACRO(VTK_EXPORT_KIT2 kit ukit dest_dir sources)
   SET(VTK_EXPORT_KIT ${kit})
   SET(VTK_EXPORT_UKIT ${ukit})
   SET(VTK_EXPORT_KIT_DOLLAR "$")
@@ -24,13 +24,14 @@ MACRO(VTK_EXPORT_KIT kit ukit sources)
       SET(KIT_EXCLUDE_LIST "${KIT_EXCLUDE_LIST}\n  \"${CLASS}\"")
     ENDIF(IS_EXCLUDE MATCHES "^1$")
   ENDFOREACH(src)
-  CONFIGURE_FILE(${VTK_SOURCE_DIR}/CMake/vtkKit.cmake.in
-                 ${VTK_BINARY_DIR}/Utilities/InstallOnly/vtk${kit}Kit.cmake
+  CONFIGURE_FILE(${VTK_CMAKE_DIR}/vtkKit.cmake.in
+                 ${dest_dir}/InstallOnly/vtk${kit}Kit.cmake
                  @ONLY IMMEDIATE)
   IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-    INSTALL_FILES(${VTK_INSTALL_PACKAGE_DIR} FILES
-      ${VTK_BINARY_DIR}/Utilities/InstallOnly/vtk${kit}Kit.cmake
-      )
+    INSTALL(FILES
+      ${dest_dir}/InstallOnly/vtk${kit}Kit.cmake
+      DESTINATION "${VTK_INSTALL_PACKAGE_DIR_CM24}"
+      COMPONENT Development)
   ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
   # Export the list of classes from the build tree.
@@ -54,7 +55,12 @@ MACRO(VTK_EXPORT_KIT kit ukit sources)
       SET(KIT_EXCLUDE_LIST "${KIT_EXCLUDE_LIST}\n  \"${CLASS}\"")
     ENDIF(IS_EXCLUDE MATCHES "^1$")
   ENDFOREACH(src)
-  CONFIGURE_FILE(${VTK_SOURCE_DIR}/CMake/vtkKit.cmake.in
-                 ${VTK_BINARY_DIR}/Utilities/vtk${kit}Kit.cmake
+  CONFIGURE_FILE(${VTK_CMAKE_DIR}/vtkKit.cmake.in
+                 ${dest_dir}/vtk${kit}Kit.cmake
                  @ONLY IMMEDIATE)
+ENDMACRO(VTK_EXPORT_KIT2)
+
+#-----------------------------------------------------------------------------
+MACRO(VTK_EXPORT_KIT kit ukit sources)
+  VTK_EXPORT_KIT2(${kit} ${ukit} ${VTK_BINARY_DIR}/Utilities "${sources}")
 ENDMACRO(VTK_EXPORT_KIT)

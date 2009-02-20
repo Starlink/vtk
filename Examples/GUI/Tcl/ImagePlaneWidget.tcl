@@ -63,7 +63,7 @@ vtkImagePlaneWidget planeWidgetX
   planeWidgetX SetPicker picker
   planeWidgetX SetKeyPressActivationValue "x"
   set prop1 [planeWidgetX GetPlaneProperty]
-  $prop1 SetColor 1 0 0  
+  $prop1 SetColor 1 0 0    
 
 vtkImagePlaneWidget planeWidgetY
   planeWidgetY DisplayTextOn
@@ -93,6 +93,13 @@ vtkImagePlaneWidget planeWidgetZ
 
 set current_widget planeWidgetZ
 set mode_widget  planeWidgetZ
+
+planeWidgetX AddObserver EndWindowLevelEvent WindowLevelXCallback
+planeWidgetY AddObserver EndWindowLevelEvent WindowLevelYCallback
+planeWidgetZ AddObserver EndWindowLevelEvent WindowLevelZCallback
+planeWidgetX AddObserver ResetWindowLevelEvent WindowLevelXCallback
+planeWidgetY AddObserver ResetWindowLevelEvent WindowLevelYCallback
+planeWidgetZ AddObserver ResetWindowLevelEvent WindowLevelZCallback
 
 # Create the RenderWindow and Renderer
 #
@@ -365,6 +372,27 @@ proc SetInterpolation { } {
   }
   $mode_widget SetResliceInterpolate $mode
   renWin Render
+}
+
+proc WindowLevelXCallback {} {
+  set w [planeWidgetX GetWindow]
+  set l [planeWidgetX GetLevel]  
+  planeWidgetY SetWindowLevel $w $l 1 
+  planeWidgetZ SetWindowLevel $w $l 1
+}
+
+proc WindowLevelYCallback {} {
+  set w [planeWidgetY GetWindow]
+  set l [planeWidgetY GetLevel]  
+  planeWidgetX SetWindowLevel $w $l 1 
+  planeWidgetZ SetWindowLevel $w $l 1
+}
+
+proc WindowLevelZCallback {} {
+  set w [planeWidgetZ GetWindow]
+  set l [planeWidgetZ GetLevel]  
+  planeWidgetX SetWindowLevel $w $l 1 
+  planeWidgetY SetWindowLevel $w $l 1
 }
 
 

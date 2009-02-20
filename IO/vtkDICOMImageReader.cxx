@@ -28,7 +28,7 @@
 #include "DICOMAppHelper.h"
 #include "DICOMParser.h"
 
-vtkCxxRevisionMacro(vtkDICOMImageReader, "$Revision: 1.32.6.2 $");
+vtkCxxRevisionMacro(vtkDICOMImageReader, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkDICOMImageReader);
 
 class vtkDICOMImageReaderVector : public vtkstd::vector<vtkstd::string>

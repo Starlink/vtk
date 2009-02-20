@@ -15,14 +15,17 @@
 #include "vtkGenericEnSightReader.h"
 
 #include "vtkCallbackCommand.h"
+#include "vtkCompositeDataPipeline.h"
 #include "vtkDataArrayCollection.h"
 #include "vtkDataArraySelection.h"
-#include "vtkDataSet.h"
 #include "vtkEnSight6BinaryReader.h"
 #include "vtkEnSight6Reader.h"
 #include "vtkEnSightGoldBinaryReader.h"
 #include "vtkEnSightGoldReader.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkIdListCollection.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 
 #include <vtkstd/string>
@@ -30,7 +33,7 @@
 #include <assert.h>
 #include <ctype.h> /* isspace */
 
-vtkCxxRevisionMacro(vtkGenericEnSightReader, "$Revision: 1.74 $");
+vtkCxxRevisionMacro(vtkGenericEnSightReader, "$Revision: 1.84 $");
 vtkStandardNewMacro(vtkGenericEnSightReader);
 
 vtkCxxSetObjectMacro(vtkGenericEnSightReader,TimeSets, 
@@ -77,6 +80,7 @@ vtkGenericEnSightReader::vtkGenericEnSightReader()
   this->NumberOfComplexVectorsPerElement = 0;
   
   this->TimeValue = 0;
+
   this->MinimumTimeValue = 0;
   this->MaximumTimeValue = 0;
   
@@ -88,6 +92,8 @@ vtkGenericEnSightReader::vtkGenericEnSightReader()
 
   this->ByteOrder = FILE_UNKNOWN_ENDIAN;
   
+  this->ParticleCoordinatesByIndex = 0;
+
   this->EnSightVersion = -1;
   
   this->PointDataArraySelection = vtkDataArraySelection::New();
@@ -106,7 +112,7 @@ vtkGenericEnSightReader::vtkGenericEnSightReader()
   this->SelectionModifiedDoNotCallModified = 0;
   this->TranslationTable = new TranslationTableType;
 
-  this->SetNumberOfOutputPorts(0);
+  this->SetNumberOfInputPorts(0);
 }
 
 //----------------------------------------------------------------------------
@@ -172,19 +178,33 @@ vtkGenericEnSightReader::~vtkGenericEnSightReader()
 }
 
 //----------------------------------------------------------------------------
-void vtkGenericEnSightReader::Execute()
+int vtkGenericEnSightReader::RequestData(
+  vtkInformation *vtkNotUsed(request),
+  vtkInformationVector **vtkNotUsed(inputVector),
+  vtkInformationVector *outputVector)
 {
   int i;
 
   if ( !this->Reader )
     {
-    return;
+    return 0;
     }
+
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
   // Set the real reader's data array selections from ours.
   this->SetReaderDataArraySelectionSetsFromSelf();
   
   this->Reader->SetTimeValue(this->GetTimeValue());
+  this->Reader->UpdateInformation();
+  vtkInformation* tmpOutInfo =
+    this->Reader->GetExecutive()->GetOutputInformation(0);
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
+    {
+    tmpOutInfo->CopyEntry(
+      outInfo,
+      vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+    }
   this->Reader->Update();
 
   this->NumberOfScalarsPerNode = this->Reader->GetNumberOfScalarsPerNode();
@@ -209,53 +229,11 @@ void vtkGenericEnSightReader::Execute()
     this->Reader->GetNumberOfComplexScalarsPerElement();
   this->NumberOfComplexVectorsPerElement =
     this->Reader->GetNumberOfComplexScalarsPerElement();
-  
-  for (i = 0; i < this->Reader->GetNumberOfOutputs(); i++)
-    {
-    vtkDataObject* output = this->GetOutput(i);
-    if ( ! output )
-      {
-      // Copy the output rather than setting directly.
-      // When we set directly, the internal reader looses its output.
-      // Next execute, a new output is added, 
-      // and another partid is added too.
-      vtkDataObject* tmp = this->Reader->GetOutput(i);
-      if( tmp )
-        {
-        output = tmp->NewInstance();
-        this->SetNthOutput(i, output); // law: this causes the extra partid bug
-        output->ShallowCopy(tmp);
-        output->CopyInformation(tmp);
-        output->Delete();
-        // Used later.
-        //output = NULL;
-        }
-      else
-        {
-        this->SetNthOutput(i, 0);
-        }
-      }
-    else
-      {
-      // We don't know the number of outputs or whole extent of the
-      // internal reader's data until after it executes.  Therefore,
-      // the update extent of the reader is set to empty.  Since the
-      // reader ignores the update extent anyway, it reads correctly,
-      // but then this shallow copy destroys this reader's update
-      // extent.  Save it and restore.
-      int tempExtent[6];
-      output->GetUpdateExtent(tempExtent);
-      output->ShallowCopy(this->Reader->GetOutput(i));
-      output->SetUpdateExtent(tempExtent);
-      }
-    // Since most unstructured filters in VTK generate all their data once,
-    // make it the default.
-    // protected: if ( output->GetExtentType() == VTK_PIECES_EXTENT )
-    if (output && ( output->IsA("vtkPolyData") || output->IsA("vtkUnstructuredGrid")))
-      {
-      output->SetMaximumNumberOfPieces(1);
-      }
-    }
+
+  vtkMultiBlockDataSet *output = vtkMultiBlockDataSet::SafeDownCast(
+    outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  output->ShallowCopy(this->Reader->GetOutput());
+
   for (i = 0; i < this->Reader->GetNumberOfVariables(); i++)
     {
     this->AddVariableDescription(this->Reader->GetDescription(i));
@@ -269,6 +247,8 @@ void vtkGenericEnSightReader::Execute()
     this->AddComplexVariableType(this->Reader->GetComplexVariableType(i));
     this->NumberOfComplexVariables++;
     }
+
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -287,6 +267,7 @@ void vtkGenericEnSightReader::SetTimeValue(float value)
 int vtkGenericEnSightReader::DetermineEnSightVersion()
 {
   char line[256], subLine[256], subLine1[256], subLine2[256], binaryLine[81];
+  char *binaryLinePtr;
   int stringRead;
   int timeSet = 1, fileSet = 1;
   int xtimeSet= 1, xfileSet= 1;
@@ -414,7 +395,15 @@ int vtkGenericEnSightReader::DetermineEnSightVersion()
           
             this->ReadBinaryLine(binaryLine);
             binaryLine[80] = '\0';
-            sscanf(binaryLine, " %*s %s", subLine);
+            // because fortran stores 4 length bytes at the start, 
+            // if the strlen is less than 4, skip the first 4
+            // and jump to the start of the actual string
+            binaryLinePtr = &binaryLine[0];
+            if (strlen(binaryLine)<4) 
+              {
+              binaryLinePtr = &binaryLine[4];
+              }
+            sscanf(binaryLinePtr, " %*s %s", subLine);
             // If the file is ascii, there might not be a null
             // terminator. This leads to a UMR in sscanf
             if (strncmp(subLine,"Binary",6) == 0 ||
@@ -576,7 +565,14 @@ void vtkGenericEnSightReader::SetCaseFileName(const char* fileName)
   
   // strip off the path and save it as FilePath if it was included in the
   // filename
-  if ((endingSlash = strrchr(this->CaseFileName, '/')))
+  endingSlash = strrchr(this->CaseFileName, '/');
+  if(endingSlash == NULL)
+    {
+    // check Windows directory separator
+    endingSlash = strrchr(this->CaseFileName, '\\');
+    }
+
+  if (endingSlash)
     {
     position = endingSlash - this->CaseFileName + 1;
     path = new char[position + 1];
@@ -590,7 +586,6 @@ void vtkGenericEnSightReader::SetCaseFileName(const char* fileName)
     delete [] path;
     delete [] newFileName;
     }
-      
 }
 
 //----------------------------------------------------------------------------
@@ -604,7 +599,7 @@ int vtkGenericEnSightReader::ReadLine(char result[256])
     {
     return 0;
     }
-  
+
   return 1;
 }
 
@@ -657,25 +652,10 @@ int vtkGenericEnSightReader::ReadNextDataLine(char result[256])
 }
 
 //----------------------------------------------------------------------------
-void vtkGenericEnSightReader::Update()
-{
-  int i;
-  
-  this->UpdateInformation();
-  this->Execute();
-  
-  for (i = 0; i < this->GetNumberOfOutputs(); i++)
-    {
-    if ( this->GetOutput(i) )
-      {
-      this->GetOutput(i)->DataHasBeenGenerated();
-      this->GetOutput(i)->SetUpdateExtentToWholeExtent();
-      }
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkGenericEnSightReader::ExecuteInformation()
+int vtkGenericEnSightReader::RequestInformation(
+  vtkInformation *request,
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector)
 {
   int version = this->DetermineEnSightVersion();
   int createReader = 1;
@@ -760,7 +740,7 @@ void vtkGenericEnSightReader::ExecuteInformation()
     {
     vtkErrorMacro("Error determining EnSightVersion");
     this->EnSightVersion = -1;
-    return;
+    return 0;
     }
   this->EnSightVersion = version;
   
@@ -770,8 +750,9 @@ void vtkGenericEnSightReader::ExecuteInformation()
   this->Reader->SetCaseFileName(this->GetCaseFileName());
   this->Reader->SetFilePath(this->GetFilePath());
   this->Reader->SetByteOrder(this->ByteOrder);
-  this->Reader->UpdateInformation();
-  
+  this->Reader->RequestInformation(request, inputVector, outputVector);
+  this->Reader->SetParticleCoordinatesByIndex(this->ParticleCoordinatesByIndex);
+
   this->SetTimeSets(this->Reader->GetTimeSets());
   if(!this->TimeValueInitialized)
     {
@@ -781,7 +762,9 @@ void vtkGenericEnSightReader::ExecuteInformation()
   this->MaximumTimeValue = this->Reader->GetMaximumTimeValue();
   
   // Copy new data array selections from internal reader.
-  this->SetDataArraySelectionSetsFromReader();  
+  this->SetDataArraySelectionSetsFromReader();
+
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -1275,10 +1258,13 @@ void vtkGenericEnSightReader::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "TimeSets: " << this->TimeSets << endl;
   os << indent << "ReadAllVariables: " << this->ReadAllVariables << endl;
   os << indent << "ByteOrder: " << this->ByteOrder << endl;
+  os << indent << "ParticleCoordinatesByIndex: " << this->ParticleCoordinatesByIndex << endl;
   os << indent << "CellDataArraySelection: " << this->CellDataArraySelection 
      << endl;
   os << indent << "PointDataArraySelection: " << this->PointDataArraySelection 
      << endl;
+  os << indent << "GeometryFileName: " << 
+     (this->GeometryFileName ? this->GeometryFileName : "(none)") << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -1491,10 +1477,18 @@ void vtkGenericEnSightReader::SetCellArrayStatus(const char* name, int status)
 //----------------------------------------------------------------------------
 int vtkGenericEnSightReader::InsertNewPartId(int partId)
 {
-  int lastId = this->TranslationTable->PartIdMap.size();
-  this->TranslationTable->PartIdMap.insert( 
+  int lastId = static_cast<int>(this->TranslationTable->PartIdMap.size());
+  this->TranslationTable->PartIdMap.insert(
     vtkstd::map<int,int>::value_type(partId, lastId));
   lastId = this->TranslationTable->PartIdMap[partId];
   //assert( lastId == this->PartIdTranslationTable[partId] );
   return lastId;
+}
+
+//----------------------------------------------------------------------------
+int vtkGenericEnSightReader::FillOutputPortInformation(int vtkNotUsed(port),
+                                                       vtkInformation* info)
+{
+  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkMultiBlockDataSet");
+  return 1;
 }

@@ -80,7 +80,7 @@ public:
   // created first, which happens on the first instantiation of this class
   // or when BuildPsiTable is first called.
   static float Psi(float taufD, float taubD);
-
+  static float *GetPsiTable(int &size);
   static void BuildPsiTable();
 
 protected:
@@ -88,7 +88,7 @@ protected:
   ~vtkUnstructuredGridPartialPreIntegration();
 
   vtkVolumeProperty *Property;
-
+ 
   vtkPartialPreIntegrationTransferFunction *TransferFunctions;
   vtkTimeStamp TransferFunctionsModified;
   int NumIndependentComponents;
@@ -114,6 +114,12 @@ inline float vtkUnstructuredGridPartialPreIntegration::Psi(float taufD,
   return PsiTable[gammafi*PSI_TABLE_SIZE + gammabi];
 }
 
+inline float *vtkUnstructuredGridPartialPreIntegration::GetPsiTable(int &size)
+{
+  size = PSI_TABLE_SIZE;
+  return PsiTable;
+}
+
 inline void vtkUnstructuredGridPartialPreIntegration::IntegrateRay(
                                                        double length,
                                                        double intensity_front,
@@ -125,7 +131,7 @@ inline void vtkUnstructuredGridPartialPreIntegration::IntegrateRay(
   float taufD = length*attenuation_front;
   float taubD = length*attenuation_back;
   float Psi = vtkUnstructuredGridPartialPreIntegration::Psi(taufD, taubD);
-  float zeta = (float)exp(-0.5*(taufD+taubD));
+  float zeta = static_cast<float>(exp(-0.5*(taufD+taubD)));
   float alpha = 1-zeta;
 
   float newintensity = (1-color[3])*(  intensity_front*(1-Psi)
@@ -148,7 +154,7 @@ inline void vtkUnstructuredGridPartialPreIntegration::IntegrateRay(
   float taufD = length*attenuation_front;
   float taubD = length*attenuation_back;
   float Psi = vtkUnstructuredGridPartialPreIntegration::Psi(taufD, taubD);
-  float zeta = (float)exp(-0.5*(taufD+taubD));
+  float zeta = static_cast<float>(exp(-0.5*(taufD+taubD)));
   float alpha = 1-zeta;
 
   color[0] += (1-color[3])*(color_front[0]*(1-Psi) + color_back[0]*(Psi-zeta));

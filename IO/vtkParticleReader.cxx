@@ -31,8 +31,9 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 #include <vtkstd/string>
+#include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkParticleReader, "$Revision: 1.28 $");
+vtkCxxRevisionMacro(vtkParticleReader, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkParticleReader);
 
 namespace {
@@ -93,8 +94,8 @@ namespace {
       vtkstd::replace(s.begin(),s.end(),',','\t');
 
       // We have data.
-      strstream is;
-      is << s.c_str() << ends;// no istringstream in VTK
+      vtksys_ios::stringstream is;
+      is << s.c_str();
       is >> val[0] >> val[1] >> val[2] >> val[3];
 
       return 1;
@@ -554,8 +555,8 @@ int vtkParticleReader::ProduceOutputFromBinaryFileDouble(vtkInformationVector *o
     return 0;
     }
 
-  start = piece * this->NumberOfPoints / numPieces;
-  next = (piece+1) * this->NumberOfPoints / numPieces;
+  start = static_cast<unsigned long>(piece * this->NumberOfPoints / numPieces);
+  next = static_cast<unsigned long>((piece+1) * this->NumberOfPoints / numPieces);
 
   length = next - start;
 
@@ -750,8 +751,8 @@ int vtkParticleReader::ProduceOutputFromBinaryFileFloat(vtkInformationVector *ou
     return 0;
     }
 
-  start = piece * this->NumberOfPoints / numPieces;
-  next = (piece+1) * this->NumberOfPoints / numPieces;
+  start = static_cast<unsigned long>(piece * this->NumberOfPoints / numPieces);
+  next = static_cast<unsigned long>((piece+1) * this->NumberOfPoints / numPieces);
 
   length = next - start;
 

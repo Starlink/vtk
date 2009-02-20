@@ -21,10 +21,12 @@
 #define __vtkSmartPointer_h
 
 #include "vtkSmartPointerBase.h"
+#include <vtksys/Configure.hxx> // need check for member template support
 
 template <class T>
 class vtkSmartPointer: public vtkSmartPointerBase
 {
+  static T* CheckType(T* t) { return t; }
 public:
   // Description:
   // Initialize smart pointer to NULL.
@@ -37,7 +39,13 @@ public:
   // Description:
   // Initialize smart pointer with a new reference to the same object
   // referenced by given smart pointer.
+#ifdef vtksys_CXX_HAS_MEMBER_TEMPLATES
+  template <class U>
+  vtkSmartPointer(const vtkSmartPointer<U>& r):
+    vtkSmartPointerBase(CheckType(r.GetPointer())) {}
+#else
   vtkSmartPointer(const vtkSmartPointerBase& r): vtkSmartPointerBase(r) {}
+#endif
 
   // Description:
   // Assign object to reference.  This removes any reference to an old
@@ -51,11 +59,20 @@ public:
   // Description:
   // Assign object to reference.  This removes any reference to an old
   // object.
+#ifdef vtksys_CXX_HAS_MEMBER_TEMPLATES
+  template <class U>
+  vtkSmartPointer& operator=(const vtkSmartPointer<U>& r)
+    {
+    this->vtkSmartPointerBase::operator=(CheckType(r.GetPointer()));
+    return *this;
+    }
+#else
   vtkSmartPointer& operator=(const vtkSmartPointerBase& r)
     {
     this->vtkSmartPointerBase::operator=(r);
     return *this;
     }
+#endif
 
   // Description:
   // Get the contained pointer.
@@ -133,12 +150,12 @@ public:
     return vtkSmartPointer<T>(t, NoReference());
     }
 
-  // Work-around for HP overload resolution bug.  Since
+  // Work-around for HP and IBM overload resolution bug.  Since
   // NullPointerOnly is a private type the only pointer value that can
   // be passed by user code is a null pointer.  This operator will be
   // chosen by the compiler when comparing against null explicitly and
   // avoid the bogus ambiguous overload error.
-#if defined(__HP_aCC)
+#if defined(__HP_aCC) || defined(__IBMCPP__)
 # define VTK_SMART_POINTER_DEFINE_OPERATOR_WORKAROUND(op) \
   vtkstd_bool operator op (NullPointerOnly*) const        \
     {                                                     \

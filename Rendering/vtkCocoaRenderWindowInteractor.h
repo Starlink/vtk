@@ -76,11 +76,6 @@ public:
   void TerminateApp();
 
   // Description:
-  // Cocoa timer methods
-  int CreateTimer(int timertype);
-  int DestroyTimer();
-
-  // Description:
   // Methods to set the default exit method for the class. This method is
   // only used if no instance level ExitMethod has been defined.  It is
   // provided as a means to control how an interactor is exited given
@@ -101,7 +96,14 @@ protected:
   ~vtkCocoaRenderWindowInteractor();
 
   int     InstallMessageProc;
-  void*   Timer;  // really a vtkCocoaTimer*
+  
+  // Description:
+  // Accessors for the Cocoa member variables. These should be used at all time, even
+  // by this class.
+  void SetTimerDictionary(void *dictionary);    // Really an NSMutableDictionary*
+  void *GetTimerDictionary();
+  void SetCocoaServer(void *server);            // Really a vtkCocoaServer*
+  void *GetCocoaServer();
 
   //BTX
   // Description:
@@ -112,10 +114,31 @@ protected:
   static void (*ClassExitMethodArgDelete)(void *);
   static void *ClassExitMethodArg;
   //ETX
+
+  // Description:
+  // Cocoa-specific internal timer methods. See the superclass for detailed
+  // documentation.
+  virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
+  virtual int InternalDestroyTimer(int platformTimerId);
   
+  // Description:
+  // Accessors for the cocoa manager (Really an NSMutableDictionary*).
+  // It manages all Cocoa objects in this C++ class.
+  void SetCocoaManager(void *manager);
+  void *GetCocoaManager();
+
 private:
   vtkCocoaRenderWindowInteractor(const vtkCocoaRenderWindowInteractor&);  // Not implemented.
   void operator=(const vtkCocoaRenderWindowInteractor&);  // Not implemented.
+  
+  // Important: this class cannot contain Objective-C instance
+  // variables for 2 reasons:
+  // 1) C++ files include this header
+  // 2) because of garbage collection
+  // Instead, use the CocoaManager dictionary to keep a collection
+  // of what would otherwise be Objective-C instance variables.
+  void    *CocoaManager;        // Really an NSMutableDictionary*
+  
 };
 
 #endif

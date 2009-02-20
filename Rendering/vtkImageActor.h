@@ -91,18 +91,25 @@ public:
   void GetDisplayBounds(double bounds[6]);
 
   // Description:
-  // Return a slice number computed from the display extent.
+  // Return the slice number (& min/max slice number) computed from the display
+  // extent.
   int GetSliceNumber();
+  int GetSliceNumberMax();
+  int GetSliceNumberMin();
   
-//BTX
+  //BTX
   // Description:
   // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE
   // DO NOT USE THIS METHOD OUTSIDE OF THE RENDERING PROCESS
   // Support the standard render methods.
-  int RenderTranslucentGeometry(vtkViewport *viewport);
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport *viewport);
   int RenderOpaqueGeometry(vtkViewport *viewport);
   virtual void Render(vtkRenderer *) {};
-//ETX
+  
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  //ETX
 
   // Description:
   // Set/Get the current slice number. The axis Z in ZSlice does not
@@ -116,7 +123,6 @@ public:
     this->DisplayExtent[0], this->DisplayExtent[1],
     this->DisplayExtent[2], this->DisplayExtent[3], z, z);
   };
-  
   int GetZSlice() { return this->DisplayExtent[4];};
   int GetWholeZMin();
   int GetWholeZMax();
@@ -129,6 +135,7 @@ protected:
   double        Opacity;
   vtkImageData* Input;
   int           DisplayExtent[6];
+  int           ComputedDisplayExtent[6];
   double        DisplayBounds[6];
 
 private:

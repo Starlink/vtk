@@ -20,10 +20,10 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkCommand.h"
+#include "vtkCallbackCommand.h"
 #include "vtkWindows.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleFlight, "$Revision: 1.30 $");
+vtkCxxRevisionMacro(vtkInteractorStyleFlight, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkInteractorStyleFlight);
 
 class CPIDControl
@@ -73,7 +73,7 @@ double CPIDControl::PIDCalc(double dX, double dFinalX)
   m_iVelCount++;
   if(m_iVelCount >= 10)
   {
-    m_dVelAvg = m_dVelSum/(double)m_iVelCount;
+    m_dVelAvg = m_dVelSum/m_iVelCount;
     m_iVelCount = 0;
     m_dVelSum = 0.0;
   }
@@ -198,24 +198,14 @@ void vtkInteractorStyleFlight::EndReverseFly()
 //---------------------------------------------------------------------------
 void vtkInteractorStyleFlight::OnTimer()
 {
-  vtkRenderWindowInteractor *rwi = this->Interactor;
-
   switch (this->State) 
     {
     case VTKIS_FORWARDFLY:
       this->ForwardFly();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     case VTKIS_REVERSEFLY:
       this->ReverseFly();
-      if (this->UseTimers)
-        {
-        rwi->CreateTimer(VTKI_TIMER_UPDATE);
-        }
       break;
 
     default:
@@ -252,7 +242,9 @@ void vtkInteractorStyleFlight::OnLeftButtonDown()
     {
     return;
     }
+
   //
+  this->GrabFocus(this->EventCallbackCommand);
   vtkCamera* cam = this->CurrentRenderer->GetActiveCamera();
   switch (this->State)
     {
@@ -277,6 +269,10 @@ void vtkInteractorStyleFlight::OnLeftButtonUp()
     default :
       break;
     }
+  if ( this->Interactor )
+    {
+    this->ReleaseFocus();
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -299,7 +295,9 @@ void vtkInteractorStyleFlight::OnRightButtonDown()
     {
     return;
     }
+
   //
+  this->GrabFocus(this->EventCallbackCommand);
   vtkCamera* cam = this->CurrentRenderer->GetActiveCamera();
   switch (this->State)
     {
@@ -323,6 +321,10 @@ void vtkInteractorStyleFlight::OnRightButtonUp()
       break;
     default :
       break;
+    }
+  if ( this->Interactor )
+    {
+    this->ReleaseFocus();
     }
 }
 
@@ -499,7 +501,7 @@ void vtkInteractorStyleFlight::UpdateMouseSteering(vtkCamera *cam)
   // we want to steer by an amount proportional to window viewangle and size
   // compute dx and dy increments relative to last mouse click
   int *size = this->Interactor->GetSize();
-  double scalefactor = 5*cam->GetViewAngle()/(double)size[0];
+  double scalefactor = 5*cam->GetViewAngle()/size[0];
   double dx = - (thispos[0] - lastpos[0])*scalefactor*aspeed;
   double dy =   (thispos[1] - lastpos[1])*scalefactor*aspeed;
 

@@ -21,15 +21,17 @@ $camera SetViewAngle 30
 $camera SetClippingRange 124.221 363.827
 
 vtkGenericEnSightReader reader
+# Make sure all algorithms use the composite data pipeline
+vtkCompositeDataPipeline cdp
+reader SetDefaultExecutivePrototype cdp
 reader SetCaseFileName "$VTK_DATA_ROOT/Data/EnSight/ironProt_bin.case"
-reader Update
 
 vtkContourFilter Contour0
 Contour0 SetInputConnection [reader GetOutputPort]
 Contour0 SetValue 0 200
 Contour0 SetComputeScalars 1
 
-vtkPolyDataMapper mapper
+vtkHierarchicalPolyDataMapper mapper
 mapper SetInputConnection [Contour0 GetOutputPort]
 mapper SetImmediateModeRendering 1
 mapper SetScalarRange 0 1
@@ -47,3 +49,5 @@ iren Initialize
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
+
+reader SetDefaultExecutivePrototype {}

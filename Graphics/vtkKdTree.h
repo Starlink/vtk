@@ -59,12 +59,14 @@ class vtkTimerLog;
 class vtkIdList;
 class vtkIdTypeArray;
 class vtkIntArray;
+class vtkPointSet;
 class vtkPoints;
 class vtkCellArray;
 class vtkCell;
 class vtkKdNode;
 class vtkBSPCuts;
 class vtkBSPIntersections;
+class vtkDataSetCollection;
 
 class VTK_GRAPHICS_EXPORT vtkKdTree : public vtkLocator
 {
@@ -162,28 +164,48 @@ public:
   //   removes that data set from the list of data sets.
   //     AddDataSet adds a data set to the list of data sets.
 
-  void SetDataSet(vtkDataSet *set);
-  void SetNthDataSet(int index, vtkDataSet *set);
-  void RemoveDataSet(int index);
-  void RemoveDataSet(vtkDataSet *set);
-  void AddDataSet(vtkDataSet *set);
+  // Description:
+  // Clear out all data sets and replace with single data set.  For backward
+  // compatibility with superclass.
+  virtual void SetDataSet(vtkDataSet *set);
+
+  // Description:
+  // This class can compute a spatial decomposition based on the cells in a list
+  // of one or more input data sets.  Add them one at a time with this method.
+  virtual void AddDataSet(vtkDataSet *set);
+
+  // Description:
+  // Remove the given data set.
+  virtual void RemoveDataSet(int index);
+  virtual void RemoveDataSet(vtkDataSet *set);
+  virtual void RemoveAllDataSets();
 
   // Description:
   //   Get the number of data sets included in spatial paritioning
-  int GetNumberOfDataSets(){return this->NumDataSets;};
+  int GetNumberOfDataSets();
 
   // Description:
   //   Get the nth defined data set in the spatial partitioning.
   //   (If you used SetNthDataSet to define 0,1 and 3 and ask for
   //   data set 2, you get 3.)
 
+  // Description:
+  // Return the n'th data set.
   vtkDataSet *GetDataSet(int n);
+
+  // Description:
+  // Return the 0'th data set.  For compatability with the superclass'
+  // interface.
   vtkDataSet *GetDataSet(){ return this->GetDataSet(0); }
 
   // Description:
-  //   Get handle for one of the data sets included in spatial paritioning.
-  //   Handles can change after RemoveDataSet.
-  int GetDataSet(vtkDataSet *set);
+  // Return a collection of all the data sets.
+  vtkGetObjectMacro(DataSets, vtkDataSetCollection);
+
+  // Description:
+  // Return the index of the given data set.  Returns -1 if that data
+  // set does not exist.
+  int GetDataSetIndex(vtkDataSet *set);
 
   // Description:
   //   Get the spatial bounds of the entire k-d tree space. Sets
@@ -231,7 +253,7 @@ public:
   //   When CreateCellLists is called again, the lists created
   //   on the previous call  are deleted.
   
-  void CreateCellLists(int DataSet, int *regionReqList, 
+  void CreateCellLists(int dataSetIndex, int *regionReqList, 
                        int reqListSize);
   void CreateCellLists(vtkDataSet *set, int *regionReqList,
                        int reqListSize);
@@ -339,27 +361,53 @@ public:
                                       double **convexRegionBounds);
 
   // Description:
-  //    Given a direction of projection (typically obtained with
-  //    vtkCamera::GetDirectionOfProjection()), this function
-  //    creates a list of the k-d tree region IDs in order from 
-  //    front to back with respect to the that direction.
-  //    The number of regions in
-  //    the ordered list is returned.  (This is not actually sorting
-  //    the regions on their distance from the view plane, but there
-  //    is no region on the list which blocks a region that appears
-  //    earlier on the list.)
-
-  int DepthOrderAllRegions(double *dop, vtkIntArray *orderedList);
+  // DO NOT CALL.  Depricated in VTK 5.2.  Use ViewOrderAllRegionsInDirection
+  // or ViewOrderAllRegionsFromPosition.
+  VTK_LEGACY(int DepthOrderAllRegions(double *dop, vtkIntArray *orderedList));
 
   // Description:
-  //    Given a direction of projection, and a list of k-d tree region 
-  //    IDs, this function creates an ordered list of those IDs
-  //    in front to back order with respect to the
-  //    camera's direction of projection.  The number of regions in
-  //    the ordered list is returned.
+  // DO NOT CALL.  Depricated in VTK 5.2.  Use ViewOrderRegionsInDirection
+  // or ViewOrderRegionsFromPosition.
+  VTK_LEGACY(int DepthOrderRegions(vtkIntArray *regionIds, double *dop,
+                                   vtkIntArray *orderedList));
 
-  int DepthOrderRegions(vtkIntArray *regionIds, double *dop,
-                        vtkIntArray *orderedList);
+  // Description:
+  // Given a direction of projection (typically obtained with
+  // vtkCamera::GetDirectionOfProjection()), this method, creates a list of the
+  // k-d tree region IDs in order from front to back with respect to that
+  // direction.  The number of ordered regions is returned.  Use this method to
+  // view order regions for cameras that use parallel projection.
+  int ViewOrderAllRegionsInDirection(const double directionOfProjection[3],
+                                     vtkIntArray *orderedList);
+
+  // Description:
+  // Given a direction of projection and a list of k-d tree region IDs, this
+  // method, creates a list of the k-d tree region IDs in order from front to
+  // back with respect to that direction.  The number of ordered regions is
+  // returned.  Use this method to view order regions for cameras that use
+  // parallel projection.
+  int ViewOrderRegionsInDirection(vtkIntArray *regionIds,
+                                  const double directionOfProjection[3],
+                                  vtkIntArray *orderedList);
+
+  // Description:
+  // Given a camera position (typically obtained with vtkCamera::GetPosition()),
+  // this method, creates a list of the k-d tree region IDs in order from front
+  // to back with respect to that direction.  The number of ordered regions is
+  // returned.  Use this method to view order regions for cameras that use
+  // perspective projection.
+  int ViewOrderAllRegionsFromPosition(const double directionOfProjection[3],
+                                      vtkIntArray *orderedList);
+
+  // Description:
+  // Given a camera position and a list of k-d tree region IDs, this method,
+  // creates a list of the k-d tree region IDs in order from front to back with
+  // respect to that direction.  The number of ordered regions is returned.  Use
+  // this method to view order regions for cameras that use perspective
+  // projection.
+  int ViewOrderRegionsFromPosition(vtkIntArray *regionIds,
+                                   const double directionOfProjection[3],
+                                   vtkIntArray *orderedList);
 
   // Description:
   // This is a special purpose locator that builds a k-d tree to 
@@ -373,6 +421,7 @@ public:
   //
   // This method works most efficiently when the point arrays are
   // float arrays.
+  void BuildLocatorFromPoints(vtkPointSet *pointset);
   void BuildLocatorFromPoints(vtkPoints *ptArray);
   void BuildLocatorFromPoints(vtkPoints **ptArray, int numPtArrays);
   
@@ -450,19 +499,32 @@ public:
   // Description:
   //    Return 1 if the geometry of the input data sets
   //    has changed since the last time the k-d tree was built.
-  int NewGeometry();
+  virtual int NewGeometry();
 
   // Description:
   //    Return 1 if the geometry of these data sets differs
   //    for the geometry of the last data sets used to build
   //    the k-d tree.
-  int NewGeometry(vtkDataSet **sets, int numDataSets);
+  virtual int NewGeometry(vtkDataSet **sets, int numDataSets);
+
+  // Description:
+  // Forget about the last geometry used.  The next call to NewGeometry will
+  // return 1.  A new k-d tree will be built the next time BuildLocator is
+  // called.
+  virtual void InvalidateGeometry();
 
   // Description:
   //    Create a copy of the binary tree representation of the
   //    k-d tree spatial partitioning provided.  
 
   static vtkKdNode *CopyTree(vtkKdNode *kd);
+
+  // Description:
+  // Fill ids with points found in area.  The area is a 6-tuple containing
+  // (xmin, xmax, ymin, ymax, zmin, zmax).
+  // This method will clear the array by default.  To append ids to an array,
+  // set clearArray to false.
+  void FindPointsInArea(double* area, vtkIdTypeArray* ids, bool clearArray = true);
 
 protected:
 
@@ -557,9 +619,33 @@ protected:
   float *ComputeCellCenters(int set);
   float *ComputeCellCenters(vtkDataSet *set);
 
+  vtkDataSetCollection *DataSets;
+
   virtual void ReportReferences(vtkGarbageCollector*);
 
-private:
+  // Description:
+  // Modelled on vtkAlgorithm::UpdateProgress(). 
+  // Update the progress when building the locator.
+  // Fires vtkCommand::ProgressEvent.
+  void UpdateProgress(double amount);
+
+  // Description:
+  // Set/Get the execution progress of a process object.
+  vtkSetClampMacro(Progress,double,0.0,1.0);
+  vtkGetMacro(Progress,double);
+
+protected:
+  // So that each suboperation can report progress
+  // in [0,1], yet we will be able to report a global 
+  // progress. Sub-operations must use UpdateSubOperationProgress()
+  // for this to work.
+  double ProgressScale;
+  double ProgressOffset;
+  
+  // Update progress for a sub-operation. \c amount goes from 0.0 to 1.0.
+  // Actual progress is given by 
+  // (this->ProgressOffset + this->ProgressScale* amount).
+  void UpdateSubOperationProgress(double amount);
 
   static void _SetNewBounds(vtkKdNode *kd, double *b, int *fixDim);
   static void CopyChildNodes(vtkKdNode *to, vtkKdNode *from);
@@ -568,6 +654,12 @@ private:
   static void ZeroNumberOfPoints(vtkKdNode *kd);
 
 //BTX
+  // Recursive helper for public FindPointsInArea
+  void FindPointsInArea(vtkKdNode* node, double* area, vtkIdTypeArray* ids);
+
+  // Recursive helper for public FindPointsInArea
+  void AddAllPointsInRegion(vtkKdNode* node, vtkIdTypeArray* ids);
+
   int DivideRegion(vtkKdNode *kd, float *c1, int *ids, int nlevels);
 
   void DoMedianFind(vtkKdNode *kd, float *c1, int *ids, int d1, int d2, int d3);
@@ -614,11 +706,22 @@ private:
   int FindClosestPointInSphere(double x, double y, double z, double radius,
                                int skipRegion, double &dist2);
 
-  int _DepthOrderRegions(vtkIntArray *IdsOfInterest, double *dop,
-                                vtkIntArray *orderedList);
+  int _ViewOrderRegionsInDirection(vtkIntArray *IdsOfInterest,
+                                   const double dop[3],
+                                   vtkIntArray *orderedList);
 
-  static int __DepthOrderRegions(vtkKdNode *node, vtkIntArray *list, 
-                          vtkIntArray *IdsOfInterest, double *dir, int nextId);
+  static int __ViewOrderRegionsInDirection(vtkKdNode *node, vtkIntArray *list, 
+                                           vtkIntArray *IdsOfInterest,
+                                           const double dir[3], int nextId);
+
+  int _ViewOrderRegionsFromPosition(vtkIntArray *IdsOfInterest,
+                                    const double pos[3],
+                                    vtkIntArray *orderedList);
+
+  static int __ViewOrderRegionsFromPosition(vtkKdNode *node, vtkIntArray *list, 
+                                            vtkIntArray *IdsOfInterest,
+                                            const double pos[3], int nextId);
+
   static int __ConvexSubRegions(int *ids, int len, vtkKdNode *tree, vtkKdNode **nodes);
   static int FoundId(vtkIntArray *idArray, int id);
 
@@ -654,8 +757,6 @@ private:
 
   void NewPartitioningRequest(int req);
 
-  int NumDataSetsAllocated;
-
   int NumberOfRegionsOrLess;
   int NumberOfRegionsOrMore;
 
@@ -679,9 +780,6 @@ private:
   int Timing;
   double FudgeFactor;   // a very small distance, relative to the dataset's size
 
-  vtkDataSet **DataSets;
-  int NumDataSets;
-
   // These instance variables are used by the special locator created
   // to find duplicate points. (BuildLocatorFromPoints)
 
@@ -698,13 +796,15 @@ private:
   int LastNumDataSets;
   int LastDataCacheSize;
   vtkDataSet **LastInputDataSets;
+  unsigned long *LastDataSetObserverTags;
   int *LastDataSetType;
   double *LastInputDataInfo;
   double *LastBounds;
-  int *LastNumPoints;
-  int *LastNumCells;
+  vtkIdType *LastNumPoints;
+  vtkIdType *LastNumCells;
 
   vtkBSPCuts *Cuts;
+  double Progress;
 
   vtkKdTree(const vtkKdTree&); // Not implemented
   void operator=(const vtkKdTree&); // Not implemented

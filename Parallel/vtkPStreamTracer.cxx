@@ -16,6 +16,7 @@
 
 #include "vtkAppendPolyData.h"
 #include "vtkCellData.h"
+#include "vtkCompositeDataSet.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -28,7 +29,7 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPStreamTracer, "$Revision: 1.17 $");
+vtkCxxRevisionMacro(vtkPStreamTracer, "$Revision: 1.22 $");
 
 vtkCxxSetObjectMacro(vtkPStreamTracer, Controller, vtkMultiProcessController);
 vtkCxxSetObjectMacro(vtkPStreamTracer, 
@@ -48,6 +49,8 @@ vtkPStreamTracer::vtkPStreamTracer()
   this->IntegrationDirections = 0;
 
   this->GenerateNormalsInIntegrate = 0;
+
+  this->EmptyData = 0;
 }
 
 vtkPStreamTracer::~vtkPStreamTracer()
@@ -91,6 +94,7 @@ void vtkPStreamTracer::ReceiveLastPoints(vtkPolyData *output)
       {
       break;
       }
+
     this->ReceiveCellPoint(this->GetOutput(), streamId, -1);
     }
   // We were told that it is our turn to send first points.
@@ -332,6 +336,13 @@ int vtkPStreamTracer::RequestData(
     return retVal;
     }
 
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+  if (!this->SetupOutput(inInfo, outInfo))
+    {
+    return 0;
+    }
+
   vtkInformation *sourceInfo = inputVector[1]->GetInformationObject(0);
   vtkDataSet *source = 0;
   if (sourceInfo)
@@ -339,30 +350,31 @@ int vtkPStreamTracer::RequestData(
     source = vtkDataSet::SafeDownCast(
       sourceInfo->Get(vtkDataObject::DATA_OBJECT()));
     }
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
   vtkPolyData* output = vtkPolyData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   vtkInterpolatedVelocityField* func;
   int maxCellSize = 0;
-  if (this->CheckInputs(func, &maxCellSize, inputVector) != VTK_OK)
+  if (this->CheckInputs(func, &maxCellSize) != VTK_OK)
     {
-    vtkDebugMacro("No appropriate inputs have been found. Can not execute.");
+    vtkDebugMacro("No appropriate inputs have been found..");
+    this->EmptyData = 1;
     func->Delete();
-    // >>>>>>>>>> TODO: All should pass this test.
-    return 1;
     }
-  func->SetCaching(0);
-  this->SetInterpolator(func);
-  func->Delete();
-
+  else
+    {
+    func->SetCaching(0);
+    this->SetInterpolator(func);
+    func->Delete();
+    }
+    
   this->InitializeSeeds(this->Seeds, 
                         this->SeedIds, 
                         this->IntegrationDirections,
                         source);
-
+  
   this->TmpOutputs.erase(this->TmpOutputs.begin(), this->TmpOutputs.end());
-  this->ParallelIntegrate(inputVector);
+  this->ParallelIntegrate();
 
   // The parallel integration adds all streamlines to TmpOutputs
   // container. We append them all together here.
@@ -411,6 +423,7 @@ int vtkPStreamTracer::RequestData(
 
   output->Squeeze();
 
+  this->InputData->UnRegister(this);
   return 1;
 }
 

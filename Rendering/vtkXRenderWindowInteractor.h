@@ -38,6 +38,7 @@
 #include <X11/Intrinsic.h> // Needed for X types in the public interface
 
 class vtkCallbackCommand;
+class vtkXRenderWindowInteractorInternals;
 
 //BTX
 // Forward declare internal friend functions.
@@ -71,11 +72,6 @@ public:
   vtkGetMacro(BreakLoopFlag, int);
   vtkBooleanMacro(BreakLoopFlag, int);
 
-  // Description:
-  // X timer methods
-  int CreateTimer(int timertype);
-  int DestroyTimer(void);
-
   // Description: 
   // Initializes the event handlers using an XtAppContext that you have
   // provided.  This assumes that you want to own the event loop.
@@ -98,6 +94,11 @@ public:
   // call this method it will loop processing X events until the
   // application is exited.
   virtual void Start();
+
+  // Description:
+  // Update the Size data member and set the associated RenderWindow's
+  // size.
+  virtual void UpdateSize(int,int);
 
   // Description:
   // Specify the Xt widget to use for interaction. This method is
@@ -174,6 +175,14 @@ protected:
   int OwnApp;
   int PositionBeforeStereo[2];
   Widget TopLevelShell;
+  int TimerId;
+  vtkXRenderWindowInteractorInternals* Internal;
+
+  // Description: 
+  // X-specific internal timer methods. See the superclass for detailed
+  // documentation.
+  virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
+  virtual int InternalDestroyTimer(int platformTimerId);
 
   int BreakLoopFlag;
   XtIntervalId AddTimeOut(XtAppContext app_context, unsigned long interval,
@@ -183,12 +192,10 @@ protected:
 
   vtkCallbackCommand* BreakXtLoopCallback;
   static void BreakXtLoop(vtkObject*, unsigned long, void*, void*);
+
 private:
   vtkXRenderWindowInteractor(const vtkXRenderWindowInteractor&);  // Not implemented.
   void operator=(const vtkXRenderWindowInteractor&);  // Not implemented.
 };
 
 #endif
-
-
-

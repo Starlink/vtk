@@ -43,6 +43,9 @@ class vtkCamera;
 class vtkLightCollection;
 class vtkCullerCollection;
 class vtkLight;
+class vtkPainter;
+class vtkIdentColoredPainter;
+class vtkVisibleCellSelector;
 
 class VTK_RENDERING_EXPORT vtkRenderer : public vtkViewport
 {
@@ -72,6 +75,10 @@ public:
   // Description:
   // Remove a light from the list of lights.
   void RemoveLight(vtkLight *);
+
+  // Description:
+  // Remove all lights from the list of lights.
+  void RemoveAllLights();
 
   // Description:
   // Return the collection of lights.
@@ -163,6 +170,14 @@ public:
   vtkBooleanMacro(Erase, int);
 
   // Description:
+  // When this flag is off, render commands are ignored.  It is used to either
+  // multiplex a vtkRenderWindow or render only part of a vtkRenderWindow.
+  // By default, Draw is on.
+  vtkSetMacro(Draw, int);
+  vtkGetMacro(Draw, int);
+  vtkBooleanMacro(Draw, int);
+
+  // Description:
   // Add an culler to the list of cullers.
   void AddCuller(vtkCuller *);
 
@@ -201,6 +216,14 @@ public:
   // Create an image. Subclasses of vtkRenderer must implement this method.
   virtual void DeviceRender() =0;
 
+  // Description:
+  // Render translucent polygonal geometry. Default implementation just call
+  // UpdateTranslucentPolygonalGeometry().
+  // Subclasses of vtkRenderer that can deal with depth peeling must
+  // override this method.
+  // It updates boolean ivar LastRenderingUsedDepthPeeling.
+  virtual void DeviceRenderTranslucentPolygonalGeometry();
+  
   // Description:
   // Clear the image to the background color.
   virtual void Clear() {};
@@ -329,7 +352,7 @@ public:
   // Description:
   // Should be used internally only during a render
   // Get the number of props that were rendered using a
-  // RenderOpaqueGeometry or RenderTranslucentGeometry call.
+  // RenderOpaqueGeometry or RenderTranslucentPolygonalGeometry call.
   // This is used to know if something is in the frame buffer.
   vtkGetMacro( NumberOfPropsRendered, int );
 
@@ -339,7 +362,12 @@ public:
   // prop that renders the pixel at selectionX, selectionY will be returned.
   // If nothing was picked then NULL is returned.  This method selects from 
   // the renderers Prop list.
-  vtkAssemblyPath* PickProp(double selectionX, double selectionY);
+  vtkAssemblyPath* PickProp(double selectionX, double selectionY)
+    {
+      return this->PickProp(selectionX, selectionY, selectionX, selectionY);
+    }
+  vtkAssemblyPath* PickProp(double selectionX1, double selectionY1,
+                            double selectionX2, double selectionY2);
 
   // Description:
   // Do anything necessary between rendering the left and right viewpoints
@@ -353,6 +381,50 @@ public:
   // tile may be diferent that the aspect ratio of the renderer when rendered
   // in it entirity
   double GetTiledAspectRatio();
+
+  // Description:
+  // This method returns 1 if the ActiveCamera has already been set or
+  // automatically created by the renderer. It returns 0 if the 
+  // ActiveCamera does not yet exist.
+  int IsActiveCameraCreated() 
+    { return (this->ActiveCamera != NULL); }
+  
+  
+  // Description:
+  // Turn on/off rendering of translucent material with depth peeling
+  // technique. The render window must have alpha bits (ie call
+  // SetAlphaBitPlanes(1)) to support depth peeling.
+  // If UseDepthPeeling is on and the GPU supports it, depth peeling is used
+  // for rendering translucent materials.
+  // If UseDepthPeeling is off, alpha blending is used.
+  // Initial value is off.
+  vtkSetMacro(UseDepthPeeling,int);
+  vtkGetMacro(UseDepthPeeling,int);
+  vtkBooleanMacro(UseDepthPeeling,int);
+  
+  // Description:
+  // In case of use of depth peeling technique for rendering translucent
+  // material, define the threshold under which the algorithm stops to
+  // iterate over peel layers. This is the ratio of the number of pixels
+  // that have been touched by the last layer over the total number of pixels
+  // of the viewport area.
+  // Initial value is 0.0, meaning rendering have to be exact. Greater values
+  // may speed-up the rendering with small impact on the quality.
+  vtkSetClampMacro(OcclusionRatio,double,0.0,0.5);
+  vtkGetMacro(OcclusionRatio,double);
+  
+  // Description:
+  // In case of depth peeling, define the maximum number of peeling layers.
+  // Initial value is 4. A special value of 0 means no maximum limit.
+  // It has to be a positive value.
+  vtkSetMacro(MaximumNumberOfPeels,int);
+  vtkGetMacro(MaximumNumberOfPeels,int);
+  
+  // Description:
+  // Tells if the last call to DeviceRenderTranslucentPolygonalGeometry()
+  // actually used depth peeling.
+  // Initial value is false.
+  vtkGetMacro(LastRenderingUsedDepthPeeling,int);
   
 protected:
   vtkRenderer();
@@ -430,11 +502,25 @@ protected:
   int Erase;
 
   // Description:
+  // When this flag is off, render commands are ignored.  It is used to either
+  // multiplex a vtkRenderWindow or render only part of a vtkRenderWindow.
+  // By default, Draw is on.
+  int Draw;
+
+  // Description:
   // Ask all props to update and draw any opaque and translucent
   // geometry. This includes both vtkActors and vtkVolumes
   // Returns the number of props that rendered geometry.
   virtual int UpdateGeometry(void);
 
+  // Description:
+  // Ask all props to update and draw any translucent polygonal
+  // geometry. This includes both vtkActors and vtkVolumes
+  // Return the number of rendered props.
+  // It is called once with alpha blending technique. It is called multiple
+  // times with depth peeling technique.
+  virtual int UpdateTranslucentPolygonalGeometry();
+  
   // Description:
   // Ask the active camera to do whatever it needs to do prior to rendering.
   // Creates a camera if none found active.
@@ -452,10 +538,89 @@ protected:
   virtual int UpdateLights(void) {return 0;};
 
   // Description:
-  // Get the current camera and eventually reset it if it gets created
+  // Get the current camera and reset it only if it gets created
   // automatically (see GetActiveCamera).
-  // This is mainly used internally.
-  vtkCamera *GetActiveCameraAndEventuallyReset();
+  // This is only used internally.
+  vtkCamera *GetActiveCameraAndResetIfCreated();
+
+  // Description:
+  // If this flag is on and the GPU supports it, depth peeling is used
+  // for rendering translucent materials.
+  // If this flag is off, alpha blending is used.
+  // Initial value is off.
+  int UseDepthPeeling;
+  
+  // Description:
+  // In case of use of depth peeling technique for rendering translucent
+  // material, define the threshold under which the algorithm stops to
+  // iterate over peel layers. This is the ratio of the number of pixels
+  // that have been touched by the last layer over the total number of pixels
+  // of the viewport area.
+  // Initial value is 0.0, meaning rendering have to be exact. Greater values
+  // may speed-up the rendering with small impact on the quality.
+  double OcclusionRatio;
+   
+  // Description:
+  // In case of depth peeling, define the maximum number of peeling layers.
+  // Initial value is 4. A special value of 0 means no maximum limit.
+  // It has to be a positive value.
+  int MaximumNumberOfPeels;
+  
+  // Description:
+  // Tells if the last call to DeviceRenderTranslucentPolygonalGeometry()
+  // actually used depth peeling.
+  // Initial value is false.
+  int LastRenderingUsedDepthPeeling;
+  
+  // VISIBLE CELL SELECTION ----------------------------------------
+  //BTX  
+  friend class vtkVisibleCellSelector;
+
+  //Description:
+  // Call to put the Renderer into a mode in which it will color visible 
+  // polygons with an enoded index. Later the pixel colors can be retrieved to
+  // determine what objects lie behind each pixel.  
+  enum {NOT_SELECTING = 0, COLOR_BY_PROCESSOR, COLOR_BY_ACTOR, 
+        COLOR_BY_CELL_ID_HIGH, COLOR_BY_CELL_ID_MID, COLOR_BY_CELL_ID_LOW,
+        COLOR_BY_VERTEX};  
+  //ETX
+  vtkSetMacro(SelectMode, int);
+  vtkSetMacro(SelectConst, unsigned int);
+
+   // Description:
+  // Allows the use of customized Painters for selection.
+  // If none is supplied with this method, a default will be created 
+  // automatically.
+  void SetIdentPainter(vtkIdentColoredPainter*);
+  
+  // Description:
+  // Renders each polygon with a color that represents an selection index.
+  virtual int UpdateGeometryForSelection(void);
+
+  // Description:
+  // Called by UpdateGeometryForSelection to temporarily swap in a mapper to 
+  // render a prop in selection mode.
+  vtkPainter* SwapInSelectablePainter(vtkProp *, 
+                                              int &);
+
+  // Description:
+  // Called by UpdateGeometryForSelection to restore a prop's original mapper.
+  void SwapOutSelectablePainter(vtkProp *,
+                                vtkPainter*, 
+                                int );
+
+  // Description:
+  // Used in Selection to recover a selected prop from an index.
+  vtkProp            **PropsSelectedFrom;
+  int                PropsSelectedFromCount;
+
+  // Ivars for visible cell selecting
+  int SelectMode;
+  unsigned int SelectConst;
+  vtkIdentColoredPainter *IdentPainter;
+  // End Ivars for visible cell selecting.
+
+  //---------------------------------------------------------------
   
 private:
   vtkRenderer(const vtkRenderer&);  // Not implemented.

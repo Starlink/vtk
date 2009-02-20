@@ -52,8 +52,8 @@ public:
   vtkCell *GetEdge(int edgeId);
   vtkCell *GetFace(int faceId);
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
-  void Contour(double value, vtkDataArray *cellScalars, 
-               vtkPointLocator *locator, vtkCellArray *verts, 
+  void Contour(double value, vtkDataArray *cellScalars,
+               vtkPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
@@ -65,13 +65,30 @@ public:
   int IntersectWithLine(double p1[3], double p2[3], double tol, double& t,
                         double x[3], double pcoords[3], int& subId);
   int Triangulate(int index, vtkIdList *ptIds, vtkPoints *pts);
-  void Derivatives(int subId, double pcoords[3], double *values, 
+  void Derivatives(int subId, double pcoords[3], double *values,
                    int dim, double *derivs);
 
   // Description:
-  // Voxel specific methods for interpolation and derivatives.
+  // @deprecated Replaced by vtkVoxel::InterpolateFunctions as of VTK 5.2
   static void InterpolationFunctions(double pcoords[3], double weights[8]);
+  // Description:
+  // @deprecated Replaced by vtkVoxel::InterpolateDerivs as of VTK 5.2
   static void InterpolationDerivs(double pcoords[3], double derivs[24]);
+  // Description:
+  // Compute the interpolation functions/derivatives
+  // (aka shape functions/derivatives)
+  virtual void InterpolateFunctions(double pcoords[3], double weights[8])
+    {
+    vtkVoxel::InterpolationFunctions(pcoords,weights);
+    }
+  virtual void InterpolateDerivs(double pcoords[3], double derivs[24])
+    {
+    vtkVoxel::InterpolationDerivs(pcoords,derivs);
+    }
+
+  // Description:
+  // Return the ids of the vertices defining edge/face (`edgeId`/`faceId').
+  // Ids are related to the cell, not to the dataset.
   static int *GetEdgeArray(int edgeId);
   static int *GetFaceArray(int faceId);
 
@@ -81,7 +98,7 @@ protected:
 
   vtkLine *Line;
   vtkPixel *Pixel;
-  
+
 private:
   vtkVoxel(const vtkVoxel&);  // Not implemented.
   void operator=(const vtkVoxel&);  // Not implemented.

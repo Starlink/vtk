@@ -43,7 +43,7 @@
 VTK_THREAD_RETURN_TYPE UnstructuredGridVolumeRayCastMapper_CastRays( void *arg );
 
 
-vtkCxxRevisionMacro(vtkUnstructuredGridVolumeRayCastMapper, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkUnstructuredGridVolumeRayCastMapper, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkUnstructuredGridVolumeRayCastMapper);
 
 vtkCxxSetObjectMacro(vtkUnstructuredGridVolumeRayCastMapper, RayCastFunction,
@@ -86,12 +86,6 @@ vtkUnstructuredGridVolumeRayCastMapper::vtkUnstructuredGridVolumeRayCastMapper()
   this->RayCastFunction = vtkUnstructuredGridBunykRayCastFunction::New();
   this->RayIntegrator = NULL;
   this->RealRayIntegrator = NULL;
-
-  this->ScalarMode = VTK_SCALAR_MODE_DEFAULT;
-  this->ArrayName = new char[1];
-  this->ArrayName[0] = '\0';
-  this->ArrayId = -1;
-  this->ArrayAccessMode = VTK_GET_ARRAY_BY_ID;
 }
 
 // Destruct a vtkUnstructuredGridVolumeRayCastMapper - clean up any memory used
@@ -119,8 +113,6 @@ vtkUnstructuredGridVolumeRayCastMapper::~vtkUnstructuredGridVolumeRayCastMapper(
     {
     this->RealRayIntegrator->UnRegister(this);
     }
-
-  delete[] this->ArrayName;
 }
 
 float vtkUnstructuredGridVolumeRayCastMapper::RetrieveRenderTime( vtkRenderer *ren, 
@@ -193,60 +185,6 @@ void vtkUnstructuredGridVolumeRayCastMapper::StoreRenderTime( vtkRenderer *ren,
   this->RenderRendererTable[this->RenderTableEntries] = ren;
   
   this->RenderTableEntries++;
-}
-
-void vtkUnstructuredGridVolumeRayCastMapper::SelectScalarArray(int arrayNum)
-{
-  if (   (this->ArrayId == arrayNum)
-      && (this->ArrayAccessMode == VTK_GET_ARRAY_BY_ID) )
-    {
-    return;
-    }
-  this->Modified();
-
-  this->ArrayId = arrayNum;
-  this->ArrayAccessMode = VTK_GET_ARRAY_BY_ID;
-}
-
-void vtkUnstructuredGridVolumeRayCastMapper::SelectScalarArray(const char *arrayName)
-{
-  if (   !arrayName
-      || (   (strcmp(this->ArrayName, arrayName) == 0)
-          && (this->ArrayAccessMode == VTK_GET_ARRAY_BY_ID) ) )
-    {
-    return;
-    }
-  this->Modified();
-
-  delete[] this->ArrayName;
-  this->ArrayName = new char[strlen(arrayName) + 1];
-  strcpy(this->ArrayName, arrayName);
-  this->ArrayAccessMode = VTK_GET_ARRAY_BY_NAME;
-}
-
-// Return the method for obtaining scalar data.
-const char *vtkUnstructuredGridVolumeRayCastMapper::GetScalarModeAsString(void)
-{
-  if ( this->ScalarMode == VTK_SCALAR_MODE_USE_CELL_DATA )
-    {
-    return "UseCellData";
-    }
-  else if ( this->ScalarMode == VTK_SCALAR_MODE_USE_POINT_DATA ) 
-    {
-    return "UsePointData";
-    }
-  else if ( this->ScalarMode == VTK_SCALAR_MODE_USE_POINT_FIELD_DATA )
-    {
-    return "UsePointFieldData";
-    }
-  else if ( this->ScalarMode == VTK_SCALAR_MODE_USE_CELL_FIELD_DATA )
-    {
-    return "UseCellFieldData";
-    }
-  else 
-    {
-    return "Default";
-    }
 }
 
 void vtkUnstructuredGridVolumeRayCastMapper::ReleaseGraphicsResources(vtkWindow *)
@@ -468,12 +406,38 @@ void vtkUnstructuredGridVolumeRayCastMapper::Render( vtkRenderer *ren, vtkVolume
   this->CurrentVolume   = vol;
   this->CurrentRenderer = ren;
 
-  // Create iterators here to prevent race conditions.
+  // Create iterators and buffers here to prevent race conditions.
   this->RayCastIterators
     = new vtkUnstructuredGridVolumeRayCastIterator*[this->NumberOfThreads];
+  this->IntersectedCellsBuffer    = new vtkIdList*[this->NumberOfThreads];
+  this->IntersectionLengthsBuffer = new vtkDoubleArray*[this->NumberOfThreads];
+  this->NearIntersectionsBuffer   = new vtkDataArray*[this->NumberOfThreads];
+  this->FarIntersectionsBuffer    = new vtkDataArray*[this->NumberOfThreads];
   for (i = 0; i < this->NumberOfThreads; i++)
     {
     this->RayCastIterators[i] = this->RayCastFunction->NewIterator();
+    this->IntersectionLengthsBuffer[i] = vtkDoubleArray::New();
+    this->IntersectionLengthsBuffer[i]
+      ->Allocate(this->RayCastIterators[i]->GetMaxNumberOfIntersections());
+    this->NearIntersectionsBuffer[i]
+      = vtkDataArray::CreateDataArray(this->Scalars->GetDataType());
+    this->NearIntersectionsBuffer[i]
+      ->Allocate(this->RayCastIterators[i]->GetMaxNumberOfIntersections());
+    if (this->CellScalars)
+      {
+      this->IntersectedCellsBuffer[i] = vtkIdList::New();
+      this->IntersectedCellsBuffer[i]
+        ->Allocate(this->RayCastIterators[i]->GetMaxNumberOfIntersections());
+      this->FarIntersectionsBuffer[i] = this->NearIntersectionsBuffer[i];
+      }
+    else
+      {
+      this->IntersectedCellsBuffer[i] = NULL;
+      this->FarIntersectionsBuffer[i]
+        = vtkDataArray::CreateDataArray(this->Scalars->GetDataType());
+      this->FarIntersectionsBuffer[i]
+        ->Allocate(this->RayCastIterators[i]->GetMaxNumberOfIntersections());
+      }
     }
 
   // Set the number of threads to use for ray casting,
@@ -489,8 +453,22 @@ void vtkUnstructuredGridVolumeRayCastMapper::Render( vtkRenderer *ren, vtkVolume
   for (i = 0; i < this->NumberOfThreads; i++)
     {
     this->RayCastIterators[i]->Delete();
+    this->IntersectionLengthsBuffer[i]->Delete();
+    this->NearIntersectionsBuffer[i]->Delete();
+    if (this->CellScalars)
+      {
+      this->IntersectedCellsBuffer[i]->Delete();
+      }
+    else
+      {
+      this->FarIntersectionsBuffer[i]->Delete();
+      }
     }
   delete[] this->RayCastIterators;
+  delete[] this->IntersectedCellsBuffer;
+  delete[] this->IntersectionLengthsBuffer;
+  delete[] this->NearIntersectionsBuffer;
+  delete[] this->FarIntersectionsBuffer;
   
   if ( !ren->GetRenderWindow()->GetAbortRender() )
     {
@@ -575,22 +553,10 @@ void vtkUnstructuredGridVolumeRayCastMapper::CastRays( int threadID, int threadC
   vtkUnstructuredGridVolumeRayCastIterator *iterator
     = this->RayCastIterators[threadID];
 
-  vtkDoubleArray *intersectionLengths = vtkDoubleArray::New();
-  vtkDataArray *nearIntersections
-    = vtkDataArray::CreateDataArray(this->Scalars->GetDataType());
-  vtkDataArray *farIntersections;
-  vtkIdList *intersectedCells;
-  if (this->CellScalars)
-    {
-    intersectedCells = vtkIdList::New();
-    farIntersections = nearIntersections;
-    }
-  else
-    {
-    farIntersections
-      = vtkDataArray::CreateDataArray(this->Scalars->GetDataType());
-    intersectedCells = NULL;
-    }
+  vtkIdList *intersectedCells = this->IntersectedCellsBuffer[threadID];
+  vtkDoubleArray *intersectionLengths=this->IntersectionLengthsBuffer[threadID];
+  vtkDataArray *nearIntersections = this->NearIntersectionsBuffer[threadID];
+  vtkDataArray *farIntersections = this->FarIntersectionsBuffer[threadID];
 
   for ( j = 0; j < this->ImageInUseSize[1]; j++ )
     {
@@ -670,17 +636,17 @@ void vtkUnstructuredGridVolumeRayCastMapper::CastRays( int threadID, int threadC
       if ( color[3] > 0.0 )
         {
         int val;
-        val = static_cast<int>((color[0]/color[3])*255.0);
+        val = static_cast<int>(color[0]*255.0);
         val = (val > 255)?(255):(val);
         val = (val <   0)?(  0):(val);
         ucptr[0] = static_cast<unsigned char>(val);
         
-        val = static_cast<int>((color[1]/color[3])*255.0);
+        val = static_cast<int>(color[1]*255.0);
         val = (val > 255)?(255):(val);
         val = (val <   0)?(  0):(val);
         ucptr[1] = static_cast<unsigned char>(val);
         
-        val = static_cast<int>((color[2]/color[3])*255.0);
+        val = static_cast<int>(color[2]*255.0);
         val = (val > 255)?(255):(val);
         val = (val <   0)?(  0):(val);
         ucptr[2] = static_cast<unsigned char>(val);
@@ -699,17 +665,6 @@ void vtkUnstructuredGridVolumeRayCastMapper::CastRays( int threadID, int threadC
         }
       ucptr+=4;
       }
-    }
-
-  intersectionLengths->Delete();
-  nearIntersections->Delete();
-  if (!this->CellScalars)
-    {
-    farIntersections->Delete();
-    }
-  else
-    {
-    intersectedCells->Delete();
     }
 }
 
@@ -779,17 +734,6 @@ double vtkUnstructuredGridVolumeRayCastMapper::GetZBufferValue(int x, int y)
 void vtkUnstructuredGridVolumeRayCastMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-
-
-  os << indent << "ScalarMode: " << this->GetScalarModeAsString() << endl;
-  if (this->ArrayAccessMode == VTK_GET_ARRAY_BY_ID)
-    {
-    os << indent << "ArrayId: " << this->ArrayId << endl;
-    }
-  else
-    {
-    os << indent << "ArrayName: " << this->ArrayName << endl;
-    }
 
   os << indent << "Image Sample Distance: " 
      << this->ImageSampleDistance << "\n";

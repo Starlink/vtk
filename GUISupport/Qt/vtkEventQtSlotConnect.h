@@ -33,7 +33,8 @@
 // - MySlot(vtkObject* caller)
 // - MySlot(vtkObject* caller, unsigned long vtk_event)
 // - MySlot(vtkObject* caller, unsigned long vtk_event, void* client_data)
-// - MySlot(vtkObject* caller, unsigned long vtk_event, void* client_data, vtkCommand*)
+// - MySlot(vtkObject* caller, unsigned long vtk_event, void* client_data, void* call_data)
+// - MySlot(vtkObject* caller, unsigned long vtk_event, void* client_data, void* call_data, vtkCommand*)
 
 
 #ifndef VTK_EVENT_QT_SLOT_CONNECT
@@ -41,21 +42,11 @@
 
 #include "vtkObject.h"
 #include "vtkCommand.h"  // for event defines
-#include "qobject.h"
+#include "QVTKWin32Header.h"  // for export define
+#include "qobject.h"          // for version info
 
 class QObject;
-class vtkCallbackCommand;
 class vtkQtConnections;
-
-#if defined(WIN32) && defined(VTK_BUILD_SHARED_LIBS)
-#if defined(QVTK_EXPORTS) || defined(QVTKWidgetPlugin_EXPORTS)
-#define QVTK_EXPORT __declspec( dllexport )
-#else
-#define QVTK_EXPORT __declspec( dllimport ) 
-#endif
-#else
-#define QVTK_EXPORT
-#endif
 
 // manage connections between VTK object events and Qt slots
 class QVTK_EXPORT vtkEventQtSlotConnect : public vtkObject
@@ -69,18 +60,27 @@ class QVTK_EXPORT vtkEventQtSlotConnect : public vtkObject
     void PrintSelf(ostream& os, vtkIndent indent);
     
     // Description:
-    // Connect a vtk object's event with a Qt object's slot.
-    // Multiple connections which are identical are treated as separate connections.
+    // Connect a vtk object's event with a Qt object's slot.  Multiple
+    // connections which are identical are treated as separate connections.
     virtual void Connect(vtkObject* vtk_obj, unsigned long event, 
-                 QObject* qt_obj, const char* slot, void* client_data=NULL, float priority=0.0);
+                         const QObject* qt_obj, const char* slot, 
+                         void* client_data=NULL, float priority=0.0
+#if QT_VERSION >= 0x040000
+                         ,Qt::ConnectionType type = Qt::AutoConnection);
+#else
+                         );
+#endif
     
     // Description:
     // Disconnect a vtk object from a qt object.
+    // Passing no arguments will disconnect all slots maintained by this object.
     // Passing in only a vtk object will disconnect all slots from it.
-    // Passing only a vtk object and event, will disconnect all slots matching the vtk object and event.
+    // Passing only a vtk object and event, will disconnect all slots matching 
+    // the vtk object and event.
     // Passing all information in will match all information.
-    virtual void Disconnect(vtkObject* vtk_obj, unsigned long event=vtkCommand::NoEvent, 
-                 QObject* qt_obj=NULL, const char* slot = 0);
+    virtual void Disconnect(
+      vtkObject* vtk_obj=NULL, unsigned long event=vtkCommand::NoEvent, 
+      const QObject* qt_obj=NULL, const char* slot = 0, void* client_data=NULL);
 
   protected:
     vtkQtConnections* Connections;
@@ -92,60 +92,6 @@ class QVTK_EXPORT vtkEventQtSlotConnect : public vtkObject
     // unimplemented
     vtkEventQtSlotConnect(const vtkEventQtSlotConnect&);
     void operator=(const vtkEventQtSlotConnect&);
-};
-
-
-
-// class for managing a single VTK/Qt connection
-// not to be used directly, only here in header file for 
-// moc to process
-class vtkQtConnection : public QObject
-{
-  Q_OBJECT
-  
-  public:
-
-    // constructor
-    vtkQtConnection();
-
-    // destructor, disconnect if necessary
-    ~vtkQtConnection();
-   
-    // print function
-    void PrintSelf(ostream& os, vtkIndent indent);
-    
-    // callback from VTK to emit signal
-    void Execute(vtkObject* caller, unsigned long event, void* client_data);
-    
-    // set the connection
-    void SetConnection(vtkObject* vtk_obj, unsigned long event,
-                       QObject* qt_obj, const char* slot, void* client_data, float priority=0.0);
-    
-    // check if a connection matches input parameters
-    bool IsConnection(vtkObject* vtk_obj, unsigned long event,
-                      QObject* qt_obj, const char* slot);
-
-    static void DoCallback(vtkObject* vtk_obj, unsigned long event,
-                           void* client_data, void* call_data);
-    
-  signals:
-    // the qt signal for moc to take care of
-    void EmitExecute(vtkObject*, unsigned long, void* client_data, vtkCommand*);
-
-  protected:
-    
-    // the connection information
-    vtkObject* VTKObject;
-    vtkCallbackCommand* Callback;
-    QObject* QtObject;
-    void* ClientData;
-    unsigned long VTKEvent;
-    QString QtSlot;
-
-  private:
-    vtkQtConnection(const vtkQtConnection&);
-    void operator=(const vtkQtConnection&);
-
 };
 
 #endif

@@ -12,15 +12,17 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkImageData.h"
 #include "vtkDEMReader.h"
+
+#include "vtkDataArray.h"
+#include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkDEMReader, "$Revision: 1.40 $");
+vtkCxxRevisionMacro(vtkDEMReader, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkDEMReader);
 
 #define VTK_SW  0
@@ -359,7 +361,7 @@ void vtkDEMReader::ComputeExtentOriginAndSpacing (int extent[6],
 
   spacing[0] = this->SpatialResolution[0] * planeConversion;
   spacing[1] = this->SpatialResolution[1] * planeConversion;
-  spacing[2] = 0;
+  spacing[2] = 1.0;
 }
 
 int vtkDEMReader::ReadProfiles (vtkImageData *data)

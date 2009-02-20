@@ -17,10 +17,11 @@
 #include "vtkCoordinate.h"
 #include "vtkExecutive.h"
 #include "vtkImagingFactory.h"
+#include "vtkInformation.h"
 #include "vtkLookupTable.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPolyDataMapper2D, "$Revision: 1.43 $");
+vtkCxxRevisionMacro(vtkPolyDataMapper2D, "$Revision: 1.45 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -117,7 +118,7 @@ vtkPolyDataMapper2D *vtkPolyDataMapper2D::New()
 {
   // First try to create the object from the vtkObjectFactory
   vtkObject* ret = vtkImagingFactory::CreateInstance("vtkPolyDataMapper2D");
-  return (vtkPolyDataMapper2D*)ret;
+  return static_cast<vtkPolyDataMapper2D *>(ret);
 }
 
 
@@ -338,3 +339,11 @@ void vtkPolyDataMapper2D::SetColorModeToDefault()
 
 void vtkPolyDataMapper2D::SetColorModeToMapScalars() 
 {this->SetColorMode(VTK_COLOR_MODE_MAP_SCALARS);};
+
+//----------------------------------------------------------------------------
+int vtkPolyDataMapper2D::FillInputPortInformation(
+  int vtkNotUsed( port ), vtkInformation* info)
+{
+  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
+  return 1;
+}

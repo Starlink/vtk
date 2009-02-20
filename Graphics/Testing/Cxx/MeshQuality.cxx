@@ -17,16 +17,17 @@
 
 int DumpQualityStats( vtkMeshQuality* iq, const char *arrayname )
 {
-  double avg = iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 1 );
-
-  cout << "  range: "
+  cout << "  cardinality: "
+       << iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 4 )
+       << "  , range: "
        << iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 0 )
        << "  -  "
        << iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 2 )
        << endl;
-  cout << "  average: " << avg
+
+  cout << "  average: " << iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 1 )
        << "  , standard deviation: "
-       << sqrt(fabs(iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 3 ) - avg * avg))
+       << sqrt(fabs(iq->GetOutput()->GetFieldData()->GetArray( arrayname )->GetComponent( 0, 3 )))
        << endl;
 
   return 0;
@@ -70,7 +71,7 @@ int MeshQuality( int argc, char* argv[] )
          << endl;
     DumpQualityStats( iq, "Mesh Triangle Quality" );
 
-    iq->SetTriangleQualityMeasureToFrobeniusNorm();
+    iq->SetTriangleQualityMeasureToAspectFrobenius();
     iq->Update();
     cout << " Frobenius Norm:"
          << endl;
@@ -105,13 +106,13 @@ int MeshQuality( int argc, char* argv[] )
          << endl;
     DumpQualityStats( iq, "Mesh Quadrilateral Quality" );
     
-    iq->SetQuadQualityMeasureToMedFrobeniusNorm();
+    iq->SetQuadQualityMeasureToMedAspectFrobenius();
     iq->Update();
     cout << " Average Frobenius Norm:"
          << endl;
     DumpQualityStats( iq, "Mesh Quadrilateral Quality" );
     
-    iq->SetQuadQualityMeasureToMaxFrobeniusNorm();
+    iq->SetQuadQualityMeasureToMaxAspectFrobenius();
     iq->Update();
     cout << " Maximal Frobenius Norm:"
          << endl;
@@ -146,7 +147,7 @@ int MeshQuality( int argc, char* argv[] )
          << endl;
     DumpQualityStats( iq, "Mesh Tetrahedron Quality" );
     
-    iq->SetTetQualityMeasureToFrobeniusNorm();
+    iq->SetTetQualityMeasureToAspectFrobenius();
     iq->Update();
     cout << " Frobenius Norm:"
          << endl;
@@ -155,6 +156,12 @@ int MeshQuality( int argc, char* argv[] )
     iq->SetTetQualityMeasureToMinAngle();
     iq->Update();
     cout << " Minimal Dihedral Angle:"
+         << endl;
+    DumpQualityStats( iq, "Mesh Tetrahedron Quality" );
+
+    iq->SetTetQualityMeasureToCollapseRatio();
+    iq->Update();
+    cout << " Collapse Ratio:"
          << endl;
     DumpQualityStats( iq, "Mesh Tetrahedron Quality" );
     cout << endl; 

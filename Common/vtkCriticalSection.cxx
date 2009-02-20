@@ -15,7 +15,7 @@
 #include "vtkCriticalSection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCriticalSection, "$Revision: 1.11 $");
+vtkCxxRevisionMacro(vtkCriticalSection, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkCriticalSection);
 
 // New for the SimpleCriticalSection

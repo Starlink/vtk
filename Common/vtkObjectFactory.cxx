@@ -15,16 +15,17 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkDebugLeaks.h"
-#include "vtkDirectory.h"
 #include "vtkDynamicLoader.h"
 #include "vtkObjectFactoryCollection.h"
 #include "vtkOverrideInformation.h"
 #include "vtkOverrideInformationCollection.h"
 #include "vtkVersion.h"
 
+#include "vtksys/Directory.hxx"
+
 #include <ctype.h>
 
-vtkCxxRevisionMacro(vtkObjectFactory, "$Revision: 1.43 $");
+vtkCxxRevisionMacro(vtkObjectFactory, "$Revision: 1.48 $");
 
 vtkObjectFactoryCollection* vtkObjectFactory::RegisteredFactories = 0;
 
@@ -202,17 +203,16 @@ inline int vtkNameIsSharedLibrary(const char* name)
 
 void vtkObjectFactory::LoadLibrariesInPath(const char* path)
 {
-  vtkDirectory* dir = vtkDirectory::New();
-  if(!dir->Open(path))
+  vtksys::Directory dir;
+  if(!dir.Load(path))
     {
-    dir->Delete();
     return;
     }
-  
+
   // Attempt to load each file in the directory as a shared library
-  for(int i = 0; i < dir->GetNumberOfFiles(); i++)
+  for(unsigned long i = 0; i < dir.GetNumberOfFiles(); i++)
     {
-    const char* file = dir->GetFile(i);
+    const char* file = dir.GetFile(i);
     // try to make sure the file has at least the extension
     // for a shared library in it.
     if(vtkNameIsSharedLibrary(file))
@@ -224,17 +224,17 @@ void vtkObjectFactory::LoadLibrariesInPath(const char* path)
         // Look for the symbol vtkLoad, vtkGetFactoryCompilerUsed,
         // and vtkGetFactoryVersion in the library
         VTK_LOAD_FUNCTION loadfunction
-          = (VTK_LOAD_FUNCTION)
+          = (VTK_LOAD_FUNCTION)(
           vtkDynamicLoader::GetSymbolAddress(lib,
-                                             "vtkLoad");
+                                             "vtkLoad"));
         VTK_COMPILER_FUNCTION compilerFunction
-          = (VTK_COMPILER_FUNCTION)
+          = (VTK_COMPILER_FUNCTION)(
           vtkDynamicLoader::GetSymbolAddress(lib,
-                                             "vtkGetFactoryCompilerUsed");
+                                             "vtkGetFactoryCompilerUsed"));
         VTK_VERSION_FUNCTION versionFunction
-          = (VTK_VERSION_FUNCTION)
+          = (VTK_VERSION_FUNCTION)(
           vtkDynamicLoader::GetSymbolAddress(lib,
-                                             "vtkGetFactoryVersion");
+                                             "vtkGetFactoryVersion"));
         // if the symbol is found call it to create the factory
         // from the library
         if(loadfunction && compilerFunction && versionFunction)
@@ -260,7 +260,7 @@ void vtkObjectFactory::LoadLibrariesInPath(const char* path)
             newfactory->LibraryCompilerUsed = 
               strcpy(new char[strlen(compiler)+1], compiler);
             // initialize class members if load worked
-            newfactory->LibraryHandle = (void*)lib;
+            newfactory->LibraryHandle = static_cast<void*>(lib);
             newfactory->LibraryPath = 
               strcpy(new char[strlen(fullpath)+1], fullpath);
             vtkObjectFactory::RegisterFactory(newfactory);
@@ -276,7 +276,6 @@ void vtkObjectFactory::LoadLibrariesInPath(const char* path)
       delete [] fullpath;
       }
     }
-  dir->Delete();
 }
 
 
@@ -400,7 +399,7 @@ void vtkObjectFactory::UnRegisterFactory(vtkObjectFactory* factory)
   vtkObjectFactory::RegisteredFactories->RemoveItem(factory);
   if(lib)
     {
-    vtkDynamicLoader::CloseLibrary((vtkLibHandle)lib);
+    vtkDynamicLoader::CloseLibrary(static_cast<vtkLibHandle>(lib));
     }
 }
 

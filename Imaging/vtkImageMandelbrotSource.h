@@ -98,6 +98,11 @@ public:
   // What about other parameters ???
   void CopyOriginAndSample(vtkImageMandelbrotSource *source); 
 
+  // Description:
+  // Set/Get a subsample rate.
+  vtkSetClampMacro(SubsampleRate, int, 1, VTK_LARGE_INTEGER);
+  vtkGetMacro(SubsampleRate, int);
+
 protected:
   vtkImageMandelbrotSource();
   ~vtkImageMandelbrotSource();
@@ -119,6 +124,8 @@ protected:
 
   // A flag for keeping size constant (vs. keeping the spacing).
   int ConstantSize;
+
+  int SubsampleRate;
 
   // see vtkAlgorithm for details
   virtual int RequestData(vtkInformation *request,

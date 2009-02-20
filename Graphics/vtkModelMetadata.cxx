@@ -1,3 +1,4 @@
+
 /*=========================================================================
 
   Program:   ParaView
@@ -24,13 +25,14 @@
 #include "vtkCharArray.h"
 #include "vtkFloatArray.h"
 #include "vtkDataArray.h"
+#include "vtkIdTypeArray.h"
 #include "vtkIntArray.h"
 #include "vtkIdList.h"
 #include "vtkCellData.h"
 #include "vtkPointData.h"
 #include <time.h>
 
-vtkCxxRevisionMacro(vtkModelMetadata, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkModelMetadata, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkModelMetadata);
 
 #include <vtkstd/set>
@@ -1951,7 +1953,7 @@ vtkCharArray *vtkModelMetadata::PackCharArray(int maxS, int maxL)
     {
     for (int j=0; j<4; j++)
       {
-      int l = strlen(this->QARecord[i][j]);
+      int l = static_cast<int>(strlen(this->QARecord[i][j]));
       if (l > maxS) l = maxS;
 
       memcpy(p, this->QARecord[i][j], l);
@@ -2715,7 +2717,10 @@ int vtkModelMetadata::MergeGlobalInformation(const vtkModelMetadata *em)
     typedef char *p4[4];
 
     p4 *qaRecs = new p4 [num];
-    char *name, *version, *date, *time;
+    char *name = 0;
+    char *version = 0;
+    char *date = 0;
+    char *time = 0;
 
     for (i=0; i<num; i++)
       {
@@ -3599,16 +3604,14 @@ vtkModelMetadata *vtkModelMetadata::ExtractGlobalMetadata()
 }
 
 vtkModelMetadata *vtkModelMetadata::ExtractModelMetadata(
-                                     vtkIntArray *globalCellIdList,
-                                     vtkDataSet *grid,
-                                     const char *globalCellIdArrayName,
-                                     const char *globalNodeIdArrayName)
+  vtkIdTypeArray *globalCellIdList,
+  vtkDataSet *grid)
 {
   int i;
 
   vtkModelMetadata *em = this->ExtractGlobalMetadata();
 
-  int ncells = globalCellIdList->GetNumberOfTuples();
+  vtkIdType ncells = globalCellIdList->GetNumberOfTuples();
 
   if (ncells < 1)
     {
@@ -3620,7 +3623,7 @@ vtkModelMetadata *vtkModelMetadata::ExtractModelMetadata(
   vtkModelMetadataSTLCloak *nodeIds = 
     new vtkModelMetadataSTLCloak;     // the nodes they include
 
-  int *ids = globalCellIdList->GetPointer(0);
+  vtkIdType *ids = globalCellIdList->GetPointer(0);
 
   for (i=0; i<ncells; i++)
     {
@@ -3629,8 +3632,8 @@ vtkModelMetadata *vtkModelMetadata::ExtractModelMetadata(
 
   ncells = cellIds->IntSet.size();
 
-  vtkDataArray *ca = grid->GetCellData()->GetArray(globalCellIdArrayName);
-  vtkDataArray *pa = grid->GetPointData()->GetArray(globalNodeIdArrayName);
+  vtkDataArray *ca = grid->GetCellData()->GetGlobalIds();
+  vtkDataArray *pa = grid->GetPointData()->GetGlobalIds();
 
   if (!ca || !pa)
     {
@@ -3639,18 +3642,18 @@ vtkModelMetadata *vtkModelMetadata::ExtractModelMetadata(
     return NULL;
     }
 
-  vtkIntArray *ica  = vtkIntArray::SafeDownCast(ca);
-  vtkIntArray *ipa  = vtkIntArray::SafeDownCast(pa);
+  vtkIdTypeArray *ica  = vtkIdTypeArray::SafeDownCast(ca);
+  vtkIdTypeArray *ipa  = vtkIdTypeArray::SafeDownCast(pa);
 
   if (!ica || !ipa)
     {
-    vtkErrorMacro(<< "vtkModelMetadata::ExtractModelMetadata id arrays not ints");
+    vtkErrorMacro(<< "vtkModelMetadata::ExtractModelMetadata id arrays not vtkIdType");
     em->Delete();
     return NULL;
     }
 
-  int *gcids = ica->GetPointer(0);  // global cell ids
-  int *gpids = ipa->GetPointer(0);  // global point ids
+  vtkIdType *gcids = ica->GetPointer(0);  // global cell ids
+  vtkIdType *gpids = ipa->GetPointer(0);  // global point ids
 
   int gridCells = grid->GetNumberOfCells();
   vtkIdList *ptIds = vtkIdList::New();
@@ -3706,7 +3709,7 @@ char *vtkModelMetadata::StrDupWithNew(const char *s)
 
   if (s)
     {
-    int len = strlen(s);
+    int len = static_cast<int>(strlen(s));
     if (len == 0)
       {
       newstr = new char [1];
@@ -4028,7 +4031,10 @@ void vtkModelMetadata::PrintGlobalInformation()
     {
     cout << "QA Records:" << endl;
 
-    char *name, *ver, *date, *time;
+    char *name = 0;
+    char *ver = 0;
+    char *date = 0;
+    char *time = 0;
 
     for (i=0; i<this->NumberOfQARecords; i++)
       {
@@ -4115,74 +4121,93 @@ int vtkModelMetadata::CalculateMaximumLengths(int &maxString, int &maxLine)
   // used by other dataset file formats in the future.  So we
   // need to deduce a fixed string length and line length.
 
-  int sizeLine = (this->Title ? strlen(this->Title) : 0);
+  int sizeLine = (this->Title ? static_cast<int>(strlen(this->Title)) : 0);
   maxLine = ((sizeLine > maxLine) ? sizeLine : maxLine);
 
   for (i=0; i<this->NumberOfInformationLines; i++)
     {
     sizeLine = (this->InformationLine[i] ? 
-                strlen(this->InformationLine[i]) : 0);
+                static_cast<int>(strlen(this->InformationLine[i])) : 0);
     maxLine = ((sizeLine > maxLine) ? sizeLine : maxLine);
     }
 
   for (i=0; i<this->NumberOfQARecords; i++)
     {
     sizeLine = (this->QARecord[i][0] ? 
-                strlen(this->QARecord[i][0]) : 0);
+                static_cast<int>(strlen(this->QARecord[i][0])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
 
     sizeLine = (this->QARecord[i][1] ? 
-                strlen(this->QARecord[i][1]) : 0);
+                static_cast<int>(strlen(this->QARecord[i][1])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
 
     sizeLine = (this->QARecord[i][2] ? 
-                strlen(this->QARecord[i][2]) : 0);
+                static_cast<int>(strlen(this->QARecord[i][2])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
 
     sizeLine = (this->QARecord[i][3] ? 
-                strlen(this->QARecord[i][3]) : 0);
+                static_cast<int>(strlen(this->QARecord[i][3])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->Dimension; i++)
     {
     sizeLine = (this->CoordinateNames[i] ? 
-                strlen(this->CoordinateNames[i]) : 0);
+                static_cast<int>(strlen(this->CoordinateNames[i])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->NumberOfBlocks; i++)
     {
     sizeLine = (this->BlockElementType[i] ? 
-                strlen(this->BlockElementType[i]) : 0);
+                static_cast<int>(strlen(this->BlockElementType[i])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->NumberOfBlockProperties; i++)
     {
     sizeLine = (this->BlockPropertyNames[i] ? 
-                strlen(this->BlockPropertyNames[i]) : 0);
+                static_cast<int>(strlen(this->BlockPropertyNames[i])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->NumberOfNodeSetProperties; i++)
     {
     sizeLine = (this->NodeSetPropertyNames[i] ? 
-                strlen(this->NodeSetPropertyNames[i]) : 0);
+                static_cast<int>(strlen(this->NodeSetPropertyNames[i])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->NumberOfSideSetProperties; i++)
     {
     sizeLine = (this->SideSetPropertyNames[i] ? 
-                strlen(this->SideSetPropertyNames[i]) : 0);
+                static_cast<int>(strlen(this->SideSetPropertyNames[i])) : 0);
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 
   for (i=0; i<this->NumberOfGlobalVariables; i++)
     {
     sizeLine = (this->GlobalVariableNames[i] ? 
-                strlen(this->GlobalVariableNames[i]) : 0);
+                static_cast<int>(strlen(this->GlobalVariableNames[i])) : 0);
+    maxString = (sizeLine > maxString) ? sizeLine : maxString;
+    }
+
+  // Figure the node and element variable name lengths into the calculations.
+  // Note: sizeLine++ is necessary (for the null-terminating char?)
+
+  for (i=0; i<this->NumberOfNodeVariables; i++)
+    {
+    sizeLine = (this->NodeVariableNames[i] ? 
+                static_cast<int>(strlen(this->NodeVariableNames[i])) : 0);
+    sizeLine++;
+    maxString = (sizeLine > maxString) ? sizeLine : maxString;
+    }
+
+  for (i=0; i<this->NumberOfElementVariables; i++)
+    {
+    sizeLine = (this->ElementVariableNames[i] ? 
+                static_cast<int>(strlen(this->ElementVariableNames[i])) : 0);
+    sizeLine++;
     maxString = (sizeLine > maxString) ? sizeLine : maxString;
     }
 

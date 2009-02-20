@@ -24,6 +24,7 @@
 #include "vtkCellData.h"
 #include "vtkPointData.h"
 #include "vtkFloatArray.h"
+#include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationDoubleVectorKey.h"
 #include "vtkInformationVector.h"
@@ -47,7 +48,11 @@
 #include <vtkstd/list>
 #include "vtkStdString.h"
 
+#include <math.h>
+
 #define DEBUG 0
+
+vtkStdString _blocks;
 
 // vtkExodusMetadata is an internal helper class that
 // manages the metadata associated with the point and cell
@@ -61,10 +66,12 @@ private:
   vtkstd::vector<vtkStdString> pointArrayNames;
   vtkstd::vector<int> pointArrayComponents;
   vtkstd::vector<int> pointArrayStatus;
+  vtkstd::map<vtkStdString,int> pointArrayInitStatus;
 
   vtkstd::vector<vtkStdString> cellArrayNames;
   vtkstd::vector<int> cellArrayComponents;
   vtkstd::vector<int> cellArrayStatus;
+  vtkstd::map<vtkStdString,int> cellArrayInitStatus;
 
   int originalNumberOfPointArrays;
   int originalNumberOfCellArrays;
@@ -79,6 +86,7 @@ private:
   vtkstd::vector<int> blockIds;
   vtkstd::vector<int> blockStatus;
   vtkstd::vector<int> numElementsInBlock;
+  vtkstd::map<vtkStdString,int> blockInitStatus;
 
   // Node/Side set id stuff
   //  Store *Ids* for each node/side set
@@ -92,12 +100,14 @@ private:
   vtkstd::vector<int> nodeSetDistFact;
   vtkstd::vector<int> nodeSetStatus;
   vtkstd::vector<vtkStdString> nodeSetName;
+  vtkstd::map<vtkStdString,int> nodeSetInitStatus;
 
   vtkstd::vector<int> sideSetId;
   vtkstd::vector<int> sideSetSize;
   vtkstd::vector<int> sideSetDistFact;
   vtkstd::vector<int> sideSetStatus;
   vtkstd::vector<vtkStdString> sideSetName;
+  vtkstd::map<vtkStdString,int> sideSetInitStatus;
 
   //part stuff. There is no PartStatus array
   //a part is active only if all its blocks are active
@@ -170,7 +180,7 @@ public:
     }
   inline int GetNumberOfPointArrays() 
     { 
-      return pointArrayNames.size(); 
+      return static_cast<int>( pointArrayNames.size() ); 
     }
   inline const char* GetPointArrayName(int idx) 
     { 
@@ -183,6 +193,10 @@ public:
   inline int GetPointArrayStatus(int idx) 
     { 
       return pointArrayStatus[idx]; 
+    }
+  inline void SetPointArrayInitStatus(vtkStdString name, int on) 
+    { 
+      pointArrayInitStatus[name] = on; 
     }
   inline void SetPointArrayStatus(int idx, int on) 
     { 
@@ -218,7 +232,7 @@ public:
     }
   inline int GetNumberOfCellArrays() 
     { 
-      return cellArrayNames.size(); 
+      return static_cast<int>( cellArrayNames.size() ); 
     }
   inline const char* GetCellArrayName(int idx) 
     { 
@@ -227,6 +241,10 @@ public:
   inline int GetCellArrayComponents(int idx) 
     { 
       return cellArrayComponents[idx]; 
+    }
+  inline void SetCellArrayInitStatus(vtkStdString name, int on) 
+    { 
+      cellArrayInitStatus[name] = on; 
     }
   inline void SetCellArrayStatus(int idx, int flag) 
     { 
@@ -273,27 +291,21 @@ public:
   // size - node/side set size
   // dist - number of distribution factors
   // default node/side set status to 'of' or '0'
-  inline void AddNodeSet( const int id, const int size, const int dist )
+  inline void AddNodeSet( vtkStdString name, const int id, const int size, const int dist, int status )
     {
-      char buffer[80];
-      sprintf(buffer, "NodeSet %d",id);
-    
       this->nodeSetId.push_back( id );
-      this->nodeSetName.push_back( buffer );
+      this->nodeSetName.push_back( name );
       this->nodeSetSize.push_back( size );
       this->nodeSetDistFact.push_back( dist );
-      this->nodeSetStatus.push_back( 0 );
+      this->nodeSetStatus.push_back( status );
     }
-  inline void AddSideSet( const int id, const int size, const int dist )
+  inline void AddSideSet( vtkStdString name, const int id, const int size, const int dist, int status )
     {
-      char buffer[80];
-      sprintf(buffer, "SideSet %d",id);
-      
       this->sideSetId.push_back( id );
-      this->sideSetName.push_back( buffer );
+      this->sideSetName.push_back( name );
       this->sideSetSize.push_back( size );
       this->sideSetDistFact.push_back( dist );
-      this->sideSetStatus.push_back( 0 );
+      this->sideSetStatus.push_back( status );
     }
 
   // Do a bound check and return a non-sensical -1 for a count if the user
@@ -307,8 +319,8 @@ public:
   //          metadata for all node/side sets this *should* agree with
   //          the number reported by exodus. Status flags specify which
   //          node/side sets get loaded and visualized.
-  inline int GetNumberOfNodeSets() { return this->nodeSetId.size(); }
-  inline int GetNumberOfSideSets() { return this->sideSetId.size(); }
+  inline int GetNumberOfNodeSets() { return static_cast<int>( this->nodeSetId.size() ); }
+  inline int GetNumberOfSideSets() { return static_cast<int>( this->sideSetId.size() ); }
 
   inline int GetNodeSetId( const int id )
     {
@@ -345,6 +357,22 @@ public:
       return (id>=0 && id<(int)sideSetDistFact.size()) ? sideSetDistFact[id] : -1;
     }
 
+  inline int GetNodeSetInitStatus( vtkStdString name )
+    {
+    vtkstd::map<vtkStdString,int>::iterator i = nodeSetInitStatus.find(name);
+    if( i!= nodeSetInitStatus.end() )
+      {
+      return (*i).second;
+      }
+    else
+      {
+      return 0;
+      }
+    }
+  inline void SetNodeSetInitStatus( vtkStdString name, const int status )
+    {
+      this->nodeSetInitStatus[name] = status;
+    }
   inline void SetNodeSetStatus( const int id, const int status )
     {
       if( id>=0 && id<(int)this->nodeSetStatus.size() )
@@ -359,10 +387,26 @@ public:
         {
         if ( name == this->nodeSetName[id] ) 
           {
-          this->SetNodeSetStatus(id,status);
+          this->SetNodeSetStatus(static_cast<int>(id),status);
           return;
           }
         }
+    }
+  inline int GetSideSetInitStatus( vtkStdString name )
+    {
+    vtkstd::map<vtkStdString,int>::iterator i = sideSetInitStatus.find(name);
+    if( i!= sideSetInitStatus.end() )
+      {
+      return (*i).second;
+      }
+    else
+      {
+      return 0;
+      }
+    }
+  inline void SetSideSetInitStatus( vtkStdString name, const int status )
+    {
+      this->sideSetInitStatus[name] = status;
     }
   inline void SetSideSetStatus( const int id, const int status )
     {
@@ -378,7 +422,7 @@ public:
         {
         if ( name == this->sideSetName[id] ) 
           {
-          this->SetSideSetStatus(id,status);
+          this->SetSideSetStatus(static_cast<int>(id),status);
           return;
           }
         }
@@ -398,7 +442,7 @@ public:
         {
         if ( name == this->nodeSetName[id] ) 
           {
-          return this->GetNodeSetStatus(id);
+          return this->GetNodeSetStatus(static_cast<int>(id));
           }
         }
         return 0;
@@ -414,7 +458,7 @@ public:
         {
         if ( name == this->sideSetName[id] ) 
           {
-          return this->GetSideSetStatus(id);
+          return this->GetSideSetStatus(static_cast<int>(id));
           }
         }
         return 0;
@@ -429,33 +473,32 @@ public:
                        vtkStdString materialName, 
                        vtkstd::vector<vtkStdString> localAssemblyNames,
                        int id, int num_elem, int status) 
-    {
-      blockNames.push_back(blockName);
-      //cout << "added block " << blockName << " " << blockNames.size() << endl;
-      blockIds.push_back(id);
-      blockStatus.push_back(status);
-      numElementsInBlock.push_back(num_elem);
-      unsigned int i;
-      int found=0;
-      int blockID=blockNames.size()-1;
-      sortedOrder[blockID]=blockID;
-      //set up the Part Arrays
-      for (i=0;i<partNames.size();i++){
-      if (partNames[i]==partName)
-        {
-        blockIDToPartID[blockID]=i;
-        partIDToBlockIDs[i].push_back(blockID);
-        found=1;
-        }
+  {
+    blockNames.push_back(blockName);
+    blockIds.push_back(id);
+    blockStatus.push_back(status);
+    numElementsInBlock.push_back(num_elem);
+    unsigned int i;
+    int found=0;
+    int blockID=static_cast<int>(blockNames.size())-1;
+    sortedOrder[blockID]=blockID;
+    //set up the Part Arrays
+    for (i=0;i<partNames.size();i++){
+    if (partNames[i]==partName)
+      {
+      blockIDToPartID[blockID]=i;
+      partIDToBlockIDs[i].push_back(blockID);
+      found=1;
       }
-      if (!found)
-        {
-        int partID=partNames.size();
-        partNames.push_back(partName);
-        blockIDToPartID[blockID]=partID;
-        partIDToBlockIDs[partID]=vtkstd::vector<int>();
-        partIDToBlockIDs[partID].push_back(blockID);
-        }
+    }
+    if (!found)
+      {
+      int partID=static_cast<int>(partNames.size());
+      partNames.push_back(partName);
+      blockIDToPartID[blockID]=partID;
+      partIDToBlockIDs[partID]=vtkstd::vector<int>();
+      partIDToBlockIDs[partID].push_back(blockID);
+      }
     
     //set up the material arrays
     found=0;
@@ -470,7 +513,7 @@ public:
       }
     if (!found)
       {
-      int materialID=materialNames.size();
+      int materialID=static_cast<int>(materialNames.size());
       materialNames.push_back(materialName);
       blockIDToMaterialID[blockID]=materialID;
       materialIDToBlockIDs[materialID]=vtkstd::vector<int>();
@@ -485,280 +528,293 @@ public:
       for (vtkStdString::size_type j=0;j<assemblyNames.size();j++)
         {
         if (assemblyNames[j]==assemblyName){
-        blockIDToAssemblyIDs[blockID].push_back(j);
-        assemblyIDToBlockIDs[j].push_back(blockID);
+        blockIDToAssemblyIDs[blockID].push_back(static_cast<int>(j));
+        assemblyIDToBlockIDs[static_cast<int>(j)].push_back(blockID);
         found=1;
-        //cout << "added block " << blockID << " to assembly " << assemblyName << endl;
         }
-      }
+        }
       if (!found)
         {
-        int assemblyID=assemblyNames.size();
+        int assemblyID=static_cast<int>(assemblyNames.size());
         assemblyNames.push_back(assemblyName);
         blockIDToAssemblyIDs[blockID]=vtkstd::vector<int>();
         blockIDToAssemblyIDs[blockID].push_back(assemblyID);
         assemblyIDToBlockIDs[assemblyID]=vtkstd::vector<int>();
         assemblyIDToBlockIDs[assemblyID].push_back(blockID);
-        //cout << "n added block " << blockID << " to assembly " << assemblyName << endl;
         }
       }
-
     }
-
+  
   inline void ResetBlocks() 
-    {
-      blockNames.erase(blockNames.begin(), blockNames.end());
-      blockIds.erase(blockIds.begin(), blockIds.end());
-      blockStatus.erase(blockStatus.begin(), blockStatus.end());
-      numElementsInBlock.erase(numElementsInBlock.begin(), numElementsInBlock.end());
-      partNames.erase(partNames.begin(),partNames.end());
-      materialNames.erase(materialNames.begin(),materialNames.end());
-      unsigned int i;
-      for (i=0;i<materialIDToBlockIDs.size();i++)
-        {
-        materialIDToBlockIDs[i].erase(materialIDToBlockIDs[i].begin(),
-                                      materialIDToBlockIDs[i].end());
-        }
-      materialIDToBlockIDs.erase(materialIDToBlockIDs.begin(),
-                                 materialIDToBlockIDs.end());
-      for (i=0;i<partIDToBlockIDs.size();i++)
-        {
-        partIDToBlockIDs[i].erase(partIDToBlockIDs[i].begin(),
-                                  partIDToBlockIDs[i].end());
-        }
-      for (i=0;i<assemblyIDToBlockIDs.size();i++)
-        {
-        assemblyIDToBlockIDs[i].erase(assemblyIDToBlockIDs[i].begin(),
-                                      assemblyIDToBlockIDs[i].end());
-        }
-      for (i=0;i<blockIDToAssemblyIDs.size();i++)
-        {
-        blockIDToAssemblyIDs[i].erase(blockIDToAssemblyIDs[i].begin(),
-                                      blockIDToAssemblyIDs[i].end());
-        }
-      partIDToBlockIDs.erase(partIDToBlockIDs.begin(),
-                             partIDToBlockIDs.end());
-      blockIDToPartID.erase(blockIDToPartID.begin(),blockIDToPartID.end());
-      blockIDToMaterialID.erase(blockIDToMaterialID.begin(),
-                                blockIDToMaterialID.end());
-      assemblyNames.erase(assemblyNames.begin(),assemblyNames.end());
-      blockIDToAssemblyIDs.erase(
-        blockIDToAssemblyIDs.begin(),blockIDToAssemblyIDs.end());
-      assemblyIDToBlockIDs.erase(
-        assemblyIDToBlockIDs.begin(),assemblyIDToBlockIDs.end());
-      sortedOrder.erase(sortedOrder.begin(),sortedOrder.end());
-    }
+  {
+    blockNames.erase(blockNames.begin(), blockNames.end());
+    blockIds.erase(blockIds.begin(), blockIds.end());
+    blockStatus.erase(blockStatus.begin(), blockStatus.end());
+    numElementsInBlock.erase(numElementsInBlock.begin(), numElementsInBlock.end());
+    partNames.erase(partNames.begin(),partNames.end());
+    materialNames.erase(materialNames.begin(),materialNames.end());
+    unsigned int i;
+    for (i=0;i<materialIDToBlockIDs.size();i++)
+      {
+      materialIDToBlockIDs[i].erase(materialIDToBlockIDs[i].begin(),
+                                    materialIDToBlockIDs[i].end());
+      }
+    materialIDToBlockIDs.erase(materialIDToBlockIDs.begin(),
+                               materialIDToBlockIDs.end());
+    for (i=0;i<partIDToBlockIDs.size();i++)
+      {
+      partIDToBlockIDs[i].erase(partIDToBlockIDs[i].begin(),
+                                partIDToBlockIDs[i].end());
+      }
+    for (i=0;i<assemblyIDToBlockIDs.size();i++)
+      {
+      assemblyIDToBlockIDs[i].erase(assemblyIDToBlockIDs[i].begin(),
+                                    assemblyIDToBlockIDs[i].end());
+      }
+    for (i=0;i<blockIDToAssemblyIDs.size();i++)
+      {
+      blockIDToAssemblyIDs[i].erase(blockIDToAssemblyIDs[i].begin(),
+                                    blockIDToAssemblyIDs[i].end());
+      }
+    partIDToBlockIDs.erase(partIDToBlockIDs.begin(),
+                           partIDToBlockIDs.end());
+    blockIDToPartID.erase(blockIDToPartID.begin(),blockIDToPartID.end());
+    blockIDToMaterialID.erase(blockIDToMaterialID.begin(),
+                              blockIDToMaterialID.end());
+    assemblyNames.erase(assemblyNames.begin(),assemblyNames.end());
+    blockIDToAssemblyIDs.erase(
+      blockIDToAssemblyIDs.begin(),blockIDToAssemblyIDs.end());
+    assemblyIDToBlockIDs.erase(
+      assemblyIDToBlockIDs.begin(),assemblyIDToBlockIDs.end());
+    sortedOrder.erase(sortedOrder.begin(),sortedOrder.end());
+  }
   
   inline void SetDisplayType(int type)
-    {
-      DisplayType=type;    
-    }
+  {
+    DisplayType=type;    
+  }
   
   inline int GetNumberOfBlocks() 
-    { 
-      return blockNames.size(); 
-    }
+  { 
+    return static_cast<int>(blockNames.size()); 
+  }
   inline int GetSortedOrder(int idx) 
-    { 
-      return sortedOrder[idx];
-    }
+  { 
+    return sortedOrder[idx];
+  }
   inline const char* GetBlockName(int idx) 
-    { 
-      return blockNames[sortedOrder[idx]].c_str(); 
-    }
+  { 
+    return blockNames[sortedOrder[idx]].c_str(); 
+  }
   inline int GetBlockId(int idx) 
-    { 
-      return blockIds[sortedOrder[idx]]; 
-    }
+  { 
+    return blockIds[sortedOrder[idx]]; 
+  }
   inline int GetNumElementsInBlock(int idx) 
-    { 
-      return numElementsInBlock[sortedOrder[idx]]; 
+  { 
+    return numElementsInBlock[sortedOrder[idx]]; 
+  }
+  inline void SetBlockInitStatus( vtkStdString name, const int status )
+    {
+      this->blockInitStatus[name] = status;
+    }
+  inline int GetBlockInitStatus( vtkStdString name )
+    {
+    vtkstd::map<vtkStdString,int>::iterator i = blockInitStatus.find(name);
+    if( i!= blockInitStatus.end() )
+      {
+      return (*i).second;
+      }
+    else
+      {
+      return 1;
+      }
     }
   inline void SetBlockStatus(int idx, int flag) 
-    { 
-      blockStatus[sortedOrder[idx]] = flag; 
-    }
+  { 
+    blockStatus[sortedOrder[idx]] = flag; 
+  }
   inline void SetBlockStatus(vtkStdString name, int flag) 
-    {
-      for(int idx=0; idx<this->GetNumberOfBlocks(); ++idx) 
+  {
+    for(int idx=0; idx<this->GetNumberOfBlocks(); ++idx) 
+      {
+      if ( name == this->blockNames[idx] ) 
         {
-        if ( name == this->blockNames[idx] ) 
-          {
-          this->blockStatus[idx] = flag;
-          //this->SetBlockStatus(idx,flag);
-          return;
-          }
+        this->blockStatus[idx] = flag;
+        return;
         }
-    }
+      }
+  }
   inline void SetUnsortedBlockStatus(int idx, int flag) 
-    { 
+  { 
+    if (idx >= 0 && static_cast<int>(blockStatus.size()) > idx)
+      {
       blockStatus[idx] = flag; 
-    }
-
-  inline int GetUnsortedBlockStatus(int idx) 
-    { 
-      return blockStatus[idx]; 
-    }
-  inline int GetBlockStatus(int idx) 
-    { 
-      return blockStatus[sortedOrder[idx]]; 
-    }
-  inline int GetBlockStatus(vtkStdString name) 
-    {
-      for(int idx=0; idx<this->GetNumberOfBlocks(); ++idx)
-        {
-        if ( name == this->blockNames[idx] ) 
-          return this->blockStatus[idx];
-        }
-      return -1;
-    }
-
-
+      }
+  }
   
-
+  inline int GetUnsortedBlockStatus(int idx) 
+  { 
+    if (idx >= 0 && static_cast<int>(blockStatus.size()) > idx)
+      {
+      return blockStatus[idx]; 
+      }
+    return 0;
+  }
+  inline int GetBlockStatus(int idx) 
+  { 
+    return blockStatus[sortedOrder[idx]]; 
+  }
+  inline int GetBlockStatus(vtkStdString name) 
+  {
+    for(int idx=0; idx<this->GetNumberOfBlocks(); ++idx)
+      {
+      if ( name == this->blockNames[idx] ) 
+        return this->blockStatus[idx];
+      }
+    return -1;
+  }
+  
   //Parts and Materials need to act directly on the 
   //blockStatus array. Otherwise the index is put through
   //the sortedOrder array, which gives us garbage since we have a 
   //valid index already
   inline int GetNumberOfParts()
-    {
-      return partNames.size();
-    }
+  {
+    return static_cast<int>(partNames.size());
+  }
   inline const char* GetPartName(int idx)
-    {
-      return partNames[idx].c_str();
-    }
+  {
+    return partNames[idx].c_str();
+  }
   inline const char* GetPartBlockInfo(int idx)
-    {
-      static vtkStdString blocks;
-      blocks.erase();
-      char buffer[80];
-      for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++) 
-        {
-        sprintf(buffer,"%d, ",blockIds[partIDToBlockIDs[idx][i]]);
-        blocks += buffer;
-        }
-      
-      blocks.erase(blocks.size()-2,blocks.size()-1);
-      return blocks.c_str();
-    }
+  {
+    _blocks.erase();
+    char buffer[80];
+    for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++) 
+      {
+      sprintf(buffer,"%d, ",blockIds[partIDToBlockIDs[idx][i]]);
+      _blocks += buffer;
+      }
+    
+    _blocks.erase(_blocks.size()-2,_blocks.size()-1);
+    return _blocks.c_str();
+  }
   
   inline int GetPartStatus(int idx)
-    {
-      //a part is only active if all its blocks are active
-      for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++)
+  {
+    //a part is only active if all its blocks are active
+    for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++)
+      {
+      if (!blockStatus[partIDToBlockIDs[idx][i]])
         {
-        if (!blockStatus[partIDToBlockIDs[idx][i]])
-          {
-          return 0;
-          }
+        return 0;
         }
-      return 1;
-    }  
-
+      }
+    return 1;
+  }  
+  
   inline int GetPartStatus(vtkStdString name)
-    {
-      for (unsigned int i=0;i<partNames.size();i++)
+  {
+    for (unsigned int i=0;i<partNames.size();i++)
+      {
+      if (partNames[i]==name)
         {
-        if (partNames[i]==name)
-          {
-          return GetPartStatus(i);
-          }
+        return GetPartStatus(i);
         }
-      return -1;
-    }
+      }
+    return -1;
+  }
   
   inline void SetPartStatus(int idx, int on) 
-    { 
-      //update the block status for all the blocks in this part
-      for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++)
-        {
-        //this->SetBlockStatus(partIDToBlockIDs[idx][i],on);
-        this->blockStatus[partIDToBlockIDs[idx][i]]=on;
-        }
-    }
-
+  { 
+    //update the block status for all the blocks in this part
+    for (unsigned int i=0;i<partIDToBlockIDs[idx].size();i++)
+      {
+      this->blockStatus[partIDToBlockIDs[idx][i]]=on;
+      }
+  }
+  
   inline void SetPartStatus(vtkStdString name, int flag) 
-    {
-      for(int idx=0; idx<this->GetNumberOfParts(); ++idx) 
+  {
+    for(int idx=0; idx<this->GetNumberOfParts(); ++idx) 
+      {
+      if ( name == this->partNames[idx] ) 
         {
-        if ( name == this->partNames[idx] ) 
-          {
-          this->SetPartStatus(idx,flag);
-          return;
-          }
+        this->SetPartStatus(idx,flag);
+        return;
         }
-    }
+      }
+  }
   
   inline int GetNumberOfMaterials()
-    {
-    return materialNames.size();
-    }
-
+  {
+    return static_cast<int>(materialNames.size());
+  }
+  
   inline const char* GetMaterialName(int idx)
-    {
-      return materialNames[idx].c_str();
-    }
-
+  {
+    return materialNames[idx].c_str();
+  }
+  
   inline int GetMaterialStatus(int idx)
-    {
-      for (unsigned int i=0;i<materialIDToBlockIDs[idx].size();i++)
+  {
+    for (unsigned int i=0;i<materialIDToBlockIDs[idx].size();i++)
+      {
+      if (!blockStatus[materialIDToBlockIDs[idx][i]])
         {
-        if (!blockStatus[materialIDToBlockIDs[idx][i]])
-          {
-          return 0;
-          }
+        return 0;
         }
-      return 1;
-    }  
-
+      }
+    return 1;
+  }  
+  
   inline int GetMaterialStatus(vtkStdString name)
-    {
-      for (unsigned int i=0;i<materialNames.size();i++)
+  {
+    for (unsigned int i=0;i<materialNames.size();i++)
+      {
+      if (materialNames[i]==name)
         {
-        if (materialNames[i]==name)
-          {
-          return GetMaterialStatus(i);
-          }
+        return GetMaterialStatus(i);
         }
-      return -1;
-    }
-
+      }
+    return -1;
+  }
+  
   inline void SetMaterialStatus(int idx, int on) 
-    { 
-      //update the block status for all the blocks in this material
-      for (unsigned int i=0;i<materialIDToBlockIDs[idx].size();i++)
-        {
-        //this->SetBlockStatus(materialIDToBlockIDs[idx][i],on);
-        this->blockStatus[materialIDToBlockIDs[idx][i]]=on;
-        }
-    }
-
+  { 
+    //update the block status for all the blocks in this material
+    for (unsigned int i=0;i<materialIDToBlockIDs[idx].size();i++)
+      {
+      this->blockStatus[materialIDToBlockIDs[idx][i]]=on;
+      }
+  }
+  
   inline void SetMaterialStatus(vtkStdString name, int flag) 
-    {
-      for(int idx=0; idx<this->GetNumberOfMaterials(); ++idx) 
-        {
-        if ( name == this->materialNames[idx] ) 
+  {
+    for(int idx=0; idx<this->GetNumberOfMaterials(); ++idx) 
+      {
+      if ( name == this->materialNames[idx] ) 
           {
           this->SetMaterialStatus(idx,flag);
           return;
           }
-        }
-    }
-
+      }
+  }
+  
   //Assembly stuff
   inline int GetNumberOfAssemblies()
-    {
-      return assemblyNames.size();
-    }
-
+  {
+    return static_cast<int>(assemblyNames.size());
+  }
+  
   inline const char* GetAssemblyName(int idx)
-    {
-      return assemblyNames[idx].c_str();
-    }
-
+  {
+    return assemblyNames[idx].c_str();
+  }
+  
   inline int GetAssemblyStatus(int idx)
-    {
+  {
     for (unsigned int i=0;i<assemblyIDToBlockIDs[idx].size();i++)
       {
       if (!blockStatus[assemblyIDToBlockIDs[idx][i]])
@@ -767,10 +823,10 @@ public:
         }
       }
     return 1;
-    }  
-
+  }  
+  
   inline int GetAssemblyStatus(vtkStdString name)
-    {
+  {
     for (unsigned int i=0;i<assemblyNames.size();i++)
       {
       if (assemblyNames[i]==name)
@@ -779,45 +835,44 @@ public:
         }
       }
     return -1;
-    }
-
+  }
+  
   inline void SetAssemblyStatus(int idx, int on) 
-    { 
-      //update the block status for all the blocks in this material
-      for (unsigned int i=0;i<assemblyIDToBlockIDs[idx].size();i++)
-        {
-        //this->SetBlockStatus(materialIDToBlockIDs[idx][i],on);
-        this->blockStatus[assemblyIDToBlockIDs[idx][i]]=on;
-        }
-    }
-
+  { 
+    //update the block status for all the blocks in this material
+    for (unsigned int i=0;i<assemblyIDToBlockIDs[idx].size();i++)
+      {
+      this->blockStatus[assemblyIDToBlockIDs[idx][i]]=on;
+      }
+  }
+  
   inline void SetAssemblyStatus(vtkStdString name, int flag) 
-    {
-      for(int idx=0; idx<this->GetNumberOfAssemblies(); ++idx) 
+  {
+    for(int idx=0; idx<this->GetNumberOfAssemblies(); ++idx) 
+      {
+      if ( name == this->assemblyNames[idx] ) 
         {
-        if ( name == this->assemblyNames[idx] ) 
-          {
-          this->SetAssemblyStatus(idx,flag);
-          return;
-          }
+        this->SetAssemblyStatus(idx,flag);
+        return;
         }
-    }
+      }
+  }
   
   //performs a mapping from the exodus block ID to the block ID used by 
   //Set/GetUnsortedBlockStatus
   inline int GetBlockIndex(int exodusID)
-    {
-      for (vtkstd::vector<int>::size_type i=0;i<blockIds.size();i++)
+  {
+    for (vtkstd::vector<int>::size_type i=0;i<blockIds.size();i++)
+      {
+      if (exodusID==blockIds[i])
         {
-        if (exodusID==blockIds[i])
-          {
-          return i;
-          }
+        return static_cast<int>(i);
         }
-      return -1;
-    }
-      
-
+      }
+    return -1;
+  }
+  
+  
   // This method is important to call when your done setting metadata
   void Finalize();
 
@@ -830,7 +885,7 @@ public:
   void SortBlocks()
     {
       int i;
-      for (i=blockIds.size()-1;i>=0;i--)
+      for (i=static_cast<int>(blockIds.size())-1;i>=0;i--)
         {
         for (int j=1;j<=i;j++)
           {
@@ -861,13 +916,14 @@ class vtkExodusXMLParser: public vtkXMLParser
 {
 private:
   vtkstd::map<vtkStdString,vtkStdString> MaterialSpecifications;
-  vtkstd::map<vtkStdString,vtkStdString> MaterialDescriptions;
+  vtkstd::map<vtkStdString,vtkStdString> MaterialDescriptions; 
+
   vtkstd::map<vtkStdString,vtkStdString> PartDescriptions;
   vtkstd::vector<vtkStdString> MaterialNames;
   vtkstd::vector<vtkStdString> BlockNames;
-  char* Filename;
   vtkStdString PartNumber;
   vtkStdString InstanceNumber;
+  int ParseMaterials;
   vtkstd::map<int,vtkStdString> BlockIDToPartNumber;
   vtkstd::map<vtkStdString,vtkstd::vector<vtkStdString> > PartNumberToAssemblyNumbers;
   vtkstd::map<vtkStdString,vtkstd::vector<vtkStdString> > PartNumberToAssemblyDescriptions;
@@ -875,262 +931,331 @@ private:
   vtkstd::vector<vtkStdString> CurrentAssemblyNumbers;
   vtkstd::vector<vtkStdString> CurrentAssemblyDescriptions;
 
+  //mappings for as-tested materials
+  vtkstd::map<vtkStdString,vtkStdString> MaterialSpecificationsBlocks; //maps material name to spec
+  vtkstd::map<vtkStdString,vtkStdString> MaterialDescriptionsBlocks; //maps material name to desc
+  vtkstd::map<int,vtkStdString> BlockIDToMaterial; //maps block id to material
+
   //hierarchical list mappings
   vtkstd::list<vtkStdString> apbList;
   vtkstd::map<vtkStdString,vtkstd::vector<int> > apbToBlocks;
   vtkstd::map<vtkStdString,int> apbIndents;
+
 public:
-  
-  vtkExodusXMLParser(char* filename)
+  vtkTypeRevisionMacro(vtkExodusXMLParser,vtkXMLParser);
+
+  static vtkExodusXMLParser* New();
+
+  // Description:
+  // Parse the XML input.
+  virtual int Parse(const char* inputString)
     {
-      this->SetFileName(filename);
-      this->Parse();
+      return this->Superclass::Parse(inputString);
+    }
+  virtual int Parse(const char* inputString, unsigned int length)
+    {
+      return this->Superclass::Parse(inputString, length);
+    }
+  virtual int Parse()
+    {
+      int retVal = this->Superclass::Parse();
       this->PartNumber="";
       this->InstanceNumber="";
+      this->ParseMaterials=0;
+      return retVal;
     }
-
-  virtual ~vtkExodusXMLParser() {}
-
+  
   virtual vtkStdString GetPartNumber(int block)
-    {
-      return this->BlockIDToPartNumber[block];
-    }
+  {
+    return this->BlockIDToPartNumber[block];
+  }
   virtual vtkStdString GetPartDescription(int block)
-    {
-      return this->PartDescriptions[this->BlockIDToPartNumber[block]];
-    }
+  {
+    return this->PartDescriptions[this->BlockIDToPartNumber[block]];
+  }
   virtual vtkStdString GetMaterialDescription(int block)
-    {
-      return this->MaterialDescriptions[this->BlockIDToPartNumber[block]];
-    }
+  {
+    return this->MaterialDescriptions[this->BlockIDToPartNumber[block]];
+  }
   virtual vtkStdString GetMaterialSpecification(int block)
-    {
-      return this->MaterialSpecifications[this->BlockIDToPartNumber[block]];
-    }
+  {
+    return this->MaterialSpecifications[this->BlockIDToPartNumber[block]];
+  }
   virtual vtkstd::vector<vtkStdString> GetAssemblyNumbers(int block)
-    {  
-      return this->PartNumberToAssemblyNumbers[this->BlockIDToPartNumber[block]];
-    }
+  {  
+    return this->PartNumberToAssemblyNumbers[this->BlockIDToPartNumber[block]];
+  }
   virtual vtkstd::vector<vtkStdString> GetAssemblyDescriptions(int block)
-    {
-      return this->PartNumberToAssemblyDescriptions[this->BlockIDToPartNumber[block]];
-    }
+  {
+    return this->PartNumberToAssemblyDescriptions[this->BlockIDToPartNumber[block]];
+  }
   
   virtual int GetNumberOfHierarchyEntries()
-    {
-      return this->apbList.size();
-    }
-
+  {
+    return static_cast<int>(this->apbList.size());
+  }
+  
   virtual vtkStdString GetHierarchyEntry(int num)
-    {
-      //since it's an STL list, we need to get the correct entry
-      vtkstd::list<vtkStdString>::iterator iter=this->apbList.begin();
-      for(int i=0;i<num;i++){
+  {
+    //since it's an STL list, we need to get the correct entry
+    vtkstd::list<vtkStdString>::iterator iter=this->apbList.begin();
+    for(int i=0;i<num;i++)
+      {
       iter++;
       }
-      return (*iter);
-    }
+    return (*iter);
+  }
   
   virtual vtkstd::vector<int> GetBlocksForEntry(int num)
-    {
-      return this->apbToBlocks[this->GetHierarchyEntry(num)];
-    }
+  {
+    return this->apbToBlocks[this->GetHierarchyEntry(num)];
+  }
   
   virtual vtkstd::vector<int> GetBlocksForEntry(vtkStdString entry)
-    {
-      return this->apbToBlocks[entry];
-    }
-
+  {
+    return this->apbToBlocks[entry];
+  }
+  
 protected: 
-  virtual void StartElement(const char* tname, const char** attrs)
-    { 
-      const char* name=strrchr(tname,':');
-      if (!name)
-        {
-        name=tname;
-        }
-      else
-        {
-        name++;
-        }
-
-      if (strcmp(name,"assembly")==0)
-        {
-        const char* assemblyNumber=this->GetValue("number",attrs);
-        if (assemblyNumber)
-          {
-          this->CurrentAssemblyNumbers.push_back(vtkStdString(assemblyNumber));
-          }
-        
-        const char* assemblyDescription=this->GetValue("description",attrs);
-        if (assemblyDescription)
-          {
-          this->CurrentAssemblyDescriptions.push_back(vtkStdString(assemblyDescription));
-          }
-        
-        //make the entry for the hierarchical list
-        vtkStdString result=vtkStdString("");
-        for (vtkstd::vector<int>::size_type i=0;
-             i<this->CurrentAssemblyNumbers.size()-1;
-             i++)
-          {
-          result+=vtkStdString("       ");
-          }
-
-        result+=vtkStdString("Assembly: ")+
-          assemblyDescription+vtkStdString(" (")+
-          assemblyNumber+vtkStdString(")");
-        apbList.push_back(result);
-        //record the indent level, used when we add blocks
-        apbIndents[result]=this->CurrentAssemblyNumbers.size()-1;
-        //make the blocks array
-        apbToBlocks[result]=vtkstd::vector<int>();
-        }
-      if (strcmp(name,"part")==0)
-        {
-        const char* instance=this->GetValue("instance",attrs);
-        vtkStdString instanceString=vtkStdString("");
-        if (instance)
-          {
-          instanceString=vtkStdString(instance);
-          }
-        
-        const char* partString=this->GetValue("number",attrs);
-        if (partString)
-          {
-          this->PartNumber=vtkStdString(partString)+
-            vtkStdString(" Instance: ")+
-            instanceString;
-          }
-        
-        const char* partDescString=this->GetValue("description",attrs);
-        if (partDescString && this->PartNumber!="")
-          {
-          this->PartDescriptions[this->PartNumber]=
-            partDescString;
-          }
-        
-        //copy the current assemblies to the assemblies list for this part.
-        this->PartNumberToAssemblyNumbers[this->PartNumber]=
-          vtkstd::vector<vtkStdString>(this->CurrentAssemblyNumbers);
-        this->PartNumberToAssemblyDescriptions[this->PartNumber]=
-          vtkstd::vector<vtkStdString>(this->CurrentAssemblyDescriptions);
-        
-        //make the hierarchical display entry
-        vtkStdString result=vtkStdString("");
-        for (vtkstd::vector<int>::size_type i=0;
-             i<this->CurrentAssemblyNumbers.size();
-             i++)
-          {
-          result+=vtkStdString("       ");
-          }
-        result+=vtkStdString("Part: ")+
-          partDescString+vtkStdString(" (")+
-          partString+vtkStdString(")")+vtkStdString(" Instance: ")+
-          instanceString;
-        apbList.push_back(result);
-        //record the indent level
-        apbIndents[result]=this->CurrentAssemblyNumbers.size();
-        apbToBlocks[result]=vtkstd::vector<int>();
-        }
-      else if (strcmp(name,"material-specification")==0)
-        {
-        if (this->PartNumber!="")
-          {
-          const char * materialDescriptionString=
-            GetValue("description",attrs);
-          if (materialDescriptionString)
-            {
-            this->MaterialDescriptions[this->PartNumber]=
-              vtkStdString(materialDescriptionString);
-            }
-            
-          const char * materialSpecificationString=
-            GetValue("specification",attrs);
-          if (materialSpecificationString)
-            {
-            this->MaterialSpecifications[this->PartNumber]=
-              vtkStdString(materialSpecificationString);
-            }
-          }
-        }
-      else if (strcmp(name,"blocks")==0 || strcmp(name,"dart:blocks")==0)
-        {
-        const char* instance=this->GetValue("part-instance",attrs);
-        vtkStdString instanceString=vtkStdString("");
-        if (instance)
-          {
-          this->InstanceNumber=vtkStdString(instance);
-          }
-        const char* partString=this->GetValue("part-number",attrs);
-        if (partString)
-          {
-          this->PartNumber=vtkStdString(partString);
-          } 
-        }
-      else if (strcmp(name,"block")==0 || strcmp(name,"dart:block")==0)
-        {
-        
-        if (this->PartNumber!="")
-          {
-          const char* blockString=this->GetValue("id",attrs);
-          if (blockString)
-            {
-            int id=atoi(blockString);
-            this->BlockIDToPartNumber[id]=this->PartNumber+
-              vtkStdString(" Instance: ")+this->InstanceNumber;
-            
-            //first insert block entry into apblist
-            vtkStdString apbIndexString=this->PartNumber+
-              vtkStdString(") Instance: ")+this->InstanceNumber;
-            vtkStdString partEntry=findEntry(this->apbList,apbIndexString);
-            vtkStdString blockEntry;
-            if (partEntry!=vtkStdString(""))
-              {
-              //insert into apbList
-              vtkstd::list<vtkStdString>::iterator pos=
-                vtkstd::find(this->apbList.begin(),this->apbList.end(),partEntry);
-              pos++;
-              
-              vtkStdString result=vtkStdString("");
-              for (int i=0;i<apbIndents[partEntry]+1;i++)
-                {
-                result+=vtkStdString("       ");
-                }
-              result+=vtkStdString("Block: ")+vtkStdString(blockString);
-              blockEntry=result;
-              this->apbList.insert(pos,result);
-              apbToBlocks[result]=vtkstd::vector<int>();
-              }
-            
-            //update mapping
-            //we know block number, so can get part number to update that.
-            //using part number, we can update assembly mappings
-            vtkStdString partIndexString=this->PartNumber+
-              vtkStdString(" Instance: ")+this->InstanceNumber;
-            //we know the part entry
-            //add block ID to block entry
-            apbToBlocks[blockEntry].push_back(id);
-            //add block ID to part
-            apbToBlocks[partEntry].push_back(id);
-            
-            //get the assemblies
-            vtkstd::vector<vtkStdString> assemblies=
-              this->PartNumberToAssemblyNumbers[partIndexString];
-            //add block ID to assemblies
-            for (vtkstd::vector<vtkStdString>::size_type j=0;j<assemblies.size();j++)
-              {
-              vtkStdString assemblyEntry=findEntry(this->apbList,assemblies[j]);
-              apbToBlocks[assemblyEntry].push_back(id);
-              }
-            }
-          }
-        }
+  vtkExodusXMLParser()
+  {
+    this->FileName = 0;
+    this->PartNumber="";
+    this->InstanceNumber="";
+    this->ParseMaterials=0;
+  }
+  
+  virtual ~vtkExodusXMLParser() 
+    {
+      this->SetFileName(0);
     }
+  
+  virtual void StartElement(const char* tname, const char** attrs)
+  { 
+    const char* name=strrchr(tname,':');
+    if (!name)
+      {
+      name=tname;
+      }
+    else
+      {
+      name++;
+      }
+    // ***********Assembly
+    if (strcmp(name,"assembly")==0)
+      {
+      const char* assemblyNumber=this->GetValue("number",attrs);
+      if (assemblyNumber)
+        {
+        this->CurrentAssemblyNumbers.push_back(vtkStdString(assemblyNumber));
+        }
+      
+      const char* assemblyDescription=this->GetValue("description",attrs);
+      if (assemblyDescription)
+        {
+        this->CurrentAssemblyDescriptions.push_back(vtkStdString(assemblyDescription));
+        }
+      
+      //make the entry for the hierarchical list
+      vtkStdString result=vtkStdString("");
+      for (vtkstd::vector<int>::size_type i=0;
+           i<this->CurrentAssemblyNumbers.size()-1;
+           i++)
+        {
+        result+=vtkStdString("       ");
+        }
+      
+      result+=vtkStdString("Assembly: ")+
+        assemblyDescription+vtkStdString(" (")+
+        assemblyNumber+vtkStdString(")");
+      apbList.push_back(result);
+      //record the indent level, used when we add blocks
+      apbIndents[result]=static_cast<int>(this->CurrentAssemblyNumbers.size())-1;
+      //make the blocks array
+      apbToBlocks[result]=vtkstd::vector<int>();
+      }
+    // ***********Part
+    if (strcmp(name,"part")==0)
+      {
+      const char* instance=this->GetValue("instance",attrs);
+      vtkStdString instanceString=vtkStdString("");
+      if (instance)
+        {
+        instanceString=vtkStdString(instance);
+        }
+      
+      const char* partString=this->GetValue("number",attrs);
+      if (partString)
+        {
+        this->PartNumber=vtkStdString(partString)+
+          vtkStdString(" Instance: ")+
+          instanceString;
+        }
+      
+      const char* partDescString=this->GetValue("description",attrs);
+      if (partDescString && this->PartNumber!="")
+        {
+        this->PartDescriptions[this->PartNumber]=
+          partDescString;
+        }
+      
+      //copy the current assemblies to the assemblies list for this part.
+      this->PartNumberToAssemblyNumbers[this->PartNumber]=
+        vtkstd::vector<vtkStdString>(this->CurrentAssemblyNumbers);
+      this->PartNumberToAssemblyDescriptions[this->PartNumber]=
+        vtkstd::vector<vtkStdString>(this->CurrentAssemblyDescriptions);
+      
+      //make the hierarchical display entry
+      vtkStdString result=vtkStdString("");
+      for (vtkstd::vector<int>::size_type i=0;
+           i<this->CurrentAssemblyNumbers.size();
+           i++)
+        {
+        result+=vtkStdString("       ");
+        }
+      result+=vtkStdString("Part: ")+
+        partDescString+vtkStdString(" (")+
+        partString+vtkStdString(")")+vtkStdString(" Instance: ")+
+        instanceString;
+      apbList.push_back(result);
+      //record the indent level
+      apbIndents[result]=static_cast<int>(this->CurrentAssemblyNumbers.size());
+      apbToBlocks[result]=vtkstd::vector<int>();
+      }
+    // ***********Material-specification
+    else if (strcmp(name,"material-specification")==0)
+      {
+      if (this->PartNumber!="")
+        {
+        const char * materialDescriptionString=
+          GetValue("description",attrs);
+        if (materialDescriptionString)
+          {
+          this->MaterialDescriptions[this->PartNumber]=
+            vtkStdString(materialDescriptionString);
+          }
+        
+        const char * materialSpecificationString=
+          GetValue("specification",attrs);
+        if (materialSpecificationString)
+          {
+          this->MaterialSpecifications[this->PartNumber]=
+            vtkStdString(materialSpecificationString);
+          }
+        }
+      }
+    // *********** blocks
+    else if (strcmp(name,"blocks")==0)
+      {
+      const char* instance=this->GetValue("part-instance",attrs);
+      vtkStdString instanceString=vtkStdString("");
+      if (instance)
+        {
+        this->InstanceNumber=vtkStdString(instance);
+        }
+      const char* partString=this->GetValue("part-number",attrs);
+      if (partString)
+        {
+        this->PartNumber=vtkStdString(partString);
+        } 
+      }
+    // *********** block
+    else if (strcmp(name,"block")==0)
+      {      
+      const char* blockString=this->GetValue("id",attrs);
+      int id=-1;
+      if (blockString)
+        {
+        id=atoi(blockString);
+        }
+      if (this->PartNumber!="" && id>=0)
+        {
+        this->BlockIDToPartNumber[id]=this->PartNumber+
+          vtkStdString(" Instance: ")+this->InstanceNumber;
+        
+        //first insert block entry into apblist
+        vtkStdString apbIndexString=this->PartNumber+
+          vtkStdString(") Instance: ")+this->InstanceNumber;
+        vtkStdString partEntry=findEntry(this->apbList,apbIndexString);
+        vtkStdString blockEntry=vtkStdString("");
+        if (partEntry!=vtkStdString(""))
+          {
+          //insert into apbList
+          vtkstd::list<vtkStdString>::iterator pos=
+            vtkstd::find(this->apbList.begin(),this->apbList.end(),partEntry);
+          pos++;
+          
+          vtkStdString result=vtkStdString("");
+          for (int i=0;i<apbIndents[partEntry]+1;i++)
+            {
+            result+=vtkStdString("       ");
+            }
+          result+=vtkStdString("Block: ")+vtkStdString(blockString);
+          blockEntry=result;
+          this->apbList.insert(pos,result);
+          apbToBlocks[result]=vtkstd::vector<int>();
+          }
+        if (partEntry!=vtkStdString("") && blockEntry!=vtkStdString(""))
+          {
+          //update mapping
+          //we know block number, so can get part number to update that.
+          //using part number, we can update assembly mappings
+          vtkStdString partIndexString=this->PartNumber+
+            vtkStdString(" Instance: ")+this->InstanceNumber;
+          //we know the part entry
+          //add block ID to block entry
+          apbToBlocks[blockEntry].push_back(id);
+          //add block ID to part
+          apbToBlocks[partEntry].push_back(id);
+          
+          //get the assemblies
+          vtkstd::vector<vtkStdString> assemblies=
+            this->PartNumberToAssemblyNumbers[partIndexString];
+          //add block ID to assemblies
+          for (vtkstd::vector<vtkStdString>::size_type j=0;j<assemblies.size();j++)
+            {
+            vtkStdString assemblyEntry=findEntry(this->apbList,assemblies[j]);
+            apbToBlocks[assemblyEntry].push_back(id);
+            }
+          }
+        }
+      
+      //parse material information if this block tag is part of a
+      //material-assignments tag
+      if (this->ParseMaterials==1 && id>=0)
+        {
+        const char* tmaterialName=this->GetValue("material-name",attrs);
+        if (tmaterialName)
+          {
+          this->BlockIDToMaterial[id]=vtkStdString(tmaterialName);
+          }
+        }
+      }
+    // ***********Material-assignments
+    else if  (strcmp(name,"material-assignments")==0 )
+      {
+      this->ParseMaterials=1;
+      }
+    // ***********Material
+    else if  (strcmp(name,"material")==0 )
+      {
+      const char* material=this->GetValue("name",attrs);
+      const char* spec=this->GetValue("specification",attrs);
+      const char* desc=this->GetValue("description",attrs);
+      if (material && spec)
+        {
+        this->MaterialSpecificationsBlocks[vtkStdString(material)]=vtkStdString(spec);
+        }
+      if (material && desc)
+        {
+        this->MaterialDescriptionsBlocks[vtkStdString(material)]=vtkStdString(desc);
+        }
+      }
+  }
   
   //returns the first string that contains sstring
   virtual vtkStdString findEntry(vtkstd::list<vtkStdString> slist, 
-                                   vtkStdString sstring){
+                                 vtkStdString sstring){
     for (vtkstd::list<vtkStdString>::iterator i=slist.begin();
          i!=slist.end();
          i++)
@@ -1144,90 +1269,134 @@ protected:
   }
   
   virtual void EndElement(const char* tname)
-    {
-      const char* name=strrchr(tname,':');
+  {
+    const char* name=strrchr(tname,':');
+    if (!name)
+      {
+      name=tname;
+      }
+    else
+      {
+      name++;
+      }
+    
+    if (strcmp(name,"assembly")==0)
+      {
+      this->CurrentAssemblyNumbers.pop_back();
+      this->CurrentAssemblyDescriptions.pop_back();
+      }
+    else if (strcmp(name,"blocks")==0)
+      {
+      this->PartNumber="";
+      }
+    else if (strcmp(name,"material-assignments")==0)
+      {
+      this->ParseMaterials=0;
+      }
+  }
+  
+  virtual int ParsingComplete()
+  {
+    //if we have as-tested materials, overwrite MaterialDescriptions
+    //and MaterialSpecifications
+    if (this->BlockIDToMaterial.size()>0)
+      {
+      this->MaterialSpecifications.clear();
+      this->MaterialDescriptions.clear();
+      
+      for (vtkstd::map<int,vtkStdString>::iterator i=this->BlockIDToPartNumber.begin();i!=this->BlockIDToPartNumber.end();i++)
+        {
+        int blockID=(*i).first;
+        this->MaterialSpecifications[this->BlockIDToPartNumber[blockID]]=
+          this->MaterialSpecificationsBlocks[this->BlockIDToMaterial[blockID]];
+        this->MaterialDescriptions[this->BlockIDToPartNumber[blockID]]=
+          this->MaterialDescriptionsBlocks[this->BlockIDToMaterial[blockID]];
+        }
+      }
+
+    //if we have no assembly information, we need to generate a bunch
+    //of items from the BlockIDToPartNumber array
+    if (this->apbList.size()==0)
+      {
+      for (vtkstd::map<int,vtkStdString>::iterator i=this->BlockIDToPartNumber.begin();i!=this->BlockIDToPartNumber.end();i++)
+        {
+        int id=(*i).first;
+        vtkStdString part=(*i).second;
+        vtkStdString partSpec=vtkStdString("");
+        vtkStdString instance=vtkStdString("");
+        //get part spec and instance from part
+        int pos=static_cast<int>(part.find(" Instance: "));
+        if (pos!=(int)vtkStdString::npos)
+          {
+          partSpec.assign(part,0,pos);
+          instance.assign(part,pos+11,part.size()-(pos+11));
+        }
+        
+        this->PartDescriptions[part]=vtkStdString("None");
+        
+        //convert id to a string
+        char buffer[20];
+        sprintf(buffer,"%d",id);
+
+        //find the Part entry in the apbList
+        vtkStdString apbPartEntry=vtkStdString("Part: None (")+partSpec+vtkStdString(") Instance: ")+instance;
+        vtkStdString apbBlockEntry=vtkStdString("       ")+vtkStdString("Block: ")+vtkStdString(buffer);
+        vtkStdString foundEntry=this->findEntry(this->apbList,apbPartEntry);
+        if (foundEntry==vtkStdString(""))
+          {
+          this->apbList.push_back(apbPartEntry);
+          
+          this->apbToBlocks[apbPartEntry]=vtkstd::vector<int>();
+          
+          this->apbToBlocks[apbPartEntry].push_back(id);
+
+          this->AssemblyDescriptions[apbPartEntry]=vtkStdString("None");
+          }
+        //insert into apbList
+        vtkstd::list<vtkStdString>::iterator positer=
+          vtkstd::find(this->apbList.begin(),this->apbList.end(),apbPartEntry);
+        positer++;
+        this->apbList.insert(positer,apbBlockEntry);
+        this->apbToBlocks[apbBlockEntry]=vtkstd::vector<int>();
+        this->apbToBlocks[apbBlockEntry].push_back(id);        
+        
+        
+        }
+      }
+
+    return vtkXMLParser::ParsingComplete();
+  }
+  
+  virtual const char* GetValue(const char* attr,const char** attrs)
+  {
+    int i;
+    for (i=0;attrs[i];i+=2)
+      {
+      const char* name=strrchr(attrs[i],':');
       if (!name)
         {
-        name=tname;
+        name=attrs[i];
         }
       else
         {
         name++;
         }
-
-      if (strcmp(name,"assembly")==0)
+      if (strcmp(attr,name)==0)
         {
-        this->CurrentAssemblyNumbers.pop_back();
-        this->CurrentAssemblyDescriptions.pop_back();
+        return attrs[i+1];
         }
-      if (strcmp(name,"blocks")==0 || strcmp(name,"dart:blocks")==0)
-        {
-        this->PartNumber="";
-        }
-    }
-
-  virtual int ParsingComplete()
-    {
-      //cout << "done parsing\n";
-      //vtkstd::map<int,vtkStdString>::iterator i;
-      //for (i=this->BlockIDToPartNumber.begin();
-      //   i!=this->BlockIDToPartNumber.end();i++)
-      //{
-      //cout << "Block " << (*i).first << "\n Part Number: " << (*i).second 
-      //     << "\n Part Description: " << this->PartDescriptions[(*i).second]
-      //    << "\n Material Description: " 
-      //   << this->MaterialDescriptions[(*i).second]
-      //   <<"\n Material Specifications: " 
-      //   << this->MaterialSpecifications[(*i).second] << endl;
-      //
-      //
-      //}
-      //cout << "Block " << (*i).first << "\n Part Number: " << (*i).second << " Assemblies: ";
-      //for (int j=0;j<this->PartNumberToAssemblyNumbers[(*i).second].size();j++){
-      //  cout << this->PartNumberToAssemblyNumbers[(*i).second][j] << " ";
-      //}
-      //cout << endl;
-      //}
-      //int count=0;
-      //for (vtkstd::list<vtkStdString>::iterator i=this->apbList.begin();i!=this->apbList.end();i++){
-      //cout << (*i) << " blocks:";
-      //for (int j=0;j<apbToBlocks[(*i)].size();j++){
-      //  cout << " " << apbToBlocks[(*i)][j];
-      //}
-      //cout << endl;
-      //cout << count++ << endl;
-      //}
-
-      return vtkXMLParser::ParsingComplete();
-    }
-
-  virtual const char* GetValue(const char* attr,const char** attrs)
-    {
-      int i;
-      for (i=0;attrs[i];i+=2)
-        {
-        const char* name=strrchr(attrs[i],':');
-        if (!name)
-          {
-          name=attrs[i];
-          }
-        else
-          {
-          name++;
-          }
-        if (strcmp(attr,name)==0)
-          {
-          return attrs[i+1];
-          }
-        }
-      return NULL;
-    }
+      }
+    return NULL;
+  }
   
 private:
   vtkExodusXMLParser(const vtkExodusXMLParser&); // Not implemented
   void operator=(const vtkExodusXMLParser&); // Not implemented
 };
 
+
+vtkCxxRevisionMacro(vtkExodusXMLParser, "$Revision: 1.56 $");
+vtkStandardNewMacro(vtkExodusXMLParser);
 
 // This is a cruddy hack... because we need to pass a
 // char ** pointer to the exodus function
@@ -1315,7 +1484,7 @@ int vtkExodusMetadata::VectorizeArrays(
   int idx = 0;
   while (idx < numOriginalNames)
     {
-    int len = strlen(originalNames[idx]);
+    int len = static_cast<int>(strlen(originalNames[idx]));
     char last_char = toupper(originalNames[idx][len-1]);
 
     char *newName = vtkExodusReader::StrDupWithNew(originalNames[idx]);
@@ -1348,12 +1517,13 @@ int vtkExodusMetadata::VectorizeArrays(
     idx = nextIdx;
     }
 
-  return newNames->size();
+  return static_cast<int>(newNames->size());
 }
 
 void vtkExodusMetadata::Finalize()
 {
   int i;
+  vtkstd::map<vtkStdString,int>::iterator iter;
 
   ////////////////////////////////
   // Point Arrays
@@ -1371,6 +1541,14 @@ void vtkExodusMetadata::Finalize()
       this->GetArrayStatusInitValue( vtkExodusReader::POINT ) );
     }
 
+  // Check to see if any initial values have been set for this array
+  for (iter=pointArrayInitStatus.begin();iter!=pointArrayInitStatus.end();iter++)
+    {
+    this->SetPointArrayStatus((*iter).first,(*iter).second);
+    }
+  // Delete the values when we're done
+  pointArrayInitStatus.erase(pointArrayInitStatus.begin(),pointArrayInitStatus.end());
+
   ////////////////////////////////
   // Cell Arrays
   ////////////////////////////////
@@ -1386,12 +1564,20 @@ void vtkExodusMetadata::Finalize()
     cellArrayStatus.push_back( 
       this->GetArrayStatusInitValue( vtkExodusReader::CELL ) );
     }
-    
+
+  // Check to see if any initial values have been set for this array
+  for (iter=cellArrayInitStatus.begin();iter!=cellArrayInitStatus.end();iter++)
+    {
+    this->SetCellArrayStatus((*iter).first,(*iter).second);
+    }
+  // Delete the values when we're done:
+  cellArrayInitStatus.erase(cellArrayInitStatus.begin(),cellArrayInitStatus.end());
+
   this->SortBlocks();
 }
 
 
-vtkCxxRevisionMacro(vtkExodusReader, "$Revision: 1.9 $");
+vtkCxxRevisionMacro(vtkExodusReader, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkExodusReader);
 
 #ifdef ARRAY_TYPE_NAMES_IN_CXX_FILE
@@ -1423,6 +1609,46 @@ const char *vtkExodusReader::ArrayTypeNames[NUM_ARRAY_TYPES] = {
 };
 #endif
 
+// Helper function
+int vtkExodusReaderFileExist(const char *file_name) 
+{
+  struct stat fs;
+  if (file_name)
+    {
+    return (stat(file_name, &fs) != -1);
+    }
+  else
+    {
+    return 0;
+    }
+}
+
+// Description:
+// Determine if the file can be readed with this reader.
+int vtkExodusReader::CanReadFile(const char* fname)
+{ 
+  // First see if the file exists at all
+  if (vtkExodusReaderFileExist(fname) == 0)
+    {
+    return 0;
+    }
+    
+  // Okay now see if it's really an exodus file
+  int returnVal = ex_open( fname, EX_READ, 
+                           &(this->ExodusCPUWordSize),
+                           &(this->ExodusIOWordSize), 
+                           &(this->ExodusVersion));
+  // Failure
+  if (returnVal < 0)
+    {
+    return 0;
+    }
+
+  // close the file opened for testing.
+  ex_close(returnVal);
+  // Success
+  return 1;
+}
 //----------------------------------------------------------------------------
 // Description:
 // Instantiate object with NULL filename.
@@ -1433,16 +1659,23 @@ vtkExodusReader::vtkExodusReader()
 
   this->TimeStep = 0;
   this->ActualTimeStep = 0;
+  this->TimeSteps = 0;
   this->GenerateBlockIdCellArray = 1;
-  this->GenerateGlobalElementIdArray = 0;
+  this->GenerateGlobalElementIdArray = 1;
   this->GenerateGlobalNodeIdArray = 1;
   this->ApplyDisplacements = 1;
   this->DisplacementMagnitude = 1;
   
   this->Title = new char[MAX_LINE_LENGTH+1];
+  this->Title[0] = (char)'\0';
+  this->Dimensionality = 0;
+  this->NumberOfUsedElements = 0;
+  this->NumberOfElementsInFile = 0;
   this->NumberOfBlocks = 0;
   this->NumberOfUsedNodes = 0;
   this->NumberOfNodesInFile = 0;
+  this->NumberOfNodeSets = 0;
+  this->NumberOfSideSets = 0;
   this->NumberOfTimeSteps = 0;
   this->ExodusCPUWordSize = 0;
   this->ExodusIOWordSize = 0;
@@ -1462,6 +1695,8 @@ vtkExodusReader::vtkExodusReader()
   this->PointMap = vtkIntArray::New();
   this->ReversePointMap = vtkIntArray::New();
 
+  this->HasModeShapes = 0;
+
   this->ExodusModel = NULL;
   this->ExodusModelMetadata = 0;
   this->PackExodusModelOntoOutput = 1;
@@ -1476,6 +1711,8 @@ vtkExodusReader::vtkExodusReader()
   this->AddingFilter = vtkDSPFilterDefinition::New();
   //end USE_EXO_DSP_FILTERS
 
+  this->ProgressOffset = 0.0;
+  this->ProgressScale = 1.0;
   this->SetNumberOfInputPorts(0);
 }
 
@@ -1485,6 +1722,7 @@ vtkExodusReader::~vtkExodusReader()
 {
   this->SetFileName(NULL);
   this->SetXMLFileName(NULL);
+  this->SetCurrentXMLFileName(NULL);
 
   this->SetTitle(NULL);
   this->SetCurrentFileName(NULL);
@@ -1521,10 +1759,11 @@ vtkExodusReader::~vtkExodusReader()
   //end USE_EXO_DSP_FILTERS
 
 
-  if (this->Parser){
-  this->Parser->Delete();
-  this->Parser=NULL;
-  }
+  if (this->Parser)
+    {
+    this->Parser->Delete();
+    this->Parser=NULL;
+    }
 
   delete this->MetaData;
 
@@ -1535,6 +1774,12 @@ vtkExodusReader::~vtkExodusReader()
     }
   //end USE_EXO_DSP_FILTERS
 
+  if (this->TimeSteps)
+    {
+    delete [] this->TimeSteps;
+    this->TimeSteps = 0;
+    this->NumberOfTimeSteps = 0;
+    }
 }
 
 void vtkExodusReader::NewExodusModel()
@@ -1597,6 +1842,14 @@ void vtkExodusReader::SetPointArrayStatus(int index, int flag)
 
 void vtkExodusReader::SetPointArrayStatus(const char* name, int flag)
 {
+  if(this->MetaData->GetNumberOfPointArrays()==0)
+    {
+    // The point array status is being set before the meta data has been finalized
+    // so cache this value for later and use as the initial value
+    // If the number of arrays really is zero then this doesn't do any harm.
+    this->MetaData->SetPointArrayInitStatus(name, flag);
+    }
+
   this->MetaData->SetPointArrayStatus(name, flag);
   this->Modified();
 }
@@ -1647,6 +1900,14 @@ void vtkExodusReader::SetCellArrayStatus(int index, int flag)
 
 void vtkExodusReader::SetCellArrayStatus(const char* name, int flag)
 {
+  if(this->MetaData->GetNumberOfCellArrays()==0)
+    {
+    // The cell array status is being set before the meta data has been finalized
+    // so cache this value for later and use as the initial value
+    // If the number of arrays really is zero then this doesn't do any harm.
+    this->MetaData->SetCellArrayInitStatus(name, flag);
+    }
+
   this->MetaData->SetCellArrayStatus(name, flag);
   this->Modified();
 }
@@ -1696,6 +1957,12 @@ void vtkExodusReader::SetBlockArrayStatus(int index, int flag)
 
 void vtkExodusReader::SetBlockArrayStatus(const char* name, int flag)
 {
+  if(this->MetaData->GetNumberOfBlocks()==0)
+    {
+    // The value is being set before the metadata has been finalized
+    // So store for later and use as the initial value if needed
+    this->MetaData->SetBlockInitStatus(name,flag);
+    }
   // Only modify if we are 'out of sync'
   if (this->MetaData->GetBlockStatus(name) != flag)
     {
@@ -1741,6 +2008,12 @@ void vtkExodusReader::SetNodeSetArrayStatus(int index, int flag)
 }
 void vtkExodusReader::SetNodeSetArrayStatus(const char* name, int flag)
 {
+  if(this->MetaData->GetNumberOfNodeSets()==0)
+    {
+    // The value is being set before the metadata has been finalized
+    // So store for later and use as the initial value if needed
+    this->MetaData->SetNodeSetInitStatus(name,flag);
+    }
   // Only modify if we are 'out of sync'
   if (this->MetaData->GetNodeSetStatus(name) != flag)
     {
@@ -1780,6 +2053,12 @@ void vtkExodusReader::SetSideSetArrayStatus(int index, int flag)
 }
 void vtkExodusReader::SetSideSetArrayStatus(const char* name, int flag)
 {
+  if(this->MetaData->GetNumberOfSideSets()==0)
+    {
+    // The value is being set before the metadata has been finalized
+    // So store for later and use as the initial value if needed
+    this->MetaData->SetSideSetInitStatus(name,flag);
+    }
   // Only modify if we are 'out of sync'
   if (this->MetaData->GetSideSetStatus(name) != flag)
     {
@@ -2090,20 +2369,6 @@ void vtkExodusReader::SetDisplayType(int type){
   this->DisplayType=type;
 }
 
-// Helper function
-int vtkExodusReaderFileExist(char *file_name) 
-{
-  struct stat fs;
-  if (file_name)
-    {
-    return (stat(file_name, &fs) != -1);
-    }
-  else
-    {
-    return 0;
-    }
-}
-
 //----------------------------------------------------------------------------
 int vtkExodusReader::RequestInformation(
   vtkInformation *vtkNotUsed(request),
@@ -2142,6 +2407,32 @@ int vtkExodusReader::RequestInformation(
 
   if ( !newFile && !newXMLFile && !newMetaData)
     {
+    // always set the time step values even if we short circuit
+    if (!this->HasModeShapes)
+      {
+      if (this->NumberOfTimeSteps)
+        {
+        vtkInformation* outInfo = outputVector->GetInformationObject(0);
+        outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), 
+                     this->TimeSteps, 
+                     this->NumberOfTimeSteps);
+        double timeRange[2];
+        timeRange[0] = this->TimeSteps[0];
+        timeRange[1] = this->TimeSteps[this->NumberOfTimeSteps-1];
+        outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), 
+                     timeRange, 2);
+        }
+      }
+    else
+      {
+      vtkInformation* outInfo = outputVector->GetInformationObject(0);
+      outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+      double timeRange[2];
+      timeRange[0] = 0;
+      timeRange[1] = 1;
+      outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(),
+                   timeRange, 2);
+      }
     return 1;
     }
   
@@ -2154,7 +2445,7 @@ int vtkExodusReader::RequestInformation(
       this->Parser=NULL;
       }
   
-    // If the xml file does not exist, try try again
+     // If the xml file does not exist, try try again
     if (!vtkExodusReaderFileExist(this->XMLFileName)) 
       {
       // Okay try to create an xml file using exodus file as basename
@@ -2163,11 +2454,13 @@ int vtkExodusReader::RequestInformation(
       char* fpt=strrchr(tempName,'.');
       if (fpt) strncpy(fpt,".xml\0",5);
       // Does the xml file exist?
+      int XMLfound=0;
       if (vtkExodusReaderFileExist(tempName)) 
         {
         SetXMLFileName(tempName);
+        XMLfound=1;
         } 
-      else 
+      if (!XMLfound) 
         {
         //try .dart
         fpt=strrchr(tempName,'.');
@@ -2175,11 +2468,28 @@ int vtkExodusReader::RequestInformation(
         if (vtkExodusReaderFileExist(tempName)) 
           {
           SetXMLFileName(tempName);
+          XMLfound=1;
           }
-        else
+        }
+      if (!XMLfound)
+        {
+        //try artifact.dta
+#ifdef _WIN32
+        fpt=strrchr(tempName,'\\');
+        if (fpt) strncpy(fpt,"\\artifact.dta\0",14);
+#else
+        fpt=strrchr(tempName,'/');
+        if (fpt) strncpy(fpt,"/artifact.dta\0",14);
+#endif
+        if (vtkExodusReaderFileExist(tempName)) 
           {
-          SetXMLFileName(NULL);
+          SetXMLFileName(tempName);
+          XMLfound=1;
           }
+        }
+      if (!XMLfound)
+        {
+        SetXMLFileName(NULL);
         }
       }
     
@@ -2187,7 +2497,9 @@ int vtkExodusReader::RequestInformation(
     if (this->XMLFileName)
       {
       //cout << "parsing: " << this->XMLFileName << endl;
-      this->Parser=new vtkExodusXMLParser(this->XMLFileName);
+      this->Parser = vtkExodusXMLParser::New();
+      this->Parser->SetFileName(this->XMLFileName);
+      this->Parser->Parse();
       }
   
     // The filename is different so we need to open the file
@@ -2263,6 +2575,7 @@ int vtkExodusReader::RequestInformation(
     this->MetaData->ResetBlocks();
     int *ids = new int[this->NumberOfBlocks];
     char block_name_buffer[80];
+    int status = 1;
     ex_get_elem_blk_ids (this->CurrentHandle, ids);
   
     for (i = 0; i < this->NumberOfBlocks; ++i)
@@ -2286,6 +2599,11 @@ int vtkExodusReader::RequestInformation(
         }
   
       sprintf(block_name_buffer,"Block: %d (%s)",ids[i],elem_type);
+  
+      // Get whether an initial state for this block has been specified
+      // If none is found, the default value is 'on'
+      status = this->MetaData->GetBlockInitStatus(block_name_buffer);
+
       if (this->Parser && this->Parser->GetPartDescription(ids[i])!="")
         {
         //construct assembly names from number and description arrays
@@ -2310,7 +2628,7 @@ int vtkExodusReader::RequestInformation(
                                  this->Parser->GetMaterialDescription(ids[i])+" : "+
                                  this->Parser->GetMaterialSpecification(ids[i]), 
                                  assemblyNames,
-                                 ids[i], num_elem_in_block, 1);
+                                 ids[i], num_elem_in_block, status);
         }
       else
         {
@@ -2318,7 +2636,7 @@ int vtkExodusReader::RequestInformation(
         assemblyNames.push_back(vtkStdString("Default Assembly"));
         this->MetaData->AddBlock(block_name_buffer,"Default Part", 
                                  "Default Material", assemblyNames,ids[i], 
-                                 num_elem_in_block, 1); 
+                                 num_elem_in_block, status); 
         }
   
       }
@@ -2429,6 +2747,8 @@ void vtkExodusReader::ReadNodeSetMetadata()
     }
   // read meta data for each node set
   int i = 0;
+  char bufferName[80];
+  int status = 0;
   for( i = 0; i < this->NumberOfNodeSets; i++ )
     {
     error = ex_get_node_set_param( this->CurrentHandle, nodeSetId[i], &size, &dist );
@@ -2438,7 +2758,11 @@ void vtkExodusReader::ReadNodeSetMetadata()
       }
     // Add a node set's metadata to vtkExodusMetaData
     // Store it's Exodus Id, size, and number of distribution factors
-    this->MetaData->AddNodeSet( nodeSetId[i], size, dist );
+    sprintf(bufferName, "NodeSet %d",nodeSetId[i]);
+    // Get whether an initial state has been given for this node set
+    // If none is found, the default is "off"
+    status = this->MetaData->GetNodeSetInitStatus(bufferName);
+    this->MetaData->AddNodeSet( bufferName, nodeSetId[i], size, dist, status );
     }
 }
 void vtkExodusReader::ReadSideSetMetadata()
@@ -2461,6 +2785,8 @@ void vtkExodusReader::ReadSideSetMetadata()
     }
   // read meta data for each side set
   int i = 0;
+  char bufferName[80];
+  int status = 0;
   for( i = 0; i < this->NumberOfSideSets; i++ )
     {
     error = ex_get_side_set_param( this->CurrentHandle, sideSetId[i], &size, &dist );
@@ -2471,7 +2797,11 @@ void vtkExodusReader::ReadSideSetMetadata()
       }
     // Add a side set's metadate to vtkExodusMetaData
     // Store it's Exodus Id, size, and number of distribution factors
-    this->MetaData->AddSideSet( sideSetId[i], size, dist );
+    sprintf(bufferName, "SideSet %d",sideSetId[i]);
+    status = this->MetaData->GetSideSetInitStatus(bufferName);
+    // Get whether an initial state has been given for this side set
+    // If none is found, the default is "off"
+    this->MetaData->AddSideSet( bufferName, sideSetId[i], size, dist, status );
     }
 }
 
@@ -2486,7 +2816,6 @@ int vtkExodusReader::RequestData(
     vtkWarningMacro(<< "Can't open file");
     return 0;
     }
-
   this->ActualTimeStep = this->TimeStep;
 
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
@@ -2494,43 +2823,54 @@ int vtkExodusReader::RequestData(
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
+  int tsLength =
+    outInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+  double* steps =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    
   // Check if a particular time was requested.
-  if(outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_INDEX()))
+  if(outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
     {
-    // Get the requested time step.
-    this->ActualTimeStep =
-      outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_INDEX());
+    // Get the requested time step. We only supprt requests of a single time
+    // step in this reader right now
+    double *requestedTimeSteps = 
+      outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+    this->TimeValue = requestedTimeSteps[0];
 
-    // Save the time value in the output data information.
-    int length =
-      outInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
-    if(this->ActualTimeStep >= 0 && this->ActualTimeStep < length)
+    if (!this->HasModeShapes)
       {
-      double* steps =
-        outInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
-      output->GetInformation()->Set(vtkDataObject::DATA_TIME(),
-                                    steps[this->ActualTimeStep]);
+      //find the timestep with the closest value to the requested time
+      //value
+      int cnt = 0;
+      int closestStep=0;
+      double minDist=-1;
+      for (cnt=0;cnt<tsLength-1;cnt++)
+        {
+        double tdist=(steps[cnt]-this->TimeValue>this->TimeValue-steps[cnt])?steps[cnt]-this->TimeValue:this->TimeValue-steps[cnt];
+        if (minDist<0 || tdist<minDist)
+          {
+          minDist=tdist;
+          closestStep=cnt;
+          }
+        }
+      this->ActualTimeStep=closestStep;
+       // find the first time value larger than requested time value
+      // this logic could be improved
+      //while (cnt < tsLength-1 && steps[cnt] < this->TimeValue)
+      //  {
+      //  
+      //  cnt++;
+      //  }
+      //this->ActualTimeStep = cnt;
       }
-    else
-      {
-      vtkErrorMacro("Time index " << this->ActualTimeStep
-                    << " requested but there are "
-                    << length << " time steps.");
-      }
-    output->GetInformation()->Set(vtkDataObject::DATA_TIME_INDEX(),
-                                  this->ActualTimeStep);
     }
+
   // Force TimeStep into the "known good" range. Although this
   // could be accomplished inside SetTimeStep(),
   // - we'd rather not override a VTK macro-defined method
   //   because the macro might change
   // - it might be good to allow out-of-range values in
   //   places
-  // CHANGE: It is generally not good practice to change ivar
-  // publicly accessible (through Set) in Execute(). This can 
-  // easily make the user interface (for example server manager) 
-  // in a state inconsistent with the reader. Therefore, clamp a 
-  // protected variable and use that instead.
   if ( this->ActualTimeStep < this->TimeStepRange[0] )
     {
     this->ActualTimeStep = this->TimeStepRange[0];
@@ -2589,6 +2929,20 @@ int vtkExodusReader::RequestData(
     // The points and cell information is always the same for exodus
     // Also copy the generated arrays which also stay the same
     output->ShallowCopy(this->DataCache);
+    }
+
+  // Save the time value in the output data information.
+  if (steps)
+    {
+    if (!this->HasModeShapes)
+      {
+      output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(),
+                                    steps+this->ActualTimeStep, 1);
+      }
+    else
+      {
+      output->GetInformation()->Remove(vtkDataObject::DATA_TIME_STEPS());
+      }
     }
   
   // Read in the arrays.
@@ -2651,12 +3005,24 @@ void vtkExodusReader::ReadGeometry(int handle, vtkUnstructuredGrid* output)
 {
   // Reset the entire unstructured grid
   output->Reset();
- 
+
+  this->ProgressOffset = 0;
+  this->ProgressScale = 0.4;
+
   // Read in cell topology
   this->ReadCells(handle, output);
-  
+
+  this->UpdateProgress(0.4);
+  this->ProgressOffset = 0.4;
+  this->ProgressScale = 0.2;
+
   // Read in node and side sets
   this->ReadNodeAndSideSets(handle, output);
+
+  this->UpdateProgress(0.6);
+
+  this->ProgressOffset = 0.6;
+  this->ProgressScale = 0.4;
   
   // Now read in the points
   // Note: This should come after reading in
@@ -2691,8 +3057,8 @@ void vtkExodusReader::ReadNodeAndSideSets(int handle, vtkUnstructuredGrid* outpu
       nodeIndexes->SetNumberOfValues(this->MetaData->GetNodeSetSize(i)); 
       
       // Get the node indexes
-      ex_get_node_set(handle, this->MetaData->GetNodeSetId(i), nodeIndexes->GetPointer(0));
-      
+      ex_get_node_set(handle, this->MetaData->GetNodeSetId(i), 
+          nodeIndexes->GetPointer(0));
       
       // Okay now loop though the nodes indexes and insert into the output
       for(j=0; j < this->MetaData->GetNodeSetSize(i); ++j) 
@@ -2703,7 +3069,8 @@ void vtkExodusReader::ReadNodeAndSideSets(int handle, vtkUnstructuredGrid* outpu
         }
       }
     }
-    
+
+  this->UpdateProgress(this->ProgressOffset + this->ProgressScale*0.5);
     
   // Read in all the side sets that are 'on'
   for (i=0; i < this->GetNumberOfSideSets(); ++i)
@@ -2712,7 +3079,8 @@ void vtkExodusReader::ReadNodeAndSideSets(int handle, vtkUnstructuredGrid* outpu
     if (this->MetaData->GetSideSetStatus(i)) 
       {
    
-      // Allocate storage for 'counts' (element size) array and node indexes (connectivity) 
+      // Allocate storage for 'counts' (element size) array and 
+      // node indexes (connectivity) 
       // Assumption: Side set elements will not be more than 4 nodes :)
       counts->Reset();
       counts->SetNumberOfValues(this->MetaData->GetSideSetSize(i));
@@ -2720,7 +3088,8 @@ void vtkExodusReader::ReadNodeAndSideSets(int handle, vtkUnstructuredGrid* outpu
       nodeIndexes->SetNumberOfValues(this->MetaData->GetSideSetSize(i)*4); 
         
       // Get the counts (element size) array and the node indexes
-      ex_get_side_set_node_list(handle, this->MetaData->GetSideSetId(i), counts->GetPointer(0), nodeIndexes->GetPointer(0));
+      ex_get_side_set_node_list(handle, this->MetaData->GetSideSetId(i), 
+          counts->GetPointer(0), nodeIndexes->GetPointer(0));
       
       indexPtr = nodeIndexes->GetPointer(0);
       
@@ -2745,31 +3114,29 @@ void vtkExodusReader::ReadNodeAndSideSets(int handle, vtkUnstructuredGrid* outpu
             cellType=VTK_QUAD;
             break;
           default:
-            vtkErrorMacro("Unknown side side element with: " << counts->GetValue(j) << " nodes");
+            vtkErrorMacro("Unknown side side element with: " << 
+                counts->GetValue(j) << " nodes");
             return;
           }
           
-          // Now set up connectivity for cell
-          cellIds->Reset();
-          for (k=0; k<cellNumPoints; ++k)
-            {
-            cellIds->InsertNextId(GetPointMapIndex(indexPtr[k]-1));
-            }
-          indexPtr+=cellNumPoints;
-          
-          // Now insert the cell
-          output->InsertNextCell(cellType, cellIds);
+        // Now set up connectivity for cell
+        cellIds->Reset();
+        for (k=0; k<cellNumPoints; ++k)
+          {
+          cellIds->InsertNextId(GetPointMapIndex(indexPtr[k]-1));
+          }
+        indexPtr+=cellNumPoints;
+        
+        // Now insert the cell
+        output->InsertNextCell(cellType, cellIds);
         } 
       }
     }  
-       
        
   // Delete any allocated stuff   
   cellIds->Delete();
   counts->Delete();
   nodeIndexes->Delete();   
-    
-
 }
 
 // Read in connectivity information
@@ -2796,7 +3163,8 @@ void vtkExodusReader::ReadCells(int handle, vtkUnstructuredGrid* output)
    
   // Initialize using the type of cells.  
   // A block contains only one type of cell.
-  for (i=0; i < this->MetaData->GetNumberOfBlocks(); ++i)
+  int num_of_blocks = this->MetaData->GetNumberOfBlocks();
+  for (i=0; i < num_of_blocks; ++i)
     {
     // Do we read this block?
     if (this->MetaData->GetBlockStatus(i)==0) 
@@ -2838,7 +3206,7 @@ void vtkExodusReader::ReadCells(int handle, vtkUnstructuredGrid* output)
     else if (!strncmp(elem_type,"HEX",3) && (num_nodes_per_elem==21)) 
       {cellType=VTK_QUADRATIC_HEXAHEDRON; cellNumPoints=20;} 
     else if (!strncmp(elem_type,"HEX",3) && (num_nodes_per_elem==27)) 
-      {cellType=VTK_QUADRATIC_HEXAHEDRON; cellNumPoints=20;} 
+      {cellType=VTK_TRIQUADRATIC_HEXAHEDRON; cellNumPoints=27;} 
     else if (!strncmp(elem_type,"QUA",3) && (num_nodes_per_elem==8)) 
       {cellType=VTK_QUADRATIC_QUAD; cellNumPoints=8;}   
     else if (!strncmp(elem_type,"QUA",3) && (num_nodes_per_elem==9)) 
@@ -2867,6 +3235,7 @@ void vtkExodusReader::ReadCells(int handle, vtkUnstructuredGrid* output)
     else if (!strncmp(elem_type,"HEX",3)) {cellType=VTK_HEXAHEDRON; cellNumPoints=8;}
     else if (!strncmp(elem_type,"SHE",3) && (num_nodes_per_elem==3)) {cellType=VTK_TRIANGLE;    cellNumPoints=3;}
     else if (!strncmp(elem_type,"SHE",3) && (num_nodes_per_elem==4)) {cellType=VTK_QUAD;        cellNumPoints=4;}
+    else if (!strncmp(elem_type,"SUPER",5)) {cellType=VTK_POLY_VERTEX; cellNumPoints=num_nodes_per_elem;}
     else 
       {
       vtkErrorMacro("Unsupported element type: " << elem_type);
@@ -2899,6 +3268,22 @@ void vtkExodusReader::ReadCells(int handle, vtkUnstructuredGrid* output)
         for (k=16; k<20; ++k)
           cellIds->InsertNextId(GetPointMapIndex(pConnect[k-4]-1));
         }
+      else if (cellType==VTK_TRIQUADRATIC_HEXAHEDRON)
+        {
+        for (k=0; k<12; ++k)
+          cellIds->InsertNextId(GetPointMapIndex(pConnect[k]-1));  
+        for (k=12; k<16; ++k)
+          cellIds->InsertNextId(GetPointMapIndex(pConnect[k+4]-1));
+        for (k=16; k<20; ++k)
+          cellIds->InsertNextId(GetPointMapIndex(pConnect[k-4]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[23]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[24]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[25]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[26]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[21]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[22]-1));
+        cellIds->InsertNextId(GetPointMapIndex(pConnect[20]-1));
+        }
 
       // All the rest of the cells have the same node numbering 
       else
@@ -2912,6 +3297,12 @@ void vtkExodusReader::ReadCells(int handle, vtkUnstructuredGrid* output)
 
       // Insert cell into output.
       output->InsertNextCell(cellType, cellIds);
+      if (j%1000==0)
+        {
+        double prog = 
+          static_cast<double>(i*j)/(num_elem_in_block * num_of_blocks);
+        this->UpdateProgress(this->ProgressOffset + this->ProgressScale*prog);
+        }
       }
     
     delete [] connect;
@@ -2959,6 +3350,11 @@ void vtkExodusReader::ReadPoints(int handle, vtkUnstructuredGrid* output)
     {
     point_index = this->ReversePointMap->GetValue(pointId);
     newPoints->InsertPoint(pointId, x[point_index], y[point_index], z[point_index]);
+    if (pointId%1000 == 0)
+      {
+      this->UpdateProgress(this->ProgressOffset + 
+        static_cast<double>(pointId)/this->NumberOfUsedNodes * this->ProgressScale);
+      }
     }
   output->SetPoints(newPoints);
   delete [] x;
@@ -3005,10 +3401,10 @@ void vtkExodusReader::ReadArrays(int handle, vtkUnstructuredGrid* output)
     if ((this->ApplyDisplacements ||  /* user wants displacement field */
          this->ExodusModelMetadata)   /* user may plan to write out file */
          &&
-         !strncmp(arrayNameUpper,"DISP",4)) 
+         !strncmp(arrayNameUpper,"DIS",3)) 
       {
       // Add it to the arrays I want
-      SetPointArrayStatus(idx, 1);
+      this->MetaData->SetPointArrayStatus(idx, 1);
       }
 
     // Does the user want this array?
@@ -3030,14 +3426,17 @@ void vtkExodusReader::ReadArrays(int handle, vtkUnstructuredGrid* output)
     // then read in the data
     else if (getArray && !haveArray)
       { 
-
       // How many dimensions is this array
       dim = this->GetPointArrayNumberOfComponents(idx);
 
       if (dim == 1)
+        {
         array = this->ReadPointArray(handle, arrayIdx);
+        }
       else
+        {
         array = this->ReadPointVector(handle, arrayIdx, dim);
+        }
 
       // Opps some sort of problem
       if (array == NULL) 
@@ -3111,9 +3510,13 @@ void vtkExodusReader::ReadArrays(int handle, vtkUnstructuredGrid* output)
       // How many dimensions is this array
       dim = this->GetCellArrayNumberOfComponents(idx);
       if (dim == 1)
+        {
         array = this->ReadCellArray(handle, arrayIdx);
+        }
       else
+        {
         array = this->ReadCellVector(handle, arrayIdx, dim);
+        }
 
       // Opps some sort of problem
       if (array == NULL)
@@ -3166,7 +3569,7 @@ void vtkExodusReader::AddDisplacements(vtkUnstructuredGrid* output)
     // Is this array displacement?
     strcpy(arrayName, this->GetPointArrayName(idx));
     this->StringUppercase(arrayName,arrayNameUpper);
-    if (!strncmp(arrayNameUpper,"DISP",4)) 
+    if (!strncmp(arrayNameUpper,"DIS",3)) 
       {
       FOUND = 1;
       break;
@@ -3185,7 +3588,15 @@ void vtkExodusReader::AddDisplacements(vtkUnstructuredGrid* output)
   warp->SetInput(geom);
   warp->SetInputArrayToProcess(
     0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, arrayName);
-  warp->SetScaleFactor(DisplacementMagnitude);
+  if (this->HasModeShapes)
+    {
+    warp->SetScaleFactor(
+              this->DisplacementMagnitude*cos(2*vtkMath::Pi()*this->TimeValue));
+    }
+  else
+    {
+    warp->SetScaleFactor(this->DisplacementMagnitude);
+    }
   warp->Update();
 
   geom->Delete();
@@ -3199,14 +3610,6 @@ void vtkExodusReader::AddDisplacements(vtkUnstructuredGrid* output)
   // Delete warp filter
   warp->Delete();
 
-  // Remove displacement field if it's possible the dataset will be
-  // written out to a new Exodus file later on.  Since we've just
-  // applied displacements to the points, maintaining the displacement array
-  // will yield incorrect geometry when the output file is read in.
-
-  if (this->ExodusModelMetadata){
-    output->GetPointData()->RemoveArray(arrayName);
-  }
 }
 
 
@@ -3334,7 +3737,9 @@ vtkDataArray *vtkExodusReader::ReadCellVector(int handle, int varIndex, int dim)
   // Do they need a third
   vtkFloatArray *dim3 = NULL;
   if (dim == 3)
+    {
     dim3 = (vtkFloatArray*)ReadCellArray(handle,varIndex+2);
+    }
 
   // Okay now set up memory pointers
   float *vector_ptr = vectors->GetPointer(0);
@@ -3590,8 +3995,8 @@ void vtkExodusReader::GenerateExtraArrays(vtkUnstructuredGrid* output)
     exo_array_data = new int[this->NumberOfNodesInFile];
   
     // Temp vtk array
-    array = vtkIntArray::New();
-    array->SetNumberOfValues(this->NumberOfUsedNodes);
+    vtkIdTypeArray* idarray = vtkIdTypeArray::New();
+    idarray->SetNumberOfValues(this->NumberOfUsedNodes);
 
     // Get the data into the temp int array
     ex_get_node_num_map(this->CurrentHandle, exo_array_data);
@@ -3601,19 +4006,27 @@ void vtkExodusReader::GenerateExtraArrays(vtkUnstructuredGrid* output)
     for (i=0; i<this->NumberOfUsedNodes; i++)
       {
       point_index = this->ReversePointMap->GetValue(i);
-      array->SetValue(i, exo_array_data[point_index]);
+      idarray->SetValue(i, exo_array_data[point_index]);
       }
 
     // Clean up temp int array
     delete [] exo_array_data;
 
     // Set up array and 'give' to output
-    array->SetName( this->GetGlobalNodeIdArrayName() );
-    output->GetPointData()->AddArray(array);
+    idarray->SetName( this->GetGlobalNodeIdArrayName() );
+
+    vtkIdTypeArray* pedigree = vtkIdTypeArray::New();
+    pedigree->DeepCopy(idarray);
+    pedigree->SetName(this->GetPedigreeNodeIdArrayName());
+    
+    output->GetPointData()->AddArray(pedigree);
+    output->GetPointData()->SetGlobalIds(idarray);
 
     // Delete my copy of the array
-    array->Delete();
-    array = NULL;
+    pedigree->Delete();
+    pedigree = NULL;
+    idarray->Delete();
+    idarray = NULL;
     }
 
   ///////////////////////////////////////
@@ -3661,7 +4074,7 @@ void vtkExodusReader::GenerateExtraArrays(vtkUnstructuredGrid* output)
       this->GlobalElementIdCache = tmp;
       }
 
-    int *idList = new int [this->NumberOfUsedElements];
+    int *idList = (int*)malloc(this->NumberOfUsedElements*sizeof(int));
 
     if (nblocksUsed < nblocks)
       {
@@ -3687,23 +4100,46 @@ void vtkExodusReader::GenerateExtraArrays(vtkUnstructuredGrid* output)
              this->NumberOfUsedElements * sizeof(int));
       }
 
-    array = vtkIntArray::New();
-    array->SetArray(idList, this->NumberOfUsedElements, 0);
-    array->SetName( this->GetGlobalElementIdArrayName() );
+    vtkIdTypeArray* idarray = vtkIdTypeArray::New();
+#ifdef VTK_USE_64BIT_IDS
+    idarray->SetNumberOfValues(this->NumberOfUsedElements);
+    for (int idIdx=0; idIdx < this->NumberOfUsedElements; idIdx++)
+      {
+      idarray->SetValue(idIdx, idList[idIdx]);
+      }
+#else
+    idarray->SetArray(idList, this->NumberOfUsedElements, 0);
+#endif
+    idarray->SetName( this->GetGlobalElementIdArrayName() );
     
     // Padding cell arrays to have 'some' value for the addition 
     // of nodesets and sidesets
     for(i=0;i<GetExtraCellCountForNodeSideSets();++i)
       {
-      array->InsertNextValue(0);
+      idarray->InsertNextValue(0);
       }
 
-    output->GetCellData()->AddArray(array);
-    array->Delete();
-    array = NULL;
+    vtkIdTypeArray* pedigree = vtkIdTypeArray::New();
+    pedigree->DeepCopy(idarray);
+    pedigree->SetName(this->GetPedigreeElementIdArrayName());
+
+    output->GetCellData()->AddArray(pedigree);
+    output->GetCellData()->SetGlobalIds(idarray);
+    pedigree->Delete();
+    pedigree = NULL;
+    idarray->Delete();
+    idarray = NULL;
     }
   // **KEN** I think we should be done with the ReversePointMap.  Should we
   // delete it here?
+
+  // Used by the ExodusIIWriter when writing back to the original file 
+  // as a map between the used node ids and the actual ids in the file
+  
+  //this->ReversePointMap->SetNumberOfValues(this->NumberOfUsedNodes);
+  //this->ReversePointMap->SetName( "InternalNodeId" );
+  //output->GetPointData()->AddArray(this->ReversePointMap);
+
 }
 
 
@@ -3821,6 +4257,7 @@ void vtkExodusReader::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "TimeStepRange: " << this->TimeStepRange[0] << " " << this->TimeStepRange[1] << endl;
   os << indent << "DisplacementMagnitude: " << this->DisplacementMagnitude << "\n";
   os << indent << "DisplayType: " << this->DisplayType << "\n";
+  os << indent << "HasModeShapes: " << this->HasModeShapes << endl;
 }
 
 
@@ -3856,7 +4293,7 @@ void vtkExodusReader::StringUppercase(const char* str, char* upperstr)
   int len = 0;
   if ( str )
     {
-    len = strlen(str);
+    len = static_cast<int>( strlen(str) );
     for (int i=0; i<len; i++)
       upperstr[i] = toupper(str[i]);
     }
@@ -3982,7 +4419,7 @@ char *vtkExodusReader::StrDupWithNew(const char *s)
 
   if (s)
     {
-    int len = strlen(s);
+    int len = static_cast<int>( strlen(s) );
     if (len == 0)
       {
       newstr = new char [1];
@@ -4094,9 +4531,10 @@ int vtkExodusReader::GetArrayStatus ( vtkExodusReader::ArrayType type,
     case vtkExodusReader::NUM_ARRAY_TYPES:
     case vtkExodusReader::UNKNOWN_TYPE:
     default:
-      return 0;
       break;
     }
+
+  return 0;
 }
 
 int vtkExodusReader::GetNumberOfArrays ( vtkExodusReader::ArrayType type )
@@ -4127,9 +4565,10 @@ int vtkExodusReader::GetNumberOfArrays ( vtkExodusReader::ArrayType type )
     case vtkExodusReader::NUM_ARRAY_TYPES:
     case vtkExodusReader::UNKNOWN_TYPE:
     default:
-      return 0;
       break;
     }
+
+  return 0;
 }
 
 const char*vtkExodusReader::GetArrayName ( vtkExodusReader::ArrayType type, 
@@ -4161,25 +4600,10 @@ const char*vtkExodusReader::GetArrayName ( vtkExodusReader::ArrayType type,
     case vtkExodusReader::NUM_ARRAY_TYPES:
     case vtkExodusReader::UNKNOWN_TYPE:
     default:
-      return NULL;
       break;
     }
-}
 
-void vtkExodusReader::SetXMLFileName(const char *filename) 
-{
-  // NULL or "" then just return
-  if (!filename || !strcmp(filename,"")) 
-    {
-    return;
-    }
-  else 
-    {
-    XMLFileName = StrDupWithNew(filename); // Memory leak :)
-    }
-
-  this->Modified();
-  //cout << "Exodus XML file set to " << XMLFileName << endl;
+  return NULL;
 }
 
 // Had to add this because displacement vector names had spaces
@@ -4193,7 +4617,7 @@ void vtkExodusReader::RemoveBeginningAndTrailingSpaces(char **names, int len)
   for (i=0; i<len; i++)
     {
     char *c = names[i];
-    int nmlen = strlen(c);
+    int nmlen = static_cast<int>( strlen(c) );
 
     char *cbegin = c;
     char *cend = c + nmlen - 1;
@@ -4248,6 +4672,7 @@ int vtkExodusReader::GetTimeSeriesData( int itemID, const char *vName,
     if ((strcmp(vType, "CELL") == 0) || (strcmp(vType, "cell") == 0) ) 
       {
       int varid = GetCellArrayID( vName );
+      // ex_get_elem_var_time assumes zero-based index for varid
       ex_get_elem_var_time( this->CurrentHandle, varid, itemID, 1, 
                                   numTimesteps, memory );
       retVal = 1;
@@ -4255,7 +4680,8 @@ int vtkExodusReader::GetTimeSeriesData( int itemID, const char *vName,
     else if ((strcmp(vType, "POINT") == 0) || (strcmp(vType, "point") == 0) ) 
       {
       int varid = GetPointArrayID( vName );
-      ex_get_nodal_var_time( this->CurrentHandle, varid, itemID, 1, 
+      // ex_get_nodal_var_time assumes one-based index for varid
+      ex_get_nodal_var_time( this->CurrentHandle, varid + 1, itemID, 1, 
                                    numTimesteps, memory );
       retVal = 1;
       }
@@ -4280,22 +4706,41 @@ void vtkExodusReader::GetAllTimes(vtkInformationVector *outputVector)
 {
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
 
-  int numTimesteps = this->GetNumberOfTimeSteps();
-  if (numTimesteps == 0)
+  this->NumberOfTimeSteps = this->GetNumberOfTimeSteps();
+  if (this->NumberOfTimeSteps == 0)
     {
     return;
     }
-  float* ftimeSteps = new float[numTimesteps];
+  float* ftimeSteps = new float[this->NumberOfTimeSteps];
   ex_get_all_times( this->CurrentHandle, ftimeSteps );
-  double* timeSteps = new double[numTimesteps];
-  for (int i=0; i<numTimesteps; i++)
+  if (this->TimeSteps)
     {
-    timeSteps[i] = ftimeSteps[i];
+    delete [] this->TimeSteps;
     }
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), 
-               timeSteps, 
-               numTimesteps);
-  delete[] timeSteps;
+  this->TimeSteps = new double[this->NumberOfTimeSteps];
+  for (int i=0; i<this->NumberOfTimeSteps; i++)
+    {
+    this->TimeSteps[i] = ftimeSteps[i];
+    }
+  if (!this->HasModeShapes)
+    {
+    outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), 
+                 this->TimeSteps, 
+                 this->NumberOfTimeSteps);
+    double timeRange[2];
+    timeRange[0] = this->TimeSteps[0];
+    timeRange[1] = this->TimeSteps[this->NumberOfTimeSteps-1];
+    outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), 
+                 timeRange, 2);
+    }
+  else
+    {
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    double timeRange[2];
+    timeRange[0] = 0;
+    timeRange[1] = 1;
+    outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
+    }
   delete[] ftimeSteps;
 }
 
@@ -4878,33 +5323,34 @@ int vtkExodusReader::GetVariableID ( const char *type, const char *name )
 {
   ArrayType typeID = this->GetArrayTypeID( type );
 
+  int res = -1;
   switch ( typeID )
     {
     case vtkExodusReader::CELL:
-      return this->GetCellArrayID( name );
+      res = this->GetCellArrayID( name );
       break;
     case vtkExodusReader::POINT:
-      return this->GetPointArrayID( name );
+      res = this->GetPointArrayID( name );
       break;
     case vtkExodusReader::BLOCK:
-      return this->GetBlockArrayID( name );
+      res = this->GetBlockArrayID( name );
       break;
     case vtkExodusReader::PART:
-      return this->GetPartArrayID( name );
+      res = this->GetPartArrayID( name );
       break;
     case vtkExodusReader::MATERIAL:
-      return this->GetMaterialArrayID( name );
+      res = this->GetMaterialArrayID( name );
       break;
     case vtkExodusReader::ASSEMBLY:
-      return this->GetAssemblyArrayID( name );
+      res = this->GetAssemblyArrayID( name );
       break;
     case vtkExodusReader::HIERARCHY:
     case vtkExodusReader::NUM_ARRAY_TYPES:
     case vtkExodusReader::UNKNOWN_TYPE:
     default:
-      return -1;
-      break;
+      ;
     }
+  return res;
 }
 
 int vtkExodusReader::GetGlobalElementID ( vtkDataSet *data, int localID )

@@ -5,7 +5,7 @@
 char *Capitalized(const char *input)
 {
   char *result;
-  unsigned int i;
+  size_t i;
 
   result = strdup(input);
   if (result[0] > 90) 
@@ -49,7 +49,7 @@ static void CreateInitFile(const char *libName,
   fprintf(fout,
     "extern \"C\"\n"
     "{\n"
-    "#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4) && (TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)\n"
+    "#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)\n"
     "  typedef int (*vtkTclCommandType)(ClientData, Tcl_Interp *,int, CONST84 char *[]);\n"
     "#else\n"
     "  typedef int (*vtkTclCommandType)(ClientData, Tcl_Interp *,int, char *[]);\n"
@@ -128,14 +128,22 @@ static void CreateInitFile(const char *libName,
     fprintf(fout,
       "  Tcl_InitHashTable(&info->CommandLookup, TCL_STRING_KEYS);\n");
     fprintf(fout,
-      "  Tcl_SetAssocData(interp,(char *) \"vtk\",NULL,(ClientData *)info);\n");
+      "  Tcl_SetAssocData(interp,(char *)(\"vtk\"),NULL,reinterpret_cast<ClientData *>(info));\n");
     fprintf(fout,
-      "  Tcl_CreateExitHandler(vtkCommonDeleteAssocData,(ClientData *)info);\n");
+      "  Tcl_CreateExitHandler(vtkCommonDeleteAssocData,reinterpret_cast<ClientData *>(info));\n");
 
     /* create special vtkCommand command */
-    fprintf(fout,"  Tcl_CreateCommand(interp,(char *) \"vtkCommand\",\n"
+    fprintf(fout,"  Tcl_CreateCommand(interp,(char *)(\"vtkCommand\"),\n"
       "                    reinterpret_cast<vtkTclCommandType>(vtkCreateCommand),\n"
-      "                    (ClientData *)NULL, NULL);\n\n");
+      "                    static_cast<ClientData *>(NULL), NULL);\n\n");
+
+    /*
+     * Set the default precision of tcl to match the legacy vtk default
+     * precsion.  Wrapped code will use the tcl_precision variable to
+     * define the output resolution for converting doubles to strings
+     */
+    fprintf(fout,
+            "  Tcl_SetVar2(interp, \"tcl_precision\", (char *) NULL, \"6\", TCL_GLOBAL_ONLY);\n");
     }
 
   for (i = 0; i < numCommands; i++)
@@ -146,7 +154,7 @@ static void CreateInitFile(const char *libName,
 
   for (i = 0; i < numConcrete; i++)
     {
-    fprintf(fout,"  vtkTclCreateNew(interp,(char *) \"%s\", %sNewCommand,\n",
+    fprintf(fout,"  vtkTclCreateNew(interp,const_cast<char *>(\"%s\"), %sNewCommand,\n",
       concrete[i], concrete[i]);
     fprintf(fout,"                  %sCommand);\n",concrete[i]);
     }

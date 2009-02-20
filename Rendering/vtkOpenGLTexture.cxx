@@ -23,11 +23,12 @@
 #include "vtkOpenGLRenderWindow.h"
 
 #include "vtkOpenGL.h"
+#include "vtkgl.h" // vtkgl namespace
 
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLTexture, "$Revision: 1.56 $");
+vtkCxxRevisionMacro(vtkOpenGLTexture, "$Revision: 1.67 $");
 vtkStandardNewMacro(vtkOpenGLTexture);
 #endif
 
@@ -40,6 +41,10 @@ vtkOpenGLTexture::vtkOpenGLTexture()
 
 vtkOpenGLTexture::~vtkOpenGLTexture()
 {
+  if (this->RenderWindow)
+    {
+    this->ReleaseGraphicsResources(this->RenderWindow);
+    }
   this->RenderWindow = NULL;
 }
 
@@ -48,7 +53,7 @@ void vtkOpenGLTexture::ReleaseGraphicsResources(vtkWindow *renWin)
 {
   if (this->Index && renWin)
     {
-    ((vtkRenderWindow *) renWin)->MakeCurrent();
+    static_cast<vtkRenderWindow *>(renWin)->MakeCurrent();
 #ifdef GL_VERSION_1_1
     // free any textures
     if (glIsTexture(this->Index))
@@ -77,15 +82,24 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
   GLenum format = GL_LUMINANCE;
   vtkImageData *input = this->GetInput();
   
-  // need to reload the texture
+  // Need to reload the texture.
+  // There used to be a check on the render window's mtime, but
+  // this is too broad of a check (e.g. it would cause all textures
+  // to load when only the desired update rate changed).
+  // If a better check is required, check something more specific,
+  // like the graphics context.
+  vtkOpenGLRenderWindow* renWin = 
+    static_cast<vtkOpenGLRenderWindow*>(ren->GetRenderWindow());
+
   if (this->GetMTime() > this->LoadTime.GetMTime() ||
       input->GetMTime() > this->LoadTime.GetMTime() ||
       (this->GetLookupTable() && this->GetLookupTable()->GetMTime () >  
        this->LoadTime.GetMTime()) || 
-       ren->GetRenderWindow() != this->RenderWindow)
+       renWin != this->RenderWindow.GetPointer() ||
+       renWin->GetContextCreationTime() > this->LoadTime)
     {
     int bytesPerPixel;
-    int *size;
+    int size[3];
     vtkDataArray *scalars;
     unsigned char *dataPtr;
     int rowLength;
@@ -94,15 +108,29 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
     unsigned short xs,ys;
     GLuint tempIndex=0;
 
-    // get some info
-    size = input->GetDimensions();
-    scalars = input->GetPointData()->GetScalars();
+    // Get the scalars the user choose to color with.
+    scalars = this->GetInputArrayToProcess(0, input);
 
     // make sure scalars are non null
     if (!scalars) 
       {
       vtkErrorMacro(<< "No scalar values found for texture input!");
       return;
+      }
+
+    // get some info
+    input->GetDimensions(size);
+
+    if (input->GetNumberOfCells() == scalars->GetNumberOfTuples())
+      {
+      // we are using cell scalars. Adjust image size for cells.
+      for (int kk=0; kk < 3; kk++)
+        {
+        if (size[kk]>1)
+          {
+          size[kk]--;
+          }
+        }
       }
 
     bytesPerPixel = scalars->GetNumberOfComponents();
@@ -145,8 +173,8 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
       }
 
     // xsize and ysize must be a power of 2 in OpenGL
-    xs = (unsigned short)xsize;
-    ys = (unsigned short)ysize;
+    xs = static_cast<unsigned short>(xsize);
+    ys = static_cast<unsigned short>(ysize);
     while (!(xs & 0x01))
       {
       xs = xs >> 1;
@@ -226,16 +254,21 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
     // get a unique display list id
 #ifdef GL_VERSION_1_1
     glGenTextures(1, &tempIndex);
-    this->Index = (long) tempIndex;
+    this->Index = static_cast<long>(tempIndex);
     glBindTexture(GL_TEXTURE_2D, this->Index);
 #else
     this->Index = glGenLists(1);
-    glDeleteLists ((GLuint) this->Index, (GLsizei) 0);
-    glNewList ((GLuint) this->Index, GL_COMPILE);
+    glDeleteLists (static_cast<GLuint>(this->Index), static_cast<GLsizei>(0));
+    glNewList (static_cast<GLuint>(this->Index), GL_COMPILE);
 #endif
+    //seg fault protection for those wackos that don't use an
+    //opengl render window
+    if(this->RenderWindow->IsA("vtkOpenGLRenderWindow"))
+      {
+      static_cast<vtkOpenGLRenderWindow *>(ren->GetRenderWindow())->
+        RegisterTextureResource( this->Index );
+      }
 
-    ((vtkOpenGLRenderWindow *)(ren->GetRenderWindow()))->RegisterTextureResource( this->Index );
-    
     if (this->Interpolate)
       {
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -291,7 +324,7 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
 #endif
     glTexImage2D( GL_TEXTURE_2D, 0 , internalFormat,
                   xsize, ysize, 0, format, 
-                  GL_UNSIGNED_BYTE, (const GLvoid *)resultData );
+                  GL_UNSIGNED_BYTE, static_cast<const GLvoid *>(resultData) );
 #ifndef GL_VERSION_1_1
     glEndList ();
 #endif
@@ -314,11 +347,24 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
   
   // don't accept fragments if they have zero opacity. this will stop the
   // zbuffer from be blocked by totally transparent texture fragments.
-  glAlphaFunc (GL_GREATER, (GLclampf) 0);
+  glAlphaFunc (GL_GREATER, static_cast<GLclampf>(0));
   glEnable (GL_ALPHA_TEST);
 
   // now bind it 
   glEnable(GL_TEXTURE_2D);
+  
+  GLint uUseTexture=-1;
+  GLint uTexture=-1;
+  
+  vtkOpenGLRenderer *oRenderer=static_cast<vtkOpenGLRenderer *>(ren);
+ 
+  if(oRenderer->GetDepthPeelingHigherLayer())
+    {
+    uUseTexture=oRenderer->GetUseTextureUniformVariable();
+    uTexture=oRenderer->GetTextureUniformVariable();
+    vtkgl::Uniform1i(uUseTexture,1);
+    vtkgl::Uniform1i(uTexture,0); // active texture 0
+    }
 }
 
 
@@ -357,8 +403,8 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
   xsize = FindPowerOfTwo(xs);
   ysize = FindPowerOfTwo(ys);
   
-  hx = (float)(xs - 1.0) / (xsize - 1.0);
-  hy = (float)(ys - 1.0) / (ysize - 1.0);
+  hx = static_cast<float>(xs - 1.0) / (xsize - 1.0);
+  hy = static_cast<float>(ys - 1.0) / (ysize - 1.0);
 
   tptr = p = new unsigned char[xsize*ysize*bpp];
 
@@ -367,7 +413,7 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
     {
     pcoords[1] = j*hy;
 
-    jIdx = (int)pcoords[1];
+    jIdx = static_cast<int>(pcoords[1]);
     if ( jIdx >= (ys-1) ) //make sure to interpolate correctly at edge
       {
       jIdx = ys - 2;
@@ -383,7 +429,7 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
     for (i=0; i < xsize; i++)
       {
       pcoords[0] = i*hx;
-      iIdx = (int)pcoords[0];
+      iIdx = static_cast<int>(pcoords[0]);
       if ( iIdx >= (xs-1) ) 
         {
         iIdx = xs - 2;
@@ -408,7 +454,8 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
       w3 = pcoords[0]*pcoords[1];
       for (k=0; k < bpp; k++)
         {
-        *p++ = (unsigned char) (p1[k]*w0 + p2[k]*w1 + p3[k]*w2 + p4[k]*w3);
+        *p++ = static_cast<unsigned char>(p1[k]*w0 + p2[k]*w1 + p3[k]*w2
+                                          + p4[k]*w3);
         }
       }
     }
@@ -422,4 +469,5 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
 void vtkOpenGLTexture::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+  os << indent << "Index: " << this->Index << endl;
 }

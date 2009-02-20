@@ -8,6 +8,7 @@ SET(KIT_LIBS vtkFiltering)
 SET( Kit_SRCS
 vtkBooleanTexture.cxx
 vtkExtractVOI.cxx
+vtkFastSplatter.cxx
 vtkGaussianSplatter.cxx
 vtkImageAccumulate.cxx
 vtkImageAnisotropicDiffusion2D.cxx
@@ -106,6 +107,7 @@ vtkImageToImageStencil.cxx
 vtkImageTranslateExtent.cxx
 vtkImageVariance3D.cxx
 vtkImageWrapPad.cxx
+vtkImageWeightedSum.cxx
 vtkImplicitFunctionToImageStencil.cxx
 vtkPointLoad.cxx
 vtkSampleFunction.cxx
@@ -122,9 +124,20 @@ vtkImageFourierFilter
 vtkImageIterateFilter
 vtkImagePadFilter
 vtkImageSpatialAlgorithm
-vtkImageSpatialFilter
   ABSTRACT
 )
+
+IF(CMAKE_COMPILER_IS_GNUCXX AND VTK_GNUCXX_VERSION)
+  STRING(REGEX MATCH "3\\.2\\.[0-9]" is_gcc32 ${VTK_GNUCXX_VERSION})
+  IF(is_gcc32)
+    SET_SOURCE_FILES_PROPERTIES(
+     vtkImageEuclideanDistance.cxx
+     vtkImageLogic.cxx
+     PROPERTIES
+     COMPILE_FLAGS -O0
+     )
+  ENDIF(is_gcc32)
+ENDIF(CMAKE_COMPILER_IS_GNUCXX AND VTK_GNUCXX_VERSION)
 
 # conditionally compile legacy classes
 IF (NOT VTK_LEGACY_REMOVE)
@@ -148,5 +161,5 @@ SET(KIT_JAVA_DEPS)
 
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
-INCLUDE(${VTK_SOURCE_DIR}/CMake/KitCommonBlock.cmake)
+INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
 #-----------------------------------------------------------------------------

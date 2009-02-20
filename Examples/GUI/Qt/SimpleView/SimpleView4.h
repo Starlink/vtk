@@ -3,7 +3,7 @@
   Program:   Visualization Toolkit
   Module:    $RCSfile: SimpleView4.h,v $
   Language:  C++
-  Date:      $Date: 2005/08/11 16:47:38 $
+  Date:      $Date: 2005-08-11 16:47:38 $
   Version:   $Revision: 1.1 $
 
   Copyright 2004 Sandia Corporation.

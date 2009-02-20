@@ -35,8 +35,8 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
-  // Fire various events, SetEventInformation should be called just prior
-  // to calling any of these methods.  This methods will Invoke the 
+  // Fire various events. SetEventInformation should be called just prior
+  // to calling any of these methods. These methods will Invoke the
   // corresponding vtk event.
   virtual void MouseMoveEvent();
   virtual void RightButtonPressEvent();
@@ -56,16 +56,34 @@ public:
   virtual void KeyReleaseEvent();
   virtual void CharEvent();
   virtual void ExitEvent();
-  
+
   // Description:
-  // Allow users of the class to add callbacks to handle the creation and 
-  // destruction of timers.   CreateTimer should create a timer event of 10 milliseconds,
-  // and at the end of that time, it should call TimerEvent on this class.
-  virtual int CreateTimer(int );
-  virtual int DestroyTimer();
+  // Flag that indicates whether the TimerEvent method should call ResetTimer
+  // to simulate repeating timers with an endless stream of one shot timers.
+  // By default this flag is on and all repeating timers are implemented as a
+  // stream of sequential one shot timers. If the observer of
+  // CreateTimerEvent actually creates a "natively repeating" timer, setting
+  // this flag to off will prevent (perhaps many many) unnecessary calls to
+  // ResetTimer. Having the flag on by default means that "natively one
+  // shot" timers can be either one shot or repeating timers with no
+  // additional work. Also, "natively repeating" timers still work with the
+  // default setting, but with potentially many create and destroy calls.
+  vtkSetMacro(TimerEventResetsTimer, int);
+  vtkGetMacro(TimerEventResetsTimer, int);
+  vtkBooleanMacro(TimerEventResetsTimer, int);
+
 protected:
   vtkGenericRenderWindowInteractor();
   ~vtkGenericRenderWindowInteractor();
+
+  // Description: 
+  // Generic internal timer methods. See the superclass for detailed
+  // documentation.
+  virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
+  virtual int InternalDestroyTimer(int platformTimerId);
+
+  int TimerEventResetsTimer;
+
 private:
   vtkGenericRenderWindowInteractor(const vtkGenericRenderWindowInteractor&);  // Not implemented.
   void operator=(const vtkGenericRenderWindowInteractor&);  // Not implemented.

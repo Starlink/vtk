@@ -17,7 +17,7 @@
 // vtkAnimationCue and vtkAnimationScene provide the framework to support
 // animations in VTK. vtkAnimationCue represents an entity that changes/
 // animates with time, while vtkAnimationScene represents scene or setup 
-// for the animation, which consists on individual cues or other scenes.
+// for the animation, which consists of individual cues or other scenes.
 //
 // A scene can be played in real time mode, or as a seqence of frames
 // 1/frame rate apart in time.
@@ -64,10 +64,13 @@ public:
   // It's an error to add a cue twice to the Scene.
   void AddCue(vtkAnimationCue* cue);
   void RemoveCue(vtkAnimationCue* cue);
+  void RemoveAllCues();
+  int  GetNumberOfCues();
   
   // Description:
-  // Starts playing the animation scene.
-  void Play();
+  // Starts playing the animation scene. Fires a vtkCommand::StartEvent
+  // before play beings and vtkCommand::EndEvent after play ends.
+  virtual void Play();
 
   // Description:
   // Stops the animation scene that is running.
@@ -81,6 +84,7 @@ public:
   // Description:
   // Makes the state of the scene same as the given time.
   void SetAnimationTime(double time);
+  vtkGetMacro(AnimationTime, double);
 
   // Description:
   // Overridden to allow change to Normalized mode only
@@ -106,7 +110,7 @@ protected:
   // Description:
   // Called on every valid tick.
   // Calls ticks on all the contained cues.
-  virtual void TickInternal(double currenttime, double deltatime);
+  virtual void TickInternal(double currenttime, double deltatime, double clocktime);
   virtual void StartCueInternal();
   virtual void EndCueInternal();
 
@@ -130,4 +134,3 @@ private:
 };
 
 #endif
-

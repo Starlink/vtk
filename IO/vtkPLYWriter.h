@@ -16,12 +16,15 @@
 // .SECTION Description
 // vtkPLYWriter writes polygonal data in Stanford University PLY format
 // (see http://graphics.stanford.edu/data/3Dscanrep/). The data can be
-// written in either binary (little or big endian) or ASCII representation. 
+// written in either binary (little or big endian) or ASCII representation.
+// As for PointData and CellData, vtkPLYWriter cannot handle normals or
+// vectors. It only handles RGB PointData and CellData. You need to set the
+// name of the array (using SetName for the array and SetArrayName for the
+// writer). If the array is not a vtkUnsignedCharArray with 3 components,
+// you need to specify a vtkLookupTable to map the scalars to RGB.
 
 // .SECTION Caveats
-// PLY does not handle big endian versus little endian correctly. Also,
-// this class is compiled into VTK only if the PLY library is found
-// during the make process (using CMake).
+// PLY does not handle big endian versus little endian correctly.
 
 // .SECTION See Also
 // vtkPLYReader

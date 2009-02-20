@@ -21,21 +21,21 @@
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkIntArray.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkIdTypeArray.h"
 
-vtkCxxRevisionMacro(vtkConnectivityFilter, "$Revision: 1.72 $");
+vtkCxxRevisionMacro(vtkConnectivityFilter, "$Revision: 1.74 $");
 vtkStandardNewMacro(vtkConnectivityFilter);
 
 // Construct with default extraction mode to extract largest regions.
 vtkConnectivityFilter::vtkConnectivityFilter()
 {
-  this->RegionSizes = vtkIntArray::New();
+  this->RegionSizes = vtkIdTypeArray::New();
   this->ExtractionMode = VTK_EXTRACT_LARGEST_REGION;
   this->ColorRegions = 0;
 
@@ -53,6 +53,9 @@ vtkConnectivityFilter::vtkConnectivityFilter()
   
   this->Seeds = vtkIdList::New();
   this->SpecifiedRegionIds = vtkIdList::New();
+
+  this->NewScalars = 0;
+  this->NewCellScalars = 0;
 }
 
 vtkConnectivityFilter::~vtkConnectivityFilter()
@@ -128,8 +131,14 @@ int vtkConnectivityFilter::RequestData(
     this->PointMap[i] = -1;
     }
 
-  this->NewScalars = vtkFloatArray::New();
+  this->NewScalars = vtkIdTypeArray::New();
+  this->NewScalars->SetName("RegionId");
   this->NewScalars->SetNumberOfTuples(numPts);
+
+  this->NewCellScalars = vtkIdTypeArray::New();
+  this->NewCellScalars->SetName("RegionId");
+  this->NewCellScalars->SetNumberOfTuples(numCells);
+
   newPts = vtkPoints::New();
   newPts->Allocate(numPts);
 
@@ -264,8 +273,11 @@ int vtkConnectivityFilter::RequestData(
     {
     int idx = outputPD->AddArray(this->NewScalars);
     outputPD->SetActiveAttribute(idx, vtkDataSetAttributes::SCALARS);
+    idx = outputCD->AddArray(this->NewCellScalars);
+    outputCD->SetActiveAttribute(idx, vtkDataSetAttributes::SCALARS);
     }
   this->NewScalars->Delete();
+  this->NewCellScalars->Delete();
 
   output->SetPoints(newPts);
   newPts->Delete();
@@ -372,7 +384,7 @@ int vtkConnectivityFilter::RequestData(
 //
 void vtkConnectivityFilter::TraverseAndMark (vtkDataSet *input)
 {
-  int i, j, k, cellId, numIds, ptId, numPts, numCells;
+  vtkIdType i, j, k, cellId, numIds, ptId, numPts, numCells;
   vtkIdList *tmpWave;
 
   while ( (numIds=this->Wave->GetNumberOfIds()) > 0 )
@@ -382,6 +394,7 @@ void vtkConnectivityFilter::TraverseAndMark (vtkDataSet *input)
       cellId = this->Wave->GetId(i);
       if ( this->Visited[cellId] < 0 )
         {
+        this->NewCellScalars->SetValue(cellId, this->RegionNumber);
         this->Visited[cellId] = this->RegionNumber;
         this->NumCellsInRegion++;
         input->GetCellPoints(cellId, this->PointIds);
@@ -392,8 +405,8 @@ void vtkConnectivityFilter::TraverseAndMark (vtkDataSet *input)
           if ( this->PointMap[ptId=this->PointIds->GetId(j)] < 0 )
             {
             this->PointMap[ptId] = this->PointNumber++;
-            this->NewScalars->SetComponent(this->PointMap[ptId], 0,
-                                           this->RegionNumber);
+            this->NewScalars->SetValue(this->PointMap[ptId],
+                                       this->RegionNumber);
             }
 
           input->GetPointCells(ptId,this->CellIds);

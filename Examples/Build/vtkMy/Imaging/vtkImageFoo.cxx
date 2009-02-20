@@ -20,7 +20,7 @@
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkImageFoo, "$Revision: 1.10.2.1 $");
+vtkCxxRevisionMacro(vtkImageFoo, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkImageFoo);
 
 //----------------------------------------------------------------------------

@@ -33,9 +33,11 @@
 #define kwsysProcess_SetTimeout          kwsys_ns(Process_SetTimeout)
 #define kwsysProcess_SetWorkingDirectory kwsys_ns(Process_SetWorkingDirectory)
 #define kwsysProcess_SetPipeFile         kwsys_ns(Process_SetPipeFile)
+#define kwsysProcess_SetPipeNative       kwsys_ns(Process_SetPipeNative)
 #define kwsysProcess_SetPipeShared       kwsys_ns(Process_SetPipeShared)
 #define kwsysProcess_Option_Detach       kwsys_ns(Process_Option_Detach)
 #define kwsysProcess_Option_HideWindow   kwsys_ns(Process_Option_HideWindow)
+#define kwsysProcess_Option_Verbatim     kwsys_ns(Process_Option_Verbatim)
 #define kwsysProcess_GetOption           kwsys_ns(Process_GetOption)
 #define kwsysProcess_SetOption           kwsys_ns(Process_SetOption)
 #define kwsysProcess_Option_e            kwsys_ns(Process_Option_e)
@@ -70,6 +72,7 @@
 #define kwsysProcess_Pipe_STDOUT         kwsys_ns(Process_Pipe_STDOUT)
 #define kwsysProcess_Pipe_STDERR         kwsys_ns(Process_Pipe_STDERR)
 #define kwsysProcess_Pipe_Timeout        kwsys_ns(Process_Pipe_Timeout)
+#define kwsysProcess_Pipe_Handle         kwsys_ns(Process_Pipe_Handle)
 #define kwsysProcess_WaitForExit         kwsys_ns(Process_WaitForExit)
 #define kwsysProcess_Kill                kwsys_ns(Process_Kill)
 
@@ -82,6 +85,13 @@ extern "C"
  * Process control data structure.
  */
 typedef struct kwsysProcess_s kwsysProcess;
+
+/* Platform-specific pipe handle type.  */
+#if defined(_WIN32) && !defined(__CYGWIN__)
+typedef void* kwsysProcess_Pipe_Handle;
+#else
+typedef int kwsysProcess_Pipe_Handle;
+#endif
 
 /**
  * Create a new Process instance.
@@ -96,7 +106,7 @@ kwsysEXPORT void kwsysProcess_Delete(kwsysProcess* cp);
 
 /**
  * Set the command line to be executed.  Argument is an array of
- * pointers to the command and each argument.  Ths array must end with
+ * pointers to the command and each argument.  The array must end with
  * a NULL pointer.  Any previous command lines are removed.  Returns
  * 1 for success and 0 otherwise.
  */
@@ -105,7 +115,7 @@ kwsysEXPORT int kwsysProcess_SetCommand(kwsysProcess* cp,
 
 /**
  * Add a command line to be executed.  Argument is an array of
- * pointers to the command and each argument.  Ths array must end with
+ * pointers to the command and each argument.  The array must end with
  * a NULL pointer.  If this is not the first command added, its
  * standard input will be connected to the standard output of the
  * previous command.  Returns 1 for success and 0 otherwise.
@@ -145,6 +155,27 @@ kwsysEXPORT void kwsysProcess_SetPipeShared(kwsysProcess* cp, int pipe,
                                             int shared);
 
 /**
+ * Specify a platform-specific native pipe for use as one of the child
+ * interface pipes.  The native pipe is specified by an array of two
+ * descriptors or handles.  The first entry in the array (index 0)
+ * should be the read end of the pipe.  The second entry in the array
+ * (index 1) should be the write end of the pipe.  If a null pointer
+ * is given the option will be disabled.
+ *
+ * For Pipe_STDIN the native pipe is connected to the first child in
+ * the pipeline as its stdin.  After the children are created the
+ * write end of the pipe will be closed in the child process and the
+ * read end will be closed in the parent process.
+ *
+ * For Pipe_STDOUT and Pipe_STDERR the pipe is connected to the last
+ * child as its stdout or stderr.  After the children are created the
+ * write end of the pipe will be closed in the parent process and the
+ * read end will be closed in the child process.
+ */
+kwsysEXPORT void kwsysProcess_SetPipeNative(kwsysProcess* cp, int pipe,
+                                            kwsysProcess_Pipe_Handle p[2]);
+
+/**
  * Get/Set a possibly platform-specific option.  Possible options are:
  *
  *  kwsysProcess_Option_Detach = Whether to detach the process.
@@ -154,6 +185,13 @@ kwsysEXPORT void kwsysProcess_SetPipeShared(kwsysProcess* cp, int pipe,
  *  kwsysProcess_Option_HideWindow = Whether to hide window on Windows.
  *         0 = No (default)
  *         1 = Yes
+ *
+ *  kwsysProcess_Option_Verbatim = Whether SetCommand and AddCommand
+ *                                 should treat the first argument
+ *                                 as a verbatim command line
+ *                                 and ignore the rest of the arguments.
+ *         0 = No (default)
+ *         1 = Yes
  */
 kwsysEXPORT int kwsysProcess_GetOption(kwsysProcess* cp, int optionId);
 kwsysEXPORT void kwsysProcess_SetOption(kwsysProcess* cp, int optionId,
@@ -161,7 +199,8 @@ kwsysEXPORT void kwsysProcess_SetOption(kwsysProcess* cp, int optionId,
 enum kwsysProcess_Option_e
 {
   kwsysProcess_Option_HideWindow,
-  kwsysProcess_Option_Detach
+  kwsysProcess_Option_Detach,
+  kwsysProcess_Option_Verbatim
 };
 
 /**
@@ -340,9 +379,11 @@ kwsysEXPORT void kwsysProcess_Kill(kwsysProcess* cp);
 # undef kwsysProcess_SetTimeout
 # undef kwsysProcess_SetWorkingDirectory
 # undef kwsysProcess_SetPipeFile
+# undef kwsysProcess_SetPipeNative
 # undef kwsysProcess_SetPipeShared
 # undef kwsysProcess_Option_Detach
 # undef kwsysProcess_Option_HideWindow
+# undef kwsysProcess_Option_Verbatim
 # undef kwsysProcess_GetOption
 # undef kwsysProcess_SetOption
 # undef kwsysProcess_Option_e
@@ -377,6 +418,7 @@ kwsysEXPORT void kwsysProcess_Kill(kwsysProcess* cp);
 # undef kwsysProcess_Pipe_STDOUT
 # undef kwsysProcess_Pipe_STDERR
 # undef kwsysProcess_Pipe_Timeout
+# undef kwsysProcess_Pipe_Handle
 # undef kwsysProcess_WaitForExit
 # undef kwsysProcess_Kill
 #endif

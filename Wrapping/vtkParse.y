@@ -24,7 +24,7 @@ Run yacc like this:
 
 Modify vtkParse.tab.c:
   - remove TABs
-  - comment out yyerrorlab stuff
+  - remove yyerrorlab stuff in range ["goto yyerrlab1;", "yyerrstatus = 3;")
 
 */
 
@@ -34,11 +34,62 @@ Modify vtkParse.tab.c:
 #define yyerror(a) fprintf(stderr,"%s\n",a)
 #define yywrap() 1
 
+/* Make sure yacc-generated code knows we have included stdlib.h.  */
+#ifndef _STDLIB_H
+# define _STDLIB_H
+#endif
+#define YYINCLUDED_STDLIB_H
+
+/* Map from the type enumeration in vtkType.h to the VTK wrapping type
+   system number for the type.  Note that the wrapping type system
+   does not enumerate its type values by name.  Look in the
+   type_primitive production rule in the grammar for the "official"
+   enumeration. */
+static int vtkParseTypeMap[] =
+  {
+   0x2,  /* VTK_VOID                0 */
+   0,    /* VTK_BIT                 1 */
+   0x3,  /* VTK_CHAR                2 */
+   0x13, /* VTK_UNSIGNED_CHAR       3 */
+   0x5,  /* VTK_SHORT               4 */
+   0x15, /* VTK_UNSIGNED_SHORT      5 */
+   0x4,  /* VTK_INT                 6 */
+   0x14, /* VTK_UNSIGNED_INT        7 */
+   0x6,  /* VTK_LONG                8 */
+   0x16, /* VTK_UNSIGNED_LONG       9 */
+   0x1,  /* VTK_FLOAT              10 */
+   0x7,  /* VTK_DOUBLE             11 */
+   0xA,  /* VTK_ID_TYPE            12 */
+   0,    /* VTK_STRING             13 */
+   0,    /* VTK_OPAQUE             14 */
+   0xD,  /* VTK_SIGNED_CHAR        15 */
+   0xB,  /* VTK_LONG_LONG          16 */
+   0x1B, /* VTK_UNSIGNED_LONG_LONG 17 */
+   0xC,  /* VTK___INT64            18 */
+   0x1C  /* VTK_UNSIGNED___INT64   19 */
+  };
+
+/* Define some constants to simplify references to the table lookup in
+   the type_primitive production rule code.  */
+#include "vtkType.h"
+#define VTK_PARSE_INT8 vtkParseTypeMap[VTK_TYPE_INT8]
+#define VTK_PARSE_UINT8 vtkParseTypeMap[VTK_TYPE_UINT8]
+#define VTK_PARSE_INT16 vtkParseTypeMap[VTK_TYPE_INT16]
+#define VTK_PARSE_UINT16 vtkParseTypeMap[VTK_TYPE_UINT16]
+#define VTK_PARSE_INT32 vtkParseTypeMap[VTK_TYPE_INT32]
+#define VTK_PARSE_UINT32 vtkParseTypeMap[VTK_TYPE_UINT32]
+#define VTK_PARSE_INT64 vtkParseTypeMap[VTK_TYPE_INT64]
+#define VTK_PARSE_UINT64 vtkParseTypeMap[VTK_TYPE_UINT64]
+#define VTK_PARSE_FLOAT32 vtkParseTypeMap[VTK_TYPE_FLOAT32]
+#define VTK_PARSE_FLOAT64 vtkParseTypeMap[VTK_TYPE_FLOAT64]
+
 static void vtkParseDebug(const char* s1, const char* s2);
 
-/* MSVC Does not define __STDC__ properly. */
-#if defined(_MSC_VER) && _MSC_VER >= 1200 && !defined(__STDC__)
-# define __STDC__ 1
+/* Borland and MSVC do not define __STDC__ properly. */
+#if !defined(__STDC__)
+# if (defined(_MSC_VER) && _MSC_VER >= 1200) || defined(__BORLANDC__)
+#  define __STDC__ 1
+# endif
 #endif
 
 /* Disable warnings in generated code. */
@@ -46,9 +97,14 @@ static void vtkParseDebug(const char* s1, const char* s2);
 # pragma warning (disable: 4127) /* conditional expression is constant */
 # pragma warning (disable: 4244) /* conversion to smaller integer type */
 #endif
+#if defined(__BORLANDC__)
+# pragma warn -8004 /* assigned a value that is never used */
+# pragma warn -8008 /* conditional is always true */
+# pragma warn -8066 /* unreachable code */
+#endif
 
 int yylex(void);
-void output_function();
+void output_function(void);
 
 /* vtkstrdup is not part of POSIX so we create our own */
 char *vtkstrdup(const char *in)
@@ -82,7 +138,7 @@ char *vtkstrdup(const char *in)
         sigAllocatedLength)
       {
       currentFunction->Signature = (char *)
-	realloc(currentFunction->Signature, sigAllocatedLength*2);
+        realloc(currentFunction->Signature, sigAllocatedLength*2);
       sigAllocatedLength = sigAllocatedLength*2;
       }
     } 
@@ -164,6 +220,7 @@ char *vtkstrdup(const char *in)
 %token VOID
 %token CHAR
 %token SIGNED_CHAR
+%token BOOL
 %token CLASS_REF
 %token OTHER
 %token CONST
@@ -175,6 +232,16 @@ char *vtkstrdup(const char *in)
 %token VAR_FUNCTION
 %token ARRAY_NUM
 %token VTK_LEGACY
+%token TypeInt8
+%token TypeUInt8
+%token TypeInt16
+%token TypeUInt16
+%token TypeInt32
+%token TypeUInt32
+%token TypeInt64
+%token TypeUInt64
+%token TypeFloat32
+%token TypeFloat64
 
 /* macro tokens */
 %token IdType
@@ -233,58 +300,58 @@ function: '~' func { preSig("~"); }
       | type func 
          {
          currentFunction->ReturnType = $<integer>1;
-	 } 
+         } 
       | type CONST func 
          {
          currentFunction->ReturnType = $<integer>1;
-	 } 
+         } 
       | VIRTUAL type CONST func 
          {
          preSig("virtual ");
          currentFunction->ReturnType = $<integer>2;
-	 }
+         }
       | VIRTUAL type func 
          {
          preSig("virtual ");
          currentFunction->ReturnType = $<integer>2;
-	 }
+         }
       | VIRTUAL func
          {
          preSig("virtual ");
-	 };
+         };
 
 operator:
         operator_sig
          {
          output_function();
-	 }
+         }
       | type operator_sig
          {
          currentFunction->ReturnType = $<integer>1;
          output_function();
-	 }
+         }
       | type CONST operator_sig
          {
          currentFunction->ReturnType = $<integer>1;
          output_function();
-	 }
+         }
       | VIRTUAL type CONST operator_sig
          {
          preSig("virtual ");
          currentFunction->ReturnType = $<integer>2;
          output_function();
-	 }
+         }
       | VIRTUAL type operator_sig
          {
          preSig("virtual ");
          currentFunction->ReturnType = $<integer>2;
          output_function();
-	 }
+         }
       | VIRTUAL operator_sig
          {
          preSig("virtual ");
          output_function();
-	 };
+         };
 
 operator_sig: OPERATOR maybe_other_no_semi ';'
     {
@@ -331,13 +398,13 @@ arg: type
     {
       currentFunction->ArgCounts[currentFunction->NumberOfArguments] = 0; 
       currentFunction->ArgTypes[currentFunction->NumberOfArguments] = 
-	$<integer>1;} 
+        $<integer>1;} 
   | type var_id 
     {
       currentFunction->ArgCounts[currentFunction->NumberOfArguments] = 
-	$<integer>2 / 0x10000; 
+        $<integer>2 / 0x10000; 
       currentFunction->ArgTypes[currentFunction->NumberOfArguments] = 
-	$<integer>1 + $<integer>2 % 0x10000;
+        $<integer>1 + $<integer>2 % 0x10000;
     } opt_var_assign
   | VAR_FUNCTION 
     { 
@@ -399,6 +466,16 @@ type_red2: UNSIGNED {postSig("unsigned ");}
                   | type_primitive { $<integer>$ = $<integer>1;};
 
 type_primitive: 
+  TypeInt8 { postSig("vtkTypeInt8 "); $<integer>$ = VTK_PARSE_INT8; } |
+  TypeUInt8 { postSig("vtkTypeUInt8 "); $<integer>$ = VTK_PARSE_UINT8; } |
+  TypeInt16 { postSig("vtkTypeInt16 "); $<integer>$ = VTK_PARSE_INT16; } |
+  TypeUInt16 { postSig("vtkTypeUInt16 "); $<integer>$ = VTK_PARSE_UINT16; } |
+  TypeInt32 { postSig("vtkTypeInt32 "); $<integer>$ = VTK_PARSE_INT32; } |
+  TypeUInt32 { postSig("vtkTypeUInt32 "); $<integer>$ = VTK_PARSE_UINT32; } |
+  TypeInt64 { postSig("vtkTypeInt64 "); $<integer>$ = VTK_PARSE_INT64; } |
+  TypeUInt64 { postSig("vtkTypeUInt64 "); $<integer>$ = VTK_PARSE_UINT64; } |
+  TypeFloat32 { postSig("vtkTypeFloat32 "); $<integer>$ = VTK_PARSE_FLOAT32; } |
+  TypeFloat64 { postSig("vtkTypeFloat64 "); $<integer>$ = VTK_PARSE_FLOAT64; } |
   FLOAT  { postSig("float "); $<integer>$ = 0x1;} | 
   VOID   { postSig("void "); $<integer>$ = 0x2;} | 
   CHAR   { postSig("char "); $<integer>$ = 0x3;} | 
@@ -431,7 +508,8 @@ type_primitive:
   IdType { postSig("vtkIdType "); $<integer>$ = 0xA;} |
   LONG_LONG { postSig("long long "); $<integer>$ = 0xB;} |
   INT64__ { postSig("__int64 "); $<integer>$ = 0xC;} |
-  SIGNED_CHAR { postSig("signed char "); $<integer>$ = 0xD;};
+  SIGNED_CHAR { postSig("signed char "); $<integer>$ = 0xD;} |
+  BOOL { postSig("bool "); $<integer>$ = 0xE;};
 
 optional_scope: | ':' scope_list;
 
@@ -938,7 +1016,58 @@ macro:
    currentFunction->Signature = (char *)malloc(2048);
    sigAllocatedLength = 2048;
    sprintf(currentFunction->Signature, "%s *NewInstance ();",
-	   $<str>3);
+           $<str>3);
+   sprintf(temps,"NewInstance"); 
+   currentFunction->Name = vtkstrdup(temps);
+   currentFunction->NumberOfArguments = 0;
+   currentFunction->ReturnType = 0x309;
+   currentFunction->ReturnClass = vtkstrdup($<str>3);
+   output_function();
+
+   if ( data.IsConcrete )
+     {
+     currentFunction->Signature = (char *)malloc(2048);
+     sigAllocatedLength = 2048;
+     sprintf(currentFunction->Signature, "%s *SafeDownCast (vtkObject* o);",
+             $<str>3);
+     sprintf(temps,"SafeDownCast"); 
+     currentFunction->Name = vtkstrdup(temps);
+     currentFunction->NumberOfArguments = 1;
+     currentFunction->ArgTypes[0] = 0x309;
+     currentFunction->ArgCounts[0] = 1;
+     currentFunction->ArgClasses[0] = vtkstrdup("vtkObject");
+     currentFunction->ReturnType = 0x2309;
+     currentFunction->ReturnClass = vtkstrdup($<str>3);
+     output_function();
+     }
+   }
+| TypeMacro '(' any_id ',' any_id ',' ')'
+   { 
+   currentFunction->Signature = (char *)malloc(2048);
+   sigAllocatedLength = 2048;
+   sprintf(currentFunction->Signature, "const char *GetClassName ();");
+   sprintf(temps,"GetClassName"); 
+   currentFunction->Name = vtkstrdup(temps);
+   currentFunction->NumberOfArguments = 0;
+   currentFunction->ReturnType = 0x1303;
+   output_function();
+
+   currentFunction->Signature = (char *)malloc(2048);
+   sigAllocatedLength = 2048;
+   sprintf(currentFunction->Signature,
+           "int IsA (const char *name);");
+   sprintf(temps,"IsA"); 
+   currentFunction->Name = vtkstrdup(temps);
+   currentFunction->NumberOfArguments = 1;
+   currentFunction->ArgTypes[0] = 0x1303;
+   currentFunction->ArgCounts[0] = 0;
+   currentFunction->ReturnType = 0x4;
+   output_function();
+
+   currentFunction->Signature = (char *)malloc(2048);
+   sigAllocatedLength = 2048;
+   sprintf(currentFunction->Signature, "%s *NewInstance ();",
+           $<str>3);
    sprintf(temps,"NewInstance"); 
    currentFunction->Name = vtkstrdup(temps);
    currentFunction->NumberOfArguments = 0;
@@ -1020,7 +1149,7 @@ void InitFunction(FunctionInfo *func)
 }
 
 /* when the cpp file doesn't have enough info use the hint file */
-void look_for_hint()
+void look_for_hint(void)
 {
   char h_cls[80];
   char h_func[80];
@@ -1038,9 +1167,9 @@ void look_for_hint()
   while (fscanf(fhint,"%s %s %x %i",h_cls,h_func,&h_type,&h_value) != EOF)
     {
     if ((!strcmp(h_cls,data.ClassName))&&
-	currentFunction->Name &&
-	(!strcmp(h_func,currentFunction->Name))&&
-	((int)h_type == currentFunction->ReturnType))
+        currentFunction->Name &&
+        (!strcmp(h_func,currentFunction->Name))&&
+        ((int)h_type == currentFunction->ReturnType))
       {
       currentFunction->HaveHint = 1;
       currentFunction->HintSize = h_value;
@@ -1092,7 +1221,7 @@ void output_function()
       case 0x301: case 0x302: case 0x307: case 0x30A: case 0x30B: case 0x30C:
       case 0x304: case 0x305: case 0x306: case 0x313:
         look_for_hint();
-	break;
+        break;
       }
     }
 

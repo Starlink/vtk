@@ -187,6 +187,7 @@ public:
   // able to collect all the actors or volumes. These methods
   // are used in that process.
   virtual void GetActors(vtkPropCollection *);
+  virtual void GetVolumes(vtkPropCollection *);
   
   // Description:
   // Set the id of the LOD that is to be used for picking when  automatic 
@@ -211,8 +212,13 @@ public:
   // Description:
   // Support the standard render methods.
   int RenderOpaqueGeometry(vtkViewport *viewport);
-  int RenderTranslucentGeometry(vtkViewport *viewport);
-
+  virtual int RenderTranslucentPolygonalGeometry( vtkViewport *ren);
+  virtual int RenderVolumetricGeometry( vtkViewport *ren);
+  
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // Release any graphics resources that are being consumed by this actor.
   // The parameter window could be used to determine which graphic

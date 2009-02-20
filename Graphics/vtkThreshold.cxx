@@ -23,7 +23,7 @@
 #include "vtkPointData.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkThreshold, "$Revision: 1.68 $");
+vtkCxxRevisionMacro(vtkThreshold, "$Revision: 1.71 $");
 vtkStandardNewMacro(vtkThreshold);
 
 // Construct with lower threshold=0, upper threshold=1, and threshold 
@@ -37,6 +37,7 @@ vtkThreshold::vtkThreshold()
   this->ThresholdFunction      = &vtkThreshold::Upper;
   this->ComponentMode          = VTK_COMPONENT_MODE_USE_SELECTED;
   this->SelectedComponent      = 0;
+  this->PointsDataType         = VTK_FLOAT;
 
   // by default process active point scalars
   this->SetInputArrayToProcess(0,0,0,vtkDataObject::FIELD_ASSOCIATION_POINTS_THEN_CELLS,
@@ -58,7 +59,7 @@ void vtkThreshold::ThresholdByLower(double lower)
     this->Modified();
     }
 }
-                           
+
 // Criterion is cells whose scalars are greater or equal to upper threshold.
 void vtkThreshold::ThresholdByUpper(double upper)
 {
@@ -70,7 +71,7 @@ void vtkThreshold::ThresholdByUpper(double upper)
     this->Modified();
     }
 }
-                           
+
 // Criterion is cells whose scalars are between lower and upper thresholds.
 void vtkThreshold::ThresholdBetween(double lower, double upper)
 {
@@ -127,12 +128,16 @@ int vtkThreshold::RequestData(
     return 1;
     }
 
+  outPD->CopyGlobalIdsOn();
   outPD->CopyAllocate(pd);
+  outCD->CopyGlobalIdsOn();
   outCD->CopyAllocate(cd);
 
   numPts = input->GetNumberOfPoints();
   output->Allocate(input->GetNumberOfCells());
+
   newPoints = vtkPoints::New();
+  newPoints->SetDataType( this->PointsDataType );
   newPoints->Allocate(numPts);
 
   pointMap = vtkIdList::New(); //maps old point ids into new
@@ -315,4 +320,6 @@ void vtkThreshold::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Lower Threshold: " << this->LowerThreshold << "\n";
   os << indent << "Upper Threshold: " << this->UpperThreshold << "\n";
+  os << indent << "DataType of the output points: " 
+     << this->PointsDataType << "\n";
 }

@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkXMLWriter.h"
 
+#include "vtkArrayIteratorIncludes.h"
 #include "vtkBase64OutputStream.h"
 #include "vtkByteSwap.h"
 #include "vtkCellData.h"
@@ -26,6 +27,7 @@
 #include "vtkOutputStream.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
+#include "vtkStdString.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkZLibDataCompressor.h"
@@ -44,9 +46,170 @@
 # include <io.h> /* unlink */
 #endif
 
-vtkCxxRevisionMacro(vtkXMLWriter, "$Revision: 1.58.2.5 $");
-vtkCxxSetObjectMacro(vtkXMLWriter, Compressor, vtkDataCompressor);
+#if defined(__BORLANDC__)
+#include <ctype.h> // isalnum is defined here for some versions of Borland
+#endif
 
+//*****************************************************************************
+// Friend class to enable access for  template functions to the protected
+// writer methods.
+class vtkXMLWriterHelper
+{
+public:
+ static inline void SetProgressPartial(vtkXMLWriter* writer, double progress)
+   {
+   writer->SetProgressPartial(progress);
+   }
+ static inline int WriteBinaryDataBlock(vtkXMLWriter* writer,
+   unsigned char* in_data, vtkXMLWriter::OffsetType numWords, int wordType)
+   {
+   return writer->WriteBinaryDataBlock(in_data, numWords, wordType);
+   }
+ static inline void* GetInt32IdTypeBuffer(vtkXMLWriter* writer)
+   {
+   return static_cast<void*>(writer->Int32IdTypeBuffer);
+   }
+ static inline unsigned char* GetByteSwapBuffer(vtkXMLWriter* writer)
+   {
+   return writer->ByteSwapBuffer;
+   }
+};
+
+//----------------------------------------------------------------------------
+template <class iterT>
+int vtkXMLWriterWriteBinaryDataBlocks(vtkXMLWriter* writer,
+  iterT* iter,
+  int wordType, vtkXMLWriter::OffsetType memWordSize, vtkXMLWriter::OffsetType outWordSize)
+{
+  // generic implementation for fixed component length arrays.
+  vtkXMLWriter::OffsetType numWords = iter->GetNumberOfValues();
+  vtkXMLWriter::OffsetType blockWords = writer->GetBlockSize()/outWordSize;
+  vtkXMLWriter::OffsetType memBlockSize = blockWords*memWordSize;
+  
+  // Prepare a pointer and counter to move through the data.
+  unsigned char* ptr = reinterpret_cast<unsigned char*>(iter->GetTuple(0));
+  vtkXMLWriter::OffsetType wordsLeft = numWords;
+
+  // Do the complete blocks.
+  vtkXMLWriterHelper::SetProgressPartial(writer, 0);
+  int result = 1;
+  while(result && (wordsLeft >= blockWords))
+    {
+    if(!vtkXMLWriterHelper::WriteBinaryDataBlock(writer, ptr, blockWords, wordType))
+      {
+      result = 0;
+      }
+    ptr += memBlockSize;
+    wordsLeft -= blockWords;
+    vtkXMLWriterHelper::SetProgressPartial(writer, 
+      float(numWords-wordsLeft)/numWords);
+    }
+
+  // Do the last partial block if any.
+  if(result && (wordsLeft > 0))
+    {
+    if(!vtkXMLWriterHelper::WriteBinaryDataBlock(writer, ptr, wordsLeft, wordType))
+      {
+      result = 0;
+      }
+    }
+  vtkXMLWriterHelper::SetProgressPartial(writer, 1);
+  return result;
+}
+
+//----------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+int vtkXMLWriterWriteBinaryDataBlocks(vtkXMLWriter* writer,
+  vtkArrayIteratorTemplate<vtkStdString>* iter,
+  int wordType, vtkXMLWriter::OffsetType vtkNotUsed(memWordSize), vtkXMLWriter::OffsetType outWordSize)
+{
+  vtkXMLWriterHelper::SetProgressPartial(writer, 0);
+  vtkStdString::value_type* allocated_buffer = 0;
+  vtkStdString::value_type* temp_buffer = 0;
+  if (vtkXMLWriterHelper::GetInt32IdTypeBuffer(writer))
+    {
+    temp_buffer = reinterpret_cast<vtkStdString::value_type*>(
+      vtkXMLWriterHelper::GetInt32IdTypeBuffer(writer));
+    }
+  else if (vtkXMLWriterHelper::GetByteSwapBuffer(writer))
+    {
+    temp_buffer = reinterpret_cast<vtkStdString::value_type*>(
+      vtkXMLWriterHelper::GetByteSwapBuffer(writer));
+    }
+  else
+    {
+    allocated_buffer = new vtkStdString::value_type[writer->GetBlockSize()/outWordSize];
+    temp_buffer = allocated_buffer;
+    }
+  
+  // For string arrays, writing as binary requires that the strings are written
+  // out into a contiguous block. This is essential since the compressor can
+  // only compress complete blocks of data.
+  vtkXMLWriter::OffsetType numStrings = iter->GetNumberOfValues();
+  vtkXMLWriter::OffsetType maxCharsPerBlock = writer->GetBlockSize() / outWordSize;
+
+  vtkXMLWriter::OffsetType index = 0; // index in string array.
+  int result = 1;
+  vtkIdType stringOffset = 0; // num of chars of string written in pervious block.
+    // this is required since a string may not fit completely in a block.
+  
+  while (result && index < numStrings) // write one block at a time.
+    {
+    vtkXMLWriter::OffsetType cur_offset = 0; // offset into the temp_buffer.
+    while (index < numStrings && cur_offset < maxCharsPerBlock)
+      {
+      vtkStdString &str = iter->GetValue(index);
+      vtkStdString::size_type length = str.size();
+      const char* data = str.c_str();
+      data += stringOffset; // advance by the chars already written.
+      length -= stringOffset;
+      stringOffset = 0;
+      if (length == 0)
+        {
+        // just write the string termination char.
+        temp_buffer[cur_offset++] = 0x0;
+        }
+      else
+        {
+        vtkXMLWriter::OffsetType new_offset = cur_offset + length + 1; // (+1) for termination char.
+        if (new_offset <= maxCharsPerBlock)
+          {
+          memcpy(&temp_buffer[cur_offset], data, length);
+          cur_offset += length;
+          temp_buffer[cur_offset++] = 0x0;
+          }
+        else
+          {
+          vtkXMLWriter::OffsetType bytes_to_copy =  (maxCharsPerBlock - cur_offset);
+          stringOffset = bytes_to_copy;
+          memcpy(&temp_buffer[cur_offset], data, bytes_to_copy);
+          cur_offset += bytes_to_copy;
+          }
+        }
+      index++;
+      }
+    if (cur_offset > 0)
+      {
+      // We have a block of data to write.
+      result = vtkXMLWriterHelper::WriteBinaryDataBlock(writer,
+        reinterpret_cast<unsigned char*>(temp_buffer),
+        cur_offset, wordType);
+      vtkXMLWriterHelper::SetProgressPartial(writer, float(index)/numStrings);
+      }
+    }
+
+  if (allocated_buffer)
+    {
+    delete [] allocated_buffer;
+    allocated_buffer = 0;
+    }
+  vtkXMLWriterHelper::SetProgressPartial(writer, 1);
+  return result;
+}
+//*****************************************************************************
+
+vtkCxxRevisionMacro(vtkXMLWriter, "$Revision: 1.72 $");
+vtkCxxSetObjectMacro(vtkXMLWriter, Compressor, vtkDataCompressor);
 //----------------------------------------------------------------------------
 vtkXMLWriter::vtkXMLWriter()
 {
@@ -389,6 +552,17 @@ int vtkXMLWriter::OpenFile()
     }
   else
     {
+    // Strip trailing whitespace from the filename.
+    int len = static_cast<int>(strlen(this->FileName));
+    for (int i = len-1; i >= 0; i--)
+      {      
+      if (isalnum(this->FileName[i])) 
+        {
+        break;
+        }
+      this->FileName[i] = 0;
+      }
+
     // Try to open the output file for writing.
 #ifdef _WIN32
     this->OutFile = new ofstream(this->FileName, ios::out | ios::binary);
@@ -608,16 +782,16 @@ void vtkXMLWriter::EndAppendedData()
 }
 
 //----------------------------------------------------------------------------
-unsigned long
+vtkXMLWriter::OffsetType
 vtkXMLWriter::ReserveAttributeSpace(const char* attr, int length)
 {
   // Save the starting stream position.
   ostream& os = *(this->Stream);
-  unsigned long startPosition = os.tellp();
+  OffsetType startPosition = os.tellp();
 
   // By default write an empty valid xml: attr="".  In most case it
   // will be overwritten but we guarantee that the xml produced will
-  // be valid in case we stop writting too early.
+  // be valid in case we stop writing too early.
   os << " " << attr << "=\"\"";
 
   // Now reserve space for the value.
@@ -639,16 +813,16 @@ vtkXMLWriter::ReserveAttributeSpace(const char* attr, int length)
 }
 
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::GetAppendedDataOffset()
+vtkXMLWriter::OffsetType vtkXMLWriter::GetAppendedDataOffset()
 {
-  unsigned long pos = this->Stream->tellp();
+  OffsetType pos = this->Stream->tellp();
   return (pos - this->AppendedDataPosition);
 }
 
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::WriteAppendedDataOffset(unsigned long streamPos,
-                                                    unsigned long &lastoffset,
-                                                    const char* attr)
+vtkXMLWriter::OffsetType vtkXMLWriter::WriteAppendedDataOffset(OffsetType streamPos,
+                                                 OffsetType &lastoffset,
+                                                 const char* attr)
 {
   // Write an XML attribute with the given name.  The value is the
   // current appended data offset.  Starts writing at the given stream
@@ -656,8 +830,8 @@ unsigned long vtkXMLWriter::WriteAppendedDataOffset(unsigned long streamPos,
   // only the double quotes.  In all cases, the final stream position
   // is left the same as before the call.
   ostream& os = *(this->Stream);
-  unsigned long returnPos = os.tellp();
-  unsigned long offset = returnPos - this->AppendedDataPosition;
+  OffsetType returnPos = os.tellp();
+  OffsetType offset = returnPos - this->AppendedDataPosition;
   lastoffset = offset; //saving result
   os.seekp(streamPos);
   if(attr)
@@ -665,7 +839,7 @@ unsigned long vtkXMLWriter::WriteAppendedDataOffset(unsigned long streamPos,
     os << " " << attr << "=";
     }
   os << "\"" << offset << "\"";
-  unsigned long endPos = os.tellp();
+  OffsetType endPos = os.tellp();
   os.seekp(returnPos);
 
   os.flush();
@@ -676,20 +850,21 @@ unsigned long vtkXMLWriter::WriteAppendedDataOffset(unsigned long streamPos,
 
   return endPos;
 }
+
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::ForwardAppendedDataOffset(unsigned long streamPos,
-                                                      unsigned long offset,
-                                                      const char* attr)
+vtkXMLWriter::OffsetType vtkXMLWriter::ForwardAppendedDataOffset(OffsetType streamPos,
+                                                   OffsetType offset,
+                                                   const char* attr)
 {
   ostream& os = *(this->Stream);
-  unsigned long returnPos = os.tellp();
+  OffsetType returnPos = os.tellp();
   os.seekp(streamPos);
   if(attr)
     {
     os << " " << attr << "=";
     }
   os << "\"" << offset << "\"";
-  unsigned long endPos = os.tellp();
+  OffsetType endPos = os.tellp();
   os.seekp(returnPos);
 
   os.flush();
@@ -702,27 +877,53 @@ unsigned long vtkXMLWriter::ForwardAppendedDataOffset(unsigned long streamPos,
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLWriter::WriteBinaryData(void* data, int numWords, int wordType)
+vtkXMLWriter::OffsetType vtkXMLWriter::ForwardAppendedDataDouble(OffsetType streamPos,
+                                                   double value,
+                                                   const char* attr)
 {
-  unsigned long outWordSize = this->GetOutputWordTypeSize(wordType);
+  ostream& os = *(this->Stream);
+  OffsetType returnPos = os.tellp();
+  os.seekp(streamPos);
+  if(attr)
+    {
+    os << " " << attr << "=";
+    }
+  os << "\"" << value << "\"";
+  OffsetType endPos = os.tellp();
+  os.seekp(returnPos);
+
+  os.flush();
+  if (os.fail())
+    {
+    this->SetErrorCode(vtkErrorCode::GetLastSystemError());
+    }
+
+  return endPos;
+}
+
+//----------------------------------------------------------------------------
+int vtkXMLWriter::WriteBinaryData(vtkAbstractArray* a)
+{
+  int wordType = a->GetDataType();
+  OffsetType outWordSize = this->GetOutputWordTypeSize(wordType);
+  OffsetType data_size = a->GetDataSize();
   if(this->Compressor)
     {
     // Need to compress the data.  Create compression header.  This
     // reserves enough space in the output.
-    if(!this->CreateCompressionHeader(numWords*outWordSize))
+    if(!this->CreateCompressionHeader(data_size*outWordSize))
       {
       return 0;
       }
-
     // Start writing the data.
     int result = this->DataStream->StartWriting();
 
     // Process the actual data.
-    if(result && !this->WriteBinaryDataInternal(data, numWords, wordType))
+    if (result && !this->WriteBinaryDataInternal(a, data_size))
       {
       result = 0;
       }
-
+    
     // Finish writing the data.
     if(result && !this->DataStream->EndWriting())
       {
@@ -747,7 +948,7 @@ int vtkXMLWriter::WriteBinaryData(void* data, int numWords, int wordType)
   else
     {
     // No data compression.  The header is just the length of the data.
-    HeaderType length = numWords*outWordSize;
+    HeaderType length = data_size*outWordSize;
     unsigned char* p = reinterpret_cast<unsigned char*>(&length);
     this->PerformByteSwap(p, 1, sizeof(HeaderType));
 
@@ -771,7 +972,7 @@ int vtkXMLWriter::WriteBinaryData(void* data, int numWords, int wordType)
       }
 
     // Process the actual data.
-    if(!this->WriteBinaryDataInternal(data, numWords, wordType))
+    if(!this->WriteBinaryDataInternal(a, data_size))
       {
       return 0;
       }
@@ -787,8 +988,8 @@ int vtkXMLWriter::WriteBinaryData(void* data, int numWords, int wordType)
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLWriter::WriteBinaryDataInternal(void* data, int numWords,
-                                          int wordType)
+int vtkXMLWriter::WriteBinaryDataInternal(vtkAbstractArray* a, 
+  OffsetType vtkNotUsed(data_size))
 {
   // Break into blocks and handle each one separately.  This allows
   // for better random access when reading compressed data and saves
@@ -799,20 +1000,21 @@ int vtkXMLWriter::WriteBinaryDataInternal(void* data, int numWords,
   // size of data in memory and the size on disk are different.  This
   // is necessary to allow vtkIdType to be converted to UInt32 for
   // writing.
-  unsigned long memWordSize = this->GetWordTypeSize(wordType);
-  unsigned long outWordSize = this->GetOutputWordTypeSize(wordType);
-  unsigned long blockWords = this->BlockSize/outWordSize;
-  unsigned long memBlockSize = blockWords*memWordSize;
+
+  int wordType = a->GetDataType();
+  OffsetType memWordSize = this->GetWordTypeSize(wordType);
+  OffsetType outWordSize = this->GetOutputWordTypeSize(wordType);
 
 #ifdef VTK_USE_64BIT_IDS
   // If the type is vtkIdType, it may need to be converted to the type
   // requested for output.
   if((wordType == VTK_ID_TYPE) && (this->IdType == vtkXMLWriter::Int32))
     {
-    this->Int32IdTypeBuffer = new Int32IdType[blockWords];
+    OffsetType blockWordsEstimate = this->BlockSize / outWordSize;
+    this->Int32IdTypeBuffer = new Int32IdType[blockWordsEstimate];
     }
 #endif
-
+  
   // Decide if we need to byte swap.
 #ifdef VTK_WORDS_BIGENDIAN
   if(outWordSize > 1 && this->ByteOrder != vtkXMLWriter::BigEndian)
@@ -830,37 +1032,24 @@ int vtkXMLWriter::WriteBinaryDataInternal(void* data, int numWords,
       }
     else
       {
-      this->ByteSwapBuffer = new unsigned char[blockWords*outWordSize];
+      // The maximum nlock size if this->BlockSize. The actual data in the block
+      // may be lesser.
+      this->ByteSwapBuffer = new unsigned char[this->BlockSize];
       }
     }
-
-  // Prepare a pointer and counter to move through the data.
-  unsigned char* ptr = reinterpret_cast<unsigned char*>(data);
-  unsigned long wordsLeft = numWords;
-
-  // Do the complete blocks.
-  this->SetProgressPartial(0);
-  int result = 1;
-  while(result && (wordsLeft >= blockWords))
+  int ret;;
+  vtkArrayIterator* iter = a->NewIterator();
+  switch (wordType)
     {
-    if(!this->WriteBinaryDataBlock(ptr, blockWords, wordType))
-      {
-      result = 0;
-      }
-    ptr += memBlockSize;
-    wordsLeft -= blockWords;
-    this->SetProgressPartial(float(numWords-wordsLeft)/numWords);
+    vtkArrayIteratorTemplateMacro(
+      ret = vtkXMLWriterWriteBinaryDataBlocks(this, 
+        static_cast<VTK_TT*>(iter),
+        wordType, memWordSize, outWordSize));
+  default:
+    vtkWarningMacro("Cannot write binary data of type : " << wordType);
+    ret = 0;
     }
-
-  // Do the last partial block if any.
-  if(result && (wordsLeft > 0))
-    {
-    if(!this->WriteBinaryDataBlock(ptr, wordsLeft, wordType))
-      {
-      result = 0;
-      }
-    }
-  this->SetProgressPartial(1);
+  iter->Delete();
 
   // Free the byte swap buffer if it was allocated.
   if(this->ByteSwapBuffer && !this->Int32IdTypeBuffer)
@@ -877,13 +1066,12 @@ int vtkXMLWriter::WriteBinaryDataInternal(void* data, int numWords,
     this->Int32IdTypeBuffer = 0;
     }
 #endif
-
-  return result;
+  return ret;
 }
-
+  
 //----------------------------------------------------------------------------
-int vtkXMLWriter::WriteBinaryDataBlock(unsigned char* in_data, int numWords,
-                                       int wordType)
+int vtkXMLWriter::WriteBinaryDataBlock(unsigned char* in_data,
+                                       OffsetType numWords, int wordType)
 {
   unsigned char* data = in_data;
 #ifdef VTK_USE_64BIT_IDS
@@ -905,7 +1093,7 @@ int vtkXMLWriter::WriteBinaryDataBlock(unsigned char* in_data, int numWords,
 
   // Get the word size of the data buffer.  This is now the size that
   // will be written.
-  unsigned long wordSize = this->GetOutputWordTypeSize(wordType);
+  OffsetType wordSize = this->GetOutputWordTypeSize(wordType);
 
   // If we need to byte swap, do it now.
   if(this->ByteSwapBuffer)
@@ -948,7 +1136,8 @@ int vtkXMLWriter::WriteBinaryDataBlock(unsigned char* in_data, int numWords,
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::PerformByteSwap(void* data, int numWords, int wordSize)
+void vtkXMLWriter::PerformByteSwap(void* data, OffsetType numWords,
+                                   int wordSize)
 {
   char* ptr = static_cast<char*>(data);
   if(this->ByteOrder == vtkXMLWriter::BigEndian)
@@ -996,7 +1185,7 @@ void vtkXMLWriter::SetDataStream(vtkOutputStream* arg)
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLWriter::CreateCompressionHeader(unsigned long size)
+int vtkXMLWriter::CreateCompressionHeader(OffsetType size)
 {
   // Allocate and initialize the compression header.
   // The format is this:
@@ -1008,8 +1197,8 @@ int vtkXMLWriter::CreateCompressionHeader(unsigned long size)
   //  }
 
   // Find the size and number of blocks.
-  unsigned long numFullBlocks = size / this->BlockSize;
-  unsigned long lastBlockSize = size % this->BlockSize;
+  unsigned int numFullBlocks = size / this->BlockSize;
+  unsigned int lastBlockSize = size % this->BlockSize;
   unsigned int numBlocks = numFullBlocks + (lastBlockSize?1:0);
 
   unsigned int headerLength = numBlocks+3;
@@ -1050,7 +1239,7 @@ int vtkXMLWriter::CreateCompressionHeader(unsigned long size)
 
 //----------------------------------------------------------------------------
 int vtkXMLWriter::WriteCompressionBlock(unsigned char* data,
-                                        unsigned long size)
+                                        OffsetType size)
 {
   // Compress the data.
   vtkUnsignedCharArray* outputArray = this->Compressor->Compress(data, size);
@@ -1079,7 +1268,7 @@ int vtkXMLWriter::WriteCompressionBlock(unsigned char* data,
 int vtkXMLWriter::WriteCompressionHeader()
 {
   // Write real compression header back into stream.
-  unsigned long returnPosition = this->Stream->tellp();
+  OffsetType returnPosition = this->Stream->tellp();
 
   // Need to byte-swap header.
   this->PerformByteSwap(this->CompressionHeader, this->CompressionHeaderLength,
@@ -1104,7 +1293,7 @@ int vtkXMLWriter::WriteCompressionHeader()
 }
 
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::GetOutputWordTypeSize(int dataType)
+vtkXMLWriter::OffsetType vtkXMLWriter::GetOutputWordTypeSize(int dataType)
 {
 #ifdef VTK_USE_64BIT_IDS
   // If the type is vtkIdType, it may need to be converted to the type
@@ -1119,21 +1308,24 @@ unsigned long vtkXMLWriter::GetOutputWordTypeSize(int dataType)
 
 //----------------------------------------------------------------------------
 template <class T>
-unsigned long vtkXMLWriterGetWordTypeSize(T*)
+vtkXMLWriter::OffsetType vtkXMLWriterGetWordTypeSize(T*)
 {
   return sizeof(T);
 }
 
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::GetWordTypeSize(int dataType)
+vtkXMLWriter::OffsetType vtkXMLWriter::GetWordTypeSize(int dataType)
 {
-  unsigned long size = 1;
+  OffsetType size = 1;
   switch (dataType)
     {
     vtkTemplateMacro(
       size = vtkXMLWriterGetWordTypeSize(static_cast<VTK_TT*>(0))
       );
-    default:
+  case VTK_STRING:
+    return sizeof(vtkStdString::value_type);
+    
+  default:
       { vtkWarningMacro("Unsupported data type: " << dataType); } break;
     }
   return size;
@@ -1148,6 +1340,7 @@ const char* vtkXMLWriter::GetWordTypeName(int dataType)
   // These string values must match vtkXMLDataElement::GetWordTypeAttribute().
   switch (dataType)
     {
+  case VTK_STRING:           return "String";
     case VTK_FLOAT:          return "Float32";
     case VTK_DOUBLE:         return "Float64";
     case VTK_ID_TYPE:
@@ -1229,6 +1422,12 @@ int vtkXMLWriter::WriteScalarAttribute(const char* name, int data)
 
 //----------------------------------------------------------------------------
 int vtkXMLWriter::WriteScalarAttribute(const char* name, float data)
+{
+  return this->WriteVectorAttribute(name, 1, &data);
+}
+
+//----------------------------------------------------------------------------
+int vtkXMLWriter::WriteScalarAttribute(const char* name, double data)
 {
   return this->WriteVectorAttribute(name, 1, &data);
 }
@@ -1363,30 +1562,91 @@ int vtkXMLWriter::WriteStringAttribute(const char* name, const char* value)
 }
 
 //----------------------------------------------------------------------------
+// This method is provided so that the specialization code for certain types
+// can be minimal.
 template <class T>
-int vtkXMLWriteAsciiData(ostream& os, T* data, int length, vtkIndent indent,
-                         long)
+inline ostream& vtkXMLWriteAsciiValue(ostream& os, const T& value)
 {
+  os << value;
+  return os;
+}
+
+//----------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline ostream& vtkXMLWriteAsciiValue(ostream& os, const char &c)
+{
+  os << short(c);
+  return os;
+}
+
+//----------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline ostream& vtkXMLWriteAsciiValue(ostream& os, const unsigned char &c)
+{
+  os << static_cast<unsigned short>(c);
+  return os;
+}
+
+//----------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline ostream& vtkXMLWriteAsciiValue(ostream& os, const signed char &c)
+{
+  os << short(c);
+  return os;
+}
+
+//----------------------------------------------------------------------------
+VTK_TEMPLATE_SPECIALIZE
+inline ostream& vtkXMLWriteAsciiValue(ostream& os, const vtkStdString& str)
+{
+  vtkStdString::const_iterator iter = str.begin();
+  vtkXMLWriteAsciiValue(os, *iter);
+  iter++;
+  for (; iter != str.end(); ++iter)
+    {
+    os << " ";
+    vtkXMLWriteAsciiValue(os, *iter);
+    }
+  os << " ";
+  char delim = 0x0;
+  return vtkXMLWriteAsciiValue(os, delim);
+}
+
+//----------------------------------------------------------------------------
+template <class iterT>
+int vtkXMLWriteAsciiData(ostream& os, iterT* iter, vtkIndent indent)
+{
+  if (!iter)
+    {
+    return 0;
+    }
   int columns = 6;
+  vtkXMLWriter::OffsetType length = iter->GetNumberOfTuples() * 
+    iter->GetNumberOfComponents();
+  
   int rows = length/columns;
   int lastRowLength = length%columns;
   int r,c;
-  int pos=0;
+  vtkIdType index=0;
   for(r=0;r < rows;++r)
     {
-    os << indent << data[pos++];
+    os << indent;
+    vtkXMLWriteAsciiValue(os, iter->GetValue(index++));
     for(c=1;c < columns;++c)
       {
-      os << " " << data[pos++];
+      os << " ";  
+      vtkXMLWriteAsciiValue(os, iter->GetValue(index++));
       }
     os << "\n";
     }
   if(lastRowLength > 0)
     {
-    os << indent << data[pos++];
+    os << indent;
+    vtkXMLWriteAsciiValue(os, iter->GetValue(index++));
     for(c=1;c < lastRowLength;++c)
       {
-      os << " " << data[pos++];
+      os << " " ;
+    vtkXMLWriteAsciiValue(os, iter->GetValue(index++));
       }
     os << "\n";
     }
@@ -1394,155 +1654,80 @@ int vtkXMLWriteAsciiData(ostream& os, T* data, int length, vtkIndent indent,
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLWriteAsciiData(ostream& os, char* data, int length, vtkIndent indent,
-                         int)
+int vtkXMLWriter::WriteAsciiData(vtkAbstractArray* a, vtkIndent indent)
 {
-  int columns = 6;
-  int rows = length/columns;
-  int lastRowLength = length%columns;
-  int r,c;
-  int pos=0;
-  for(r=0;r < rows;++r)
-    {
-    os << indent << short(data[pos++]);
-    for(c=1;c < columns;++c)
-      {
-      os << " " << short(data[pos++]);
-      }
-    os << "\n";
-    }
-  if(lastRowLength > 0)
-    {
-    os << indent << short(data[pos++]);
-    for(c=1;c < lastRowLength;++c)
-      {
-      os << " " << short(data[pos++]);
-      }
-    os << "\n";
-    }
-  return (os? 1:0);
-}
-
-//----------------------------------------------------------------------------
-int vtkXMLWriteAsciiData(ostream& os, unsigned char* data, int length,
-                         vtkIndent indent, int)
-{
-  int columns = 6;
-  int rows = length/columns;
-  int lastRowLength = length%columns;
-  int r,c;
-  int pos=0;
-  typedef unsigned short ushort;
-  for(r=0;r < rows;++r)
-    {
-    os << indent << ushort(data[pos++]);
-    for(c=1;c < columns;++c)
-      {
-      os << " " << ushort(data[pos++]);
-      }
-    os << "\n";
-    }
-  if(lastRowLength > 0)
-    {
-    os << indent << ushort(data[pos++]);
-    for(c=1;c < lastRowLength;++c)
-      {
-      os << " " << ushort(data[pos++]);
-      }
-    os << "\n";
-    }
-  return (os? 1:0);
-}
-
-//----------------------------------------------------------------------------
-int vtkXMLWriteAsciiData(ostream& os, signed char* data, int length,
-                         vtkIndent indent, int)
-{
-  int columns = 6;
-  int rows = length/columns;
-  int lastRowLength = length%columns;
-  int r,c;
-  int pos=0;
-  for(r=0;r < rows;++r)
-    {
-    os << indent << short(data[pos++]);
-    for(c=1;c < columns;++c)
-      {
-      os << " " << short(data[pos++]);
-      }
-    os << "\n";
-    }
-  if(lastRowLength > 0)
-    {
-    os << indent << short(data[pos++]);
-    for(c=1;c < lastRowLength;++c)
-      {
-      os << " " << short(data[pos++]);
-      }
-    os << "\n";
-    }
-  return (os? 1:0);
-}
-
-//----------------------------------------------------------------------------
-int vtkXMLWriter::WriteAsciiData(void* data, int numWords, int wordType,
-                                 vtkIndent indent)
-{
-  void* b = data;
-  int nw = numWords;
-  vtkIndent i = indent;
+  vtkArrayIterator* iter = a->NewIterator();
   ostream& os = *(this->Stream);
-  switch(wordType)
+  int ret;
+  switch(a->GetDataType())
     {
-    vtkTemplateMacro(
-      return vtkXMLWriteAsciiData(os, static_cast<VTK_TT*>(b), nw, i, 1)
-      );
-    default:
-      return 0;
+    vtkArrayIteratorTemplateMacro(
+      ret = vtkXMLWriteAsciiData(os, 
+        static_cast<VTK_TT*>(iter),
+        indent));
+    // Why isn;t vtkBitArray handled?
+  default:
+    ret = 0;
+    break;
     }
+  iter->Delete();
+  return ret;
 }
 
 //----------------------------------------------------------------------------
-unsigned long vtkXMLWriter::WriteDataArrayAppended(vtkDataArray* a,
-                                                   vtkIndent indent,
-                                                   const char* alternateName,
-                                                   int writeNumTuples,
-                                                   int timestep)
+void vtkXMLWriter::WriteArrayAppended(vtkAbstractArray* a,
+  vtkIndent indent, OffsetsManager &offs, const char* alternateName,
+  int writeNumTuples, int timestep)
 {
   ostream& os = *(this->Stream);
   // Write the header <DataArray:
-  this->WriteDataArrayHeader(a,indent,alternateName, writeNumTuples, timestep);
-  unsigned long pos = this->ReserveAttributeSpace("offset");
+  this->WriteArrayHeader(a,indent,alternateName, writeNumTuples, timestep);
+
+  if (vtkDataArray::SafeDownCast(a))
+    {
+    // write the scalar range of this data array, we reserver space because we
+    // don't actually have the data at this point
+    offs.GetRangeMinPosition(timestep) 
+      = this->ReserveAttributeSpace("RangeMin");
+    offs.GetRangeMaxPosition(timestep) 
+      = this->ReserveAttributeSpace("RangeMax");
+    }
+  else
+    {
+    // ranges are not written for non-data arrays.
+    offs.GetRangeMinPosition(timestep) = -1;
+    offs.GetRangeMaxPosition(timestep) = -1;
+    }
+
+  offs.GetPosition(timestep) = this->ReserveAttributeSpace("offset");
   // Close the header
   os << "/>\n";
-  this->WriteDataArrayFooter(os, indent);
-
-  return pos;
+  this->WriteArrayFooter(os, indent); 
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::WriteDataArrayAppendedData(vtkDataArray* a,
-                                              unsigned long pos,
-                                              unsigned long &lastoffset)
+void vtkXMLWriter::WriteArrayAppendedData(vtkAbstractArray* a,
+  OffsetType pos, OffsetType& lastoffset)
 {
   this->WriteAppendedDataOffset(pos, lastoffset, "offset");
-  if (this->ErrorCode != vtkErrorCode::NoError)
-    {
-    return;
-    }
-  this->WriteBinaryData(a->GetVoidPointer(0),
-                        a->GetNumberOfTuples()*a->GetNumberOfComponents(),
-                        a->GetDataType());
+  this->WriteBinaryData(a); 
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::WriteDataArrayHeader(vtkDataArray* a, vtkIndent indent,
+void vtkXMLWriter::WriteArrayHeader(vtkAbstractArray* a,  vtkIndent indent,
                                         const char* alternateName,
                                         int writeNumTuples,
                                         int timestep)
 {
   ostream& os = *(this->Stream);
-  os << indent << "<DataArray";
+  if (vtkDataArray::SafeDownCast(a))
+    {
+    os << indent << "<DataArray";
+    }
+  else
+    {
+    os << indent << "<Array";
+    }
   this->WriteWordTypeAttribute("type", a->GetDataType());
   if(alternateName)
     {
@@ -1563,7 +1748,7 @@ void vtkXMLWriter::WriteDataArrayHeader(vtkDataArray* a, vtkIndent indent,
   if(a->GetNumberOfComponents() > 1)
     {
     this->WriteScalarAttribute("NumberOfComponents",
-                               a->GetNumberOfComponents());
+      a->GetNumberOfComponents());
     }
   if(this->NumberOfTimeSteps > 1)
     {
@@ -1576,13 +1761,14 @@ void vtkXMLWriter::WriteDataArrayHeader(vtkDataArray* a, vtkIndent indent,
   if(writeNumTuples)
     {
     this->WriteScalarAttribute("NumberOfTuples",
-                               a->GetNumberOfTuples());
+      a->GetNumberOfTuples());
     }
-  this->WriteDataModeAttribute("format");
+
+  this->WriteDataModeAttribute("format"); 
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::WriteDataArrayFooter(ostream &os, vtkIndent )
+void vtkXMLWriter::WriteArrayFooter(ostream &os, vtkIndent )
 {
   os.flush();
   if (os.fail())
@@ -1590,40 +1776,52 @@ void vtkXMLWriter::WriteDataArrayFooter(ostream &os, vtkIndent )
     this->SetErrorCode(vtkErrorCode::GetLastSystemError());
     }
 }
-//----------------------------------------------------------------------------
-void vtkXMLWriter::WriteDataArrayInline(vtkDataArray* a, vtkIndent indent,
-                                        const char* alternateName,
-                                        int writeNumTuples)
-{
-  ostream& os = *(this->Stream);
-  // Write the header <DataArray:
-  this->WriteDataArrayHeader(a, indent, alternateName, writeNumTuples, -1);
-  // Close the header
-  os << ">\n";
-  // Write the data
-  this->WriteInlineData(a->GetVoidPointer(0),
-                        a->GetNumberOfTuples()*a->GetNumberOfComponents(),
-                        a->GetDataType(), indent.GetNextIndent());
-  // Close the </DataArray>
-  os << indent << "</DataArray>\n";
-  this->WriteDataArrayFooter(os, indent);
-}
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::WriteInlineData(void* data, int numWords, int wordType,
-                                   vtkIndent indent)
+void vtkXMLWriter::WriteInlineData(vtkAbstractArray* a, vtkIndent indent)
 {
   if(this->DataMode == vtkXMLWriter::Binary)
     {
     ostream& os = *(this->Stream);
     os << indent;
-    this->WriteBinaryData(data, numWords, wordType);
+    this->WriteBinaryData(a);
     os << "\n";
     }
   else
     {
-    this->WriteAsciiData(data, numWords, wordType, indent);
+    this->WriteAsciiData(a, indent);
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkXMLWriter::WriteArrayInline(vtkAbstractArray* a, vtkIndent indent,
+  const char* alternateName, int writeNumTuples)
+{
+  ostream& os = *(this->Stream);
+  // Write the header <DataArray or <Array:
+  this->WriteArrayHeader(a, indent, alternateName, writeNumTuples, 0);
+
+  vtkDataArray* da = vtkDataArray::SafeDownCast(a);
+  if (da)
+    {
+    // write the range
+    this->WriteScalarAttribute("RangeMin",da->GetRange(-1)[0]);
+    this->WriteScalarAttribute("RangeMax",da->GetRange(-1)[1]);
+    }
+
+  // Close the header
+  os << ">\n";
+  this->WriteInlineData(a, indent.GetNextIndent());
+  // Close the </DataArray> or </Array>
+  if (da)
+    {
+    os << indent << "</DataArray>\n";
+    }
+  else
+    {
+    os << indent << "</Array>\n";
+    }
+  this->WriteArrayFooter(os, indent); 
 }
 
 //----------------------------------------------------------------------------
@@ -1660,7 +1858,7 @@ void vtkXMLWriter::WriteFieldDataInline(vtkFieldData* fd, vtkIndent indent)
   for(i=0; i < fd->GetNumberOfArrays(); ++i)
     {
     this->SetProgressRange(progressRange, i, fd->GetNumberOfArrays());
-    this->WriteDataArrayInline(fd->GetArray(i), indent.GetNextIndent(),
+    this->WriteArrayInline(fd->GetAbstractArray(i), indent.GetNextIndent(),
       names[i], 1);
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
@@ -1704,8 +1902,8 @@ void vtkXMLWriter::WritePointDataInline(vtkPointData* pd, vtkIndent indent)
   for(i=0; i < pd->GetNumberOfArrays(); ++i)
     {
     this->SetProgressRange(progressRange, i, pd->GetNumberOfArrays());
-    vtkDataArray* a = this->CreateArrayForPoints(pd->GetArray(i));
-    this->WriteDataArrayInline(a, indent.GetNextIndent(), names[i]);
+    vtkAbstractArray* a = this->CreateArrayForPoints(pd->GetAbstractArray(i));
+    this->WriteArrayInline(a, indent.GetNextIndent(), names[i]);
     a->Delete();
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
@@ -1749,8 +1947,8 @@ void vtkXMLWriter::WriteCellDataInline(vtkCellData* cd, vtkIndent indent)
   for(i=0; i < cd->GetNumberOfArrays(); ++i)
     {
     this->SetProgressRange(progressRange, i, cd->GetNumberOfArrays());
-    vtkDataArray* a = this->CreateArrayForCells(cd->GetArray(i));
-    this->WriteDataArrayInline(a, indent.GetNextIndent(), names[i]);
+    vtkAbstractArray* a = this->CreateArrayForCells(cd->GetAbstractArray(i));
+    this->WriteArrayInline(a, indent.GetNextIndent(), names[i]);
     a->Delete();
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
@@ -1783,14 +1981,15 @@ void vtkXMLWriter::WriteFieldDataAppended(vtkFieldData* fd,
   os << indent << "<FieldData>\n";
 
   int i;
+  // When we want to write index arrays with String Arrays, we will
+  // have to determine the actual arrays written out to the file
+  // and allocate the fdManager accordingly.
   fdManager->Allocate(fd->GetNumberOfArrays());
   for(i=0; i < fd->GetNumberOfArrays(); ++i)
     {
     fdManager->GetElement(i).Allocate(1);
-    fdManager->GetElement(i).GetPosition(0) = 
-      this->WriteDataArrayAppended(fd->GetArray(i),
-                                   indent.GetNextIndent(),
-                                   names[i], 1 , -1);
+    this->WriteArrayAppended(fd->GetAbstractArray(i),
+      indent.GetNextIndent(), fdManager->GetElement(i), names[i], 1 , 0);
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       this->DestroyStringArray(fd->GetNumberOfArrays(), names);
@@ -1821,9 +2020,21 @@ void vtkXMLWriter::WriteFieldDataAppendedData(vtkFieldData* fd, int timestep,
     {
     fdManager->GetElement(i).Allocate(this->NumberOfTimeSteps);
     this->SetProgressRange(progressRange, i, fd->GetNumberOfArrays());
-    this->WriteDataArrayAppendedData(fd->GetArray(i),
+    this->WriteArrayAppendedData(fd->GetAbstractArray(i),
       fdManager->GetElement(i).GetPosition(timestep),
       fdManager->GetElement(i).GetOffsetValue(timestep));
+    vtkDataArray* da = fd->GetArray(i);
+    if (da)
+      {
+      // Write ranges only for data arrays.
+      double *range = da->GetRange(-1);
+      this->ForwardAppendedDataDouble
+        (fdManager->GetElement(i).GetRangeMinPosition(timestep),
+         range[0],"RangeMin" );
+      this->ForwardAppendedDataDouble
+        (fdManager->GetElement(i).GetRangeMaxPosition(timestep),
+         range[1],"RangeMax" );
+      }
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       return;
@@ -1856,10 +2067,8 @@ void vtkXMLWriter::WritePointDataAppended(vtkPointData* pd, vtkIndent indent,
     pdManager->GetElement(i).Allocate(this->NumberOfTimeSteps);
     for(int t=0; t< this->NumberOfTimeSteps; ++t)
       {
-      pdManager->GetElement(i).GetPosition(t) =
-        this->WriteDataArrayAppended(pd->GetArray(i),
-                                     indent.GetNextIndent(),
-                                     names[i],0,t);
+      this->WriteArrayAppended(pd->GetAbstractArray(i), indent.GetNextIndent(), 
+        pdManager->GetElement(i), names[i], 0, t);
       if (this->ErrorCode != vtkErrorCode::NoError)
         {
         this->DestroyStringArray(pd->GetNumberOfArrays(), names);
@@ -1891,13 +2100,13 @@ void vtkXMLWriter::WritePointDataAppendedData(vtkPointData* pd, int timestep,
     unsigned long mtime = pd->GetMTime();
     // Only write pd if MTime has changed
     unsigned long &pdMTime = pdManager->GetElement(i).GetLastMTime();
+    vtkAbstractArray* a = this->CreateArrayForPoints(pd->GetAbstractArray(i));
     if( pdMTime != mtime )
       {
       pdMTime = mtime;
-      vtkDataArray* a = this->CreateArrayForPoints(pd->GetArray(i));
-      this->WriteDataArrayAppendedData(a, pdManager->GetElement(i).GetPosition(timestep),
-                                          pdManager->GetElement(i).GetOffsetValue(timestep));
-      a->Delete();
+      this->WriteArrayAppendedData( a, 
+         pdManager->GetElement(i).GetPosition(timestep),
+         pdManager->GetElement(i).GetOffsetValue(timestep));
       if (this->ErrorCode != vtkErrorCode::NoError)
         {
         return;
@@ -1908,10 +2117,23 @@ void vtkXMLWriter::WritePointDataAppendedData(vtkPointData* pd, int timestep,
       assert( timestep > 0 );
       pdManager->GetElement(i).GetOffsetValue(timestep) =
         pdManager->GetElement(i).GetOffsetValue(timestep-1);
-      this->ForwardAppendedDataOffset(pdManager->GetElement(i).GetPosition(timestep),
-                                      pdManager->GetElement(i).GetOffsetValue(timestep),
-                                      "offset" );
+      this->ForwardAppendedDataOffset
+        (pdManager->GetElement(i).GetPosition(timestep),
+         pdManager->GetElement(i).GetOffsetValue(timestep),"offset" );
       }
+    vtkDataArray* d = vtkDataArray::SafeDownCast(a);
+    if (d)
+      {
+      // ranges are only written in case of Data Arrays.
+      double *range = d->GetRange(-1);
+      this->ForwardAppendedDataDouble
+        (pdManager->GetElement(i).GetRangeMinPosition(timestep),
+         range[0],"RangeMin" );
+      this->ForwardAppendedDataDouble
+        (pdManager->GetElement(i).GetRangeMaxPosition(timestep),
+         range[1],"RangeMax" );
+      }
+    a->Delete();
     }
 }
 
@@ -1939,10 +2161,8 @@ void vtkXMLWriter::WriteCellDataAppended(vtkCellData* cd, vtkIndent indent,
     cdManager->GetElement(i).Allocate(this->NumberOfTimeSteps);
     for(int t=0; t< this->NumberOfTimeSteps; ++t)
       {
-      cdManager->GetElement(i).GetPosition(t) = 
-        this->WriteDataArrayAppended(cd->GetArray(i),
-                                     indent.GetNextIndent(),
-                                     names[i],0,t);
+      this->WriteArrayAppended(cd->GetAbstractArray(i), indent.GetNextIndent(), 
+        cdManager->GetElement(i), names[i], 0, t);
       if (this->ErrorCode != vtkErrorCode::NoError)
         {
         this->DestroyStringArray(cd->GetNumberOfArrays(), names);
@@ -1974,13 +2194,14 @@ void vtkXMLWriter::WriteCellDataAppendedData(vtkCellData* cd, int timestep,
     unsigned long mtime = cd->GetMTime();
     // Only write pd if MTime has changed
     unsigned long &cdMTime = cdManager->GetElement(i).GetLastMTime();
+    vtkAbstractArray* a = this->CreateArrayForCells(cd->GetAbstractArray(i));
     if( cdMTime != mtime )
       {
       cdMTime = mtime;
-      vtkDataArray* a = this->CreateArrayForCells(cd->GetArray(i));
-      this->WriteDataArrayAppendedData(a, cdManager->GetElement(i).GetPosition(timestep),
-                                          cdManager->GetElement(i).GetOffsetValue(timestep));
-      a->Delete();
+      this->WriteArrayAppendedData
+        (a, 
+         cdManager->GetElement(i).GetPosition(timestep),
+         cdManager->GetElement(i).GetOffsetValue(timestep));
       if (this->ErrorCode != vtkErrorCode::NoError)
         {
         return;
@@ -1996,6 +2217,18 @@ void vtkXMLWriter::WriteCellDataAppendedData(vtkCellData* cd, int timestep,
         cdManager->GetElement(i).GetOffsetValue(timestep),
         "offset" );
       }
+    vtkDataArray* d = vtkDataArray::SafeDownCast(a);
+    if (d)
+      {
+      double *range = d->GetRange(-1);
+      this->ForwardAppendedDataDouble
+        (cdManager->GetElement(i).GetRangeMinPosition(timestep),
+         range[0],"RangeMin" );
+      this->ForwardAppendedDataDouble
+        (cdManager->GetElement(i).GetRangeMaxPosition(timestep),
+         range[1],"RangeMax" );
+      }
+    a->Delete();
     }
 }
 
@@ -2042,8 +2275,8 @@ void vtkXMLWriter::WritePointsAppended(vtkPoints* points, vtkIndent indent,
     {
     for(int t=0; t< this->NumberOfTimeSteps; ++t)
       {
-      ptManager->GetPosition(t) =
-        this->WriteDataArrayAppended(points->GetData(), indent.GetNextIndent(),0,0,t);
+      this->WriteArrayAppended(points->GetData(), 
+        indent.GetNextIndent(), *ptManager, 0, 0, t);
       }
     }
   os << indent << "</Points>\n";
@@ -2065,13 +2298,14 @@ void vtkXMLWriter::WritePointsAppendedData(vtkPoints* points, int timestep,
     unsigned long mtime = points->GetMTime();
     // Only write points if MTime has changed
     unsigned long &pointsMTime = ptManager->GetLastMTime();
+    // since points->Data is a vtkDataArray.
+    vtkDataArray* outPoints = vtkDataArray::SafeDownCast(
+      this->CreateArrayForPoints(points->GetData()));
     if( pointsMTime != mtime )
       {
       pointsMTime = mtime;
-      vtkDataArray* outPoints = this->CreateArrayForPoints(points->GetData());
-      this->WriteDataArrayAppendedData(outPoints, ptManager->GetPosition(timestep),
-                                                  ptManager->GetOffsetValue(timestep));
-      outPoints->Delete();
+      this->WriteArrayAppendedData(outPoints, 
+        ptManager->GetPosition(timestep), ptManager->GetOffsetValue(timestep));
       }
     else
       {
@@ -2081,6 +2315,14 @@ void vtkXMLWriter::WritePointsAppendedData(vtkPoints* points, int timestep,
         ptManager->GetPosition(timestep),
         ptManager->GetOffsetValue(timestep), "offset");
       }
+    double *range = outPoints->GetRange(-1);
+    this->ForwardAppendedDataDouble
+      (ptManager->GetRangeMinPosition(timestep),
+       range[0],"RangeMin" );
+    this->ForwardAppendedDataDouble
+      (ptManager->GetRangeMaxPosition(timestep),
+       range[1],"RangeMax" );
+    outPoints->Delete();
     }
 }
 
@@ -2092,8 +2334,8 @@ void vtkXMLWriter::WritePointsInline(vtkPoints* points, vtkIndent indent)
   os << indent << "<Points>\n";
   if(points)
     {
-    vtkDataArray* outPoints = this->CreateArrayForPoints(points->GetData());
-    this->WriteDataArrayInline(outPoints, indent.GetNextIndent());
+    vtkAbstractArray* outPoints = this->CreateArrayForPoints(points->GetData());
+    this->WriteArrayInline(outPoints, indent.GetNextIndent());
     outPoints->Delete();
     }
   os << indent << "</Points>\n";
@@ -2118,7 +2360,7 @@ void vtkXMLWriter::WriteCoordinatesInline(vtkDataArray* xc, vtkDataArray* yc,
     vtkDataArray* oxc = this->CreateExactCoordinates(xc, 0);
     vtkDataArray* oyc = this->CreateExactCoordinates(yc, 1);
     vtkDataArray* ozc = this->CreateExactCoordinates(zc, 2);
-
+    
     // Split progress over the three coordinates arrays.
     vtkIdType total = (oxc->GetNumberOfTuples()+
                        oyc->GetNumberOfTuples()+
@@ -2138,7 +2380,7 @@ void vtkXMLWriter::WriteCoordinatesInline(vtkDataArray* xc, vtkDataArray* yc,
     this->GetProgressRange(progressRange);
 
     this->SetProgressRange(progressRange, 0, fractions);
-    this->WriteDataArrayInline(oxc, indent.GetNextIndent());
+    this->WriteArrayInline(oxc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       oxc->Delete();
@@ -2148,7 +2390,7 @@ void vtkXMLWriter::WriteCoordinatesInline(vtkDataArray* xc, vtkDataArray* yc,
       }
 
     this->SetProgressRange(progressRange, 1, fractions);
-    this->WriteDataArrayInline(oyc, indent.GetNextIndent());
+    this->WriteArrayInline(oyc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       oxc->Delete();
@@ -2158,7 +2400,7 @@ void vtkXMLWriter::WriteCoordinatesInline(vtkDataArray* xc, vtkDataArray* yc,
       }
 
     this->SetProgressRange(progressRange, 2, fractions);
-    this->WriteDataArrayInline(ozc, indent.GetNextIndent());
+    this->WriteArrayInline(ozc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       oxc->Delete();
@@ -2205,8 +2447,8 @@ vtkXMLWriter::WriteCoordinatesAppended(vtkDataArray* xc, vtkDataArray* yc,
       coordManager->GetElement(i).Allocate(this->NumberOfTimeSteps);
       for(int t=0; t<this->NumberOfTimeSteps; ++t)
         {
-        coordManager->GetElement(i).GetPosition(t) =
-          this->WriteDataArrayAppended(allcoords[i], indent.GetNextIndent());
+        this->WriteArrayAppended(allcoords[i], indent.GetNextIndent(),
+          coordManager->GetElement(i), 0, 0, t);
         if (this->ErrorCode != vtkErrorCode::NoError)
           {
           return ;
@@ -2267,7 +2509,7 @@ void vtkXMLWriter::WriteCoordinatesAppendedData(vtkDataArray* xc, vtkDataArray* 
       if( coordMTime != mtime )
         {
         coordMTime = mtime;
-        this->WriteDataArrayAppendedData(allcoords[i], 
+        this->WriteArrayAppendedData(allcoords[i], 
           coordManager->GetElement(i).GetPosition(timestep),
           coordManager->GetElement(i).GetOffsetValue(timestep));
         if (this->ErrorCode != vtkErrorCode::NoError)
@@ -2290,7 +2532,7 @@ void vtkXMLWriter::WriteCoordinatesAppendedData(vtkDataArray* xc, vtkDataArray* 
 }
 
 //----------------------------------------------------------------------------
-vtkDataArray* vtkXMLWriter::CreateArrayForPoints(vtkDataArray* inArray)
+vtkAbstractArray* vtkXMLWriter::CreateArrayForPoints(vtkAbstractArray* inArray)
 {
   // Only some subclasses need to do anything.  By default, just
   // return the array as given.
@@ -2299,7 +2541,7 @@ vtkDataArray* vtkXMLWriter::CreateArrayForPoints(vtkDataArray* inArray)
 }
 
 //----------------------------------------------------------------------------
-vtkDataArray* vtkXMLWriter::CreateArrayForCells(vtkDataArray* inArray)
+vtkAbstractArray* vtkXMLWriter::CreateArrayForCells(vtkAbstractArray* inArray)
 {
   // Only some subclasses need to do anything.  By default, just
   // return the array as given.
@@ -2339,7 +2581,7 @@ void vtkXMLWriter::WritePPointData(vtkPointData* pd, vtkIndent indent)
   int i;
   for(i=0; i < pd->GetNumberOfArrays(); ++i)
     {
-    this->WritePDataArray(pd->GetArray(i), indent.GetNextIndent(), names[i]);
+    this->WritePArray(pd->GetAbstractArray(i), indent.GetNextIndent(), names[i]);
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       this->DestroyStringArray(pd->GetNumberOfArrays(), names);
@@ -2374,7 +2616,7 @@ void vtkXMLWriter::WritePCellData(vtkCellData* cd, vtkIndent indent)
   int i;
   for(i=0; i < cd->GetNumberOfArrays(); ++i)
     {
-    this->WritePDataArray(cd->GetArray(i), indent.GetNextIndent(), names[i]);
+    this->WritePArray(cd->GetAbstractArray(i), indent.GetNextIndent(), names[i]);
     }
 
   os << indent << "</PCellData>\n";
@@ -2390,7 +2632,7 @@ void vtkXMLWriter::WritePPoints(vtkPoints* points, vtkIndent indent)
   os << indent << "<PPoints>\n";
   if(points)
     {
-    this->WritePDataArray(points->GetData(), indent.GetNextIndent());
+    this->WritePArray(points->GetData(), indent.GetNextIndent());
     }
   os << indent << "</PPoints>\n";
   os.flush();
@@ -2401,11 +2643,19 @@ void vtkXMLWriter::WritePPoints(vtkPoints* points, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLWriter::WritePDataArray(vtkDataArray* a, vtkIndent indent,
+void vtkXMLWriter::WritePArray(vtkAbstractArray* a, vtkIndent indent,
                                    const char* alternateName)
 {
+  vtkDataArray* d = vtkDataArray::SafeDownCast(a);
   ostream& os = *(this->Stream);
-  os << indent << "<PDataArray";
+  if (d)
+    {
+    os << indent << "<PDataArray";
+    }
+  else
+    {
+    os << indent << "<PArray";
+    }
   this->WriteWordTypeAttribute("type", a->GetDataType());
   if(alternateName)
     {
@@ -2443,17 +2693,17 @@ void vtkXMLWriter::WritePCoordinates(vtkDataArray* xc, vtkDataArray* yc,
   os << indent << "<PCoordinates>\n";
   if(xc && yc && zc)
     {
-    this->WritePDataArray(xc, indent.GetNextIndent());
+    this->WritePArray(xc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       return;
       }
-    this->WritePDataArray(yc, indent.GetNextIndent());
+    this->WritePArray(yc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       return;
       }
-    this->WritePDataArray(zc, indent.GetNextIndent());
+    this->WritePArray(zc, indent.GetNextIndent());
     if (this->ErrorCode != vtkErrorCode::NoError)
       {
       return;
@@ -2618,7 +2868,7 @@ void vtkXMLWriter::WriteNextTime(double time)
   if (this->NumberOfTimeValues)
     {
     // Write user specified time value in the TimeValues attribute
-    unsigned long returnPos = os.tellp();
+    OffsetType returnPos = os.tellp();
     os.seekp(this->NumberOfTimeValues[this->CurrentTimeIndex-1]);
     os << time;
     os.seekp(returnPos);

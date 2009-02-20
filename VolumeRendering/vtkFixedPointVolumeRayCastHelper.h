@@ -84,6 +84,18 @@
 //ETX
 
 //BTX
+#define VTKKWRCHelper_GetCellComponentRawScalarValues( DATA, CIDX ) \
+  A[CIDX] = static_cast<unsigned int >((*(DATA     )));             \
+  B[CIDX] = static_cast<unsigned int >((*(DATA+Binc)));             \
+  C[CIDX] = static_cast<unsigned int >((*(DATA+Cinc)));             \
+  D[CIDX] = static_cast<unsigned int >((*(DATA+Dinc)));             \
+  E[CIDX] = static_cast<unsigned int >((*(DATA+Einc)));             \
+  F[CIDX] = static_cast<unsigned int >((*(DATA+Finc)));             \
+  G[CIDX] = static_cast<unsigned int >((*(DATA+Ginc)));             \
+  H[CIDX] = static_cast<unsigned int >((*(DATA+Hinc)))
+//ETX
+
+//BTX
 #define VTKKWRCHelper_GetCellComponentMagnitudeValues( ABCD, EFGH, CIDX )      \
   mA[CIDX] = static_cast<unsigned int >(*(ABCD       ));                       \
   mB[CIDX] = static_cast<unsigned int >(*(ABCD+mBFinc));                       \
@@ -946,6 +958,8 @@
   unsigned int oldSPos[3];                              \
                                                         \
   oldSPos[0] = (pos[0] >> VTKKW_FP_SHIFT) + 1;          \
+  oldSPos[1] = 0;                                       \
+  oldSPos[2] = 0;                                       \
                                                         \
   unsigned int w1X, w1Y, w1Z;                           \
   unsigned int w2X, w2Y, w2Z;                           \
@@ -962,6 +976,8 @@
   unsigned int oldSPos[3];                                      \
                                                                 \
   oldSPos[0] = (pos[0] >> VTKKW_FP_SHIFT) + 1;                  \
+  oldSPos[1] = 0;                                               \
+  oldSPos[2] = 0;                                               \
                                                                 \
   unsigned int w1X, w1Y, w1Z;                                   \
   unsigned int w2X, w2Y, w2Z;                                   \
@@ -1007,6 +1023,8 @@
   unsigned int oldSPos[3];                              \
                                                         \
   oldSPos[0] = (pos[0] >> VTKKW_FP_SHIFT) + 1;          \
+  oldSPos[1] = 0;                                       \
+  oldSPos[2] = 0;                                       \
                                                         \
   unsigned int w1X, w1Y, w1Z;                           \
   unsigned int w2X, w2Y, w2Z;                           \
@@ -1040,6 +1058,8 @@
   unsigned int oldSPos[3];                                      \
                                                                 \
   oldSPos[0] = (pos[0] >> VTKKW_FP_SHIFT) + 1;                  \
+  oldSPos[1] = 0;                                               \
+  oldSPos[2] = 0;                                               \
                                                                 \
   unsigned int w1X, w1Y, w1Z;                                   \
   unsigned int w2X, w2Y, w2Z;                                   \
@@ -1051,7 +1071,6 @@
   unsigned int color[3] = {0,0,0};                              \
   unsigned short remainingOpacity = 0x7fff;                     \
   unsigned short tmp[4];
-
 //ETX
 
 //BTX
@@ -1173,15 +1192,15 @@
 //ETX
 
 //BTX
-#define VTKKWRCHelper_IncrementAndLoopEnd()                                     \
-      imagePtr+=4;                                                              \
-      }                                                                         \
-    if ( j%32 == 31 )                                                           \
-      {                                                                         \
-      float fargs[1];                                                           \
-      fargs[0] = static_cast<float>(j)/static_cast<float>(imageInUseSize[1]-1); \
-      mapper->InvokeEvent( vtkCommand::ProgressEvent, fargs );                  \
-      }                                                                         \
+#define VTKKWRCHelper_IncrementAndLoopEnd()                                             \
+      imagePtr+=4;                                                                      \
+      }                                                                                 \
+    if ( j%32 == 31 )                                                                   \
+      {                                                                                 \
+      double fargs[1];                                                                  \
+      fargs[0] = static_cast<double>(j)/static_cast<float>(imageInUseSize[1]-1);        \
+      mapper->InvokeEvent( vtkCommand::VolumeMapperRenderProgressEvent, fargs );        \
+      }                                                                                 \
     }
 //ETX
 
@@ -1245,7 +1264,7 @@
 //ETX
 
 //BTX 
-#define VTKKWRCHelper_MIPSpaceLeapCheck( MAXIDX, MAXIDXDEF )            \
+#define VTKKWRCHelper_MIPSpaceLeapCheck( MAXIDX, MAXIDXDEF, FLIP )      \
   if ( pos[0] >> VTKKW_FPMM_SHIFT != mmpos[0] ||                        \
        pos[1] >> VTKKW_FPMM_SHIFT != mmpos[1] ||                        \
        pos[2] >> VTKKW_FPMM_SHIFT != mmpos[2] )                         \
@@ -1254,7 +1273,7 @@
     mmpos[1] = pos[1] >> VTKKW_FPMM_SHIFT;                              \
     mmpos[2] = pos[2] >> VTKKW_FPMM_SHIFT;                              \
     mmvalid = (MAXIDXDEF)?                                              \
-     (mapper->CheckMIPMinMaxVolumeFlag( mmpos, 0, MAXIDX )):(1);        \
+     (mapper->CheckMIPMinMaxVolumeFlag( mmpos, 0, MAXIDX, FLIP )):(1);  \
     }                                                                   \
                                                                         \
   if ( !mmvalid )                                                       \
@@ -1265,23 +1284,23 @@
 
 
 //BTX 
-#define VTKKWRCHelper_MIPSpaceLeapPopulateMulti( MAXIDX )                       \
-  if ( pos[0] >> VTKKW_FPMM_SHIFT != mmpos[0] ||                                \
-       pos[1] >> VTKKW_FPMM_SHIFT != mmpos[1] ||                                \
-       pos[2] >> VTKKW_FPMM_SHIFT != mmpos[2] )                                 \
-    {                                                                           \
-    mmpos[0] = pos[0] >> VTKKW_FPMM_SHIFT;                                      \
-    mmpos[1] = pos[1] >> VTKKW_FPMM_SHIFT;                                      \
-    mmpos[2] = pos[2] >> VTKKW_FPMM_SHIFT;                                      \
-    for ( c = 0; c < components; c++ )                                          \
-      {                                                                         \
-      mmvalid[c] = mapper->CheckMIPMinMaxVolumeFlag( mmpos, c, MAXIDX[c] );     \
-      }                                                                         \
+#define VTKKWRCHelper_MIPSpaceLeapPopulateMulti( MAXIDX, FLIP )                   \
+  if ( pos[0] >> VTKKW_FPMM_SHIFT != mmpos[0] ||                                  \
+       pos[1] >> VTKKW_FPMM_SHIFT != mmpos[1] ||                                  \
+       pos[2] >> VTKKW_FPMM_SHIFT != mmpos[2] )                                   \
+    {                                                                             \
+    mmpos[0] = pos[0] >> VTKKW_FPMM_SHIFT;                                        \
+    mmpos[1] = pos[1] >> VTKKW_FPMM_SHIFT;                                        \
+    mmpos[2] = pos[2] >> VTKKW_FPMM_SHIFT;                                        \
+    for ( c = 0; c < components; c++ )                                            \
+      {                                                                           \
+      mmvalid[c] = mapper->CheckMIPMinMaxVolumeFlag( mmpos, c, MAXIDX[c], FLIP ); \
+      }                                                                           \
     }
 //ETX
 
 //BTX 
-#define VTKKWRCHelper_MIPSpaceLeapCheckMulti( COMP )  mmvalid[COMP]
+#define VTKKWRCHelper_MIPSpaceLeapCheckMulti( COMP, FLIP )  mmvalid[COMP]
 //ETX
 
 #include "vtkObject.h"

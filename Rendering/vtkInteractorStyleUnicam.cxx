@@ -34,8 +34,9 @@
 #include "vtkSphereSource.h"
 #include "vtkTransform.h"
 #include "vtkWorldPointPicker.h"
+#include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleUnicam, "$Revision: 1.36 $");
+vtkCxxRevisionMacro(vtkInteractorStyleUnicam, "$Revision: 1.40 $");
 vtkStandardNewMacro(vtkInteractorStyleUnicam);
 
 // define 'TheTime()' function-- returns time in elapsed seconds
@@ -43,7 +44,9 @@ vtkStandardNewMacro(vtkInteractorStyleUnicam);
 # include "vtkWindows.h"
 
 static double TheTime() 
-  {return double(GetTickCount())/1000.0;}
+  {
+    return GetTickCount()/1000.0;
+  }
 #else
 #include <sys/time.h>
 
@@ -51,7 +54,7 @@ static double TheTime()
 {
   struct timeval ts; struct timezone tz;
   gettimeofday(&ts, &tz);
-  return (double)(ts.tv_sec + ts.tv_usec/1e6);
+  return static_cast<double>(ts.tv_sec + ts.tv_usec/1e6);
 }
 #endif
 
@@ -104,14 +107,7 @@ void vtkInteractorStyleUnicam::PrintSelf(ostream& os, vtkIndent indent)
 
 void vtkInteractorStyleUnicam::OnTimer() 
 {
-  if (this->ButtonDown != VTK_UNICAM_NONE) 
-    {
-    // restart timer-- we want to keep getting 'OnMouseMove' events
-    if (this->UseTimers) 
-      {
-      this->Interactor->CreateTimer(VTKI_TIMER_UPDATE);
-      }
-    }
+  ; //timer just keeps ticking since we are using repeating timers
 }
 
 void vtkInteractorStyleUnicam::SetWorldUpVector(double x, double y, double z) 
@@ -124,14 +120,12 @@ void vtkInteractorStyleUnicam::SetWorldUpVector(double x, double y, double z)
 //----------------------------------------------------------------------------
 void vtkInteractorStyleUnicam::OnLeftButtonDown() 
 {
+  this->GrabFocus(this->EventCallbackCommand);
+
   int x = this->Interactor->GetEventPosition()[0];
   int y = this->Interactor->GetEventPosition()[1];
 
   this->ButtonDown = VTK_UNICAM_BUTTON_LEFT;
-    if (this->UseTimers) 
-      {
-      this->Interactor->CreateTimer(VTKI_TIMER_UPDATE);
-      }
 
   this->DTime    = TheTime();
   this->Dist     = 0;
@@ -264,7 +258,7 @@ void vtkInteractorStyleUnicam::OnLeftButtonUp()
       // calculate scale so focus sphere always is the same size on the screen
       double s = 0.02 * vtkMath::Dot(at_v, vec);
 
-      this->FocusSphere->SetScale   (s, s, s);
+      this->FocusSphere->SetScale(s, s, s);
 
       this->FindPokedRenderer(x, y);
       this->FocusSphereRenderer = this->CurrentRenderer;
@@ -280,8 +274,10 @@ void vtkInteractorStyleUnicam::OnLeftButtonUp()
   rwi->Render();
   if (this->UseTimers)
     {
-    rwi->DestroyTimer();
+    rwi->DestroyTimer(this->TimerId);
     }
+
+  this->ReleaseFocus();
 }
 
 //----------------------------------------------------------------------------
@@ -408,7 +404,7 @@ void vtkInteractorStyleUnicam::RotateXY( int X, int Y )
     {
     this->FindPokedRenderer(X, Y);
 
-    double angle = -2*acos(clamp(dot,(double)-1.0,(double)1.0)) * Sign(te[0]-tp[0]);
+    double angle = -2*acos(clamp(dot,-1.0,1.0)) * Sign(te[0]-tp[0]);
 
     double UPvec[3];
     UPvec[0] = WorldUpVector[0];
@@ -455,9 +451,13 @@ void vtkInteractorStyleUnicam::RotateXY( int X, int Y )
     // 
     const double OVER_THE_TOP_THRESHOLD = 0.99;
     if (vtkMath::Dot(UPvec, atV) >  OVER_THE_TOP_THRESHOLD && rdist < 0)
+      {
       rdist = 0;
+      }
     if (vtkMath::Dot(UPvec, atV) < -OVER_THE_TOP_THRESHOLD && rdist > 0)
+      {
       rdist = 0;
+      }
 
     MyRotateCamera(center[0], center[1], center[2],
                    rightV[0], rightV[1], rightV[2],
@@ -577,7 +577,7 @@ void vtkInteractorStyleUnicam::GetRightVandUpV(double *p, vtkCamera *cam,
   double vec[3];
   for(i=0; i<3; i++)
     {
-      vec[i] = p[i] - from[i];
+    vec[i] = p[i] - from[i];
     }
 
   // Get shortest distance 'l' between the viewing position and
@@ -600,7 +600,6 @@ void vtkInteractorStyleUnicam::GetRightVandUpV(double *p, vtkCamera *cam,
                                     //  to 'atV' & 'rightV')
   vtkMath::Normalize(rightV);
   vtkMath::Normalize(upV);
-
   
   for(i=0; i<3; i++)
     {
@@ -650,7 +649,6 @@ void vtkInteractorStyleUnicam::MyRotateCamera(double cx, double cy, double cz,
   // IMPORTANT!  If you don't re-compute view plane normal, the camera
   // view gets all messed up.
   camera->ComputeViewPlaneNormal();
-
   t->Delete();
 }
 

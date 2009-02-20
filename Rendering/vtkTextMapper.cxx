@@ -18,7 +18,7 @@
 #include "vtkTextProperty.h"
 #include "vtkToolkits.h"
 
-vtkCxxRevisionMacro(vtkTextMapper, "$Revision: 1.54 $");
+vtkCxxRevisionMacro(vtkTextMapper, "$Revision: 1.57 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -29,10 +29,9 @@ vtkCxxSetObjectMacro(vtkTextMapper,TextProperty,vtkTextProperty);
 
 //----------------------------------------------------------------------------
 // Creates a new text mapper
-
 vtkTextMapper::vtkTextMapper()
 {
-  this->Input = (char*)NULL;
+  this->Input = NULL;
   // consistent Register/unregister
   this->TextProperty = NULL;
   this->SetTextProperty(vtkTextProperty::New());
@@ -45,7 +44,6 @@ vtkTextMapper::vtkTextMapper()
 
 //----------------------------------------------------------------------------
 // Shallow copy of an actor.
-
 void vtkTextMapper::ShallowCopy(vtkTextMapper *tm)
 {
   this->SetInput(tm->GetInput());
@@ -59,7 +57,7 @@ vtkTextMapper *vtkTextMapper::New()
 {
   // First try to create the object from the vtkObjectFactory
   vtkObject* ret = vtkImagingFactory::CreateInstance("vtkTextMapper");
-  return (vtkTextMapper*)ret;
+  return static_cast<vtkTextMapper *>(ret);
 }
 
 //----------------------------------------------------------------------------
@@ -119,107 +117,70 @@ int vtkTextMapper::GetHeight(vtkViewport* viewport)
 }
 
 //----------------------------------------------------------------------------
-#define VTK_TM_DEBUG 0
-
 int vtkTextMapper::SetConstrainedFontSize(vtkViewport *viewport,
                                           int targetWidth,
                                           int targetHeight)
 {
-  // If target "empty"
+  return this->SetConstrainedFontSize(this, viewport, targetWidth, targetHeight);
+}
 
+
+//----------------------------------------------------------------------------
+int vtkTextMapper::SetConstrainedFontSize(vtkTextMapper *tmapper, vtkViewport *viewport, 
+                                          int targetWidth, int targetHeight)
+{
+  // If target "empty" just return
   if (targetWidth == 0 && targetHeight == 0)
     {
     return 0;
     }
   
-  // Get text property
-
-  vtkTextProperty *tprop = this->GetTextProperty();
+  vtkTextProperty *tprop = tmapper->GetTextProperty();
   if (!tprop)
     {
-    vtkErrorMacro(<<"Need text property to apply constaint");
+    vtkGenericWarningMacro(<<"Need text property to apply constraint");
     return 0;
     }
-
   int fontSize = tprop->GetFontSize();
-#if VTK_TM_DEBUG
-  int oldfontSize = fontSize;
-#endif
 
   // Use the last size as a first guess
-
   int tempi[2];
-  this->GetSize(viewport, tempi);
+  tmapper->GetSize(viewport, tempi);
 
-#if 1
   // Now get an estimate of the target font size using bissection
-
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetConstrainedFontSize:     init size: (%d, %d) => (%d, %d)\n", tempi[0], tempi[1], targetWidth, targetHeight);
-#endif
-
   // Based on experimentation with big and small font size increments,
   // ceil() gives the best result.
   // big:   floor: 10749, ceil: 10106, cast: 10749, vtkMath::Round: 10311
   // small: floor: 12122, ceil: 11770, cast: 12122, vtkMath::Round: 11768
   // I guess the best optim would be to have a look at the shape of the
   // font size growth curve (probably not that linear)
-
   if (tempi[0] && tempi[1])
     {
-    float fx = (float)targetWidth / (float)tempi[0];
-    float fy = (float)targetHeight / (float)tempi[1] ;
-    fontSize = (int)ceil((float)fontSize * ((fx <= fy) ? fx : fy));
+    float fx = targetWidth / static_cast<float>(tempi[0]);
+    float fy = targetHeight / static_cast<float>(tempi[1]);
+    fontSize = static_cast<int>(ceil(fontSize * ((fx <= fy) ? fx : fy)));
     tprop->SetFontSize(fontSize);
-    this->GetSize(viewport, tempi);
+    tmapper->GetSize(viewport, tempi);
     }
 
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetConstrainedFontSize: estimate size: %2d (was: %2d)\n", 
-         fontSize, oldfontSize);
-  printf("vtkTextMapper::SetConstrainedFontSize: estimate size: (%d, %d) => (%d, %d)\n", tempi[0], tempi[1], targetWidth, targetHeight);
-#endif
-#endif
-
   // While the size is too small increase it
-
   while (tempi[1] <= targetHeight &&
          tempi[0] <= targetWidth && 
          fontSize < 100)
     {
     fontSize++;
-#if VTK_TM_DEBUG
-    printf("vtkTextMapper::SetConstrainedFontSize:  search+ size: %2d\n", 
-           fontSize);
-#endif
     tprop->SetFontSize(fontSize);
-    this->GetSize(viewport, tempi);
+    tmapper->GetSize(viewport, tempi);
     }
 
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetConstrainedFontSize:  search+ size: (%d, %d) => (%d, %d)\n", tempi[0], tempi[1], targetWidth, targetHeight);
-#endif
-
   // While the size is too large decrease it
-
   while ((tempi[1] > targetHeight || tempi[0] > targetWidth) 
          && fontSize > 0)
     {
     fontSize--;
-#if VTK_TM_DEBUG
-    printf("vtkTextMapper::SetConstrainedFontSize:  search- size: %2d\n", 
-           fontSize);
-#endif
     tprop->SetFontSize(fontSize);
-    this->GetSize(viewport, tempi);
+    tmapper->GetSize(viewport, tempi);
     }
-
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetConstrainedFontSize:  search- size: (%d, %d) => (%d, %d)\n", tempi[0], tempi[1], targetWidth, targetHeight);
-
-  printf("vtkTextMapper::SetConstrainedFontSize:      new size: %2d (was: %2d)\n", 
-         fontSize, oldfontSize);
-#endif
 
   return fontSize;
 }
@@ -244,7 +205,6 @@ int vtkTextMapper::SetMultipleConstrainedFontSize(vtkViewport *viewport,
   // First try to find the constrained font size of the first mapper: it
   // will be used minimize the search for the remaining mappers, given the 
   // fact that all mappers are likely to have the same constrained font size.
-
   int i, first;
   for (first = 0; first < nbOfMappers && !mappers[first]; first++) {}
 
@@ -256,14 +216,8 @@ int vtkTextMapper::SetMultipleConstrainedFontSize(vtkViewport *viewport,
   fontSize = mappers[first]->SetConstrainedFontSize(
     viewport, targetWidth, targetHeight);
 
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetMultipleConstrainedFontSize:    first size: %2d\n", 
-         fontSize);
-#endif
-
   // Find the constrained font size for the remaining mappers and 
   // pick the smallest
-
   for (i = first + 1; i < nbOfMappers; i++)
     {
     if (mappers[i])
@@ -278,13 +232,7 @@ int vtkTextMapper::SetMultipleConstrainedFontSize(vtkViewport *viewport,
       }
     }
 
-#if VTK_TM_DEBUG
-  printf("vtkTextMapper::SetMultipleConstrainedFontSize: smallest size: %2d\n", 
-         fontSize);
-#endif
-
   // Assign the smallest size to all text mappers and find the largest area
-
   int tempi[2];
   for (i = first; i < nbOfMappers; i++)
     {
@@ -309,6 +257,52 @@ int vtkTextMapper::SetMultipleConstrainedFontSize(vtkViewport *viewport,
   // for this one, then applied this size to all others.  But who
   // knows, maybe one day the text property will support a text
   // orientation/rotation, and in that case the height will vary.
+  return fontSize;
+}
+
+
+//----------------------------------------------------------------------------
+int vtkTextMapper::SetRelativeFontSize(vtkTextMapper *tmapper,
+                                       vtkViewport *viewport,  int *targetSize, 
+                                       int *stringSize, float sizeFactor)
+{
+  sizeFactor = (sizeFactor <= 0.0f ? 0.015f : sizeFactor);
+
+  int fontSize, targetWidth, targetHeight;
+  // Find the best size for the font
+  targetWidth = targetSize[0] > targetSize[1] ? targetSize[0] : targetSize[1];
+  targetHeight = static_cast<int>(sizeFactor * targetSize[0]
+                                  + sizeFactor * targetSize[1]);
+
+  fontSize = tmapper->SetConstrainedFontSize(tmapper, viewport, targetWidth, targetHeight);
+  tmapper->GetSize(viewport, stringSize);
+
+  return fontSize;
+}
+
+//----------------------------------------------------------------------------
+int vtkTextMapper::SetMultipleRelativeFontSize(vtkViewport *viewport, 
+                                               vtkTextMapper **textMappers, 
+                                               int nbOfMappers, int *targetSize, 
+                                               int *stringSize, float sizeFactor)
+{
+  int fontSize, targetWidth, targetHeight;
+
+  // Find the best size for the font
+  // WARNING: check that the below values are in sync with the above
+  // similar function.
+
+  targetWidth = targetSize [0] > targetSize[1] ? targetSize[0] : targetSize[1];
+
+  targetHeight = static_cast<int>(sizeFactor * targetSize[0]
+                                  + sizeFactor * targetSize[1]);
+
+  fontSize = 
+    vtkTextMapper::SetMultipleConstrainedFontSize(viewport, 
+                                                  targetWidth, targetHeight,
+                                                  textMappers,
+                                                  nbOfMappers,
+                                                  stringSize);
 
   return fontSize;
 }
@@ -317,7 +311,6 @@ int vtkTextMapper::SetMultipleConstrainedFontSize(vtkViewport *viewport,
 //----------------------------------------------------------------------------
 // Parse the input and create multiple text mappers if multiple lines
 // (delimited by \n) are specified.
-
 void vtkTextMapper::SetInput(const char *input)
 {
   if ( this->Input && input && (!strcmp(this->Input,input))) 
@@ -385,7 +378,6 @@ void vtkTextMapper::SetInput(const char *input)
 
 //----------------------------------------------------------------------------
 // Determine the number of lines in the Input string (delimited by "\n").
-
 int vtkTextMapper::GetNumberOfLines(const char *input)
 {
   if ( input == NULL || input[0] == '\0')
@@ -411,7 +403,6 @@ int vtkTextMapper::GetNumberOfLines(const char *input)
 //----------------------------------------------------------------------------
 // Get the next \n delimited line. Returns a string that
 // must be freed by the calling function.
-
 char *vtkTextMapper::NextLine(const char *input, int lineNum)
 {
   const char *ptr, *ptrEnd;
@@ -440,7 +431,6 @@ char *vtkTextMapper::NextLine(const char *input, int lineNum)
 
 //----------------------------------------------------------------------------
 // Get the size of a multi-line text string
-
 void vtkTextMapper::GetMultiLineSize(vtkViewport* viewport, int size[2])
 {
   int i;
@@ -465,14 +455,15 @@ void vtkTextMapper::GetMultiLineSize(vtkViewport* viewport, int size[2])
   
   // add in the line spacing
   this->LineSize = size[1];
-  size[1] = (int)((float)size[1] * (1.0 + (this->NumberOfLines - 1) * tprop->GetLineSpacing()));
+  size[1] = static_cast<int>(
+    size[1] * (1.0 + (this->NumberOfLines - 1) * tprop->GetLineSpacing()));
 }
 
 //----------------------------------------------------------------------------
 void vtkTextMapper::RenderOverlayMultipleLines(vtkViewport *viewport, 
                                                vtkActor2D *actor)    
 {
-  float offset = 0.0;
+  float offset = 0.0f;
   int size[2];
   // make sure LineSize is up to date 
   this->GetMultiLineSize(viewport,size);
@@ -487,13 +478,13 @@ void vtkTextMapper::RenderOverlayMultipleLines(vtkViewport *viewport,
   switch (tprop->GetVerticalJustification())
     {
     case VTK_TEXT_TOP:
-      offset = 0.0;
+      offset = 0.0f;
       break;
     case VTK_TEXT_CENTERED:
-      offset = (-this->NumberOfLines + 1.0) / 2.0;
+      offset = (-this->NumberOfLines + 1.0f) / 2.0f;
       break;
     case VTK_TEXT_BOTTOM:
-      offset = -this->NumberOfLines + 1.0;
+      offset = -this->NumberOfLines + 1.0f;
       break;
     }
 
@@ -501,7 +492,7 @@ void vtkTextMapper::RenderOverlayMultipleLines(vtkViewport *viewport,
     {
     this->TextLines[lineNum]->GetTextProperty()->ShallowCopy(tprop);
     this->TextLines[lineNum]->GetTextProperty()->SetLineOffset
-      (tprop->GetLineOffset() + (int)((float)this->LineSize * (lineNum + offset) * tprop->GetLineSpacing()));
+      (tprop->GetLineOffset() + static_cast<int>(this->LineSize * (lineNum + offset) * tprop->GetLineSpacing()));
     this->TextLines[lineNum]->RenderOverlay(viewport,actor);
     }
 }

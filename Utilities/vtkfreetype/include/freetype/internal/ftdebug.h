@@ -4,7 +4,7 @@
 /*                                                                         */
 /*    Debugging and logging component (specification).                     */
 /*                                                                         */
-/*  Copyright 1996-2001, 2002, 2004 by                                     */
+/*  Copyright 1996-2001, 2002, 2004, 2006, 2007 by                         */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -15,7 +15,7 @@
 /*                                                                         */
 /*                                                                         */
 /*  IMPORTANT: A description of FreeType's debugging support can be        */
-/*             found in "docs/DEBUG.TXT".  Read it if you need to use or   */
+/*             found in `docs/DEBUG.TXT'.  Read it if you need to use or   */
 /*             understand this code.                                       */
 /*                                                                         */
 /***************************************************************************/
@@ -92,7 +92,7 @@ FT_BEGIN_HEADER
 
 #else /* !FT_DEBUG_LEVEL_TRACE */
 
-#define FT_TRACE( level, varformat )  do ; while ( 0 )      /* nothing */
+#define FT_TRACE( level, varformat )  {}      /* nothing */
 
 #endif /* !FT_DEBUG_LEVEL_TRACE */
 
@@ -113,7 +113,7 @@ FT_BEGIN_HEADER
   /*    This function may be useful if you want to access elements of      */
   /*    the internal `ft_trace_levels' array by an index.                  */
   /*                                                                       */
-  FT_EXPORT( FT_Int )
+  FT_BASE( FT_Int )
   FT_Trace_Get_Count( void );
 
 
@@ -138,9 +138,9 @@ FT_BEGIN_HEADER
   /*    components.                                                        */
   /*                                                                       */
   /*    This function may be useful if you want to control FreeType 2's    */
-  /*    debug level in your appliaciton.                                   */
+  /*    debug level in your application.                                   */
   /*                                                                       */
-  FT_EXPORT( const char * )
+  FT_BASE( const char * )
   FT_Trace_Get_Name( FT_Int  idx );
 
 
@@ -174,7 +174,7 @@ FT_BEGIN_HEADER
 
 #else  /* !FT_DEBUG_LEVEL_ERROR */
 
-#define FT_ERROR( varformat )  do ; while ( 0 )      /* nothing */
+#define FT_ERROR( varformat )  {}      /* nothing */
 
 #endif /* !FT_DEBUG_LEVEL_ERROR */
 
@@ -197,14 +197,14 @@ FT_BEGIN_HEADER
 
 #else /* !FT_DEBUG_LEVEL_ERROR */
 
-#define FT_ASSERT( condition )  do ; while ( 0 )
+#define FT_ASSERT( condition )  {}
 
 #endif /* !FT_DEBUG_LEVEL_ERROR */
 
 
   /*************************************************************************/
   /*                                                                       */
-  /*  Define 'FT_Message' and 'FT_Panic' when needed                       */
+  /*  Define `FT_Message' and `FT_Panic' when needed                       */
   /*                                                                       */
   /*************************************************************************/
 
@@ -213,11 +213,11 @@ FT_BEGIN_HEADER
 #include "stdio.h"  /* for vprintf() */
 
   /* print a message */
-  FT_EXPORT( void )
+  FT_BASE( void )
   FT_Message( const char*  fmt, ... );
 
   /* print a message and exit */
-  FT_EXPORT( void )
+  FT_BASE( void )
   FT_Panic( const char*  fmt, ... );
 
 #endif /* FT_DEBUG_LEVEL_ERROR */

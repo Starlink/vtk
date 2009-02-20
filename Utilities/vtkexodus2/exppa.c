@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994 Sandia Corporation. Under the terms of Contract
+ * Copyright (c) 2005 Sandia Corporation. Under the terms of Contract
  * DE-AC04-94AL85000 with Sandia Corporation, the U.S. Governement
  * retains certain rights in this software.
  * 
@@ -54,17 +54,16 @@
 *
 * revision history - 
 *
-*  $Id: exppa.c,v 1.2 2005/07/19 12:31:28 andy Exp $
+*  $Id: exppa.c,v 1.4 2008-04-22 21:14:53 david.cole Exp $
 *
 *****************************************************************************/
 
 #include "exodusII.h"
 #include "exodusII_int.h"
-
 #include <string.h>
-#include <stdlib.h>
+#include <stdlib.h> /* for free() */
 
-/*
+/*!
  * writes an array of object properties
  */
 
@@ -78,7 +77,7 @@ int ex_put_prop_array (int   exoid,
    long start[1], count[1], num_obj; 
    nclong *lptr;
    char name[MAX_VAR_NAME_LENGTH+1];
-   char tmpstr[MAX_VAR_NAME_LENGTH+1];
+   char tmpstr[MAX_STR_LENGTH+1];
    char obj_stype[MAX_VAR_NAME_LENGTH+1];
    char dim_name[MAX_VAR_NAME_LENGTH+1];
 
@@ -183,6 +182,7 @@ int ex_put_prop_array (int   exoid,
 
 /*   compare stored attribute name with passed property name   */
 
+     memset(tmpstr, 0, MAX_STR_LENGTH+1);
      if ((ncattget (exoid, propid, ATT_PROP_NAME, tmpstr)) == -1)
      {
        exerrval = ncerr;
@@ -258,7 +258,7 @@ int ex_put_prop_array (int   exoid,
 /*   store property name as attribute of property array variable */
 
      if ((ncattput (exoid, propid, ATT_PROP_NAME, NC_CHAR,
-                    strlen(prop_name)+1, prop_name)) == -1)
+                    (int)strlen(prop_name)+1, prop_name)) == -1)
      {
        exerrval = ncerr;
        sprintf(errmsg,

@@ -19,14 +19,25 @@
 
 #include "vtkSystemIncludes.h"
 
+#include "vtkDataArray.h"
 #include "vtkObject.h"
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointerBase.h"
 #include "vtkTimeStamp.h"
 #include "vtkWindows.h"
 
+
+#include <vtksys/ios/sstream>
 #include <vtkstd/map>
 #include <vtkstd/string>
+
+// Silent warning like
+// "dereferencing type-punned pointer will break strict-aliasing rules"
+// it happens because this kind of expression: (long *)&ptr
+// pragma GCC diagnostic is available since gcc>=4.2
+#if defined(__GNUG__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=2)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
 
 #if defined ( _MSC_VER )
 #  define vtkConvertPtrToLong(x) ((long)(PtrToUlong(x)))
@@ -46,6 +57,10 @@
   0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
 #else
 #define VTK_PYTHON_UTIL_SUPRESS_UNINITIALIZED
+#endif
+
+#if PY_VERSION_HEX < 0x02050000
+  typedef int Py_ssize_t;
 #endif
 
 //#define VTKPYTHONDEBUG
@@ -100,11 +115,10 @@ static PyObject *PyVTKObject_PyString(PyVTKObject *self)
     }
   PyErr_Clear();
 
-  ostrstream vtkmsg_with_warning_C4701;
+  vtksys_ios::ostringstream vtkmsg_with_warning_C4701;
   self->vtk_ptr->Print(vtkmsg_with_warning_C4701);
   vtkmsg_with_warning_C4701.put('\0');
-  PyObject *res = PyString_FromString(vtkmsg_with_warning_C4701.str());
-  vtkmsg_with_warning_C4701.rdbuf()->freeze(0);
+  PyObject *res = PyString_FromString(vtkmsg_with_warning_C4701.str().c_str());
   return res;
 }
 
@@ -358,51 +372,6 @@ static PyObject *PyVTKObject_PyGetAttr(PyVTKObject *self, PyObject *attr)
 }
 
 //--------------------------------------------------------------------
-class vtkPythonDeleteCommand : public vtkCommand
-{
-public:
-  static vtkPythonDeleteCommand *New(PyVTKObject *obj) {
-    return new vtkPythonDeleteCommand(obj); };
-
-  void Execute(vtkObject *caller, unsigned long, void *);
-
-private:
-  vtkPythonDeleteCommand(PyVTKObject *obj) : Self(obj) {};
-
-  PyVTKObject *Self;
-};
-
-void vtkPythonDeleteCommand::Execute(vtkObject *caller,
-                                     unsigned long vtkNotUsed(id),
-                                     void *vtkNotUsed(data))
-{
-  if (this->Self->vtk_ptr != caller)
-    {
-    vtkGenericWarningMacro("Python vs. VTK mismatch for " << caller);
-    return;
-    }
-
-#if (PY_MAJOR_VERSION > 2) || \
-((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
-  PyGILState_STATE state = PyGILState_Ensure();
-#endif
-
-  vtkPythonDeleteObjectFromHash((PyObject *)this->Self);
-  Py_DECREF((PyObject *)this->Self->vtk_class);
-  Py_DECREF(this->Self->vtk_dict);
-#if (PY_MAJOR_VERSION >= 2)
-  PyObject_Del(this->Self);
-#else
-  PyMem_DEL(this->Self);
-#endif  
-
-#if (PY_MAJOR_VERSION > 2) || \
-((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
-  PyGILState_Release(state);
-#endif
-}
-
-//--------------------------------------------------------------------
 static void PyVTKObject_PyDelete(PyVTKObject *self)
 {
 #if PY_VERSION_HEX >= 0x02010000
@@ -411,10 +380,11 @@ static void PyVTKObject_PyDelete(PyVTKObject *self)
     PyObject_ClearWeakRefs((PyObject *) self);
     }
 #endif
-  self->vtk_ptr->Delete();
-  // the rest of the delection is handled when the VTK-level object
-  // is destroyed
+
+  // A python object owning a VTK object reference is getting
+  // destroyed.  Remove the python object's VTK object reference.
   vtkPythonDeleteObjectFromHash((PyObject *)self);
+
   Py_DECREF((PyObject *)self->vtk_class);
   Py_DECREF(self->vtk_dict);
 #if (PY_MAJOR_VERSION >= 2)
@@ -423,6 +393,79 @@ static void PyVTKObject_PyDelete(PyVTKObject *self)
   PyMem_DEL(self);
 #endif  
 }
+
+static Py_ssize_t
+array_getsegcount(PyObject *pself, Py_ssize_t *lenp)
+{
+  PyVTKObject *self = (PyVTKObject*)pself;
+  vtkDataArray *da = vtkDataArray::SafeDownCast(self->vtk_ptr);
+  if (da)
+    {
+    if (lenp)
+      {
+      *lenp = da->GetNumberOfTuples()*
+        da->GetNumberOfComponents()*
+        da->GetDataTypeSize();
+      }
+
+    return 1;
+    }
+
+  if (lenp)
+    {
+    *lenp = 0;
+    }
+  return 0;
+}
+
+static Py_ssize_t
+array_getreadbuf(PyObject *pself, Py_ssize_t segment, void **ptrptr)
+{
+  if (segment != 0) 
+    {
+    PyErr_SetString(PyExc_ValueError,
+                    "accessing non-existing array segment");
+    return -1;
+    }
+
+  PyVTKObject *self = (PyVTKObject*)pself;
+  vtkDataArray *da = vtkDataArray::SafeDownCast(self->vtk_ptr);
+  if (da)
+    {
+    *ptrptr = da->GetVoidPointer(0);
+    return da->GetNumberOfTuples()*
+      da->GetNumberOfComponents()*
+      da->GetDataTypeSize();
+    }
+  return -1;
+}
+
+
+static Py_ssize_t
+array_getwritebuf(PyObject *pself, Py_ssize_t segment, void **ptrptr)
+{
+  return array_getreadbuf(pself, segment, ptrptr);
+}
+
+static Py_ssize_t
+array_getcharbuf(PyObject *, Py_ssize_t , const char **)
+{
+  return -1;
+}
+
+static PyBufferProcs array_as_buffer = {
+#if PY_VERSION_HEX >= 0x02050000
+  (readbufferproc)array_getreadbuf,    /*bf_getreadbuffer*/
+  (writebufferproc)array_getwritebuf,  /*bf_getwritebuffer*/
+  (segcountproc)array_getsegcount,            /*bf_getsegcount*/
+  (charbufferproc)array_getcharbuf,    /*bf_getcharbuffer*/
+#else
+  (getreadbufferproc)array_getreadbuf,    /*bf_getreadbuffer*/
+  (getwritebufferproc)array_getwritebuf,  /*bf_getwritebuffer*/
+  (getsegcountproc)array_getsegcount,         /*bf_getsegcount*/
+  (getcharbufferproc)array_getcharbuf,    /*bf_getcharbuffer*/
+#endif
+};
 
 //--------------------------------------------------------------------
 static PyTypeObject PyVTKObjectType = {
@@ -445,7 +488,7 @@ static PyTypeObject PyVTKObjectType = {
   (reprfunc)PyVTKObject_PyString,        // tp_string
   (getattrofunc)PyVTKObject_PyGetAttr,   // tp_getattro
   (setattrofunc)PyVTKObject_PySetAttr,   // tp_setattro
-  0,                                     // tp_as_buffer
+  &array_as_buffer,                      // tp_as_buffer
 #if PY_VERSION_HEX >= 0x02010000
   Py_TPFLAGS_HAVE_WEAKREFS,              // tp_flags
 #else
@@ -471,20 +514,22 @@ int PyVTKObject_Check(PyObject *obj)
 PyObject *PyVTKObject_New(PyObject *pyvtkclass, vtkObjectBase *ptr)
 {
   PyVTKClass *vtkclass = (PyVTKClass *)pyvtkclass;
-
-  if (ptr)
+  bool haveRef = false;
+  if(!ptr)
     {
-    ptr->Register(NULL);
-    }
-  else if (vtkclass->vtk_new != NULL)
-    {
-    ptr = vtkclass->vtk_new();
-    }
-  else
-    {
-    PyErr_SetString(PyExc_TypeError,
-                    (char*)"this is an abstract class and cannot be instantiated");
-    return 0;
+    // Create a new instance of this class since we were not given one.
+    if(vtkclass->vtk_new)
+      {
+      ptr = vtkclass->vtk_new();
+      haveRef = true;
+      }
+    else
+      {
+      PyErr_SetString(
+        PyExc_TypeError,
+        (char*)"this is an abstract class and cannot be instantiated");
+      return 0;
+      }
     }
 #if (PY_MAJOR_VERSION >= 2)
   PyVTKObject *self = PyObject_New(PyVTKObject, &PyVTKObjectType);
@@ -516,11 +561,16 @@ PyObject *PyVTKObject_New(PyObject *pyvtkclass, vtkObjectBase *ptr)
   self->vtk_weakreflist = NULL;
 #endif
 
+  // A python object owning a VTK object reference is getting
+  // created.  Add the python object's VTK object reference.
   vtkPythonAddObjectToHash((PyObject *)self, ptr);
-  /* I'll reinstate this later
-  ptr->AddObserver(vtkCommand::DeleteEvent,
-                   vtkPythonDeleteCommand::New(self));
-  */
+
+  // The hash now owns a reference so we can free ours.
+  if(haveRef)
+    {
+    ptr->Delete();
+    }
+
   return (PyObject *)self;
 }
 
@@ -875,7 +925,10 @@ static PyObject *vtkBuildDocString(char *docstring[])
   int *m;
   int total = 0;
 
-  for (n = 0; docstring[n] != NULL; n++);
+  for (n = 0; docstring[n] != NULL; n++)
+    {
+    ;
+    }
 
   m = new int[n];
 
@@ -1146,7 +1199,10 @@ static PyObject *PyVTKSpecialObject_PyGetAttr(PyVTKSpecialObject *self,
       PyObject *lst;
       int i, n;
 
-      for (n = 0; meth && meth[n].ml_name; n++);
+      for (n = 0; meth && meth[n].ml_name; n++)
+        {
+        ;
+        }
 
       if ((lst = PyList_New(n)) != NULL)
         {
@@ -1360,7 +1416,10 @@ void vtkPythonDeleteObjectFromHash(PyObject *obj)
                          << obj->vtk_ptr);
 #endif  
 
-  vtkPythonHash->ObjectHash->erase(ptr);
+  if (vtkPythonHash)
+    {
+    vtkPythonHash->ObjectHash->erase(ptr);
+    }
 }
 
 //--------------------------------------------------------------------
@@ -1615,7 +1674,7 @@ void *vtkPythonUnmanglePointer(char *ptrText, int *len, const char *type)
 // list is modified.
 
 template<class T>
-static inline
+inline
 int vtkPythonCheckFloatArray(PyObject *args, int i, T *a, int n)
 {
   int changed = 0;
@@ -1647,7 +1706,7 @@ int vtkPythonCheckFloatArray(PyObject *args, int i, T *a, int n)
 }
 
 template<class T>
-static inline
+inline
 int vtkPythonCheckIntArray(PyObject *args, int i, T *a, int n)
 {
   int changed = 0;
@@ -1680,7 +1739,7 @@ int vtkPythonCheckIntArray(PyObject *args, int i, T *a, int n)
 
 #if defined(VTK_TYPE_USE_LONG_LONG) || defined(VTK_TYPE_USE___INT64)
 template<class T>
-static inline
+inline
 int vtkPythonCheckLongArray(PyObject *args, int i, T *a, int n)
 {
   int changed = 0;
@@ -1819,11 +1878,21 @@ void vtkPythonVoidFunc(void *arg)
   PyObject *arglist, *result;
   PyObject *func = (PyObject *)arg;
 
+  // Sometimes it is possible for the function to be invoked after
+  // Py_Finalize is called, this will cause nasty errors so we return if
+  // the interpreter is not initialized.
+  if (Py_IsInitialized() == 0)
+    {
+    return;
+    }
+
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_STATE state = PyGILState_Ensure();
 #endif
-
+#endif
+  
   arglist = Py_BuildValue((char*)"()");
 
   result = PyEval_CallObject(func, arglist);
@@ -1843,9 +1912,11 @@ void vtkPythonVoidFunc(void *arg)
     PyErr_Print();
     }
 
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_Release(state);
+#endif
 #endif
 }
 
@@ -1854,19 +1925,31 @@ void vtkPythonVoidFuncArgDelete(void *arg)
 {
   PyObject *func = (PyObject *)arg;
 
+  // Sometimes it is possible for the function to be invoked after
+  // Py_Finalize is called, this will cause nasty errors so we return if
+  // the interpreter is not initialized.
+  if (Py_IsInitialized() == 0)
+    {
+    return;
+    }
+
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_STATE state = PyGILState_Ensure();
 #endif
-
+#endif
+  
   if (func)
     {
     Py_DECREF(func);
     }
 
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_Release(state);
+#endif
 #endif
 }
   
@@ -1877,8 +1960,8 @@ vtkPythonCommand::vtkPythonCommand()
 }
 
 vtkPythonCommand::~vtkPythonCommand()
-{ 
-  if (this->obj)
+{
+  if (this->obj && Py_IsInitialized())
     {
     Py_DECREF(this->obj);
     }
@@ -1896,11 +1979,21 @@ void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
   PyObject *arglist, *result, *obj2;
   const char *eventname;
 
+  // Sometimes it is possible for the command to be invoked after
+  // Py_Finalize is called, this will cause nasty errors so we return if
+  // the interpreter is not initialized.
+  if (Py_IsInitialized() == 0)
+    {
+    return;
+    }
+
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_STATE state = PyGILState_Ensure();
 #endif
-
+#endif
+  
   if (ptr && ptr->GetReferenceCount() > 0)
     {
     obj2 = vtkPythonGetObjectFromPointer(ptr);
@@ -1995,9 +2088,11 @@ void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
     PyErr_Print();
     }
 
+#ifndef VTK_NO_PYTHON_THREADS
 #if (PY_MAJOR_VERSION > 2) || \
 ((PY_MAJOR_VERSION == 2) && (PY_MINOR_VERSION >= 3))
   PyGILState_Release(state);
+#endif
 #endif
 }
 //--------------------------------------------------------------------

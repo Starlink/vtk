@@ -23,33 +23,34 @@
 #ifndef __vtkExtractCTHPart_h
 #define __vtkExtractCTHPart_h
 
-#include "vtkPolyDataAlgorithm.h"
-class vtkPlane;
-class vtkDataArray;
-class vtkDoubleArray;
-class vtkRectilinearGrid;
+#include "vtkMultiBlockDataSetAlgorithm.h"
 
-class vtkExtractCTHPartInternal;
-class vtkHierarchicalDataSet;
-class vtkPolyData;
-class vtkUniformGrid;
-class vtkImageData;
-class vtkDataSet;
-
-class vtkContourFilter;
 class vtkAppendPolyData;
-class vtkDataSetSurfaceFilter;
+class vtkBoundingBox;
 class vtkClipPolyData;
+class vtkContourFilter;
 class vtkCutter;
-
+class vtkDataArray;
+class vtkDataSet;
+class vtkDataSetSurfaceFilter;
+class vtkDoubleArray;
+class vtkExtractCTHPartInternal;
+class vtkImageData;
+class vtkInformationDoubleVectorKey;
+class vtkCompositeDataSet;
 class vtkMultiProcessController;
+class vtkPlane;
+class vtkPolyData;
+class vtkRectilinearGrid;
+class vtkUniformGrid;
+class vtkUnsignedCharArray;
 
 //#define EXTRACT_USE_IMAGE_DATA 1
 
-class VTK_PARALLEL_EXPORT vtkExtractCTHPart : public vtkPolyDataAlgorithm
+class VTK_PARALLEL_EXPORT vtkExtractCTHPart : public vtkMultiBlockDataSetAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkExtractCTHPart,vtkPolyDataAlgorithm);
+  vtkTypeRevisionMacro(vtkExtractCTHPart,vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -63,10 +64,24 @@ public:
 
   // Description:
   // Names of cell volume fraction arrays to extract.
-  void RemoveAllVolumeArrayNames();
-  void AddVolumeArrayName(char* arrayName);
+  void RemoveDoubleVolumeArrayNames();
+  void RemoveFloatVolumeArrayNames();
+  void RemoveUnsignedCharVolumeArrayNames();
   int GetNumberOfVolumeArrayNames();
   const char* GetVolumeArrayName(int idx);
+  // for backwards compatibility
+  void RemoveAllVolumeArrayNames();
+
+  // Description
+  // Names of cell volume fraction arrays to extract.
+  // Each of the volume fraction arrays must be of the same type.
+  // These three methods enforce that on input, removing any prior arrays
+  // of the wrong type whenever a new array is added.
+  void AddDoubleVolumeArrayName(char* arrayName);
+  void AddFloatVolumeArrayName(char* arrayName);
+  void AddUnsignedCharVolumeArrayName(char* arrayName);
+  //for backwards compatibility
+  void AddVolumeArrayName(char* arrayName); 
 
   // Description:
   // Set, get or maninpulate the implicit clipping plane.
@@ -81,21 +96,26 @@ public:
   // Set the controller used to coordinate parallel processing.
   void SetController(vtkMultiProcessController* controller);
   
+  // Description:
   // Return the controller used to coordinate parallel processing. By default,
   // it is the global controller.
   vtkGetObjectMacro(Controller,vtkMultiProcessController);
-  
+
+  // Description:
+  // Set and get the volume fraction surface value. This value should be
+  // between 0 and 1
+  vtkSetClampMacro(VolumeFractionSurfaceValue, double, 0.0, 1.0);
+  vtkGetMacro(VolumeFractionSurfaceValue, double);
+ 
 protected:
   vtkExtractCTHPart();
   ~vtkExtractCTHPart();
 
-  void SetOutputData(int idx, vtkPolyData* d);
+  virtual int RequestInformation(vtkInformation *request,
+                                 vtkInformationVector **inputVector,
+                                 vtkInformationVector *outputVector);
   
-  int RequestInformation(vtkInformation *request,
-                         vtkInformationVector **inputVector,
-                         vtkInformationVector *outputVector);
-  
-  int RequestData(vtkInformation *, vtkInformationVector **,
+  virtual int RequestData(vtkInformation *, vtkInformationVector **,
                   vtkInformationVector *);
   
   // Description:
@@ -106,20 +126,16 @@ protected:
   // Description:
   // Compute the bounds over the composite dataset, some sub-dataset
   // can be on other processors.
-  void ComputeBounds(vtkHierarchicalDataSet *input,
+  void ComputeBounds(vtkCompositeDataSet *input,
                      int processNumber,
                      int numProcessors);
-  
-  // Description:
-  // The processors are views as a heap tree. The root is the processor of
-  // id 0.
-  int GetParentProcessor(int proc);
-  int GetLeftChildProcessor(int proc);
-  
+    
   void ExecutePart(const char *arrayName,
-                   vtkHierarchicalDataSet *input,
+                   vtkCompositeDataSet *input,
                    vtkAppendPolyData *appendSurface,
-                   vtkAppendPolyData *append);
+                   vtkAppendPolyData *append,
+                   float minProgress,
+                   float maxProgress);
   
   void ExecutePartOnUniformGrid(const char *arrayName,
 #ifdef EXTRACT_USE_IMAGE_DATA
@@ -128,19 +144,26 @@ protected:
                                 vtkUniformGrid *input,
 #endif
                                 vtkAppendPolyData *appendSurface,
-                                vtkAppendPolyData *append);
+                                vtkAppendPolyData *append,
+                                float minProgress,
+                                float maxProgress);
   
-  void ExecutePartOnRectilinearGrid( const char *arrayName,
-                                     vtkRectilinearGrid *input,
-                                     vtkAppendPolyData *appendSurface,
-                                     vtkAppendPolyData *append);
+  void ExecutePartOnRectilinearGrid(const char *arrayName,
+                                    vtkRectilinearGrid *input,
+                                    vtkAppendPolyData *appendSurface,
+                                    vtkAppendPolyData *append,
+                                    float minProgress,
+                                    float maxProgress);
   
   void ExecuteCellDataToPointData(vtkDataArray *cellVolumeFraction, 
                                   vtkDoubleArray *pointVolumeFraction,
-                                  int *dims);
+                                  int *dims, 
+                                  float minProgress, 
+                                  float maxProgress,
+                                  int reportProgress);
   
-  int FillInputPortInformation(int port,
-                               vtkInformation *info);
+  virtual int FillInputPortInformation(int port,
+                                       vtkInformation *info);
   
   void CreateInternalPipeline();
   void DeleteInternalPipeline();
@@ -210,8 +233,15 @@ protected:
   vtkClipPolyData *RClip1;
   vtkCutter *RCut;
   vtkClipPolyData *RClip2;
+
+  void EvaluateVolumeFractionType(vtkRectilinearGrid* rg, 
+                                  vtkCompositeDataSet* input);
+  int VolumeFractionType;
+  double VolumeFractionSurfaceValue;
+  double VolumeFractionSurfaceValueInternal;
+  int OverwriteVolumeFractionSurfaceValue;
   
-  double Bounds[6]; // Whole bounds (dataset over all the processors)
+  vtkBoundingBox *Bounds; // Whole bounds (dataset over all the processors)
   
   vtkMultiProcessController *Controller;
 private:

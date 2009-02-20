@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkImageAlgorithm.h"
 
+#include "vtkDataArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkCellData.h"
 #include "vtkPointData.h"
@@ -22,7 +23,7 @@
 #include "vtkInformationVector.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageAlgorithm, "$Revision: 1.25.4.1 $");
+vtkCxxRevisionMacro(vtkImageAlgorithm, "$Revision: 1.30 $");
 
 //----------------------------------------------------------------------------
 vtkImageAlgorithm::vtkImageAlgorithm()
@@ -199,11 +200,17 @@ vtkImageData *vtkImageAlgorithm::AllocateOutputData(vtkDataObject *output)
     // this needs to be fixed -Ken
     vtkStreamingDemandDrivenPipeline *sddp = 
       vtkStreamingDemandDrivenPipeline::SafeDownCast(this->GetExecutive());
-    if (sddp)
+    int numInfoObj = sddp->GetNumberOfOutputPorts();
+    if (sddp && numInfoObj == 1)
       {
       int extent[6];
       sddp->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),extent);
       out->SetExtent(extent);
+      }
+    else
+      {
+      vtkWarningMacro( "There are multiple output ports. You cannot use AllocateOutputData" );
+      return NULL;
       }
     out->AllocateScalars();
     }
@@ -257,8 +264,7 @@ void vtkImageAlgorithm::CopyAttributeData(vtkImageData *input,
         {
         outArray->SetName(inArray->GetName());
         }
-      output->GetPointData()->PassData(input->GetPointData());
-      output->GetCellData()->PassData(input->GetCellData());
+      output->CopyAttributes(input);
       }
     else
       {// Copy
@@ -294,6 +300,14 @@ void vtkImageAlgorithm::CopyAttributeData(vtkImageData *input,
           {
           output->GetPointData()->CopyStructuredData(input->GetPointData(),
                                                      inExt, outExt);
+          }
+        }
+      else
+        {
+        if (inArray)
+          {
+          vtkDataArray* tmp = output->GetPointData()->GetScalars();
+          tmp->SetName(inArray->GetName());
           }
         }
 

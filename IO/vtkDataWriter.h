@@ -28,11 +28,12 @@
 
 #include "vtkWriter.h"
 
-class vtkDataSet;
-class vtkPoints;
 class vtkCellArray;
 class vtkDataArray;
+class vtkDataSet;
 class vtkFieldData;
+class vtkGraph;
+class vtkPoints;
 
 class VTK_IO_EXPORT vtkDataWriter : public vtkWriter
 {
@@ -62,8 +63,10 @@ public:
   // the next call to write ...
   vtkGetMacro(OutputStringLength, int);  
   vtkGetStringMacro(OutputString);
-  unsigned char *GetBinaryOutputString() {
-      return (unsigned char *)this->OutputString;};
+  unsigned char *GetBinaryOutputString()
+    {
+      return reinterpret_cast<unsigned char *>(this->OutputString);
+    }
       
   // Description:
   // This convenience method returns the string, sets the IVAR to NULL,
@@ -114,6 +117,18 @@ public:
   vtkGetStringMacro(TCoordsName);
 
   // Description:
+  // Give a name to the global ids data. If not specified, uses 
+  // default name "global_ids".
+  vtkSetStringMacro(GlobalIdsName);
+  vtkGetStringMacro(GlobalIdsName);
+
+  // Description:
+  // Give a name to the pedigree ids data. If not specified, uses 
+  // default name "pedigree_ids".
+  vtkSetStringMacro(PedigreeIdsName);
+  vtkGetStringMacro(PedigreeIdsName);
+
+  // Description:
   // Give a name to the lookup table. If not specified, uses default
   // name "lookupTable".
   vtkSetStringMacro(LookupTableName);
@@ -156,6 +171,16 @@ public:
   int WritePointData(ostream *fp, vtkDataSet *ds);
 
   // Description:
+  // Write the edge data (e.g., scalars, vectors, ...) of a vtk graph.
+  // Returns 0 if error.
+  int WriteEdgeData(ostream *fp, vtkGraph *g);
+
+  // Description:
+  // Write the vertex data (e.g., scalars, vectors, ...) of a vtk graph.
+  // Returns 0 if error.
+  int WriteVertexData(ostream *fp, vtkGraph *g);
+
+  // Description:
   // Write out the field data.
   int WriteFieldData(ostream *fp, vtkFieldData *f);
 
@@ -191,14 +216,18 @@ protected:
   char *NormalsName;
   char *LookupTableName;
   char *FieldDataName;
+  char* GlobalIdsName;
+  char* PedigreeIdsName;
 
-  int WriteArray(ostream *fp, int dataType, vtkDataArray *data, const char *format, 
+  int WriteArray(ostream *fp, int dataType, vtkAbstractArray *data, const char *format, 
                  int num, int numComp);
   int WriteScalarData(ostream *fp, vtkDataArray *s, int num);
   int WriteVectorData(ostream *fp, vtkDataArray *v, int num);
   int WriteNormalData(ostream *fp, vtkDataArray *n, int num);
   int WriteTCoordData(ostream *fp, vtkDataArray *tc, int num);
   int WriteTensorData(ostream *fp, vtkDataArray *t, int num);
+  int WriteGlobalIdData(ostream *fp, vtkDataArray *g, int num);
+  int WritePedigreeIdData(ostream *fp, vtkAbstractArray *p, int num);
 
 private:
   vtkDataWriter(const vtkDataWriter&);  // Not implemented.

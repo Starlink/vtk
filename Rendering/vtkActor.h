@@ -59,14 +59,18 @@ public:
   // Description:
   // Support the standard render methods.
   virtual int RenderOpaqueGeometry(vtkViewport *viewport);
-  virtual int RenderTranslucentGeometry(vtkViewport *viewport);
-
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport *viewport);
+  
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // This causes the actor to be rendered. It in turn will render the actor's
   // property, texture map and then mapper. If a property hasn't been
   // assigned, then the actor will create one automatically. Note that a side
   // effect of this method is that the pipeline will be updated.
-  virtual void Render(vtkRenderer *, vtkMapper *) {};
+  virtual void Render(vtkRenderer *, vtkMapper *) {}
 
   // Description:
   // Shallow copy of an actor. Overloads the virtual vtkProp method.
@@ -88,7 +92,7 @@ public:
   vtkProperty *GetProperty();
   
   // Description:
-  // Create a new property sutible for use with this type of Actor.
+  // Create a new property suitable for use with this type of Actor.
   // For example, a vtkMesaActor should create a vtkMesaProperty 
   // in this function.   The default is to just call vtkProperty::New.
   virtual vtkProperty* MakeProperty();
@@ -99,7 +103,7 @@ public:
   // isn't specified, then the front face properties will be used.  Multiple
   // actors can share one property object.
   void SetBackfaceProperty(vtkProperty *lut);
-  vtkProperty *GetBackfaceProperty();
+  vtkGetObjectMacro(BackfaceProperty,vtkProperty);
 
   // Description: 
   // Set/Get the texture object to control rendering texture maps.  This will
@@ -122,7 +126,7 @@ public:
   // Description:
   // Get the bounds for this Actor as (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax). (The
   // method GetBounds(double bounds[6]) is available from the superclass.)
-  void GetBounds(double bounds[6]) {this->vtkProp3D::GetBounds( bounds );};
+  void GetBounds(double bounds[6]) {this->vtkProp3D::GetBounds( bounds );}
   double *GetBounds();
 
   // Description:
@@ -132,7 +136,7 @@ public:
   // use of this method is to set the desired properties in the assembly,
   // and then push the properties down to the assemblies parts with
   // ApplyProperties().
-  virtual void ApplyProperties() {return;};
+  virtual void ApplyProperties() {}
 
   // Description:
   // Get the actors mtime plus consider its properties and texture if set.
@@ -150,9 +154,9 @@ public:
   // in the near future. Use vtkProp::GetNextPath() (and related functionality)
   // to get the parts in an assembly (or more correctly, the paths in the
   // assembly).
-  virtual void InitPartTraversal();
-  virtual vtkActor *GetNextPart();
-  virtual int GetNumberOfParts();
+  VTK_LEGACY(virtual void InitPartTraversal());
+  VTK_LEGACY(virtual vtkActor *GetNextPart());
+  VTK_LEGACY(virtual int GetNumberOfParts());
   
 protected:
   vtkActor();

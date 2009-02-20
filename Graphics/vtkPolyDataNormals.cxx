@@ -27,7 +27,7 @@
 #include "vtkTriangleStrip.h"
 #include "vtkPriorityQueue.h"
 
-vtkCxxRevisionMacro(vtkPolyDataNormals, "$Revision: 1.66 $");
+vtkCxxRevisionMacro(vtkPolyDataNormals, "$Revision: 1.68.24.1 $");
 vtkStandardNewMacro(vtkPolyDataNormals);
 
 // Construct with feature angle=30, splitting and consistency turned on, 
@@ -91,13 +91,13 @@ int vtkPolyDataNormals::RequestData(
   numStrips=input->GetNumberOfStrips();
   if ( (numPts=input->GetNumberOfPoints()) < 1 )
     {
-    vtkErrorMacro(<<"No data to generate normals for!");
+    vtkDebugMacro(<<"No data to generate normals for!");
     return 1;
     }
 
 
   // If there is nothing to do, pass the data through
-  if ( this->ComputePointNormals == 0 && this->ComputeCellNormals == 0 || 
+  if ( (this->ComputePointNormals == 0 && this->ComputeCellNormals == 0) || 
        (numPolys < 1 && numStrips < 1) )
     { //don't do anything! pass data through
     output->CopyStructure(input);
@@ -272,6 +272,7 @@ int vtkPolyDataNormals::RequestData(
       } // Still some points in the queue
     this->Wave->Delete();
     this->Wave2->Delete();
+    leftmostPoints->Delete();
     vtkDebugMacro(<<"Reversed ordering of " << this->NumFlips << " polygons");
     } // automatically orient normals
   else

@@ -25,17 +25,18 @@
 #include "vtkGL2PSExporter.h"
 #endif // VTK_USE_GL2PS
 
+#include "vtkgl.h" // vtkgl namespace
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLProperty, "$Revision: 1.33 $");
+vtkCxxRevisionMacro(vtkOpenGLProperty, "$Revision: 1.41.2.1 $");
 vtkStandardNewMacro(vtkOpenGLProperty);
 #endif
 
 
 
 // Implement base class method.
-void vtkOpenGLProperty::Render(vtkActor *vtkNotUsed(anActor),
-                             vtkRenderer *vtkNotUsed(ren))
+void vtkOpenGLProperty::Render(vtkActor *anActor,
+                             vtkRenderer *ren)
 {
   int i;
   GLenum method;
@@ -44,6 +45,13 @@ void vtkOpenGLProperty::Render(vtkActor *vtkNotUsed(anActor),
   double  color[4];
 
   // unbind any textures for starters
+  vtkOpenGLRenderer *oRenderer=static_cast<vtkOpenGLRenderer *>(ren);
+  if(oRenderer->GetDepthPeelingHigherLayer())
+    {
+    GLint uUseTexture=-1;
+    uUseTexture=oRenderer->GetUseTextureUniformVariable();
+    vtkgl::Uniform1i(uUseTexture,0);
+    }
   glDisable(GL_TEXTURE_2D);
 
   // disable alpha testing (this may have been enabled
@@ -63,52 +71,44 @@ void vtkOpenGLProperty::Render(vtkActor *vtkNotUsed(anActor),
     {
     glCullFace (GL_BACK);
     glEnable (GL_CULL_FACE);
-    if (this->GetRepresentation() == VTK_WIREFRAME)
-      {
-      glPolygonMode(GL_FRONT, GL_LINE); 
-      }
-    else if (this->GetRepresentation() == VTK_SURFACE)
-      {
-      glPolygonMode(GL_FRONT, GL_FILL);
-      }
-    else
-      {
-      glPolygonMode(GL_FRONT, GL_POINT);
-      }
     }
   else //if both front & back culling on, will fall into backface culling
     { //if you really want both front and back, use the Actor's visibility flag
     glCullFace (GL_FRONT);
     glEnable (GL_CULL_FACE);
-    if (this->GetRepresentation() == VTK_WIREFRAME)
-      {
-      glPolygonMode(GL_BACK, GL_LINE);
-      }  
-    else if (this->GetRepresentation() == VTK_SURFACE)
-      {
-      glPolygonMode(GL_BACK, GL_FILL);
-      }
-    else
-      {
-      glPolygonMode(GL_BACK, GL_POINT);
-      }
     }
 
   Info[3] = this->Opacity;
-
+  
+  double factor;
+  GLint alphaBits;
+  glGetIntegerv(GL_ALPHA_BITS, &alphaBits);
+  
+  // Dealing with having a correct alpha (none square) in the framebuffer
+  // is only required if there is an alpha component in the framebuffer
+  // (doh...) and if we cannot deal directly with BlendFuncSeparate.
+  if(vtkgl::BlendFuncSeparate==0 && alphaBits>0)
+    {
+    factor=this->Opacity;
+    }
+  else
+    {
+    factor=1;
+    }
+  
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Ambient*this->AmbientColor[i]);
+    Info[i] = static_cast<float>(factor*this->Ambient*this->AmbientColor[i]);
     }
   glMaterialfv( Face, GL_AMBIENT, Info );
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Diffuse*this->DiffuseColor[i]);
+    Info[i] = static_cast<float>(factor*this->Diffuse*this->DiffuseColor[i]);
     }
   glMaterialfv( Face, GL_DIFFUSE, Info );
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Specular*this->SpecularColor[i]);
+    Info[i] = static_cast<float>(factor*this->Specular*this->SpecularColor[i]);
     }
   glMaterialfv( Face, GL_SPECULAR, Info );
 
@@ -138,7 +138,11 @@ void vtkOpenGLProperty::Render(vtkActor *vtkNotUsed(anActor),
   // vtkOpenGLPolyDataMapper::Draw() method if points or lines
   // are encountered without normals. 
   this->GetColor( color );
+  color[0] *= factor;
+  color[1] *= factor;
+  color[2] *= factor;
   color[3] = this->Opacity;
+
   glColor4dv( color );
 
   // Set the PointSize
@@ -166,11 +170,16 @@ void vtkOpenGLProperty::Render(vtkActor *vtkNotUsed(anActor),
     }
   else
     {
+    // still need to set this although we are disabling.  else the ATI X1600
+    // (for example) still manages to stipple under certain conditions.
+    glLineStipple (this->LineStippleRepeatFactor, this->LineStipplePattern);
     glDisable (GL_LINE_STIPPLE);
 #ifdef VTK_USE_GL2PS
     gl2psDisable(GL2PS_LINE_STIPPLE);
 #endif // VTK_USE_GL2PS
     }
+
+  this->Superclass::Render(anActor, ren);
 }
 
 // Implement base class method.
@@ -185,19 +194,38 @@ void vtkOpenGLProperty::BackfaceRender(vtkActor *vtkNotUsed(anActor),
 
   Info[3] = this->Opacity;
 
+  double factor;
+  GLint alphaBits;
+  glGetIntegerv(GL_ALPHA_BITS, &alphaBits);
+  
+  // Dealing with having a correct alpha (none square) in the framebuffer
+  // is only required if there is an alpha component in the framebuffer
+  // (doh...) and if we cannot deal directly with BlendFuncSeparate.
+  if(vtkgl::BlendFuncSeparate==0 && alphaBits>0)
+    {
+    factor=this->Opacity;
+    }
+  else
+    {
+    factor=1;
+    }
+  
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Ambient*this->AmbientColor[i]);
+    Info[i] = 
+      static_cast<float>(factor*this->Ambient*this->AmbientColor[i]);
     }
   glMaterialfv( Face, GL_AMBIENT, Info );
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Diffuse*this->DiffuseColor[i]);
+    Info[i] = 
+      static_cast<float>(factor*this->Diffuse*this->DiffuseColor[i]);
     }
   glMaterialfv( Face, GL_DIFFUSE, Info );
   for (i=0; i < 3; i++) 
     {
-    Info[i] = static_cast<float>(this->Specular*this->SpecularColor[i]);
+    Info[i] = 
+      static_cast<float>(factor*this->Specular*this->SpecularColor[i]);
     }
   glMaterialfv( Face, GL_SPECULAR, Info );
 

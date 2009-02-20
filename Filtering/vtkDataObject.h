@@ -55,6 +55,7 @@ class vtkInformationInformationVectorKey;
 
 #define VTK_PIECES_EXTENT   0
 #define VTK_3D_EXTENT       1
+#define VTK_TIME_EXTENT     2
 
 class VTK_FILTERING_EXPORT vtkDataObject : public vtkObject
 {
@@ -305,13 +306,25 @@ public:
   virtual int GetMaximumNumberOfPieces();
 
   // Description:
-  // Copy information about this data object to its
-  // PipelineInformation from its own Information for the given
+  // Copy information about this data object to the output
+  // information from its own Information for the given
   // request.  If the second argument is not NULL then it is the
   // pipeline information object for the input to this data object's
-  // producer.
+  // producer. If forceCopy is true, information is copied even
+  // if it exists in the output.
   virtual void CopyInformationToPipeline(vtkInformation* request,
-                                         vtkInformation* input);
+                                         vtkInformation* input,
+                                         vtkInformation* output,
+                                         int forceCopy);
+
+  // Description:
+  // Calls CopyInformationToPipeline(request, input, this->PipelineInformation, 0). 
+  // Subclasses should not override this method (not virtual)
+  void CopyInformationToPipeline(vtkInformation* request,
+                                 vtkInformation* input)
+    {
+      this->CopyInformationToPipeline(request, input, this->PipelineInformation, 0);
+    }
 
   // Description:
   // Copy information about this data object from the
@@ -411,6 +424,8 @@ public:
     FIELD_ASSOCIATION_CELLS,
     FIELD_ASSOCIATION_NONE,
     FIELD_ASSOCIATION_POINTS_THEN_CELLS,
+    FIELD_ASSOCIATION_VERTICES,
+    FIELD_ASSOCIATION_EDGES,
     NUMBER_OF_ASSOCIATIONS
   };
   //ETX
@@ -439,10 +454,11 @@ public:
   static vtkInformationIntegerKey* DATA_PIECE_NUMBER();
   static vtkInformationIntegerKey* DATA_NUMBER_OF_PIECES();
   static vtkInformationIntegerKey* DATA_NUMBER_OF_GHOST_LEVELS();
-  static vtkInformationIntegerKey* DATA_TIME_INDEX();
-  static vtkInformationDoubleKey* DATA_TIME();
+  static vtkInformationDoubleVectorKey* DATA_TIME_STEPS();
   static vtkInformationInformationVectorKey* POINT_DATA_VECTOR();
   static vtkInformationInformationVectorKey* CELL_DATA_VECTOR();
+  static vtkInformationInformationVectorKey* VERTEX_DATA_VECTOR();
+  static vtkInformationInformationVectorKey* EDGE_DATA_VECTOR();
   static vtkInformationIntegerKey* FIELD_ARRAY_TYPE();
   static vtkInformationIntegerKey* FIELD_ASSOCIATION();
   static vtkInformationIntegerKey* FIELD_ATTRIBUTE_TYPE();
@@ -450,9 +466,11 @@ public:
   static vtkInformationIntegerKey* FIELD_NUMBER_OF_COMPONENTS();
   static vtkInformationIntegerKey* FIELD_NUMBER_OF_TUPLES();
   static vtkInformationIntegerKey* FIELD_OPERATION();
+  static vtkInformationDoubleVectorKey* FIELD_RANGE();
   static vtkInformationStringKey* FIELD_NAME();
   static vtkInformationDoubleVectorKey* ORIGIN();
   static vtkInformationDoubleVectorKey* SPACING();
+  static vtkInformationIntegerKey* DATA_GEOMETRY_UNMODIFIED();
 
   //BTX
   // Description:

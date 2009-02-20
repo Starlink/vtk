@@ -40,6 +40,11 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
+  // Return true if all of the values defining the mapping have an opacity
+  // equal to 1. Default implementation return true.
+  virtual int IsOpaque();
+  
+  // Description:
   // Perform any processing required (if any) before processing 
   // scalars.
   virtual void Build() {};
@@ -86,7 +91,7 @@ public:
   // != 1 modify the resulting color consistent with the requested
   // form of the output. This is typically used by an actor in order to
   // blend its opacity.
-  void SetAlpha(double alpha);
+  virtual void SetAlpha(double alpha);
   vtkGetMacro(Alpha,double);
 
   // Description:
@@ -99,7 +104,7 @@ public:
   // which component to use to do the blending.
   // When the component argument is -1, then the this object uses its
   // own selected technique to change a vector into a scalar to map.
-  vtkUnsignedCharArray *MapScalars(vtkDataArray *scalars, int colorMode,
+  virtual vtkUnsignedCharArray *MapScalars(vtkDataArray *scalars, int colorMode,
                                    int component);
 
   // Description:
@@ -151,6 +156,11 @@ public:
   virtual vtkUnsignedCharArray *ConvertUnsignedCharToRGBA(
     vtkUnsignedCharArray *colors, int numComp, int numTuples);
 
+  // Description:
+  // This should return 1 is the subclass is using log scale for mapping scalars
+  // to colors. Default implementation returns 0.
+  virtual int UsingLogScale()
+    { return 0; }
 protected:
   vtkScalarsToColors();
   ~vtkScalarsToColors() {}

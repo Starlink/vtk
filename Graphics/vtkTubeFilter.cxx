@@ -25,7 +25,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolyLine.h"
 
-vtkCxxRevisionMacro(vtkTubeFilter, "$Revision: 1.87.6.1 $");
+vtkCxxRevisionMacro(vtkTubeFilter, "$Revision: 1.88 $");
 vtkStandardNewMacro(vtkTubeFilter);
 
 // Construct object with radius 0.5, radius variation turned off, the number 

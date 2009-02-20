@@ -96,6 +96,13 @@ public:
   int GetPatientBirthDateDay();
 
   // Description:
+  // Study Date
+  // Format: yyyymmdd
+  // For ex: DICOM (0008,0020) = 20030617
+  vtkSetStringMacro(StudyDate);
+  vtkGetStringMacro(StudyDate);
+
+  // Description:
   // Acquisition Date
   // Format: yyyymmdd
   // For ex: DICOM (0008,0022) = 20030617
@@ -109,6 +116,13 @@ public:
   int GetAcquisitionDateDay();
 
   // Description:
+  // Study Time
+  // Format: hhmmss.frac (any trailing component(s) can be ommited)
+  // For ex: DICOM (0008,0030) = 162552.0705 or 230012, or 0012
+  vtkSetStringMacro(StudyTime);
+  vtkGetStringMacro(StudyTime);
+
+  // Description:
   // Acquisition time
   // Format: hhmmss.frac (any trailing component(s) can be ommited)
   // For ex: DICOM (0008,0032) = 162552.0705 or 230012, or 0012
@@ -116,7 +130,7 @@ public:
   vtkGetStringMacro(AcquisitionTime);
 
   // Description:
-  // Image Date
+  // Image Date aka Content Date
   // Format: yyyymmdd
   // For ex: DICOM (0008,0023) = 20030617
   vtkSetStringMacro(ImageDate);
@@ -278,6 +292,18 @@ public:
   vtkSetStringMacro(Exposure);
   vtkGetStringMacro(Exposure);
 
+  // Interface to allow insertion of user define values, for instance in DICOM one would want to 
+  // store the Protocol Name (0018,1030), in this case one would do:
+  // AddUserDefinedValue( "Protocol Name", "T1W/SE/1024" );
+  void AddUserDefinedValue(const char *name, const char *value);
+  // Get a particular user value
+  const char *GetUserDefinedValue(const char *name);
+  // Get the number of user defined values
+  unsigned int GetNumberOfUserDefinedValues();
+  // Get a name/value by index
+  const char *GetUserDefinedNameByIndex(unsigned int idx);
+  const char *GetUserDefinedValueByIndex(unsigned int idx);
+
   // Description:
   // Copy the contents of p to this instance.
   virtual void DeepCopy(vtkMedicalImageProperties *p);
@@ -286,9 +312,10 @@ public:
   // Add/Remove/Query the window/level presets that may have been associated
   // to a medical image. Window is also known as 'width', level is also known
   // as 'center'. The same window/level pair can not be added twice.
-  // As a convenience, a comment can be associated to a preset.
+  // As a convenience, a comment (aka Explanation) can be associated to a preset.
   // For ex: DICOM Window Center (0028,1050) = 00045\000470
   //         DICOM Window Width  (0028,1051) = 0106\03412
+  //         DICOM Window Center Width Explanation (0028,1055) = WINDOW1\WINDOW2
   virtual void AddWindowLevelPreset(double w, double l);
   virtual void RemoveWindowLevelPreset(double w, double l);
   virtual void RemoveAllWindowLevelPresets();
@@ -299,11 +326,36 @@ public:
   virtual void SetNthWindowLevelPresetComment(int idx, const char *comment);
   virtual const char* GetNthWindowLevelPresetComment(int idx);
 
+  // Description: 
+  // Mapping from a sliceidx within a volumeidx into a DICOM Instance UID
+  // Some DICOM reader can populate this structure so that later on from a slice index
+  // in a vtkImageData volume we can backtrack and find out which 2d slice it was coming from
+  const char *GetInstanceUIDFromSliceID(int volumeidx, int sliceid);
+  void SetInstanceUIDFromSliceID(int volumeidx, int sliceid, const char *uid);
+  
+  // Description:
+  // Provides the inverse mapping. Returns -1 if a slice for this uid is 
+  // not found.
+  int GetSliceIDFromInstanceUID(int &volumeidx, const char *uid);
+
+//BTX
+  typedef enum {
+    AXIAL = 0,
+    CORONAL,
+    SAGITTAL
+  } OrientationType;
+//ETX
+  int GetOrientationType(int volumeidx);
+  void SetOrientationType(int volumeidx, int orientation);
+  static const char *GetStringFromOrientationType(unsigned int type);
+
 protected:
   vtkMedicalImageProperties();
   ~vtkMedicalImageProperties();
 
+  char *StudyDate;
   char *AcquisitionDate;
+  char *StudyTime;
   char *AcquisitionTime;
   char *ConvolutionKernel;
   char *EchoTime;

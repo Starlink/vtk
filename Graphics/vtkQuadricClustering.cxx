@@ -26,9 +26,16 @@
 #include "vtkPolyData.h"
 #include "vtkTimerLog.h"
 #include "vtkTriangle.h"
+#include <vtkstd/set> // keep track of inserted triangles
 
-vtkCxxRevisionMacro(vtkQuadricClustering, "$Revision: 1.77 $");
+vtkCxxRevisionMacro(vtkQuadricClustering, "$Revision: 1.82.2.1 $");
 vtkStandardNewMacro(vtkQuadricClustering);
+
+//----------------------------------------------------------------------------
+// PIMPLd STL set for keeping track of inserted cells
+class vtkCellSet : public vtkstd::set<vtkIdType> {};
+typedef vtkstd::set<vtkIdType>::iterator vtkCellSetIterator;
+
 
 //----------------------------------------------------------------------------
 // Construct with default NumberOfDivisions to 50, DivisionSpacing to 1
@@ -64,6 +71,10 @@ vtkQuadricClustering::vtkQuadricClustering()
 
   this->UseInputPoints = 0;
 
+  this->PreventDuplicateCells = 1;
+  this->CellSet = NULL;
+  this->NumberOfBins = 0;
+
   this->OutputTriangleArray = NULL;
   this->OutputLines = NULL;
 
@@ -84,6 +95,11 @@ vtkQuadricClustering::~vtkQuadricClustering()
   this->FeatureEdges = NULL;
   this->FeaturePoints->Delete();
   this->FeaturePoints = NULL;
+  if (this->CellSet)
+    {
+    delete this->CellSet;
+    this->CellSet = NULL;
+    }
   if (this->QuadricArray)
     {
     delete [] this->QuadricArray;
@@ -151,10 +167,13 @@ int vtkQuadricClustering::RequestData(
     double factor = pow(((double)numDiv/(double)target),0.33333);
     this->NumberOfDivisions[0] = 
       (int)(0.5+(double)(this->NumberOfXDivisions)/factor);  
+    this->NumberOfDivisions[0] = (this->NumberOfDivisions[0] > 0 ? this->NumberOfDivisions[0] : 1);
     this->NumberOfDivisions[1] = 
       (int)(0.5+(double)(this->NumberOfYDivisions)/factor);  
+    this->NumberOfDivisions[1] = (this->NumberOfDivisions[1] > 0 ? this->NumberOfDivisions[1] : 1);
     this->NumberOfDivisions[2] = 
       (int)(0.5+(double)(this->NumberOfZDivisions)/factor);  
+    this->NumberOfDivisions[2] = (this->NumberOfDivisions[2] > 0 ? this->NumberOfDivisions[2] : 1);
     }
   else
     {
@@ -205,6 +224,14 @@ int vtkQuadricClustering::RequestData(
 void vtkQuadricClustering::StartAppend(double *bounds)
 {
   vtkIdType i;
+
+  // If there are duplicate triangles. remove them
+  if ( this->PreventDuplicateCells )
+    {
+    this->CellSet = new vtkCellSet;
+    this->NumberOfBins = 
+      this->NumberOfDivisions[0]*this->NumberOfDivisions[1]*this->NumberOfDivisions[2];
+    }
 
   // Copy over the bounds.
   for (i = 0; i < 6; ++i)
@@ -452,6 +479,7 @@ void vtkQuadricClustering::AddTriangle(vtkIdType *binIds, double *pt0, double *p
   int i;
   vtkIdType triPtIds[3];
   double quadric[9], quadric4x4[4][4];
+  vtkIdType minIdx, midIdx, maxIdx, idx;
  
   // Compute the quadric.
   vtkTriangle::ComputeQuadric(pt0, pt1, pt2, quadric4x4);
@@ -509,15 +537,75 @@ void vtkQuadricClustering::AddTriangle(vtkIdType *binIds, double *pt0, double *p
     if (binIds[0] != binIds[1] && binIds[0] != binIds[2] &&
         binIds[1] != binIds[2])
       {
-      this->OutputTriangleArray->InsertNextCell(3, triPtIds);
-      if (this->CopyCellData && input)
+      if ( this->PreventDuplicateCells )
         {
-        output->GetCellData()->
-          CopyData(input->GetCellData(), this->InCellCount,
-                   this->OutCellCount++);
+        minIdx = ( binIds[0]<binIds[1] ? (binIds[0]<binIds[2] ? 0 : 2) :
+                   (binIds[1]<binIds[2] ? 1 : 2) );
+        midIdx = 0;
+        maxIdx = 0;
+        switch ( minIdx )
+          {
+          case 0:
+            if ( binIds[1] > binIds[2] )
+              {
+              maxIdx = 1;
+              midIdx = 2;
+              }
+            else
+              {
+              maxIdx = 2;
+              midIdx = 1;
+              }
+            break;
+          case 1:
+            if ( binIds[0] > binIds[2] )
+              {
+              maxIdx = 0;
+              midIdx = 2;
+              }
+            else
+              {
+              maxIdx = 2;
+              midIdx = 0;
+              }
+            break;
+          case 2:
+            if ( binIds[0] > binIds[1] )
+              {
+              maxIdx = 0;
+              midIdx = 1;
+              }
+            else
+              {
+              maxIdx = 1;
+              midIdx = 0;
+              }
+            break;
+          }
+        idx = binIds[minIdx] + this->NumberOfBins*binIds[midIdx] + 
+              this->NumberOfBins*this->NumberOfBins*binIds[maxIdx];
+        if ( this->CellSet->find(idx) == this->CellSet->end() )
+          {
+          this->CellSet->insert(idx);
+          this->OutputTriangleArray->InsertNextCell(3, triPtIds);
+          if (this->CopyCellData && input)
+            {
+            output->GetCellData()->
+              CopyData(input->GetCellData(), this->InCellCount,this->OutCellCount++);
+            }//if cell data
+          }//if not a duplicate
         }
-      }
-    }
+      else //don't check for duplicates
+        {
+        this->OutputTriangleArray->InsertNextCell(3, triPtIds);
+        if (this->CopyCellData && input)
+          {
+          output->GetCellData()->
+            CopyData(input->GetCellData(), this->InCellCount,this->OutCellCount++);
+          }//if cell data
+        }//don't check for duplicates
+      }//if not duplicate vertices
+    }//if this should be inserted
 }
 
 //----------------------------------------------------------------------------
@@ -765,7 +853,7 @@ void vtkQuadricClustering::AddVertex(vtkIdType binId, double *pt,
       if (this->CopyCellData && input)
         {
         output->GetCellData()->
-          CopyData(output->GetCellData(), this->InCellCount,
+          CopyData(input->GetCellData(), this->InCellCount,
                    this->OutCellCount++);
         }
       }
@@ -874,8 +962,15 @@ void vtkQuadricClustering::EndAppend()
     return;
     }
 
-  outputPoints = vtkPoints::New();
+  // Clean up
+  if ( this->PreventDuplicateCells )
+    {
+    delete this->CellSet;
+    this->CellSet = NULL;
+    }
 
+  // Compute the representative points for each bin
+  outputPoints = vtkPoints::New();
   for (i = 0; !abortExecute && i < numBuckets; i++ )
     {
     if (cstep > step)
@@ -1056,9 +1151,9 @@ void vtkQuadricClustering::SetNumberOfXDivisions(int num)
     {
     return;
     }
-  if (num < 2)
+  if (num < 1)
     {
-    vtkErrorMacro("You cannot use less than two divisions.");
+    vtkErrorMacro("You cannot use less than one division.");
     return;
     }
   this->Modified();
@@ -1073,9 +1168,9 @@ void vtkQuadricClustering::SetNumberOfYDivisions(int num)
     {
     return;
     }
-  if (num < 2)
+  if (num < 1)
     {
-    vtkErrorMacro("You cannot use less than two divisions.");
+    vtkErrorMacro("You cannot use less than one division.");
     return;
     }
   this->Modified();
@@ -1090,9 +1185,9 @@ void vtkQuadricClustering::SetNumberOfZDivisions(int num)
     {
     return;
     }
-  if (num < 2)
+  if (num < 1)
     {
-    vtkErrorMacro("You cannot use less than two divisions.");
+    vtkErrorMacro("You cannot use less than one division.");
     return;
     }
   this->Modified();
@@ -1188,6 +1283,13 @@ void vtkQuadricClustering::EndAppendUsingPoints(vtkPolyData *input,
     {
     vtkDebugMacro("Missing Array:  Did you call StartAppend?");
     return;
+    }
+
+  // Clean up
+  if ( this->PreventDuplicateCells )
+    {
+    delete this->CellSet;
+    this->CellSet = NULL;
     }
 
   outputPoints = vtkPoints::New();
@@ -1516,5 +1618,8 @@ void vtkQuadricClustering::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Use Feature Points: " 
      << (this->UseFeaturePoints ? "On\n" : "Off\n");
   os << indent << "Copy Cell Data : " << this->CopyCellData << endl;
+
+  os << indent << "Prevent Duplicate Cells : " 
+     << (this->PreventDuplicateCells ? "On\n" : "Off\n");
 }
 

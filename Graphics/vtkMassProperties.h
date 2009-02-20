@@ -21,7 +21,7 @@
 // closed surface.  For more details see the following reference
 // (Alyassin A.M. et al, "Evaluation of new algorithms for the
 // interactive measurement of surface area and volume", Med Phys 21(6)
-// 1994.).  
+// 1994.).
 
 // .SECTION Caveats
 // Currently only triangles are processed. Use vtkTriangleFilter to
@@ -50,6 +50,15 @@ public:
   double GetVolume() {this->Update(); return this->Volume;}
 
   // Description:
+  // Compute and return the projected volume.
+  // Typically you should compare this volume to the value returned by GetVolume
+  // if you get an error (GetVolume()-GetVolumeProjected())*10000 that is greater
+  // than GetVolume() this should identify a problem:
+  // * Either the polydata is not closed
+  // * Or the polydata contains triangle that are flipped
+  double GetVolumeProjected() {this->Update(); return this->VolumeProjected;}
+
+  // Description:
   // Compute and return the volume projected on to each axis aligned plane.
   double GetVolumeX() {this->Update(); return this->VolumeX;}
   double GetVolumeY() {this->Update(); return this->VolumeY;}
@@ -67,10 +76,18 @@ public:
   double GetSurfaceArea() {this->Update(); return this->SurfaceArea;}
 
   // Description:
+  // Compute and return the min cell area.
+  double GetMinCellArea() {this->Update(); return this->MinCellArea;}
+
+  // Description:
+  // Compute and return the max cell area.
+  double GetMaxCellArea() {this->Update(); return this->MaxCellArea;}
+
+  // Description:
   // Compute and return the normalized shape index. This characterizes the
   // deviation of the shape of an object from a sphere. A sphere's NSI
   // is one. This number is always >= 1.0.
-  double GetNormalizedShapeIndex() 
+  double GetNormalizedShapeIndex()
     {this->Update(); return this->NormalizedShapeIndex;}
 
 protected:
@@ -82,7 +99,10 @@ protected:
                           vtkInformationVector* outputVector);
 
   double  SurfaceArea;
+  double  MinCellArea;
+  double  MaxCellArea;
   double  Volume;
+  double  VolumeProjected; // == Projected area of triangles * average z values
   double  VolumeX;
   double  VolumeY;
   double  VolumeZ;
@@ -90,7 +110,6 @@ protected:
   double  Ky;
   double  Kz;
   double  NormalizedShapeIndex;
-  vtkTimeStamp ExecuteTime;
 
 private:
   vtkMassProperties(const vtkMassProperties&);  // Not implemented.

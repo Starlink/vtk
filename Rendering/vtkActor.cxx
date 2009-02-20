@@ -15,6 +15,7 @@
 #include "vtkActor.h"
 
 #include "vtkAssemblyPaths.h"
+#include "vtkDataArray.h"
 #include "vtkGraphicsFactory.h"
 #include "vtkImageData.h"
 #include "vtkLinearTransform.h"
@@ -30,9 +31,12 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkActor, "$Revision: 1.126 $");
+vtkCxxRevisionMacro(vtkActor, "$Revision: 1.138 $");
 
 vtkCxxSetObjectMacro(vtkActor,Texture,vtkTexture);
+vtkCxxSetObjectMacro(vtkActor,Mapper,vtkMapper);
+vtkCxxSetObjectMacro(vtkActor,BackfaceProperty,vtkProperty);
+vtkCxxSetObjectMacro(vtkActor,Property,vtkProperty);
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -54,6 +58,7 @@ vtkActor::vtkActor()
   vtkMath::UninitializeBounds(this->MapperBounds);
 }
 
+//----------------------------------------------------------------------------
 vtkActor::~vtkActor()
 {
   if ( this->Property != NULL) 
@@ -76,6 +81,7 @@ vtkActor::~vtkActor()
   this->SetTexture(NULL);
 }
 
+//----------------------------------------------------------------------------
 // Shallow copy of an actor.
 void vtkActor::ShallowCopy(vtkProp *prop)
 {
@@ -92,49 +98,54 @@ void vtkActor::ShallowCopy(vtkProp *prop)
   this->vtkProp3D::ShallowCopy(prop);
 }
 
+//----------------------------------------------------------------------------
 // return the correct type of Actor 
 vtkActor *vtkActor::New()
 {
   // First try to create the object from the vtkGraphicsFactory
   vtkObject* ret = vtkGraphicsFactory::CreateInstance("vtkActor");
-  return (vtkActor*)ret;
+  return static_cast<vtkActor *>(ret);
 }
 
+//----------------------------------------------------------------------------
 void vtkActor::GetActors(vtkPropCollection *ac)
 {
   ac->AddItem(this);
 }
 
+//----------------------------------------------------------------------------
 // should be called from the render methods only
 int vtkActor::GetIsOpaque()
 {
-  if (this->Property->GetOpacity() >= 1.0)
+  int result=this->Property->GetOpacity() >= 1.0;
+  
+  if(result)
     {
     if (this->Texture && this->Texture->GetInput())
       {
       this->Texture->GetInput()->UpdateInformation();
-      this->Texture->GetInput()->SetUpdateExtent(this->Texture->GetInput()->GetWholeExtent());
+      this->Texture->GetInput()->SetUpdateExtent(
+        this->Texture->GetInput()->GetWholeExtent());
       this->Texture->GetInput()->PropagateUpdateExtent();
       this->Texture->GetInput()->TriggerAsynchronousUpdate();
       this->Texture->GetInput()->UpdateData();
-      if (this->Texture->GetInput()->GetPointData()->GetScalars() == NULL)
-        { // Handle gracefully. What should it return? 
-        return 1;
-        }
-      if (this->Texture->GetInput()->GetPointData()->GetScalars()->GetNumberOfComponents()%2)
-        {
-        return 1;
-        }
-      }
-    else
-      {
-      return 1;
+      result=this->Texture->GetInput()->GetPointData()->GetScalars() == NULL
+        || this->Texture->GetInput()->GetPointData()->GetScalars()
+        ->GetNumberOfComponents()%2;
       }
     }
-  return 0;
+  if(result)
+    {
+    if(this->Mapper!=0 && this->Mapper->GetLookupTable()!=0)
+      {
+      result=this->Mapper->GetLookupTable()->IsOpaque();
+      }
+    }
+  return result;
 }
 
 
+//----------------------------------------------------------------------------
 // This causes the actor to be rendered. It in turn will render the actor's
 // property, texture map and then mapper. If a property hasn't been 
 // assigned, then the actor will create one automatically. Note that a 
@@ -173,15 +184,16 @@ int vtkActor::RenderOpaqueGeometry(vtkViewport *vp)
       this->Texture->Render(ren);
       }
     this->Render(ren,this->Mapper);
+    this->Property->PostRender(this, ren);
     this->EstimatedRenderTime += this->Mapper->GetTimeToDraw();
-
     renderedSomething = 1;
     }
 
   return renderedSomething;
 }
 
-int vtkActor::RenderTranslucentGeometry(vtkViewport *vp)
+//-----------------------------------------------------------------------------
+int vtkActor::RenderTranslucentPolygonalGeometry(vtkViewport *vp)
 {
   int          renderedSomething = 0; 
   vtkRenderer* ren = static_cast<vtkRenderer*>(vp);
@@ -215,6 +227,7 @@ int vtkActor::RenderTranslucentGeometry(vtkViewport *vp)
       this->Texture->Render(ren);
       }
     this->Render(ren,this->Mapper);
+    this->Property->PostRender(this, ren);
     this->EstimatedRenderTime += this->Mapper->GetTimeToDraw();
 
     renderedSomething = 1;
@@ -223,9 +236,30 @@ int vtkActor::RenderTranslucentGeometry(vtkViewport *vp)
   return renderedSomething;
 }
 
+//-----------------------------------------------------------------------------
+// Description:
+// Does this prop have some translucent polygonal geometry?
+int vtkActor::HasTranslucentPolygonalGeometry()
+{
+  if ( ! this->Mapper )
+    {
+    return 0;
+    }
+  // make sure we have a property
+  if (!this->Property)
+    {
+    // force creation of a property
+    this->GetProperty();
+    }
+
+  // is this actor opaque ?
+  return !this->GetIsOpaque();
+}
+
+//----------------------------------------------------------------------------
 void vtkActor::ReleaseGraphicsResources(vtkWindow *win)
 {
-  vtkRenderWindow *renWin = (vtkRenderWindow *)win;
+  vtkRenderWindow *renWin = static_cast<vtkRenderWindow *>(win);
 
   // pass this information onto the mapper
   if (this->Mapper)
@@ -238,34 +272,25 @@ void vtkActor::ReleaseGraphicsResources(vtkWindow *win)
     {
     this->Texture->ReleaseGraphicsResources(renWin);
     }
+
+  // pass this information to the properties
+  if (this->Property)
+    {
+    this->Property->ReleaseGraphicsResources(renWin);
+    }
+  if (this->BackfaceProperty)
+    {
+    this->BackfaceProperty->ReleaseGraphicsResources(renWin);
+    }
 }
 
-void vtkActor::SetProperty(vtkProperty *lut)
-{
-  if ( this->Property == lut) 
-    {
-    return;
-    }
-  if ( this->Property != NULL) 
-    {
-    this->Property->UnRegister(this);
-    this->Property = NULL;
-    }
-  if ( lut != NULL) 
-    {
-    lut->Register(this);
-    }
-  
-  this->Property = lut;
-  this->Modified();
-}
-
+//----------------------------------------------------------------------------
 vtkProperty* vtkActor::MakeProperty()
 {
   return vtkProperty::New();
 }
 
-
+//----------------------------------------------------------------------------
 vtkProperty *vtkActor::GetProperty()
 {
   if ( this->Property == NULL )
@@ -277,31 +302,7 @@ vtkProperty *vtkActor::GetProperty()
   return this->Property;
 }
 
-void vtkActor::SetBackfaceProperty(vtkProperty *lut)
-{
-  if ( this->BackfaceProperty == lut) 
-    {
-    return;
-    }
-  if ( this->BackfaceProperty != NULL) 
-    {
-    this->BackfaceProperty->UnRegister(this);
-    this->BackfaceProperty = NULL;
-    }
-  if ( lut != NULL) 
-    {
-    lut->Register(this);
-    }
-  
-  this->BackfaceProperty = lut;
-  this->Modified();
-}
-
-vtkProperty *vtkActor::GetBackfaceProperty()
-{
-  return this->BackfaceProperty;
-}
-
+//----------------------------------------------------------------------------
 // Get the bounds for this Actor as (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
 double *vtkActor::GetBounds()
 {
@@ -391,6 +392,7 @@ double *vtkActor::GetBounds()
   return this->Bounds;
 }
 
+//----------------------------------------------------------------------------
 unsigned long int vtkActor::GetMTime()
 {
   unsigned long mTime=this->Superclass::GetMTime();
@@ -417,6 +419,7 @@ unsigned long int vtkActor::GetMTime()
   return mTime;
 }
 
+//----------------------------------------------------------------------------
 unsigned long int vtkActor::GetRedrawMTime()
 {
   unsigned long mTime=this->GetMTime();
@@ -437,6 +440,7 @@ unsigned long int vtkActor::GetRedrawMTime()
   return mTime;
 }
 
+//----------------------------------------------------------------------------
 void vtkActor::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -461,6 +465,16 @@ void vtkActor::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "Property: (none)\n";
     }
 
+  if ( this->BackfaceProperty )
+    {
+    os << indent << "BackfaceProperty:\n";
+    this->BackfaceProperty->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << indent << "BackfaceProperty: (none)\n";
+    }
+
   if ( this->Texture )
     {
     os << indent << "Texture: " << this->Texture << "\n";
@@ -472,15 +486,22 @@ void vtkActor::PrintSelf(ostream& os, vtkIndent indent)
 
 }
 
+//----------------------------------------------------------------------------
 // Compatibility methods...to be deprecated in the future.
+#ifndef VTK_LEGACY_REMOVE
 #include "vtkAssemblyNode.h"
 void vtkActor::InitPartTraversal()
 {
+  VTK_LEGACY_REPLACED_BODY(vtkActor::InitPartTraversal, "VTK 5.2",
+                           vtkActor::InitPathTraversal);
   this->InitPathTraversal();
 }
 
+//----------------------------------------------------------------------------
 vtkActor *vtkActor::GetNextPart()
 {
+  VTK_LEGACY_REPLACED_BODY(vtkActor::GetNextPart, "VTK 5.2",
+                           vtkActor::GetNextPath);
   vtkAssemblyPath *path = this->GetNextPath();
   if ( !path )
     {
@@ -491,33 +512,19 @@ vtkActor *vtkActor::GetNextPart()
     vtkAssemblyNode *node = path->GetLastNode();
     if ( node && node->GetViewProp()->IsA("vtkActor") )
       {
-      return (vtkActor *)node->GetViewProp();
+      return static_cast<vtkActor *>(node->GetViewProp());
       }
     }
   return NULL;
 }
 
+//----------------------------------------------------------------------------
 int vtkActor::GetNumberOfParts()
 {
+  VTK_LEGACY_REPLACED_BODY(vtkActor::GetNumberOfParts, "VTK 5.2",
+                           vtkActor::GetNumberOfPaths);
   return this->GetNumberOfPaths();
 }
+#endif
 
 
-void vtkActor::SetMapper(vtkMapper *args)
-{
-  vtkDebugMacro(<< this->GetClassName() << " (" << this         
-  << "): setting Mapper to " << args );     
-  if (this->Mapper != args)                                       
-    {                                                           
-    if (this->Mapper != NULL) 
-      { 
-      this->Mapper->UnRegister(this); 
-      }   
-    this->Mapper = args;                                          
-    if (this->Mapper != NULL) 
-      { 
-      this->Mapper->Register(this); 
-      }     
-    this->Modified();                                           
-    }                                                           
-}

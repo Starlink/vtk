@@ -16,6 +16,9 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkCompositeDataIterator.h"
+#include "vtkCompositeDataPipeline.h"
+#include "vtkCompositeDataSet.h"
 #include "vtkDataSetAttributes.h"
 #include "vtkDoubleArray.h"
 #include "vtkExecutive.h"
@@ -26,6 +29,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkIntArray.h"
 #include "vtkInterpolatedVelocityField.h"
 #include "vtkMath.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointSet.h"
@@ -34,8 +38,9 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkRungeKutta2.h"
 #include "vtkRungeKutta4.h"
 #include "vtkRungeKutta45.h"
+#include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkStreamTracer, "$Revision: 1.35.6.1 $");
+vtkCxxRevisionMacro(vtkStreamTracer, "$Revision: 1.46 $");
 vtkStandardNewMacro(vtkStreamTracer);
 vtkCxxSetObjectMacro(vtkStreamTracer,Integrator,vtkInitialValueProblemSolver);
 vtkCxxSetObjectMacro(vtkStreamTracer,InterpolatorPrototype,vtkInterpolatedVelocityField);
@@ -108,11 +113,6 @@ vtkDataSet *vtkStreamTracer::GetSource()
     }
   return vtkDataSet::SafeDownCast(
     this->GetExecutive()->GetInputData(1, 0));
-}
-
-void vtkStreamTracer::AddInput(vtkDataSet* input)
-{
-  this->Superclass::AddInput(input);
 }
 
 int vtkStreamTracer::GetIntegratorType()
@@ -514,11 +514,59 @@ void vtkStreamTracer::InitializeSeeds(vtkDataArray*& seeds,
     }
 }
 
+int vtkStreamTracer::SetupOutput(vtkInformation* inInfo, 
+                                 vtkInformation* outInfo)
+{
+  int piece=outInfo->Get(
+    vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  int numPieces =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+
+  vtkDataObject* input = inInfo->Get(vtkDataObject::DATA_OBJECT());
+
+  vtkCompositeDataSet *hdInput = vtkCompositeDataSet::SafeDownCast(input);
+  vtkDataSet* dsInput = vtkDataSet::SafeDownCast(input);
+  if (hdInput) 
+    {
+    this->InputData = hdInput;
+    hdInput->Register(this);
+    return 1;
+    }
+  else if (dsInput)
+    {
+    vtkDataSet* copy = dsInput->NewInstance();
+    copy->ShallowCopy(dsInput);
+    vtkMultiBlockDataSet* mb = vtkMultiBlockDataSet::New();
+    mb->SetNumberOfBlocks(numPieces);
+    mb->SetBlock(piece, copy);
+    copy->Delete();
+    this->InputData = mb;
+    mb->Register(this);
+    mb->Delete();
+    return 1;
+    }
+  else
+    {
+    vtkErrorMacro("This filter cannot handle input of type: "
+                  << (input?input->GetClassName():"(none)"));
+    return 0;
+    }
+    
+}
+
 int vtkStreamTracer::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+  if (!this->SetupOutput(inInfo, outInfo))
+    {
+    return 0;
+    }
+
   vtkInformation *sourceInfo = inputVector[1]->GetInformationObject(0);
   vtkDataSet *source = 0;
   if (sourceInfo)
@@ -526,11 +574,6 @@ int vtkStreamTracer::RequestData(
     source = vtkDataSet::SafeDownCast(
       sourceInfo->Get(vtkDataObject::DATA_OBJECT()));
     }
-
-  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  vtkDataSet *input = vtkDataSet::SafeDownCast(
-    inInfo->Get(vtkDataObject::DATA_OBJECT()));
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
   vtkPolyData *output = vtkPolyData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -544,24 +587,39 @@ int vtkStreamTracer::RequestData(
     double lastPoint[3];
     vtkInterpolatedVelocityField* func;
     int maxCellSize = 0;
-    if (this->CheckInputs(func, &maxCellSize, inputVector) != VTK_OK)
+    if (this->CheckInputs(func, &maxCellSize) != VTK_OK)
       {
       vtkDebugMacro("No appropriate inputs have been found. Can not execute.");
       func->Delete();
       seeds->Delete();
       integrationDirections->Delete();
       seedIds->Delete();
+      this->InputData->UnRegister(this);
       return 1;
       }
-    vtkDataArray *vectors = this->GetInputArrayToProcess(0,inputVector);
+
+    vtkCompositeDataIterator* iter = this->InputData->NewIterator();
+    vtkSmartPointer<vtkCompositeDataIterator> iterP(iter);
+    iter->Delete();
+
+    iterP->GoToFirstItem();
+    vtkDataSet* input0 = 0;
+    if (!iterP->IsDoneWithTraversal())
+      {
+      input0 = vtkDataSet::SafeDownCast(iterP->GetCurrentDataObject());
+      }
+    vtkDataArray *vectors = this->GetInputArrayToProcess(0,input0);
     if (vectors)
       {
       const char *vecName = vectors->GetName();
-      this->Integrate(input, output,
-                    seeds, seedIds, 
-                    integrationDirections, 
-                    lastPoint, func,
-                    maxCellSize, vecName);
+      double propagation = 0;
+      vtkIdType numSteps = 0;
+      this->Integrate(input0, output,
+                      seeds, seedIds, 
+                      integrationDirections, 
+                      lastPoint, func,
+                      maxCellSize, vecName,
+                      propagation, numSteps);
       }
     func->Delete();
     seeds->Delete();
@@ -570,13 +628,28 @@ int vtkStreamTracer::RequestData(
   integrationDirections->Delete();
   seedIds->Delete();
 
+  this->InputData->UnRegister(this);
   return 1;
 }
 
 int vtkStreamTracer::CheckInputs(vtkInterpolatedVelocityField*& func,
-                                 int* maxCellSize,
-                                 vtkInformationVector **inputVector)
+                                   int* maxCellSize)
 {
+  if (!this->InputData)
+    {
+    return VTK_ERROR;
+    }
+
+  vtkCompositeDataIterator* iter = this->InputData->NewIterator();
+  vtkSmartPointer<vtkCompositeDataIterator> iterP(iter);
+  iter->Delete();
+
+  iterP->GoToFirstItem();
+  if (iterP->IsDoneWithTraversal())
+    {
+    return VTK_ERROR;
+    }
+
   // Set the function set to be integrated
   if (!this->InterpolatorPrototype)
     {
@@ -587,10 +660,11 @@ int vtkStreamTracer::CheckInputs(vtkInterpolatedVelocityField*& func,
     func = this->InterpolatorPrototype->NewInstance();
     func->CopyParameters(this->InterpolatorPrototype);
     }
-  vtkDataArray *vectors = this->GetInputArrayToProcess(0,inputVector);
+  vtkDataArray *vectors = this->GetInputArrayToProcess(
+    0,iterP->GetCurrentDataObject());
   if (!vectors)
     {
-    return 1;
+    return VTK_ERROR;
     }
   const char *vecName = vectors->GetName();
   func->SelectVectors(vecName);
@@ -599,21 +673,16 @@ int vtkStreamTracer::CheckInputs(vtkInterpolatedVelocityField*& func,
   // have the appropriate vectors and compute the maximum
   // cell size.
   int numInputs = 0;
-  int numInputConnections = this->GetNumberOfInputConnections(0);
-  for (int i = 0; i < numInputConnections; i++)
+  iterP->GoToFirstItem();
+  while (!iterP->IsDoneWithTraversal())
     {
-    vtkInformation *info = inputVector[0]->GetInformationObject(i);
-    vtkDataSet* inp = 0;
-    if (info)
-      {
-      inp = vtkDataSet::SafeDownCast(
-        info->Get(vtkDataObject::DATA_OBJECT()));
-      }
+    vtkDataSet* inp = vtkDataSet::SafeDownCast(iterP->GetCurrentDataObject());
     if (inp)
       {
       if (!inp->GetPointData()->GetVectors(vecName))
         {
-        vtkDebugMacro("Input " << i << "does not contain a velocity vector.");
+        vtkDebugMacro("One of the input blocks does not contain a "
+                      "velocity vector.");
         continue;
         }
       int cellSize = inp->GetMaxCellSize();
@@ -624,6 +693,7 @@ int vtkStreamTracer::CheckInputs(vtkInterpolatedVelocityField*& func,
       func->AddDataSet(inp);
       numInputs++;
       }
+    iterP->GoToNextItem();
     }
   if ( numInputs == 0 )
     {
@@ -641,10 +711,14 @@ void vtkStreamTracer::Integrate(vtkDataSet *input0,
                                 double lastPoint[3],
                                 vtkInterpolatedVelocityField* func,
                                 int maxCellSize,
-                                const char *vecName)
+                                const char *vecName,
+                                double& inPropagation,
+                                vtkIdType& inNumSteps)
 {
   int i;
   vtkIdType numLines = seedIds->GetNumberOfIds();
+  double propagation = inPropagation;
+  vtkIdType numSteps = inNumSteps;
 
   // Useful pointers
   vtkDataSetAttributes* outputPD = output->GetPointData();
@@ -758,6 +832,12 @@ void vtkStreamTracer::Integrate(vtkDataSet *input0,
       continue;
       }
 
+    if (propagation >= this->MaximumPropagation.Interval ||
+        numSteps > this->MaximumNumberOfSteps)
+      {
+      continue;
+      }
+
     numPts++;
     numPtsTotal++;
     vtkIdType nextPoint = outputPoints->InsertNextPoint(point1);
@@ -771,7 +851,7 @@ void vtkStreamTracer::Integrate(vtkDataSet *input0,
     delT.Interval = 0;
     IntervalInformation aStep;
     aStep.Unit = this->MaximumPropagation.Unit;
-    double propagation = 0.0, step, minStep=0, maxStep=0;
+    double step, minStep=0, maxStep=0;
     double stepTaken, accumTime=0;
     double speed;
     double cellLength;
@@ -822,7 +902,6 @@ void vtkStreamTracer::Integrate(vtkDataSet *input0,
       rotation->InsertNextValue(0.0);
       }
 
-    vtkIdType numSteps = 0;
     double error = 0;
     // Integrate until the maximum propagation length is reached, 
     // maximum number of steps is reached or until a boundary is encountered.
@@ -1016,6 +1095,15 @@ void vtkStreamTracer::Integrate(vtkDataSet *input0,
         }
       retVals->InsertNextValue(retVal);
       }
+
+    // Initialize these to 0 before starting the next line.
+    // The values passed in the function call are only used
+    // for the first line.
+    inPropagation = propagation;
+    inNumSteps = numSteps;
+
+    propagation = 0;
+    numSteps = 0;
     }
 
   if (!shouldAbort)
@@ -1221,13 +1309,13 @@ int vtkStreamTracer::FillInputPortInformation(int port, vtkInformation *info)
 {
   if (port == 0)
     {
-    info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataObject");
     }
   else if (port == 1)
     {
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
     info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
     }
-  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
 }
 
@@ -1326,3 +1414,9 @@ void vtkStreamTracer::PrintSelf(ostream& os, vtkIndent indent)
      << (this->ComputeVorticity ? " On" : " Off") << endl;
   os << indent << "Rotation scale: " << this->RotationScale << endl;
 }
+
+vtkExecutive* vtkStreamTracer::CreateDefaultExecutive()
+{
+  return vtkCompositeDataPipeline::New();
+}
+

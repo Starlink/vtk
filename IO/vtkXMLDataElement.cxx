@@ -19,8 +19,9 @@
 #include "vtkXMLUtilities.h"
 
 #include <ctype.h>
+#include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkXMLDataElement, "$Revision: 1.24.6.1 $");
+vtkCxxRevisionMacro(vtkXMLDataElement, "$Revision: 1.31.2.1 $");
 vtkStandardNewMacro(vtkXMLDataElement);
 
 //----------------------------------------------------------------------------
@@ -59,6 +60,37 @@ vtkXMLDataElement::~vtkXMLDataElement()
   this->RemoveAllNestedElements();
   delete [] this->NestedElements;
   this->SetCharacterData(0, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkXMLDataElement::RemoveAttribute(const char *name)
+{
+  if (!name || !name[0])
+    {
+    return;
+    }
+
+  // Find the attribute
+  
+  int i, j;
+  for (i = 0; i < this->NumberOfAttributes; ++i)
+    {
+    if(!strcmp(this->AttributeNames[i], name))
+      {
+      // Shift the other attributes
+      for (j = i; j < this->NumberOfAttributes - 1; ++j)
+        {
+        this->AttributeNames[j] = this->AttributeNames[j + 1];
+        this->AttributeValues[j] = this->AttributeValues[j + 1];
+        }
+      // Delete the last one
+      delete [] this->AttributeNames[this->NumberOfAttributes - 1];
+      delete [] this->AttributeValues[this->NumberOfAttributes - 1];
+      --this->NumberOfAttributes;
+      // this->AttributesSize is unchanged
+      return;
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -107,12 +139,11 @@ void vtkXMLDataElement::ReadXMLAttributes(const char** atts, int encoding)
         }
       else
         {
-        ostrstream str;
+        vtksys_ios::ostringstream str;
         vtkXMLUtilities::EncodeString(
           atts[i+1], VTK_ENCODING_UTF_8, str, this->GetAttributeEncoding(), 0);
         str << ends;
-        this->SetAttribute(atts[i], str.str());
-        str.rdbuf()->freeze(0);
+        this->SetAttribute(atts[i], str.str().c_str());
         }
       }
     }
@@ -142,9 +173,9 @@ void vtkXMLDataElement::AddCharacterData(const char* c, int length)
     {
     return;
     }
-  
+
   char* old_data = this->CharacterData;
-  int old_length = (old_data)? strlen(old_data): 0;
+  int old_length = (old_data) ? static_cast<int>(strlen(old_data)) : 0;
   int total_length = old_length + length;
   
   this->CharacterData = new char[total_length + 1];
@@ -528,6 +559,32 @@ vtkXMLDataElement* vtkXMLDataElement::LookupElementUpScope(const char* id)
 }
 
 //----------------------------------------------------------------------------
+vtkXMLDataElement* vtkXMLDataElement::LookupElementWithName(const char* name)
+{
+  if (!name)
+    {
+    return NULL;
+    }
+
+  int i;
+  for (i = 0; i < this->NumberOfNestedElements; ++i)
+    {
+    const char *nname = this->NestedElements[i]->GetName();
+    if (nname && !strcmp(nname, name))
+      {
+      return this->NestedElements[i];
+      }
+    vtkXMLDataElement *found = 
+      this->NestedElements[i]->LookupElementWithName(name);
+    if (found)
+      {
+      return found;
+      }
+    }
+  return NULL;
+}
+
+//----------------------------------------------------------------------------
 int vtkXMLDataElement::GetScalarAttribute(const char* name, int& value)
 {
   return this->GetVectorAttribute(name, 1, &value);
@@ -565,8 +622,8 @@ template <class T>
 int vtkXMLDataElementVectorAttributeParse(const char* str, int length, T* data)
 {
   if(!str || !length || !data) { return 0; }
-  strstream vstr;
-  vstr << str << ends;  
+  vtksys_ios::stringstream vstr;
+  vstr << str;  
   int i;
   for(i=0;i < length;++i)
     {
@@ -834,15 +891,15 @@ void vtkXMLDataElementVectorAttributeSet(vtkXMLDataElement *elem, const char* na
     { 
     return; 
     }
-  strstream vstr;
+  vtksys_ios::stringstream vstr;
   vstr << data[0];
   for(int i = 1; i < length; ++i)
     {
     vstr << ' ' << data[i];
     }
-  vstr << ends;
-  elem->SetAttribute(name, vstr.str());
-  vstr.rdbuf()->freeze(0);
+
+  elem->SetAttribute(name, vstr.str().c_str());
+
 }
 
 //----------------------------------------------------------------------------
@@ -898,8 +955,14 @@ void vtkXMLDataElement::SeekInlineDataPosition(vtkXMLDataParser* parser)
     stream->clear(stream->rdstate() & ~ios::eofbit);
     stream->clear(stream->rdstate() & ~ios::failbit);
     parser->SeekG(this->GetXMLByteIndex());
-    while(stream->get(c) && (c != '>'));
-    while(stream->get(c) && this->IsSpace(c));
+    while(stream->get(c) && (c != '>'))
+      {
+      ;
+      }
+    while(stream->get(c) && this->IsSpace(c))
+      {
+      ;
+      }
     unsigned long pos = parser->TellG();
     this->InlineDataPosition = pos-1;
     }
@@ -977,7 +1040,8 @@ void vtkXMLDataElement::DeepCopy(vtkXMLDataElement *elem)
   this->SetXMLByteIndex(elem->GetXMLByteIndex());
   this->SetAttributeEncoding(elem->GetAttributeEncoding());
   const char *elem_cdata = elem->GetCharacterData();
-  this->SetCharacterData(elem_cdata, elem_cdata ? strlen(elem_cdata) : 0);
+  this->SetCharacterData(elem_cdata,
+    elem_cdata ? static_cast<int>(strlen(elem_cdata)) : 0);
 
   // Copy attributes
 

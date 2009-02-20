@@ -37,7 +37,7 @@
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkImageTracerWidget, "$Revision: 1.3.4.1 $");
+vtkCxxRevisionMacro(vtkImageTracerWidget, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkImageTracerWidget);
 
 vtkCxxSetObjectMacro(vtkImageTracerWidget, HandleProperty, vtkProperty);

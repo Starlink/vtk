@@ -53,6 +53,7 @@
 # pragma warning (push)
 # pragma warning (disable:4284)
 # pragma warning (disable:4786)
+# pragma warning (disable:4512) /* no assignment operator for class */
 #endif
 
 #if @KWSYS_NAMESPACE@_STL_HAS_ALLOCATOR_TEMPLATE
@@ -82,7 +83,11 @@ namespace @KWSYS_NAMESPACE@
 // Utility functions to convert item counts.
 inline size_t hash_sizeof(void*) { return sizeof(char); }
 inline size_t hash_sizeof(const void*) { return sizeof(char); }
-template <class TPtr> inline size_t hash_sizeof(TPtr p) { return sizeof(*p); }
+template <class TPtr> inline size_t hash_sizeof(TPtr p)
+{
+  static_cast<void>(p);
+  return sizeof(*p);
+}
 template <class POut, class PIn, class TSize>
 inline TSize hash_allocator_n(POut out, PIn in, TSize n)
 {
@@ -392,7 +397,7 @@ static const unsigned long _stl_prime_list[_stl_num_primes] =
   1610612741ul, 3221225473ul, 4294967291ul
 };
 
-inline unsigned long _stl_next_prime(unsigned long __n)
+inline size_t _stl_next_prime(size_t __n)
 {
   const unsigned long* __first = _stl_prime_list;
   const unsigned long* __last = _stl_prime_list + (int)_stl_num_primes;

@@ -48,16 +48,21 @@ class vtkDoubleArray;
 class vtkUnstructuredGridVolumeRayIntegrator;
 class vtkRenderWindow;
 
+//BTX
 // Internal classes
-class vtkScreenEdge;
-class vtkSpan;
-class vtkPixelListFrame;
-class vtkUseSet;
-class vtkVertices;
-class vtkSimpleScreenEdge;
-class vtkDoubleScreenEdge;
-class vtkVertexEntry;
-class vtkPixelListEntryMemory;
+namespace vtkUnstructuredGridVolumeZSweepMapperNamespace
+{
+  class vtkScreenEdge;
+  class vtkSpan;
+  class vtkPixelListFrame;
+  class vtkUseSet;
+  class vtkVertices;
+  class vtkSimpleScreenEdge;
+  class vtkDoubleScreenEdge;
+  class vtkVertexEntry;
+  class vtkPixelListEntryMemory;
+};
+//ETX
 
 class VTK_VOLUMERENDERING_EXPORT vtkUnstructuredGridVolumeZSweepMapper : public vtkUnstructuredGridVolumeMapper
 {
@@ -69,48 +74,6 @@ public:
   // Set MaxPixelListSize to 32.
   static vtkUnstructuredGridVolumeZSweepMapper *New();
   
-  // Description:
-  // Control how the filter works with scalar point data and cell attribute
-  // data.  By default (ScalarModeToDefault), the filter will use point data,
-  // and if no point data is available, then cell data is used. Alternatively
-  // you can explicitly set the filter to use point data
-  // (ScalarModeToUsePointData) or cell data (ScalarModeToUseCellData).
-  // You can also choose to get the scalars from an array in point field
-  // data (ScalarModeToUsePointFieldData) or cell field data
-  // (ScalarModeToUseCellFieldData).  If scalars are coming from a field
-  // data array, you must call SelectColorArray before you call
-  // GetColors.
-  vtkSetMacro(ScalarMode,int);
-  vtkGetMacro(ScalarMode,int);
-  void SetScalarModeToDefault() {
-    this->SetScalarMode(VTK_SCALAR_MODE_DEFAULT);};
-  void SetScalarModeToUsePointData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_POINT_DATA);};
-  void SetScalarModeToUseCellData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_DATA);};
-  void SetScalarModeToUsePointFieldData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_POINT_FIELD_DATA);};
-  void SetScalarModeToUseCellFieldData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_FIELD_DATA);};
-  
-  // Description:
-  // When ScalarMode is set to UsePointFileData or UseCellFieldData,
-  // you can specify which array to use for coloring using these methods.
-  // The transfer function in the vtkVolumeProperty (attached to the calling
-  // vtkVolume) will decide how to convert vectors to colors.
-  virtual void SelectScalarArray(int arrayNum); 
-  virtual void SelectScalarArray(const char* arrayName); 
-  
-  // Description:
-  // Get the array name or number and component to color by.
-  virtual char* GetArrayName() { return this->ArrayName; }
-  virtual int GetArrayId() { return this->ArrayId; }
-  virtual int GetArrayAccessMode() { return this->ArrayAccessMode; }
-
-  // Description:
-  // Return the method for obtaining scalar data.
-  const char *GetScalarModeAsString();
-
   // Description:
   // Sampling distance in the XY image dimensions. Default value of 1 meaning
   // 1 ray cast per pixel. If set to 0.5, 4 rays will be cast per pixel. If
@@ -156,7 +119,7 @@ public:
   // Description:
   // Change the maximum size allowed for a pixel list. It is an advanced
   // parameter.
-  // \pre positive_size: size>0
+  // \pre positive_size: size>1
   void SetMaxPixelListSize(int size);
   
   // Description:
@@ -187,10 +150,10 @@ protected:
   void BuildUseSets();
   
   // Description:
-  // Reorder vertices `v' in increasing order in `w'. Orientation does not
-  // matter for the algorithm.
-  void ReorderTriangle(vtkIdType v[3],
-                       vtkIdType w[3]);
+  // Reorder vertices `v' in increasing order in `w'. Return if the orientation
+  // has changed.
+  int ReorderTriangle(vtkIdType v[3],
+                      vtkIdType w[3]);
 
   // Description:
   // Project and sort the vertices by z-coordinates in view space in the
@@ -219,15 +182,19 @@ protected:
   
   // Description:
   // Perform scan conversion of a triangle face.
-  void RasterizeFace(vtkIdType faceIds[3]);
-  
+  void RasterizeFace(vtkIdType faceIds[3], int externalSide);
+
+//BTX
   // Description:
   // Perform scan conversion of a triangle defined by its vertices.
   // \pre ve0_exists: ve0!=0
   // \pre ve1_exists: ve1!=0
   // \pre ve2_exists: ve2!=0
-  void RasterizeTriangle(vtkVertexEntry *ve0,vtkVertexEntry *ve1,
-                         vtkVertexEntry *ve2);
+  void RasterizeTriangle(
+            vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertexEntry *ve0,
+            vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertexEntry *ve1,
+            vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertexEntry *ve2,
+            bool exitFace);
   
   // Description:
   // Perform scan conversion of an horizontal span from left ro right at line
@@ -235,16 +202,20 @@ protected:
   // \pre left_exists: left!=0
   // \pre right_exists: right!=0
   void RasterizeSpan(int y,
-                     vtkScreenEdge *left,
-                     vtkScreenEdge *right);
+           vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkScreenEdge *left,
+           vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkScreenEdge *right,
+           bool exitFace);
   
   // Description:
   // Scan conversion of a straight line defined by endpoints v0 and v1.
   // \pre v0_exists: v0!=0
   // \pre v1_exists: v1!=0
   // \pre y_ordered v0->GetScreenY()<=v1->GetScreenY()
-  void RasterizeLine(vtkVertexEntry *v0,
-                     vtkVertexEntry *v1);
+  void RasterizeLine(
+             vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertexEntry *v0,
+             vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertexEntry *v1,
+             bool exitFace);
+//ETX
   
   void StoreRenderTime(vtkRenderer *ren,
                        vtkVolume *vol,
@@ -321,24 +292,26 @@ protected:
   int ZBufferSize[2];
   int ZBufferOrigin[2];
   
-  int ScalarMode;
-  char *ArrayName;
-  int ArrayId;
-  int ArrayAccessMode;
-  
   vtkDataArray *Scalars;
   int CellScalars;
   
-  vtkSpan *Span;
-  vtkPixelListFrame *PixelListFrame;
+  // if use CellScalars, we need to keep track of the
+  // values on each side of the face and figure out
+  // if the face is used by two cells (twosided) or one cell.
+  double FaceScalars[2];
+  int FaceSide;
+
+//BTX
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkSpan *Span;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkPixelListFrame *PixelListFrame;
   
   // Used by BuildUseSets().
   vtkGenericCell *Cell;
   
-  vtkUseSet *UseSet;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkUseSet *UseSet;
   
   vtkPriorityQueue *EventList;
-  vtkVertices *Vertices;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkVertices *Vertices;
   
   vtkTransform *PerspectiveTransform;
   vtkMatrix4x4 *PerspectiveMatrix;
@@ -348,8 +321,8 @@ protected:
   int XBounds[2];
   int YBounds[2];
   
-  vtkSimpleScreenEdge *SimpleEdge;
-  vtkDoubleScreenEdge *DoubleEdge;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkSimpleScreenEdge *SimpleEdge;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkDoubleScreenEdge *DoubleEdge;
   
   vtkUnstructuredGridVolumeRayIntegrator *RayIntegrator;
   vtkUnstructuredGridVolumeRayIntegrator *RealRayIntegrator;
@@ -363,9 +336,10 @@ protected:
   
   // Benchmark
   vtkIdType MaxRecordedPixelListSize;
+
   
-  
-  vtkPixelListEntryMemory *MemoryManager;
+  vtkUnstructuredGridVolumeZSweepMapperNamespace::vtkPixelListEntryMemory *MemoryManager;
+//ETX
 private:
   vtkUnstructuredGridVolumeZSweepMapper(const vtkUnstructuredGridVolumeZSweepMapper&);  // Not implemented.
   void operator=(const vtkUnstructuredGridVolumeZSweepMapper&);  // Not implemented.

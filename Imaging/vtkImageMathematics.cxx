@@ -13,15 +13,16 @@
 
 =========================================================================*/
 #include "vtkImageMathematics.h"
+
+#include "vtkObjectFactory.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageMathematics, "$Revision: 1.53 $");
+vtkCxxRevisionMacro(vtkImageMathematics, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkImageMathematics);
 
 //----------------------------------------------------------------------------
@@ -51,17 +52,17 @@ int vtkImageMathematics::RequestInformation (
   inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),ext);
 
   // two input take intersection
-  if (this->Operation == VTK_ADD || this->Operation == VTK_SUBTRACT || 
+  if (this->Operation == VTK_ADD || this->Operation == VTK_SUBTRACT ||
       this->Operation == VTK_MULTIPLY || this->Operation == VTK_DIVIDE ||
-      this->Operation == VTK_MIN || this->Operation == VTK_MAX || 
-      this->Operation == VTK_ATAN2) 
+      this->Operation == VTK_MIN || this->Operation == VTK_MAX ||
+      this->Operation == VTK_ATAN2)
     {
     if (!inInfo2)
       {
       vtkErrorMacro(<< "Second input must be specified for this operation.");
       return 1;
       }
-       
+
     inInfo2->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),ext2);
     for (idx = 0; idx < 3; ++idx)
       {
@@ -75,26 +76,27 @@ int vtkImageMathematics::RequestInformation (
         }
       }
     }
-  
+
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),ext,6);
 
   return 1;
 }
 
+//----------------------------------------------------------------------------
 template <class TValue, class TIvar>
 void vtkImageMathematicsClamp(TValue &value, TIvar ivar, vtkImageData *data)
 {
-  if (ivar < (TIvar) data->GetScalarTypeMin())
+  if (ivar < static_cast<TIvar>(data->GetScalarTypeMin()))
     {
-    value = (TValue) data->GetScalarTypeMin();
+    value = static_cast<TValue>(data->GetScalarTypeMin());
     }
-  else if (ivar > (TIvar) data->GetScalarTypeMax())
+  else if (ivar > static_cast<TIvar>(data->GetScalarTypeMax()))
     {
-    value = (TValue) data->GetScalarTypeMax();
+    value = static_cast<TValue>(data->GetScalarTypeMax());
     }
   else
     {
-    value = (TValue) ivar;
+    value = static_cast<TValue>(ivar);
     }
 }
 
@@ -115,37 +117,39 @@ void vtkImageMathematicsExecute1(vtkImageMathematics *self,
   unsigned long count = 0;
   unsigned long target;
   int op = self->GetOperation();
-  
+
   // find the region to loop over
-  rowLength = (outExt[1] - outExt[0]+1)*in1Data->GetNumberOfScalarComponents();
+  rowLength =
+    (outExt[1] - outExt[0]+1)*in1Data->GetNumberOfScalarComponents();
   // What a pain.  Maybe I should just make another filter.
   if (op == VTK_CONJUGATE)
     {
     rowLength = (outExt[1] - outExt[0] + 1);
     }
-  maxY = outExt[3] - outExt[2]; 
+  maxY = outExt[3] - outExt[2];
   maxZ = outExt[5] - outExt[4];
-  target = (unsigned long)((maxZ+1)*(maxY+1)/50.0);
+  target = static_cast<unsigned long>((maxZ+1)*(maxY+1)/50.0);
   target++;
-  
-  // Get increments to march through data 
+
+  // Get increments to march through data
   in1Data->GetContinuousIncrements(outExt, inIncX, inIncY, inIncZ);
   outData->GetContinuousIncrements(outExt, outIncX, outIncY, outIncZ);
 
-  int DivideByZeroToC = self->GetDivideByZeroToC();
+  int divideByZeroToC = self->GetDivideByZeroToC();
   double doubleConstantk = self->GetConstantK();
 
   // Avoid casts by making constants the same type as input/output
   // Of course they must be clamped to a valid range for the scalar type
-  T constantk; vtkImageMathematicsClamp(constantk, self->GetConstantK(), in1Data);
-  T constantc; vtkImageMathematicsClamp(constantc, self->GetConstantC(), in1Data);
+  T constantk, constantc;
+  vtkImageMathematicsClamp(constantk, self->GetConstantK(), in1Data);
+  vtkImageMathematicsClamp(constantc, self->GetConstantC(), in1Data);
 
   // Loop through output pixels
   for (idxZ = 0; idxZ <= maxZ; idxZ++)
     {
     for (idxY = 0; idxY <= maxY; idxY++)
       {
-      if (!id) 
+      if (!id)
         {
         if (!(count%target))
           {
@@ -161,46 +165,46 @@ void vtkImageMathematicsExecute1(vtkImageMathematics *self,
           case VTK_INVERT:
             if (*in1Ptr)
               {
-              *outPtr = (T)(1.0 / *in1Ptr);
+              *outPtr = static_cast<T>(1.0 / *in1Ptr);
               }
             else
               {
-              if ( DivideByZeroToC )
+              if ( divideByZeroToC )
                 {
                 *outPtr = constantc;
                 }
               else
                 {
-                *outPtr = (T)outData->GetScalarTypeMax();
+                *outPtr = static_cast<T>(outData->GetScalarTypeMax());
                 }
               }
             break;
           case VTK_SIN:
-            *outPtr = (T)(sin((double)*in1Ptr));
+            *outPtr = static_cast<T>(sin(static_cast<double>(*in1Ptr)));
             break;
           case VTK_COS:
-            *outPtr = (T)(cos((double)*in1Ptr));
+            *outPtr = static_cast<T>(cos(static_cast<double>(*in1Ptr)));
             break;
           case VTK_EXP:
-            *outPtr = (T)(exp((double)*in1Ptr));
+            *outPtr = static_cast<T>(exp(static_cast<double>(*in1Ptr)));
             break;
           case VTK_LOG:
-            *outPtr = (T)(log((double)*in1Ptr));
+            *outPtr = static_cast<T>(log(static_cast<double>(*in1Ptr)));
             break;
           case VTK_ABS:
-            *outPtr = (T)(fabs((double)*in1Ptr));
+            *outPtr = static_cast<T>(fabs(static_cast<double>(*in1Ptr)));
             break;
           case VTK_SQR:
-            *outPtr = (T)(*in1Ptr * *in1Ptr);
+            *outPtr = static_cast<T>(*in1Ptr * *in1Ptr);
             break;
           case VTK_SQRT:
-            *outPtr = (T)(sqrt((double)*in1Ptr));
+            *outPtr = static_cast<T>(sqrt(static_cast<double>(*in1Ptr)));
             break;
           case VTK_ATAN:
-            *outPtr = (T)(atan((double)*in1Ptr));
+            *outPtr = static_cast<T>(atan(static_cast<double>(*in1Ptr)));
             break;
           case VTK_MULTIPLYBYK:
-            *outPtr = (T)(doubleConstantk * (double) *in1Ptr);
+            *outPtr = static_cast<T>(doubleConstantk * static_cast<double>( *in1Ptr));
             break;
           case VTK_ADDC:
             *outPtr = constantc + *in1Ptr;
@@ -210,7 +214,7 @@ void vtkImageMathematicsExecute1(vtkImageMathematics *self,
             break;
           case VTK_CONJUGATE:
             outPtr[0] = in1Ptr[0];
-            outPtr[1] = (T)(-1.0*(double)(in1Ptr[1]));
+            outPtr[1] = static_cast<T>(-1.0*static_cast<double>(in1Ptr[1]));
             // Why bother trying to figure out the continuous increments.
             outPtr++;
             in1Ptr++;
@@ -248,23 +252,24 @@ void vtkImageMathematicsExecute2(vtkImageMathematics *self,
   unsigned long count = 0;
   unsigned long target;
   int op = self->GetOperation();
-  int DivideByZeroToC = self->GetDivideByZeroToC();
+  int divideByZeroToC = self->GetDivideByZeroToC();
   double constantc = self->GetConstantC();
-  
+
   // find the region to loop over
-  rowLength = (outExt[1] - outExt[0]+1)*in1Data->GetNumberOfScalarComponents();
+  rowLength =
+    (outExt[1] - outExt[0]+1)*in1Data->GetNumberOfScalarComponents();
   // What a pain.  Maybe I should just make another filter.
   if (op == VTK_COMPLEX_MULTIPLY)
     {
     rowLength = (outExt[1] - outExt[0]+1);
     }
 
-  maxY = outExt[3] - outExt[2]; 
+  maxY = outExt[3] - outExt[2];
   maxZ = outExt[5] - outExt[4];
-  target = (unsigned long)((maxZ+1)*(maxY+1)/50.0);
+  target = static_cast<unsigned long>((maxZ+1)*(maxY+1)/50.0);
   target++;
-  
-  // Get increments to march through data 
+
+  // Get increments to march through data
   in1Data->GetContinuousIncrements(outExt, inIncX, inIncY, inIncZ);
   in2Data->GetContinuousIncrements(outExt, in2IncX, in2IncY, in2IncZ);
   outData->GetContinuousIncrements(outExt, outIncX, outIncY, outIncZ);
@@ -274,7 +279,7 @@ void vtkImageMathematicsExecute2(vtkImageMathematics *self,
     {
     for (idxY = 0; !self->AbortExecute && idxY <= maxY; idxY++)
       {
-      if (!id) 
+      if (!id)
         {
         if (!(count%target))
           {
@@ -303,14 +308,14 @@ void vtkImageMathematicsExecute2(vtkImageMathematics *self,
               }
             else
               {
-              if ( DivideByZeroToC )
+              if ( divideByZeroToC )
                 {
-                *outPtr = (T) constantc;
+                *outPtr = static_cast<T>(constantc);
                 }
               else
                 {
                 // *outPtr = (T)(*in1Ptr / 0.00001);
-                *outPtr = (T)outData->GetScalarTypeMax();
+                *outPtr = static_cast<T>(outData->GetScalarTypeMax());
                 }
               }
             break;
@@ -341,13 +346,14 @@ void vtkImageMathematicsExecute2(vtkImageMathematics *self,
                 }
               else
                 {
-                *outPtr =  (T)atan2((double)*in1Ptr,(double)*in2Ptr);
+                *outPtr =  static_cast<T>(atan2(static_cast<double>(*in1Ptr),
+                                                static_cast<double>(*in2Ptr)));
                 }
             break;
           case VTK_COMPLEX_MULTIPLY:
             outPtr[0] = in1Ptr[0] * in2Ptr[0] - in1Ptr[1] * in2Ptr[1];
             outPtr[1] = in1Ptr[1] * in2Ptr[0] + in1Ptr[0] * in2Ptr[1];
-            // Why bother trtying to figure out the continuous increments.
+            // Why bother trying to figure out the continuous increments.
             outPtr++;
             in1Ptr++;
             in2Ptr++;
@@ -374,24 +380,24 @@ void vtkImageMathematicsExecute2(vtkImageMathematics *self,
 // It just executes a switch statement to call the correct function for
 // the datas data types.
 void vtkImageMathematics::ThreadedRequestData(
-  vtkInformation * vtkNotUsed( request ), 
-  vtkInformationVector ** vtkNotUsed( inputVector ), 
+  vtkInformation * vtkNotUsed( request ),
+  vtkInformationVector ** vtkNotUsed( inputVector ),
   vtkInformationVector * vtkNotUsed( outputVector ),
-  vtkImageData ***inData, 
+  vtkImageData ***inData,
   vtkImageData **outData,
   int outExt[6], int id)
 {
   void *inPtr1;
   void *outPtr;
-  
+
   inPtr1 = inData[0][0]->GetScalarPointerForExtent(outExt);
   outPtr = outData[0]->GetScalarPointerForExtent(outExt);
-  
 
-  if (this->Operation == VTK_ADD || this->Operation == VTK_SUBTRACT || 
+
+  if (this->Operation == VTK_ADD || this->Operation == VTK_SUBTRACT ||
       this->Operation == VTK_MULTIPLY || this->Operation == VTK_DIVIDE ||
-      this->Operation == VTK_MIN || this->Operation == VTK_MAX || 
-      this->Operation == VTK_ATAN2 || this->Operation == VTK_COMPLEX_MULTIPLY) 
+      this->Operation == VTK_MIN || this->Operation == VTK_MAX ||
+      this->Operation == VTK_ATAN2 || this->Operation == VTK_COMPLEX_MULTIPLY)
     {
     void *inPtr2;
 
@@ -407,10 +413,12 @@ void vtkImageMathematics::ThreadedRequestData(
 
     if (!inData[1] || ! inData[1][0])
       {
-      vtkErrorMacro("ImageMathematics requested to perform a two input operation with only one input\n");
+      vtkErrorMacro(
+        "ImageMathematics requested to perform a two input operation "
+        "with only one input\n");
       return;
       }
-    
+
     inPtr2 = inData[1][0]->GetScalarPointerForExtent(outExt);
 
     // this filter expects that input is the same type as output.
@@ -422,7 +430,7 @@ void vtkImageMathematics::ThreadedRequestData(
                     << outData[0]->GetScalarType());
       return;
       }
-  
+
     if (inData[1][0]->GetScalarType() != outData[0]->GetScalarType())
       {
       vtkErrorMacro(<< "Execute: input2 ScalarType, "
@@ -431,9 +439,9 @@ void vtkImageMathematics::ThreadedRequestData(
                   << outData[0]->GetScalarType());
       return;
       }
-  
+
     // this filter expects that inputs that have the same number of components
-    if (inData[0][0]->GetNumberOfScalarComponents() != 
+    if (inData[0][0]->GetNumberOfScalarComponents() !=
         inData[1][0]->GetNumberOfScalarComponents())
       {
       vtkErrorMacro(<< "Execute: input1 NumberOfScalarComponents, "
@@ -442,13 +450,17 @@ void vtkImageMathematics::ThreadedRequestData(
                     << inData[1][0]->GetNumberOfScalarComponents());
       return;
       }
-    
+
     switch (inData[0][0]->GetScalarType())
       {
       vtkTemplateMacro(
-        vtkImageMathematicsExecute2(this,inData[0][0], (VTK_TT *)(inPtr1), 
-                                    inData[1][0], (VTK_TT *)(inPtr2), 
-                                    outData[0], (VTK_TT *)(outPtr), outExt, id));
+        vtkImageMathematicsExecute2(this,inData[0][0],
+                                    static_cast<VTK_TT *>(inPtr1),
+                                    inData[1][0],
+                                    static_cast<VTK_TT *>(inPtr2),
+                                    outData[0],
+                                    static_cast<VTK_TT *>(outPtr), outExt,
+                                    id));
       default:
         vtkErrorMacro(<< "Execute: Unknown ScalarType");
         return;
@@ -459,8 +471,9 @@ void vtkImageMathematics::ThreadedRequestData(
     // this filter expects that input is the same type as output.
     if (inData[0][0]->GetScalarType() != outData[0]->GetScalarType())
       {
-      vtkErrorMacro(<< "Execute: input ScalarType, " << inData[0][0]->GetScalarType()
-      << ", must match out ScalarType " << outData[0]->GetScalarType());
+      vtkErrorMacro(<< "Execute: input ScalarType, "
+        << inData[0][0]->GetScalarType()
+        << ", must match out ScalarType " << outData[0]->GetScalarType());
       return;
       }
 
@@ -476,8 +489,10 @@ void vtkImageMathematics::ThreadedRequestData(
     switch (inData[0][0]->GetScalarType())
       {
       vtkTemplateMacro(
-        vtkImageMathematicsExecute1(this, inData[0][0], (VTK_TT *)(inPtr1), 
-                                    outData[0], (VTK_TT *)(outPtr), outExt, id));
+        vtkImageMathematicsExecute1(this, inData[0][0],
+                                    static_cast<VTK_TT *>(inPtr1),
+                                    outData[0], static_cast<VTK_TT *>(outPtr),
+                                    outExt, id));
       default:
         vtkErrorMacro(<< "Execute: Unknown ScalarType");
         return;
@@ -485,6 +500,7 @@ void vtkImageMathematics::ThreadedRequestData(
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkImageMathematics::FillInputPortInformation(
   int port, vtkInformation* info)
 {
@@ -496,6 +512,7 @@ int vtkImageMathematics::FillInputPortInformation(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkImageMathematics::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -503,14 +520,7 @@ void vtkImageMathematics::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Operation: " << this->Operation << "\n";
   os << indent << "ConstantK: " << this->ConstantK << "\n";
   os << indent << "ConstantC: " << this->ConstantC << "\n";
-  os << indent << "DivideByZeroToC: ";
-  if ( this->DivideByZeroToC )
-    {
-    os << "On\n";
-    }
-  else
-    {
-    os << "Off\n";
-    }
+  os << indent << "DivideByZeroToC: " <<
+    (this->DivideByZeroToC ? "On" : "Off") << "\n";
 }
 

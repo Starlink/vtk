@@ -49,13 +49,17 @@ public:
   // Structure passed on every event invocation.
   // Depending upon the cue time mode, these times are either
   // normalized [0,1] or relative to the scene that contains the cue.
+  // All this information is also available by asking the cue
+  // directly for it within the handler. Thus, this information can 
+  // be accessed in wrapped languages.
   class AnimationCueInfo
     {
   public:
     double StartTime;
     double EndTime;
-    double AnimationTime;// valid only on AnimationCueTickEvent
-    double DeltaTime;   // valid only on AnimationCueTickEvent
+    double AnimationTime;// valid only in AnimationCueTickEvent handler
+    double DeltaTime;   // valid only in AnimationCueTickEvent handler
+    double ClockTime;   // valid only in AnimationCueTickEvent handler
     };
   //ETX
   
@@ -108,9 +112,11 @@ public:
   // deltatime is the time since last call to Tick. deltatime also can be in seconds
   // relative to the start of the container Scene or normalized depending upon the
   // cue's Time mode.
+  // clocktime is the time from the scene i.e. it does not depend on the time
+  // mode for the cue.
   // For the first call to Tick
   // after a call to Initialize(), the deltatime is 0;
-  virtual void Tick(double currenttime, double deltatime);
+  virtual void Tick(double currenttime, double deltatime, double clocktime);
 
   // Description:
   // Called when the playing of the scene begins.
@@ -122,6 +128,25 @@ public:
   // If the cue state is ACTIVE when this method is called, this will
   // trigger a EndAnimationCueEvent.
   virtual void Finalize();
+
+  // Description:
+  // This is valid only in a AnimationCueTickEvent handler. 
+  // Before firing the event the animation cue sets the AnimationTime to
+  // the time of the tick.
+  vtkGetMacro(AnimationTime, double);
+
+  // Description:
+  // This is valid only in a AnimationCueTickEvent handler.
+  // Before firing the event the animation cue sets the DeltaTime
+  // to the difference in time between the current tick and the last tick.
+  vtkGetMacro(DeltaTime, double);
+
+  // Description:
+  // This is valid only in a AnimationCueTickEvent handler. 
+  // Before firing the event the animation cue sets the ClockTime to
+  // the time of the tick. ClockTime is directly the time from the animation
+  // scene neither normalized nor offsetted to the start of the scene.
+  vtkGetMacro(ClockTime, double);
 
 //BTX
   enum TimeCodes
@@ -143,6 +168,13 @@ protected:
   double StartTime;
   double EndTime;
   int TimeMode;
+
+  // These are set when the AnimationCueTickEvent event 
+  // is fired. Thus giving access to the information in
+  // the AnimationCueInfo struct in wrapped languages.
+  double AnimationTime;
+  double DeltaTime;
+  double ClockTime;
   
   // Description:
   // Current state of the Cue.
@@ -153,7 +185,8 @@ protected:
   // corresponding events. Subclasses can override these to
   // do extra processing at start/end or on tick.
   virtual void StartCueInternal();
-  virtual void TickInternal(double currenttime, double deltatime);
+  virtual void TickInternal(double currenttime, double deltatime,
+    double clocktime);
   virtual void EndCueInternal();
  
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1994 Sandia Corporation. Under the terms of Contract
+ * Copyright (c) 2005 Sandia Corporation. Under the terms of Contract
  * DE-AC04-94AL85000 with Sandia Corporation, the U.S. Governement
  * retains certain rights in this software.
  * 
@@ -36,11 +36,6 @@
 *
 * exppn - ex_put_prop_names: write property arrays names
 *
-* author - Larry A. Schoof, Sandia National Laboratories
-*          Victor R. Yarberry, Sandia National Laboratories
-*
-* environment - UNIX
-*
 * entry conditions - 
 *   input parameters:
 *       int     exoid                   exodus file id
@@ -53,7 +48,7 @@
 *
 * revision history - 
 *
-*  $Id: exppn.c,v 1.1 2005/07/17 15:44:00 andy Exp $
+*  $Id: exppn.c,v 1.3 2008-04-22 21:14:53 david.cole Exp $
 *
 *****************************************************************************/
 
@@ -168,21 +163,8 @@ int ex_put_prop_names (int   exoid,
        goto error_ret;  /* Exit define mode and return */
      }
 
-/*   store property name as attribute of property array variable */
-
-     if ((ncattput (exoid, propid, ATT_PROP_NAME, NC_CHAR, 
-                    strlen(prop_names[i])+1, prop_names[i])) == -1)
-     {
-       exerrval = ncerr;
-       sprintf(errmsg,
-              "Error: failed to store property name %s in file id %d",
-               prop_names[i],exoid);
-       ex_err("ex_put_prop_names",errmsg,exerrval);
-       goto error_ret;  /* Exit define mode and return */
-     }
-
      vals[0] = 0; /* fill value */
-  /*   create attribute to cause variable to fill with zeros per routine spec */
+     /*   create attribute to cause variable to fill with zeros per routine spec */
      if ((ncattput (exoid, propid, _FillValue, NC_LONG, 1, vals)) == -1)
      {
        exerrval = ncerr;
@@ -192,6 +174,20 @@ int ex_put_prop_names (int   exoid,
        ex_err("ex_put_prop_names",errmsg,exerrval);
        goto error_ret;  /* Exit define mode and return */
      }
+
+/*   store property name as attribute of property array variable */
+
+     if ((ncattput (exoid, propid, ATT_PROP_NAME, NC_CHAR, 
+                    (int)strlen(prop_names[i])+1, prop_names[i])) == -1)
+     {
+       exerrval = ncerr;
+       sprintf(errmsg,
+              "Error: failed to store property name %s in file id %d",
+               prop_names[i],exoid);
+       ex_err("ex_put_prop_names",errmsg,exerrval);
+       goto error_ret;  /* Exit define mode and return */
+     }
+
    }
 
 /* leave define mode  */

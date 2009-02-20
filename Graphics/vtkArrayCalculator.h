@@ -65,6 +65,8 @@ class vtkFunctionParser;
 #define VTK_ATTRIBUTE_MODE_DEFAULT 0
 #define VTK_ATTRIBUTE_MODE_USE_POINT_DATA 1
 #define VTK_ATTRIBUTE_MODE_USE_CELL_DATA 2
+#define VTK_ATTRIBUTE_MODE_USE_VERTEX_DATA 3
+#define VTK_ATTRIBUTE_MODE_USE_EDGE_DATA 4
 
 class VTK_GRAPHICS_EXPORT vtkArrayCalculator : public vtkDataSetAlgorithm 
 {
@@ -96,6 +98,15 @@ public:
   void AddVectorVariable(const char* variableName, const char* arrayName,
                          int component0 = 0, int component1 = 1,
                          int component2 = 2);
+
+  // Description:
+  // Add a variable name, a corresponding array name, and which components of
+  // the array to use.
+  void AddCoordinateScalarVariable(const char* variableName,
+                                   int component = 0);
+  void AddCoordinateVectorVariable(const char* variableName,
+                                   int component0 = 0, int component1 = 1,
+                                   int component2 = 2);
   
   // Description:
   // Set the name of the array in which to store the result of
@@ -106,10 +117,21 @@ public:
   vtkGetStringMacro(ResultArrayName);
   
   // Description:
+  // Set whether to output results as coordinates.  ResultArrayName will be
+  // ignored.  Outputing as coordinates is only valid with vector results and
+  // if the AttributeMode is AttributeModeToUsePointData.
+  // If a valid output can't be made, an error will occur.
+  vtkGetMacro(CoordinateResults, int);
+  vtkSetMacro(CoordinateResults, int);
+  vtkBooleanMacro(CoordinateResults, int);
+  
+  // Description:
   // Control whether the filter operates on point data or cell data.
   // By default (AttributeModeToDefault), the filter uses point
   // data. Alternatively you can explicitly set the filter to use point data
   // (AttributeModeToUsePointData) or cell data (AttributeModeToUseCellData).
+  // For graphs you can set the filter to use vertex data
+  // (AttributeModeToUseVertexData) or edge data (AttributeModeToUseEdgeData).
   vtkSetMacro(AttributeMode,int);
   vtkGetMacro(AttributeMode,int);
   void SetAttributeModeToDefault() 
@@ -118,11 +140,31 @@ public:
     {this->SetAttributeMode(VTK_ATTRIBUTE_MODE_USE_POINT_DATA);};
   void SetAttributeModeToUseCellData() 
     {this->SetAttributeMode(VTK_ATTRIBUTE_MODE_USE_CELL_DATA);};
+  void SetAttributeModeToUseVertexData() 
+    {this->SetAttributeMode(VTK_ATTRIBUTE_MODE_USE_VERTEX_DATA);};
+  void SetAttributeModeToUseEdgeData() 
+    {this->SetAttributeMode(VTK_ATTRIBUTE_MODE_USE_EDGE_DATA);};
   const char *GetAttributeModeAsString();
 
   // Description:
   // Remove all the variable names and their associated array names.
   void RemoveAllVariables();
+  
+  // Description:
+  // Remove all the scalar variable names and their associated array names.
+  void RemoveScalarVariables();
+  
+  // Description:
+  // Remove all the scalar variable names and their associated array names.
+  void RemoveVectorVariables();
+  
+  // Description:
+  // Remove all the coordinate variables.
+  void RemoveCoordinateScalarVariables();
+  
+  // Description:
+  // Remove all the coordinate variables.
+  void RemoveCoordinateVectorVariables();
 
   // Description:
   // Methods to get information about the current variables.
@@ -173,6 +215,14 @@ protected:
 
   int ReplaceInvalidValues;
   double ReplacementValue;
+  
+  int CoordinateResults;
+  char** CoordinateScalarVariableNames;
+  char** CoordinateVectorVariableNames;
+  int* SelectedCoordinateScalarComponents;
+  int** SelectedCoordinateVectorComponents;
+  int NumberOfCoordinateScalarArrays;
+  int NumberOfCoordinateVectorArrays;
 
 private:
   vtkArrayCalculator(const vtkArrayCalculator&);  // Not implemented.

@@ -41,18 +41,97 @@
 #include "vtkCellData.h"
 #include "vtkExodusModel.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkCommand.h"
 
 #include "netcdf.h"
 #include "exodusII.h"
 #include <sys/stat.h>
 #include <ctype.h>
-#include <vector>
+#include <vtkstd/vector>
 
 #define DEBUG 0
 #define vtkPExodusReaderMAXPATHLEN 2048
 
-vtkCxxRevisionMacro(vtkPExodusReader, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkPExodusReader, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkPExodusReader);
+
+class vtkPExodusReaderUpdateProgress : public vtkCommand
+{
+public:
+  vtkTypeMacro(vtkPExodusReaderUpdateProgress, vtkCommand)
+  static vtkPExodusReaderUpdateProgress* New()
+  {
+    return new vtkPExodusReaderUpdateProgress;
+  }
+  void SetReader(vtkPExodusReader* r)
+  {
+    Reader = r;
+  }
+  void SetIndex(int i)
+  {
+    Index = i;
+  }
+protected:
+
+  vtkPExodusReaderUpdateProgress()
+  {
+    Reader = NULL;
+    Index = 0;
+  }
+  ~vtkPExodusReaderUpdateProgress(){}
+
+  void Execute(vtkObject*, unsigned long event, void* callData)
+  {
+    if(event == vtkCommand::ProgressEvent)
+    {
+      int num = Reader->GetNumberOfFileNames();
+      if(num <= 1)
+        {
+        num = Reader->GetNumberOfFiles();
+        }
+      double* progress = static_cast<double*>(callData);
+      //only use half the progress since append uses the other half
+      double newProgress = (*progress/(double)num + Index/(double)num)*0.5;
+      Reader->UpdateProgress(newProgress);
+    }
+  }
+
+  vtkPExodusReader* Reader;
+  int Index;
+};
+
+class vtkPExodusReaderAppendUpdateProgress : public vtkCommand
+{
+public:
+  vtkTypeMacro(vtkPExodusReaderAppendUpdateProgress, vtkCommand)
+  static vtkPExodusReaderAppendUpdateProgress* New()
+  {
+    return new vtkPExodusReaderAppendUpdateProgress;
+  }
+  void SetReader(vtkPExodusReader* r)
+  {
+    Reader = r;
+  }
+protected:
+
+  vtkPExodusReaderAppendUpdateProgress()
+  {
+    Reader = NULL;
+  }
+  ~vtkPExodusReaderAppendUpdateProgress(){}
+
+  void Execute(vtkObject*, unsigned long event, void* callData)
+  {
+    if(event == vtkCommand::ProgressEvent)
+    {
+      double* progress = static_cast<double*>(callData);
+      double newProgress = 0.5*(*progress)+0.5;
+      Reader->UpdateProgress(newProgress);
+    }
+  }
+
+  vtkPExodusReader* Reader;
+};
 
 //----------------------------------------------------------------------------
 // Description:
@@ -95,7 +174,7 @@ vtkPExodusReader::~vtkPExodusReader()
     }
 
   // Delete all the readers we may have
-  for(int reader_idx=readerList.size()-1; reader_idx >= 0; --reader_idx)
+  for(int reader_idx=static_cast<int>( readerList.size() )-1; reader_idx >= 0; --reader_idx)
     {
     readerList[reader_idx]->Delete();
     readerList.pop_back();
@@ -137,6 +216,12 @@ int vtkPExodusReader::RequestInformation(
      ((this->FileRange[0] != this->CurrentFileRange[0]) ||
       (this->FileRange[1] != this->CurrentFileRange[1]))));
 
+  // setting filename for the first time builds the prefix/pattern
+  // if one clears the prefix/pattern, but the filename stays the same,
+  // we should rebuild the prefix/pattern
+  int rebuildPattern = newPattern && this->FilePattern[0] == '\0' &&
+                       this->FilePrefix[0] == '\0';
+
   int sanity = ((this->FilePattern && this->FilePrefix) || this->FileName);
 
   if (!sanity)
@@ -145,14 +230,15 @@ int vtkPExodusReader::RequestInformation(
     return 0;
     }
 
-  if (newPattern)
+  if (newPattern && !rebuildPattern)
     {
     char *nm = 
       new char[strlen(this->FilePattern) + strlen(this->FilePrefix) + 20];  
     sprintf(nm, this->FilePattern, this->FilePrefix, this->FileRange[0]);
     this->Superclass::SetFileName(nm);
+    delete [] nm;
     }
-  else if (newName)
+  else if (newName || rebuildPattern)
     {
     if (this->NumberOfFileNames == 1)
       {
@@ -206,7 +292,7 @@ int vtkPExodusReader::RequestData(
   int processNumber;
   int numProcessors;
   int min, max, idx;
-  unsigned int reader_idx;
+  size_t reader_idx;
 
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   // get the ouptut
@@ -228,7 +314,7 @@ int vtkPExodusReader::RequestData(
     start = this->FileRange[0];   // use prefix/pattern/range
     numFiles = this->NumberOfFiles;
     }
-
+  
   // Someone has requested a file that is above the number
   // of pieces I have. That may have been caused by having
   // more processors than files. So I'm going to create an
@@ -274,7 +360,12 @@ int vtkPExodusReader::RequestData(
   unsigned int numMyFiles = max - min + 1;
 
 #ifdef APPEND
-  vtkAppendFilter *append = vtkAppendFilter::New();
+  vtkAppendFilter *append = vtkAppendFilter::New(); 
+  vtkPExodusReaderAppendUpdateProgress* appendProgress = 
+        vtkPExodusReaderAppendUpdateProgress::New();
+  appendProgress->SetReader(this);
+  append->AddObserver(vtkCommand::ProgressEvent, appendProgress);
+  appendProgress->Delete();
 #else
   int totalSets = 0;
   int totalCells = 0;
@@ -287,12 +378,17 @@ int vtkPExodusReader::RequestData(
     {
     this->NewExodusModel();
     }
-
   if (readerList.size() < numMyFiles)
     {
     for(reader_idx=readerList.size(); reader_idx < numMyFiles; ++reader_idx)
       {
       vtkExodusReader *er = vtkExodusReader::New();
+      vtkPExodusReaderUpdateProgress* progress = 
+        vtkPExodusReaderUpdateProgress::New();
+      progress->SetReader(this);
+      progress->SetIndex(static_cast<int>(reader_idx));
+      er->AddObserver(vtkCommand::ProgressEvent, progress);
+      progress->Delete();
 
 
       //begin USE_EXO_DSP_FILTERS
@@ -362,9 +458,10 @@ int vtkPExodusReader::RequestData(
       this->GetApplyDisplacements());
     readerList[reader_idx]->SetDisplacementMagnitude(
       this->GetDisplacementMagnitude());
+    readerList[reader_idx]->SetHasModeShapes(this->GetHasModeShapes());
 
     readerList[reader_idx]->SetExodusModelMetadata(this->ExodusModelMetadata);
-    readerList[reader_idx]->PackExodusModelOntoOutputOff();
+    //readerList[reader_idx]->PackExodusModelOntoOutputOff();
 
     readerList[reader_idx]->UpdateInformation();
 
@@ -403,6 +500,14 @@ int vtkPExodusReader::RequestData(
         idx, this->GetSideSetArrayStatus(idx));
       }
     
+    vtkInformation* tmpOutInfo = 
+      readerList[reader_idx]->GetExecutive()->GetOutputInformation(0);
+    if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
+      {
+      tmpOutInfo->CopyEntry(
+        outInfo,
+        vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+      }
     readerList[reader_idx]->Update();
 
     vtkUnstructuredGrid *subgrid = vtkUnstructuredGrid::New();
@@ -448,6 +553,14 @@ int vtkPExodusReader::RequestData(
   // Append complains/barfs if you update it without any inputs
   if (append->GetInput() != NULL) 
     {
+    vtkInformation* appendOutInfo = 
+      append->GetExecutive()->GetOutputInformation(0);
+    if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
+      {
+      appendOutInfo->CopyEntry(
+        outInfo,
+        vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+      }
     append->Update();
     output->ShallowCopy(append->GetOutput());
     }
@@ -623,6 +736,7 @@ void vtkPExodusReader::SetFileNames(int nfiles, const char **names)
   // Set the number of files
   this->NumberOfFileNames = nfiles;
 
+
   // Allocate memory for new filenames
   this->FileNames = new char * [this->NumberOfFileNames];
 
@@ -706,7 +820,7 @@ int vtkPExodusReader::DeterminePattern(const char* file)
 
 
   // Find minimum of range, if any
-  for ( cc = strlen(file)-1; cc>=0; cc -- )
+  for ( cc = static_cast<int>( strlen(file) )-1; cc>=0; cc -- )
     {
     if ( prefix[cc] >= '0' && prefix[cc] <= '9' )
       {
@@ -735,7 +849,7 @@ int vtkPExodusReader::DeterminePattern(const char* file)
     }
 
   // Count up the files
-  char buffer[1024];
+  char buffer[vtkPExodusReaderMAXPATHLEN];
   struct stat fs;
   
   // First go every 100
@@ -919,3 +1033,23 @@ void vtkPExodusReader::GetDSPOutputArrays(int exoid, vtkUnstructuredGrid* output
 //end USE_EXO_DSP_FILTERS
 
 
+
+int vtkPExodusReader::GetTotalNumberOfElements()
+{
+  int total = 0;
+  for(int id=static_cast<int>( readerList.size() )-1; id >= 0; --id)
+    {
+    total += this->readerList[id]->GetTotalNumberOfElements();
+    }
+  return total;
+}
+
+int vtkPExodusReader::GetTotalNumberOfNodes()
+{
+  int total = 0;
+  for(int id=static_cast<int>( readerList.size() )-1; id >= 0; --id)
+    {
+    total += this->readerList[id]->GetTotalNumberOfNodes();
+    }
+  return total;
+}

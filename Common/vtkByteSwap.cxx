@@ -16,7 +16,7 @@
 #include <memory.h>
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkByteSwap, "$Revision: 1.50 $");
+vtkCxxRevisionMacro(vtkByteSwap, "$Revision: 1.55 $");
 vtkStandardNewMacro(vtkByteSwap);
 
 //----------------------------------------------------------------------------
@@ -34,33 +34,30 @@ vtkByteSwap::~vtkByteSwap()
 template <size_t s> struct vtkByteSwapper;
 VTK_TEMPLATE_SPECIALIZE struct vtkByteSwapper<1>
 {
-  static inline void Swap(void*) {}
+  static inline void Swap(char*) {}
 };
 VTK_TEMPLATE_SPECIALIZE struct vtkByteSwapper<2>
 {
-  static inline void Swap(void* p)
+  static inline void Swap(char* data)
     {
     char one_byte;
-    char* data = static_cast<char*>(p);
     one_byte = data[0]; data[0] = data[1]; data[1] = one_byte;
     }
 };
 VTK_TEMPLATE_SPECIALIZE struct vtkByteSwapper<4>
 {
-  static inline void Swap(void* p)
+  static inline void Swap(char* data)
     {
     char one_byte;
-    char* data = static_cast<char*>(p);
     one_byte = data[0]; data[0] = data[3]; data[3] = one_byte;
     one_byte = data[1]; data[1] = data[2]; data[2] = one_byte;
     }
 };
 VTK_TEMPLATE_SPECIALIZE struct vtkByteSwapper<8>
 {
-  static inline void Swap(void* p)
+  static inline void Swap(char* data)
     {
     char one_byte;
-    char* data = static_cast<char*>(p);
     one_byte = data[0]; data[0] = data[7]; data[7] = one_byte;
     one_byte = data[1]; data[1] = data[6]; data[6] = one_byte;
     one_byte = data[2]; data[2] = data[5]; data[5] = one_byte;
@@ -76,7 +73,7 @@ template <class T> inline void vtkByteSwapRange(T* first, vtkIdType num)
   T* last = first + num;
   for(T* p=first; p != last; ++p)
     {
-    vtkByteSwapper<sizeof(T)>::Swap(p);
+    vtkByteSwapper<sizeof(T)>::Swap(reinterpret_cast<char*>(p));
     }
 }
 inline void vtkByteSwapRangeWrite(const char* first, vtkIdType num,
@@ -105,28 +102,29 @@ inline void vtkByteSwapRangeWrite(const T* first, vtkIdType num, FILE* f, long)
   const T* last = first + num;
   for(const T* p=first; p != last; ++p)
     {
-    T temp = *p;
-    vtkByteSwapper<sizeof(T)>::Swap(&temp);
-    fwrite(&temp, sizeof(temp), 1, f);
+    // Use a union to avoid breaking C++ aliasing rules.
+    union { T value; char data[sizeof(T)]; } temp = {*p};
+    vtkByteSwapper<sizeof(T)>::Swap(temp.data);
+    fwrite(temp.data, sizeof(T), 1, f);
     }
 }
 inline void vtkByteSwapRangeWrite(const char* first, vtkIdType num,
                                   ostream* os, int)
 {
   // No need to swap segments of 1 byte.
-  os->write((char*)first, num*sizeof(char));
+  os->write(first, num*sizeof(char));
 }
 inline void vtkByteSwapRangeWrite(const signed char* first, vtkIdType num,
                                   ostream* os, int)
 {
   // No need to swap segments of 1 byte.
-  os->write((char*)first, num*sizeof(signed char));
+  os->write(reinterpret_cast<const char*>(first), num*sizeof(signed char));
 }
 inline void vtkByteSwapRangeWrite(const unsigned char* first, vtkIdType num,
                                   ostream* os, int)
 {
   // No need to swap segments of 1 byte.
-  os->write((char*)first, num*sizeof(unsigned char));
+  os->write(reinterpret_cast<const char*>(first), num*sizeof(unsigned char));
 }
 template <class T>
 inline void vtkByteSwapRangeWrite(const T* first, vtkIdType num,
@@ -137,9 +135,10 @@ inline void vtkByteSwapRangeWrite(const T* first, vtkIdType num,
   const T* last = first + num;
   for(const T* p=first; p != last; ++p)
     {
-    T temp = *p;
-    vtkByteSwapper<sizeof(T)>::Swap(&temp);
-    os->write((char*)&temp, sizeof(temp));
+    // Use a union to avoid breaking C++ aliasing rules.
+    union { T value; char data[sizeof(T)]; } temp = {*p};
+    vtkByteSwapper<sizeof(T)>::Swap(temp.data);
+    os->write(temp.data, sizeof(T));
     }
 }
 
@@ -160,7 +159,7 @@ inline void vtkByteSwapBERangeWrite(const T* p, vtkIdType num, ostream* os)
 }
 template <class T> inline void vtkByteSwapLE(T* p)
 {
-  vtkByteSwapper<sizeof(T)>::Swap(p);
+  vtkByteSwapper<sizeof(T)>::Swap(reinterpret_cast<char*>(p));
 }
 template <class T> inline void vtkByteSwapLERange(T* p, vtkIdType num)
 {
@@ -179,7 +178,7 @@ inline void vtkByteSwapLERangeWrite(const T* p, vtkIdType num, ostream* os)
 #else
 template <class T> inline void vtkByteSwapBE(T* p)
 {
-  vtkByteSwapper<sizeof(T)>::Swap(p);
+  vtkByteSwapper<sizeof(T)>::Swap(reinterpret_cast<char*>(p));
 }
 template <class T> inline void vtkByteSwapBERange(T* p, vtkIdType num)
 {
@@ -205,7 +204,7 @@ inline void vtkByteSwapLERangeWrite(const T* p, vtkIdType num, FILE* f)
 template <class T>
 inline void vtkByteSwapLERangeWrite(const T* p, vtkIdType num, ostream* os)
 {
-  os->write((char*)p, sizeof(T)*num);
+  os->write(reinterpret_cast<const char*>(p), sizeof(T)*num);
 }
 #endif
 
@@ -301,7 +300,7 @@ void vtkByteSwap::SwapVoidRange(void *buffer, int numWords, int wordSize)
   
   half = wordSize / 2;
   inc = wordSize - 1;
-  buf = (unsigned char *)(buffer);
+  buf = static_cast<unsigned char *>(buffer);
   
   for (idx1 = 0; idx1 < numWords; ++idx1)
     {

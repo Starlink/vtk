@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkImageToImageStencil.h"
 
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkImageStencilData.h"
 #include "vtkInformation.h"
@@ -24,7 +25,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageToImageStencil, "$Revision: 1.15 $");
+vtkCxxRevisionMacro(vtkImageToImageStencil, "$Revision: 1.18.2.1 $");
 vtkStandardNewMacro(vtkImageToImageStencil);
 
 //----------------------------------------------------------------------------
@@ -112,12 +113,10 @@ void vtkImageToImageStencil::ThresholdBetween(double lower, double upper)
 
 //----------------------------------------------------------------------------
 int vtkImageToImageStencil::RequestData(
-  vtkInformation *request,
+  vtkInformation *,
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  this->Superclass::RequestData(request, inputVector, outputVector);
-
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
   vtkImageData *inData = vtkImageData::SafeDownCast(
@@ -125,41 +124,19 @@ int vtkImageToImageStencil::RequestData(
   vtkImageStencilData *data = vtkImageStencilData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  int *inExt = inData->GetExtent();
-  int *inWholeExt =
-    inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
-  int outExt[6];
-  data->GetExtent(outExt);
+  int extent[6];
+  inData->GetExtent(extent);
+  // output extent is always the input extent
+  this->AllocateOutputData(data, extent);
+
   vtkDataArray *inScalars = inData->GetPointData()->GetScalars();
   double upperThreshold = this->UpperThreshold;
   double lowerThreshold = this->LowerThreshold;
 
-  // clip the extent with the image data extent
-  int extent[6];
-  for (int i = 0; i < 3; i++)
-    {
-    int lo = 2*i;
-    extent[lo] = outExt[lo];
-    if (extent[lo] < inWholeExt[lo])
-      {
-      extent[lo] = inWholeExt[lo];
-      }
-    int hi = 2*i + 1;
-    extent[hi] = outExt[hi];
-    if (extent[hi] > inWholeExt[hi])
-      {
-      extent[hi] = inWholeExt[hi];
-      }
-    if (extent[lo] > extent[hi])
-      {
-      return 1;
-      }
-    }
-
   // for keeping track of progress
   unsigned long count = 0;
-  unsigned long target = (unsigned long)
-    ((extent[5] - extent[4] + 1)*(extent[3] - extent[2] + 1)/50.0);
+  unsigned long target = static_cast<unsigned long>(
+    (extent[5] - extent[4] + 1)*(extent[3] - extent[2] + 1)/50.0);
   target++;
 
   for (int idZ = extent[4]; idZ <= extent[5]; idZ++)
@@ -177,9 +154,9 @@ int vtkImageToImageStencil::RequestData(
       int r2 = extent[1];
 
       // index into scalar array
-      int idS = ((inExt[1] - inExt[0] + 1)*
-                 ((inExt[3] - inExt[2] + 1)*(idZ - inExt[4]) +
-                  (idY - inExt[2])) + (extent[0] - inExt[0]));
+      int idS = ((extent[1] - extent[0] + 1)*
+                 ((extent[3] - extent[2] + 1)*(idZ - extent[4]) +
+                  (idY - extent[2])));
 
       for (int idX = extent[0]; idX <= extent[1]; idX++)
         {
@@ -210,22 +187,31 @@ int vtkImageToImageStencil::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 int vtkImageToImageStencil::RequestInformation(
   vtkInformation *,
-  vtkInformationVector **,
+  vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // this is an odd source that can produce any requested size.  so its whole
-  // extent is essentially infinite. This would not be a great source to
-  // connect to some sort of writer or viewer. For a sanity check we will
-  // limit the size produced to something reasonable (depending on your
-  // definition of reasonable)
+  // whole extent is largest possible extent, because this filter
+  // can accommodate any update extent
+  static int wholeExtent[6] = { 0, VTK_LARGE_INTEGER >> 2,
+                                0, VTK_LARGE_INTEGER >> 2,
+                                0, VTK_LARGE_INTEGER >> 2 };
+  double spacing[3];
+  double origin[3];
+
+  inInfo->Get(vtkDataObject::SPACING(), spacing);
+  inInfo->Get(vtkDataObject::ORIGIN(), origin);
+
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
-               0, VTK_LARGE_INTEGER >> 2,
-               0, VTK_LARGE_INTEGER >> 2,
-               0, VTK_LARGE_INTEGER >> 2);
+               wholeExtent, 6);
+  outInfo->Set(vtkDataObject::SPACING(), spacing, 3);
+  outInfo->Set(vtkDataObject::ORIGIN(), origin, 3);
+
   return 1;
 }
 

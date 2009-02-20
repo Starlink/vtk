@@ -33,7 +33,6 @@ public:
   vtkTypeRevisionMacro(vtkDistributedStreamTracer,vtkPStreamTracer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
   static vtkDistributedStreamTracer *New();
 
 protected:
@@ -47,7 +46,9 @@ protected:
                    int lastid, 
                    int lastCellId,
                    int currentLine,
-                   double* firstNormal);
+                   double* firstNormal,
+                   double propagation,
+                   vtkIdType numSteps);
   int ProcessTask(double seed[3], 
                   int direction, 
                   int isNewSeed, 
@@ -55,11 +56,12 @@ protected:
                   int lastCellId,
                   int currentLine,
                   double* firstNormal,
-                  vtkInformationVector **inputVector);
-  int ProcessNextLine(int currentLine, vtkInformationVector **inputVector);
-  int ReceiveAndProcessTask(vtkInformationVector **inputVector);
+                  double propagation,
+                  vtkIdType numSteps);
+  int ProcessNextLine(int currentLine);
+  int ReceiveAndProcessTask();
 
-  virtual void ParallelIntegrate(vtkInformationVector **inputVector);
+  virtual void ParallelIntegrate();
 
 private:
   vtkDistributedStreamTracer(const vtkDistributedStreamTracer&);  // Not implemented.

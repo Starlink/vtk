@@ -1,4 +1,4 @@
-IF (TCL_LIBRARY AND TK_LIBRARY)
+IF (TCL_FOUND AND TK_FOUND)
 
   # Do we need to copy the Tcl/Tk support files to the build directory ?
   # Yes if we are building against  static Tcl/Tk, and also yes if we
@@ -22,10 +22,10 @@ IF (TCL_LIBRARY AND TK_LIBRARY)
          "${TCL_LIBRARY_PATH}/../library"
          "${TCL_INCLUDE_PATH}/../library")
     FOREACH (dir ${TRY_DIRS})
-      IF (EXISTS "${dir}/ldAout.tcl")
+      IF (EXISTS "${dir}/auto.tcl")
         SET (VTK_TCL_SUPPORT_LIBRARY_PATH ${dir} CACHE INTERNAL
              "Path to the Tcl support library files.")
-      ENDIF (EXISTS "${dir}/ldAout.tcl")
+      ENDIF (EXISTS "${dir}/auto.tcl")
     ENDFOREACH (dir)
 
     GET_FILENAME_COMPONENT(TK_LIBRARY_PATH ${TK_LIBRARY} PATH)
@@ -43,7 +43,8 @@ IF (TCL_LIBRARY AND TK_LIBRARY)
 
     IF(VTK_TCL_SUPPORT_LIBRARY_PATH AND VTK_TK_SUPPORT_LIBRARY_PATH)
 
-      IF (CXX_TEST_PATH)
+      # required for the vtk.exe interpreter to work
+      IF(VTK_WRAP_TCL) 
         IF(NOT DEFINED TclTk_LIB_DIR)
           SET(TclTk_LIB_DIR "${PROJECT_BINARY_DIR}/lib")
         ENDIF(NOT DEFINED TclTk_LIB_DIR)
@@ -51,7 +52,7 @@ IF (TCL_LIBRARY AND TK_LIBRARY)
           ${VTK_TCL_SUPPORT_LIBRARY_PATH}
           ${VTK_TK_SUPPORT_LIBRARY_PATH}
           "${TclTk_LIB_DIR}")
-      ENDIF (CXX_TEST_PATH)
+      ENDIF(VTK_WRAP_TCL)
 
       IF(NOT VTK_INSTALL_NO_RUNTIME)
         VTK_COPY_TCL_TK_SUPPORT_FILES(
@@ -68,14 +69,20 @@ IF (TCL_LIBRARY AND TK_LIBRARY)
         FOREACH (file ${TCL_SUPPORT_FILES})
           STRING (REGEX REPLACE "${VTK_TCL_SUPPORT_LIBRARY_PATH}/" "" base ${file})
           GET_FILENAME_COMPONENT(dest ${base} PATH)
-          INSTALL_FILES(${VTK_INSTALL_TCL_DIR}/tcl${TCL_TK_VERSION}/${dest} FILES ${file})
+          INSTALL(FILES "${file}"
+            DESTINATION "${VTK_INSTALL_TCL_DIR_CM24}/tcl${TCL_TK_VERSION}/${dest}"
+            COMPONENT RuntimeLibraries
+            )
         ENDFOREACH (file)
 
         VTK_GET_TK_SUPPORT_FILES(${VTK_TK_SUPPORT_LIBRARY_PATH} "TK_SUPPORT_FILES")
         FOREACH (file ${TK_SUPPORT_FILES})
           STRING (REGEX REPLACE "${VTK_TK_SUPPORT_LIBRARY_PATH}/" "" base ${file})
           GET_FILENAME_COMPONENT(dest ${base} PATH)
-          INSTALL_FILES(${VTK_INSTALL_TCL_DIR}/tk${TCL_TK_VERSION}/${dest} FILES ${file})
+          INSTALL(FILES "${file}"
+            DESTINATION "${VTK_INSTALL_TCL_DIR_CM24}/tk${TCL_TK_VERSION}/${dest}"
+            COMPONENT RuntimeLibraries
+            )
         ENDFOREACH (file)
       ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
 
@@ -83,4 +90,4 @@ IF (TCL_LIBRARY AND TK_LIBRARY)
 
   ENDIF (VTK_TCL_TK_COPY_SUPPORT_LIBRARY)
 
-ENDIF (TCL_LIBRARY AND TK_LIBRARY)
+ENDIF (TCL_FOUND AND TK_FOUND)

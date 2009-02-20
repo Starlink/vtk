@@ -31,6 +31,7 @@
 
 #include "vtkObject.h"
 
+class vtkAbstractArray;
 class vtkAlgorithmInternals;
 class vtkAlgorithmOutput;
 class vtkDataArray;
@@ -40,6 +41,7 @@ class vtkInformation;
 class vtkInformationInformationVectorKey;
 class vtkInformationIntegerKey;
 class vtkInformationStringKey;
+class vtkInformationStringVectorKey;
 class vtkInformationVector;
 
 class VTK_FILTERING_EXPORT vtkAlgorithm : public vtkObject
@@ -163,7 +165,10 @@ public:
   // Description:
   // Set the current text message associated with the progress state.
   // This may be used by a calling process/GUI.
-  vtkSetStringMacro(ProgressText);
+  // Note: Because SetProgressText() is called from inside RequestData()
+  // it does not modify the algorithm object. Algorithms are not 
+  // allowed to modify themselves from inside RequestData().
+  void SetProgressText(const char* ptext);
   vtkGetStringMacro(ProgressText);
 
   // Description:
@@ -179,7 +184,7 @@ public:
   static vtkInformationIntegerKey* INPUT_IS_OPTIONAL();
   static vtkInformationIntegerKey* INPUT_IS_REPEATABLE();
   static vtkInformationInformationVectorKey* INPUT_REQUIRED_FIELDS();
-  static vtkInformationStringKey* INPUT_REQUIRED_DATA_TYPE();
+  static vtkInformationStringVectorKey* INPUT_REQUIRED_DATA_TYPE();
   static vtkInformationInformationVectorKey* INPUT_ARRAYS_TO_PROCESS();
   static vtkInformationIntegerKey* INPUT_PORT();
   static vtkInformationIntegerKey* INPUT_CONNECTION();
@@ -242,7 +247,13 @@ public:
   // Get the data object that will contain the algorithm output for
   // the given port.
   vtkDataObject* GetOutputDataObject(int port);
-
+  
+  // Description:
+  // Get the data object that will contain the algorithm input for the given
+  // port and given connection.
+  vtkDataObject *GetInputDataObject(int port,
+                                    int connection);
+  
   // Description:
   // Set the connection for the given input port index.  Each input
   // port of a filter has a specific purpose.  A port may have zero or
@@ -340,6 +351,11 @@ public:
   int UpdateExtentIsEmpty(vtkDataObject *output);
   int UpdateExtentIsEmpty(vtkInformation *pinfo, int extentType);
 
+  // Description:
+  // If the DefaultExecutivePrototype is set, a copy of it is created
+  // in CreateDefaultExecutive() using NewInstance().
+  static void SetDefaultExecutivePrototype(vtkExecutive* proto);
+
 protected:
   vtkAlgorithm();
   ~vtkAlgorithm();
@@ -390,7 +406,30 @@ protected:
   vtkDataArray *GetInputArrayToProcess(int idx,
                                        int connection,
                                        vtkInformationVector **inputVector);
+  vtkDataArray *GetInputArrayToProcess(int idx, 
+                                       vtkDataObject* input);
 
+
+  // Description:
+  // Get the actual data array for the input array sepcified by idx, this is
+  // only reasonable during the REQUEST_DATA pass
+  vtkAbstractArray *GetInputAbstractArrayToProcess(int idx,vtkInformationVector **inputVector);
+
+  // Description:
+  // Filters that have multiple connections on one port can use
+  // this signature. This will override the connection id that the
+  // user set in SetInputArrayToProcess() with the connection id
+  // passed. This way, the user specifies one array to process and
+  // that information is  used to obtain arrays for all the connection
+  // on the port with the appropriate connection id substituted.
+  vtkAbstractArray *GetInputAbstractArrayToProcess(int idx,
+                                       int connection,
+                                       vtkInformationVector **inputVector);
+  vtkAbstractArray *GetInputAbstractArrayToProcess(int idx, 
+                                       vtkDataObject* input);
+
+
+  
   // Description:
   // This method takes in an index (as specified in SetInputArrayToProcess)
   // and a pipeline information vector. It then finds the information about
@@ -401,11 +440,6 @@ protected:
                                                 vtkInformationVector **inputVector);
   
     
-  // Description:
-  // If the DefaultExecutivePrototype is set, a copy of it is created
-  // in CreateDefaultExecutive() using NewInstance().
-  static void SetDefaultExecutivePrototype(vtkExecutive* proto);
-
   // Description:
   // Create a default executive.
   // If the DefaultExecutivePrototype is set, a copy of it is created

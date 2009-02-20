@@ -20,7 +20,7 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPCellDataToPointData, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkPCellDataToPointData, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkPCellDataToPointData);
 
 //----------------------------------------------------------------------------
@@ -67,7 +67,7 @@ int vtkPCellDataToPointData::RequestData(
 }
 
 //--------------------------------------------------------------------------
-int vtkPCellDataToPointData::ComputeInputUpdateExtent(
+int vtkPCellDataToPointData::RequestUpdateExtent(
   vtkInformation*,
   vtkInformationVector** inputVector,
   vtkInformationVector* outputVector)
@@ -88,49 +88,53 @@ int vtkPCellDataToPointData::ComputeInputUpdateExtent(
   int* wholeExt;
   int* upExt;
   int ext[6];
-  switch (extentType)
+
+  int isInputPiecesExtent = 1;
+  if (extentType == VTK_3D_EXTENT && 
+      inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
     {
-    case VTK_PIECES_EXTENT:
-      piece = outInfo->Get(
-        vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-      numPieces = outInfo->Get(
-        vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-      ghostLevel = outInfo->Get(
-        vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS()) + 1;
-      inInfo->Set(
-        vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(), piece);
-      inInfo->Set(
-        vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(), numPieces);
-      inInfo->Set(
-        vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(), 
-        ghostLevel);
-      return 1;
-      break;
-    case VTK_3D_EXTENT:
-      wholeExt = inInfo->Get(
-        vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
-      upExt = outInfo->Get(
-        vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT());
-      memcpy(ext, upExt, 6*sizeof(int));
-      for (int i = 0; i < 3; ++i)
-        {
-        --ext[i*2];
-        if (ext[i*2] < wholeExt[i*2])
-          {
-          ext[i*2] = wholeExt[i*2];
-          }
-        ++ext[i*2+1];
-        if (ext[i*2+1] > wholeExt[i*2+1])
-          {
-          ext[i*2+1] = wholeExt[i*2+1];
-          }
-        }
-      inInfo->Set(
-        vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), ext, 6);
-      return 1;
-      break;
+    isInputPiecesExtent = 0;
     }
-  return 0;
+  if (isInputPiecesExtent)
+    {
+    piece = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+    numPieces = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+    ghostLevel = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS()) + 1;
+    inInfo->Set(
+      vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(), piece);
+    inInfo->Set(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(), numPieces);
+    inInfo->Set(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(), 
+      ghostLevel);
+    }
+  else
+    {
+    wholeExt = inInfo->Get(
+      vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+    upExt = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT());
+    memcpy(ext, upExt, 6*sizeof(int));
+    for (int i = 0; i < 3; ++i)
+      {
+      --ext[i*2];
+      if (ext[i*2] < wholeExt[i*2])
+        {
+        ext[i*2] = wholeExt[i*2];
+        }
+      ++ext[i*2+1];
+      if (ext[i*2+1] > wholeExt[i*2+1])
+        {
+        ext[i*2+1] = wholeExt[i*2+1];
+        }
+      }
+    inInfo->Set(
+      vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), ext, 6);
+    }
+  return 1;
 }
 
 //----------------------------------------------------------------------------

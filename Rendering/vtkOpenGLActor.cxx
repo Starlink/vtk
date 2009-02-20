@@ -24,14 +24,14 @@
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLActor, "$Revision: 1.29 $");
+vtkCxxRevisionMacro(vtkOpenGLActor, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkOpenGLActor);
 #endif
 
 // Actual actor render method.
 void vtkOpenGLActor::Render(vtkRenderer *ren, vtkMapper *mapper)
 {
-  float opacity;
+  double opacity;
 
   // get opacity
   opacity = this->GetProperty()->GetOpacity();
@@ -54,7 +54,14 @@ void vtkOpenGLActor::Render(vtkRenderer *ren, vtkMapper *mapper)
       }
     else
       {
-      glDepthMask (GL_FALSE);
+      if(ren->GetLastRenderingUsedDepthPeeling())
+        {
+        glDepthMask(GL_TRUE); // transparency with depth peeling
+        }
+      else
+        {
+        glDepthMask (GL_FALSE); // transparency with alpha blending
+        }
       }
     }
 

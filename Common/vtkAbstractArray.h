@@ -42,12 +42,13 @@
 #define __vtkAbstractArray_h
 
 #include "vtkObject.h"
+#include "vtkVariant.h" // for variant arguments
 
+class vtkArrayIterator;
+class vtkDataArray;
 class vtkIdList;
 class vtkIdTypeArray;
-class vtkDataArray;
-
-#define VTK_MAXIMUM_NUMBER_OF_CACHED_COMPONENT_RANGES 11
+class vtkInformation;
 
 class VTK_COMMON_EXPORT vtkAbstractArray : public vtkObject 
 {
@@ -67,36 +68,14 @@ public:
   // Description:
   // Return the underlying data type. An integer indicating data type is 
   // returned as specified in vtkSetGet.h.
-  virtual int GetDataType() = 0;
+  virtual int GetDataType() =0;
 
   // Description:
   // Return the size of the underlying data type.  For a bit, 0 is
-  // returned.  XXX FIXME How will this method behave for
-  // variably-sized objects?
+  // returned.  For string 0 is returned. Arrays with variable length
+  // components return 0.
   virtual int GetDataTypeSize() = 0;
-  static unsigned long GetDataTypeSize(int type);
-
-  // Description:
-  // Given a list of indices, return an array of values.  The caller
-  // must ensure that enough room has been allocated within the output
-  // array to hold the data and that the data types match well enough
-  // to allow any necessary conversions.
-  virtual void GetValues(vtkIdList *indices, vtkAbstractArray *output) = 0;
-
-  // Description:
-  // Get the values for the range of indices specified (i.e., p1->p2
-  // inclusive). You must insure that the output array has been
-  // previously allocated with enough space to hold the data and that
-  // the type of the output array is compatible with the type of this
-  // array.
-  virtual void GetValues(vtkIdType p1, vtkIdType p2, vtkAbstractArray *output) = 0;
-
-  // Description:
-  // Return the number of components in a single element of the array.
-  // For vtkDataArray and its subclasses, this is the number of
-  // components in a tuple.  Arrays with variable-length elements
-  // (such as vtkStringArray and vtkCellArray) should return 0.
-  virtual int GetNumberOfElementComponents() = 0;
+  static int GetDataTypeSize(int type);
 
   // Description:
   // Return the size, in bytes, of the lowest-level element of an
@@ -105,6 +84,55 @@ public:
   // sizeof(vtkStdString::value_type), which winds up being
   // sizeof(char).  
   virtual int GetElementComponentSize() = 0;
+  
+  // Description:
+  // Set/Get the dimention (n) of the components. Must be >= 1. Make sure that
+  // this is set before allocation.
+  vtkSetClampMacro(NumberOfComponents, int, 1, VTK_LARGE_INTEGER);
+  int GetNumberOfComponents() { return this->NumberOfComponents; }
+
+  // Description:
+  // Set the number of tuples (a component group) in the array. Note that 
+  // this may allocate space depending on the number of components.
+  // Also note that if allocation is performed no copy is performed so
+  // existing data will be lost (if data conservation is sought, one may
+  // use the Resize method instead).
+  virtual void SetNumberOfTuples(vtkIdType number) = 0;
+
+  // Description:
+  // Get the number of tuples (a component group) in the array.
+  vtkIdType GetNumberOfTuples() 
+    {return (this->MaxId + 1)/this->NumberOfComponents;}
+
+  // Description:
+  // Set the tuple at the ith location using the jth tuple in the source array.
+  // This method assumes that the two arrays have the same type
+  // and structure. Note that range checking and memory allocation is not 
+  // performed; use in conjunction with SetNumberOfTuples() to allocate space.
+  virtual void SetTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source) = 0;
+
+  // Description:
+  // Insert the jth tuple in the source array, at ith location in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  virtual void InsertTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source) = 0;
+
+  // Description:
+  // Insert the jth tuple in the source array, at the end in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  // Returns the location at which the data was inserted.
+  virtual vtkIdType InsertNextTuple(vtkIdType j, vtkAbstractArray* source) = 0;
+  
+  // Description:
+  // Given a list of point ids, return an array of tuples.
+  // You must insure that the output array has been previously 
+  // allocated with enough space to hold the data.
+  virtual void GetTuples(vtkIdList *ptIds, vtkAbstractArray* output);
+
+  // Description:
+  // Get the tuples for the range of points ids specified 
+  // (i.e., p1->p2 inclusive). You must insure that the output array has 
+  // been previously allocated with enough space to hold the data.
+  virtual void GetTuples(vtkIdType p1, vtkIdType p2, vtkAbstractArray *output);
 
   // Description:
   // Return a void pointer. For image pipeline interface and other 
@@ -115,13 +143,31 @@ public:
   // Deep copy of data. Implementation left to subclasses, which
   // should support as many type conversions as possible given the
   // data type.
-  virtual void DeepCopy(vtkAbstractArray *da) = 0;
+  //
+  // Subclasses should call vtkAbstractArray::DeepCopy() so that the
+  // information object (if one exists) is copied from \a da.
+  virtual void DeepCopy(vtkAbstractArray* da);
 
   // Description:
-  // Copy an element from one array into an element on this array.  
-  virtual void CopyValue(int toIndex, int fromIndex,
-                         vtkAbstractArray *sourceArray) = 0;
+  // Set the ith tuple in this array as the interpolated tuple value,
+  // given the ptIndices in the source array and associated 
+  // interpolation weights.
+  // This method assumes that the two arrays are of the same type
+  // and strcuture.
+  virtual void InterpolateTuple(vtkIdType i, vtkIdList *ptIndices,
+    vtkAbstractArray* source,  double* weights) = 0;
 
+  // Description
+  // Insert the ith tuple in this array as interpolated from the two values, 
+  // p1 and p2, and an interpolation factor, t. 
+  // The interpolation factor ranges from (0,1), 
+  // with t=0 located at p1. This method assumes that the three arrays are of 
+  // the same type. p1 is value at index id1 in source1, while, p2 is
+  // value at index id2 in source2.
+  virtual void InterpolateTuple(vtkIdType i, 
+    vtkIdType id1, vtkAbstractArray* source1, 
+    vtkIdType id2, vtkAbstractArray* source2, double t) =0;
+    
   // Description:
   // Free any unnecessary memory.
   // Description:
@@ -129,7 +175,8 @@ public:
   virtual void Squeeze() = 0; 
 
   // Description:
-  // Resize the array while conserving the data.
+  // Resize the array while conserving the data.  Returns 1 if
+  // resizing succeeded and 0 otherwise.
   virtual int Resize(vtkIdType numTuples) = 0;
 
   // Description:
@@ -156,7 +203,13 @@ public:
   // from the supplied array.
   virtual void SetVoidArray(void *vtkNotUsed(array),
                             vtkIdType vtkNotUsed(size),
-                            int vtkNotUsed(save)) {};
+                            int vtkNotUsed(save)) =0;
+
+  // Description:
+  // This method copies the array data to the void pointer specified
+  // by the user.  It is up to the user to allocate enough memory for
+  // the void pointer.
+  virtual void ExportToVoidPointer(void *vtkNotUsed(out_ptr)) {}
 
   // Description:
   // Return the memory in kilobytes consumed by this data array. Used to
@@ -169,76 +222,98 @@ public:
   
   // Description:
   // Set/get array's name
-  void SetName(const char* name);
-  const char* GetName();
+  vtkSetStringMacro(Name); 
+  vtkGetStringMacro(Name);
 
   // Description:
   // Get the name of a data type as a string.  
-  // XXX FIXME Find this macro and move it into vtkTypeNames.h or
-  // something.
   virtual const char *GetDataTypeAsString( void )
-  { return vtkImageScalarTypeNameMacro( this->GetDataType() ); }
-
-
-  // This function will only make sense once vtkDataArray is
-  // re-parented to be a subclass of vtkAbstractArray.  It is
-  // commented out for now.
+    { return vtkImageScalarTypeNameMacro( this->GetDataType() ); }
 
   // Description:
   // Creates an array for dataType where dataType is one of
   // VTK_BIT, VTK_CHAR, VTK_UNSIGNED_CHAR, VTK_SHORT,
   // VTK_UNSIGNED_SHORT, VTK_INT, VTK_UNSIGNED_INT, VTK_LONG,
   // VTK_UNSIGNED_LONG, VTK_DOUBLE, VTK_DOUBLE, VTK_ID_TYPE,
-  // VTK_STRING, VTK_CELL.
+  // VTK_STRING.
   // Note that the data array returned has be deleted by the
   // user.
-
-//  static vtkAbstractArray* CreateArray(int dataType);
+  static vtkAbstractArray* CreateArray(int dataType);
 
   // Description:
   // This method is here to make backward compatibility easier.  It
   // must return true if and only if an array contains numeric data.
-  virtual bool IsNumeric() = 0;
+  virtual int IsNumeric() = 0;
 
   // Description:
-  // Flatten an arbitrary array into two separate numeric arrays.  The
-  // first contains all the data in the source array; the second, the
-  // index of the end of each element.  This function is meant to
-  // assist reading and writing arrays with variable-length elements
-  // such as vtkStringArray and vtkCellArray.  The arrays will be
-  // created within the method body: the caller is responsible for
-  // deleting them when no longer needed.
-  //
-  // <p>
-  //
-  // For example, a string array with the elements "This" "Is" "A"
-  // "Test" would be converted into the following two arrays:
-  //
-  // Data: (unsigned char array) ThisIsATest
-  // Offsets: 3 5 6 10
-  //
-  // vtkDataArray also implements this method, although in practice
-  // you shouldn't need it.  It ignores the offsets array and takes
-  // its tuple-size information from the data array.
-  virtual void ConvertToContiguous(vtkDataArray **Data, vtkIdTypeArray **Offsets) = 0;
+  // Subclasses must override this method and provide the right 
+  // kind of templated vtkArrayIteratorTemplate.
+  virtual vtkArrayIterator* NewIterator() = 0;
 
   // Description:
-  // This is the inverse of ConvertToContiguous(), above.  
-  virtual void ConvertFromContiguous(vtkDataArray *Data, vtkIdTypeArray *Offsets) = 0;
+  // Returns the size of the data in DataTypeSize units. Thus, the number of bytes
+  // for the data can be computed by GetDataSize() * GetDataTypeSize(). Non-contiguous 
+  // or variable- size arrays  need to override this method.
+  virtual unsigned long GetDataSize()
+    {
+    return this->GetNumberOfComponents() * this->GetNumberOfTuples();
+    }
+  
+  //BTX
+  // Description:
+  // Return the indices where a specific value appears.
+  virtual vtkIdType LookupValue(vtkVariant value) = 0;
+  virtual void LookupValue(vtkVariant value, vtkIdList* ids) = 0;
+  //ETX
+  
+  // Description:
+  // Tell the array explicitly that the data has changed.
+  // This is only necessary to call when you modify the array contents
+  // without using the array's API (i.e. you retrieve a pointer to the
+  // data and modify the array contents).  You need to call this so that
+  // the fast lookup will know to rebuild itself.  Otherwise, the lookup
+  // functions will give incorrect results.
+  virtual void DataChanged() = 0;
+  
+  // Description:
+  // Delete the associated fast lookup data structure on this array,
+  // if it exists.  The lookup will be rebuilt on the next call to a lookup
+  // function.
+  virtual void ClearLookup() = 0;
+  
+  // TODO: Implement these lookup functions also.
+  //virtual void LookupRange(vtkVariant min, vtkVariant max, vtkIdList* ids,
+  //  bool includeMin = true, bool includeMax = true) = 0;
+  //virtual void LookupGreaterThan(vtkVariant min, vtkIdList* ids, bool includeMin = false) = 0;
+  //virtual void LookupLessThan(vtkVariant max, vtkIdList* ids, bool includeMax = false) = 0;
 
+  // Description:
+  // Get an information object that can be used to annotate the array.
+  // This is NULL by default; you are responsible for allocating an information object
+  // if none already exists.
+  vtkInformation* GetInformation();
+  
 protected:
   // Construct object with default tuple dimension (number of components) of 1.
   vtkAbstractArray(vtkIdType numComp=1);
   ~vtkAbstractArray();
 
-  vtkIdType Size;      // allocated size of data
-  vtkIdType MaxId;     // maximum index inserted thus far
+  // Description:
+  // Set an information object that can be used to annotate the array.
+  // This is NULL by default; you are responsible for allocating an information object
+  // if none already exists.
+  virtual void SetInformation( vtkInformation* );
+
+  vtkIdType Size;         // allocated size of data
+  vtkIdType MaxId;        // maximum index inserted thus far
+  int NumberOfComponents; // the number of components per tuple
 
   char* Name;
-
-  int DataType; // uses constants in vtkSystemIncludes.h
-                                          
   
+  bool RebuildArray;      // whether to rebuild the fast lookup data structure.
+
+  vtkInformation* Information;
+
 private:
   vtkAbstractArray(const vtkAbstractArray&);  // Not implemented.
   void operator=(const vtkAbstractArray&);  // Not implemented.

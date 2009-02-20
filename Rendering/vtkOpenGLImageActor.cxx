@@ -25,13 +25,10 @@
 #include <math.h>
 
 #include "vtkOpenGL.h"
-
-#ifndef GL_MAX_TEXTURE_SIZE
-#define GL_MAX_TEXTURE_SIZE 1024
-#endif
+#include "vtkgl.h" // vtkgl namespace
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLImageActor, "$Revision: 1.31.6.1 $");
+vtkCxxRevisionMacro(vtkOpenGLImageActor, "$Revision: 1.37.2.1 $");
 vtkStandardNewMacro(vtkOpenGLImageActor);
 #endif
 
@@ -54,7 +51,7 @@ void vtkOpenGLImageActor::ReleaseGraphicsResources(vtkWindow *renWin)
 {
   if (this->Index && renWin)
     {
-    ((vtkRenderWindow *) renWin)->MakeCurrent();
+    static_cast<vtkRenderWindow *>(renWin)->MakeCurrent();
 #ifdef GL_VERSION_1_1
     // free any textures
     if (glIsTexture(this->Index))
@@ -94,10 +91,10 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   // it must be a power of two and contiguous
   // find the two used dimensions
   // this assumes a 2D image, no lines here folk
-  if (this->DisplayExtent[0] != this->DisplayExtent[1])
+  if (this->ComputedDisplayExtent[0] != this->ComputedDisplayExtent[1])
     {
     xdim = 0;
-    if (this->DisplayExtent[2] != this->DisplayExtent[3])
+    if (this->ComputedDisplayExtent[2] != this->ComputedDisplayExtent[3])
       {
       ydim = 1;
       }
@@ -116,20 +113,20 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   double *origin = this->Input->GetOrigin();
   
   // compute the world coordinates
-  this->Coords[0] = this->DisplayExtent[0]*spacing[0] + origin[0];
-  this->Coords[1] = this->DisplayExtent[2]*spacing[1] + origin[1];
-  this->Coords[2] = this->DisplayExtent[4]*spacing[2] + origin[2];
-  this->Coords[3] = this->DisplayExtent[1]*spacing[0] + origin[0];
+  this->Coords[0] = this->ComputedDisplayExtent[0]*spacing[0] + origin[0];
+  this->Coords[1] = this->ComputedDisplayExtent[2]*spacing[1] + origin[1];
+  this->Coords[2] = this->ComputedDisplayExtent[4]*spacing[2] + origin[2];
+  this->Coords[3] = this->ComputedDisplayExtent[1]*spacing[0] + origin[0];
   this->Coords[4] = 
-    this->DisplayExtent[2 + (xdim == 1)]*spacing[1] + origin[1];
-  this->Coords[5] = this->DisplayExtent[4]*spacing[2] + origin[2];
-  this->Coords[6] = this->DisplayExtent[1]*spacing[0] + origin[0];
-  this->Coords[7] = this->DisplayExtent[3]*spacing[1] + origin[1];
-  this->Coords[8] = this->DisplayExtent[5]*spacing[2] + origin[2];
-  this->Coords[9] = this->DisplayExtent[0]*spacing[0] + origin[0];
+    this->ComputedDisplayExtent[2 + (xdim == 1)]*spacing[1] + origin[1];
+  this->Coords[5] = this->ComputedDisplayExtent[4]*spacing[2] + origin[2];
+  this->Coords[6] = this->ComputedDisplayExtent[1]*spacing[0] + origin[0];
+  this->Coords[7] = this->ComputedDisplayExtent[3]*spacing[1] + origin[1];
+  this->Coords[8] = this->ComputedDisplayExtent[5]*spacing[2] + origin[2];
+  this->Coords[9] = this->ComputedDisplayExtent[0]*spacing[0] + origin[0];
   this->Coords[10] = 
-    this->DisplayExtent[2 + (ydim == 1)]*spacing[1] + origin[1];
-  this->Coords[11] = this->DisplayExtent[5]*spacing[2] + origin[2];
+    this->ComputedDisplayExtent[2 + (ydim == 1)]*spacing[1] + origin[1];
+  this->Coords[11] = this->ComputedDisplayExtent[5]*spacing[2] + origin[2];
   
   // now contiguous would require that xdim = 0 and ydim = 1
   // OR xextent = 1 pixel and xdim = 1 and ydim = 2 
@@ -139,14 +136,14 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   int *ext = this->Input->GetExtent();
   
   if ( ( xdim == 0 && ydim == 1 && 
-         this->DisplayExtent[0] == ext[0] && 
-         this->DisplayExtent[1] == ext[1] )||
+         this->ComputedDisplayExtent[0] == ext[0] && 
+         this->ComputedDisplayExtent[1] == ext[1] )||
        ( ext[0] == ext[1] && xdim == 1 && 
-         this->DisplayExtent[2] == ext[2] && 
-         this->DisplayExtent[3] == ext[3] ) ||
+         this->ComputedDisplayExtent[2] == ext[2] && 
+         this->ComputedDisplayExtent[3] == ext[3] ) ||
        ( ext[2] == ext[3] && xdim == 0 && ydim == 2 &&
-         this->DisplayExtent[0] == ext[0] && 
-         this->DisplayExtent[1] == ext[1] ) )
+         this->ComputedDisplayExtent[0] == ext[0] && 
+         this->ComputedDisplayExtent[1] == ext[1] ) )
     {
     contiguous = 1;
     }
@@ -156,7 +153,7 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
     {
     xsize = ext[xdim*2+1] - ext[xdim*2] + 1;
     // xsize and ysize must be a power of 2 in OpenGL
-    xs = (unsigned short)xsize;
+    xs = static_cast<unsigned short>(xsize);
     while (!(xs & 0x01))
       {
       xs = xs >> 1;
@@ -170,8 +167,9 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   if (contiguous && powOfTwo)
     {
     // can we make y a power of two also ?
-    ysize = this->DisplayExtent[ydim*2+1] - this->DisplayExtent[ydim*2] + 1;
-    ys = (unsigned short)ysize;
+    ysize = (this->ComputedDisplayExtent[ydim*2+1] -
+             this->ComputedDisplayExtent[ydim*2] + 1);
+    ys = static_cast<unsigned short>(ysize);
     while (!(ys & 0x01))
       {
       ys = ys >> 1;
@@ -180,9 +178,11 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
     if (ys == 1)
       {
       release = 0;
-      this->TCoords[0] = (this->DisplayExtent[xdim*2] - ext[xdim*2] + 0.5)/xsize;
+      this->TCoords[0] = (this->ComputedDisplayExtent[xdim*2] - 
+                          ext[xdim*2] + 0.5)/xsize;
       this->TCoords[1] = 0.5/ysize;  
-      this->TCoords[2] = (this->DisplayExtent[xdim*2+1] - ext[xdim*2] + 0.5)/xsize;
+      this->TCoords[2] = (this->ComputedDisplayExtent[xdim*2+1] -
+                          ext[xdim*2] + 0.5)/xsize;
       this->TCoords[3] = this->TCoords[1];  
       this->TCoords[4] = this->TCoords[2];
       this->TCoords[5] = 1.0 - 0.5/ysize;  
@@ -196,8 +196,8 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
         reuseTexture = 1;
         }
 #endif
-      return (unsigned char *)
-        this->Input->GetScalarPointerForExtent(this->DisplayExtent);
+      return static_cast<unsigned char *>(
+        this->Input->GetScalarPointerForExtent(this->ComputedDisplayExtent));
       }
     }
   
@@ -206,14 +206,16 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
 
   // find the target size
   xsize = 1;
-  while (xsize < 
-         this->DisplayExtent[xdim*2+1] - this->DisplayExtent[xdim*2] + 1)
+  while (xsize <
+         this->ComputedDisplayExtent[xdim*2+1] -
+         this->ComputedDisplayExtent[xdim*2] + 1)
     {
     xsize *= 2;
     }
   ysize = 1;
   while (ysize < 
-         this->DisplayExtent[ydim*2+1] - this->DisplayExtent[ydim*2] + 1)
+         this->ComputedDisplayExtent[ydim*2+1] -
+         this->ComputedDisplayExtent[ydim*2] + 1)
     {
     ysize *= 2;
     }
@@ -221,10 +223,12 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   // compute the tcoords
   this->TCoords[0] = 0.5/xsize;
   this->TCoords[1] = 0.5/ysize;  
-  this->TCoords[2] = (this->DisplayExtent[xdim*2+1] - this->DisplayExtent[xdim*2] + 0.5)/xsize;
+  this->TCoords[2] = (this->ComputedDisplayExtent[xdim*2+1] -
+                      this->ComputedDisplayExtent[xdim*2] + 0.5)/xsize;
   this->TCoords[3] = this->TCoords[1];  
   this->TCoords[4] = this->TCoords[2];
-  this->TCoords[5] = (this->DisplayExtent[ydim*2+1] - this->DisplayExtent[ydim*2] + 0.5)/ysize;  
+  this->TCoords[5] = (this->ComputedDisplayExtent[ydim*2+1] -
+                      this->ComputedDisplayExtent[ydim*2] + 0.5)/ysize;  
   this->TCoords[6] = this->TCoords[0];
   this->TCoords[7] = this->TCoords[5];  
 
@@ -233,8 +237,10 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   if (xsize == this->TextureSize[0] && ysize == this->TextureSize[1])
     {
     reuseTexture = 1;
-    xsize = this->DisplayExtent[xdim*2+1] - this->DisplayExtent[xdim*2] + 1;
-    ysize = this->DisplayExtent[ydim*2+1] - this->DisplayExtent[ydim*2] + 1;
+    xsize = this->ComputedDisplayExtent[xdim*2+1] -
+      this->ComputedDisplayExtent[xdim*2] + 1;
+    ysize = this->ComputedDisplayExtent[ydim*2+1] -
+      this->ComputedDisplayExtent[ydim*2] + 1;
     }
 #endif
 
@@ -242,8 +248,8 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   if (reuseTexture && contiguous)
     {
     release = 0;
-    return (unsigned char *)
-      this->Input->GetScalarPointerForExtent(this->DisplayExtent);
+    return static_cast<unsigned char *>(
+      this->Input->GetScalarPointerForExtent(this->ComputedDisplayExtent));
     }
 
   // allocate the memory
@@ -253,11 +259,12 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
   // copy the input data to the memory
   vtkIdType inIncX, inIncY, inIncZ;
   int idxZ, idxY, idxR;
-  unsigned char *inPtr = (unsigned char *)
-    this->Input->GetScalarPointerForExtent(this->DisplayExtent);
-  this->Input->GetContinuousIncrements(this->DisplayExtent, 
+  unsigned char *inPtr = static_cast<unsigned char *>(
+    this->Input->GetScalarPointerForExtent(this->ComputedDisplayExtent));
+  this->Input->GetContinuousIncrements(this->ComputedDisplayExtent, 
                                        inIncX, inIncY, inIncZ);
-  int rowLength = numComp*(this->DisplayExtent[1] -this->DisplayExtent[0] +1);
+  int rowLength = numComp*(this->ComputedDisplayExtent[1] -
+                           this->ComputedDisplayExtent[0] +1);
   unsigned char *outPtr = res;
   vtkIdType outIncY, outIncZ;
   if (ydim == 2)
@@ -265,26 +272,31 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
     if (xdim == 0)
       {
       outIncZ = numComp * 
-        (xsize - (this->DisplayExtent[1] - this->DisplayExtent[0] + 1));
+        (xsize - (this->ComputedDisplayExtent[1] -
+                  this->ComputedDisplayExtent[0] + 1));
       }
     else
       {
       outIncZ = numComp * 
-        (xsize - (this->DisplayExtent[3] - this->DisplayExtent[2] + 1));
+        (xsize - (this->ComputedDisplayExtent[3] -
+                  this->ComputedDisplayExtent[2] + 1));
       }
     outIncY = 0;
     }
   else
     {
     outIncY = numComp * 
-      (xsize - (this->DisplayExtent[1] - this->DisplayExtent[0] + 1));
+      (xsize - (this->ComputedDisplayExtent[1] -
+                this->ComputedDisplayExtent[0] + 1));
     outIncZ = 0;    
     }
   
       
-  for (idxZ = this->DisplayExtent[4]; idxZ <= this->DisplayExtent[5]; idxZ++)
+  for (idxZ = this->ComputedDisplayExtent[4];
+       idxZ <= this->ComputedDisplayExtent[5]; idxZ++)
     {
-    for (idxY = this->DisplayExtent[2]; idxY <= this->DisplayExtent[3]; idxY++)
+    for (idxY = this->ComputedDisplayExtent[2];
+         idxY <= this->ComputedDisplayExtent[3]; idxY++)
       {
       for (idxR = 0; idxR < rowLength; idxR++)
         {
@@ -299,7 +311,6 @@ unsigned char *vtkOpenGLImageActor::MakeDataSuitable(int &xsize, int &ysize,
     outPtr += outIncZ;
     inPtr += inIncZ;
     }
-  
   return res;
 }
 
@@ -311,7 +322,9 @@ void vtkOpenGLImageActor::Load(vtkRenderer *ren)
   // need to reload the texture
   if (this->GetMTime() > this->LoadTime.GetMTime() ||
       this->Input->GetMTime() > this->LoadTime.GetMTime() ||
-      ren->GetRenderWindow() != this->RenderWindow)
+      ren->GetRenderWindow() != this->RenderWindow ||
+      static_cast<vtkOpenGLRenderWindow*>(ren->GetRenderWindow())->GetContextCreationTime() >
+      this->LoadTime)
     {
     int xsize, ysize;
     int release, reuseTexture;
@@ -336,15 +349,17 @@ void vtkOpenGLImageActor::Load(vtkRenderer *ren)
       // get a unique display list id
 #ifdef GL_VERSION_1_1
       glGenTextures(1, &tempIndex);
-      this->Index = (long) tempIndex;
+      this->Index = static_cast<long>(tempIndex);
       glBindTexture(GL_TEXTURE_2D, this->Index);
 #else
       this->Index = glGenLists(1);
-      glDeleteLists ((GLuint) this->Index, (GLsizei) 0);
-      glNewList ((GLuint) this->Index, GL_COMPILE);
+      glDeleteLists (static_cast<GLuint>(this->Index),
+                     static_cast<GLsizei>(0));
+      glNewList (static_cast<GLuint>(this->Index), GL_COMPILE);
 #endif
 
-      ((vtkOpenGLRenderWindow *)(ren->GetRenderWindow()))->RegisterTextureResource( this->Index );
+      static_cast<vtkOpenGLRenderWindow *>(ren->GetRenderWindow())
+        ->RegisterTextureResource( this->Index );
       }
     
     if (this->Interpolate)
@@ -386,16 +401,17 @@ void vtkOpenGLImageActor::Load(vtkRenderer *ren)
 #ifdef GL_VERSION_1_1
       glPixelStorei( GL_UNPACK_ALIGNMENT, 1);
       glPixelStorei( GL_UNPACK_ROW_LENGTH, 0);
-      glTexSubImage2D(  GL_TEXTURE_2D, 0,
-                        0, 0, xsize, ysize, format, 
-                        GL_UNSIGNED_BYTE, (const GLvoid *)data );
+      glTexSubImage2D(GL_TEXTURE_2D, 0,
+                      0, 0, xsize, ysize, format, 
+                      GL_UNSIGNED_BYTE,
+                      static_cast<const GLvoid *>(data));
 #endif
       }
     else
       {
-      glTexImage2D( GL_TEXTURE_2D, 0, internalFormat,
-                    xsize, ysize, 0, format, 
-                    GL_UNSIGNED_BYTE, (const GLvoid *)data );
+      glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
+                   xsize, ysize, 0, format, 
+                   GL_UNSIGNED_BYTE, static_cast<const GLvoid *>(data));
       this->TextureSize[0] = xsize;
       this->TextureSize[1] = ysize;
       }
@@ -415,17 +431,31 @@ void vtkOpenGLImageActor::Load(vtkRenderer *ren)
 #ifdef GL_VERSION_1_1
   glBindTexture(GL_TEXTURE_2D, this->Index);
 #else
-  glCallList ((GLuint) this->Index);
+  glCallList(static_cast<GLuint>(this->Index));
 #endif
   
   // don't accept fragments if they have zero opacity. this will stop the
   // zbuffer from be blocked by totally transparent texture fragments.
-  glAlphaFunc (GL_GREATER, (GLclampf) 0);
+  glAlphaFunc (GL_GREATER, static_cast<GLclampf>(0));
   glEnable (GL_ALPHA_TEST);
 
   // now bind it 
   glEnable(GL_TEXTURE_2D);
+  
+  GLint uUseTexture=-1;
+  GLint uTexture=-1;
+  
+  vtkOpenGLRenderer *oRenderer=static_cast<vtkOpenGLRenderer *>(ren);
+  
+  if(oRenderer->GetDepthPeelingHigherLayer())
+    {
+    uUseTexture=oRenderer->GetUseTextureUniformVariable();
+    uTexture=oRenderer->GetTextureUniformVariable();
+    vtkgl::Uniform1i(uUseTexture,1);
+    vtkgl::Uniform1i(uTexture,0); // active texture 0
+    }
 
+  
   // draw the quad
   if ( vtkMapper::GetResolveCoincidentTopology() )
     {
@@ -466,9 +496,12 @@ int vtkOpenGLImageActor::TextureSizeOK( int size[2] )
   // the texture is too big
 #ifdef GL_VERSION_1_1
   
+  GLint maxSize;
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxSize);
+  
   // Do a quick test to see if we are too large
-  if ( size[0] > GL_MAX_TEXTURE_SIZE ||
-       size[1] > GL_MAX_TEXTURE_SIZE )
+  if ( size[0] > maxSize ||
+       size[1] > maxSize )
     {
     return 0;
     }
@@ -476,11 +509,11 @@ int vtkOpenGLImageActor::TextureSizeOK( int size[2] )
   // Test the texture to see if it fits in memory
   glTexImage2D( GL_PROXY_TEXTURE_2D, 0, GL_RGBA8, 
                 size[0], size[1],
-                0, GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char *)NULL );
+                0, GL_RGBA, GL_UNSIGNED_BYTE,NULL );
   
   GLint params = 0;
-  glGetTexLevelParameteriv ( GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, 
-    &params ); 
+  glGetTexLevelParameteriv ( GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,
+                             &params ); 
 
   // if it does, we will render it later. define the texture here
   if ( params == 0 )
@@ -494,7 +527,8 @@ int vtkOpenGLImageActor::TextureSizeOK( int size[2] )
     }
 #else
   
-  // Otherwise we are version 1.0 and we'll just assume the card can do 1024x1024
+  // Otherwise we are version 1.0 and we'll just assume the card
+  // can do 1024x1024
   if ( size[0] > 1024 || size[1] > 1024 ) 
     {
     return 0;
@@ -514,6 +548,8 @@ int vtkOpenGLImageActor::TextureSizeOK( int size[2] )
 // a texture of this size rather than recursing further
 void vtkOpenGLImageActor::Render(vtkRenderer *ren)
 {
+  glPushAttrib( GL_ENABLE_BIT );
+  
   // Save the current display extent since we might change it
   int savedDisplayExtent[6];
   this->GetDisplayExtent( savedDisplayExtent );
@@ -525,7 +561,8 @@ void vtkOpenGLImageActor::Render(vtkRenderer *ren)
   int baseSize[3];
   for ( i = 0; i < 3; i++ )
     {
-    baseSize[i] = this->DisplayExtent[i*2+1] - this->DisplayExtent[i*2] + 1;
+    baseSize[i] = (this->ComputedDisplayExtent[i*2+1] -
+                   this->ComputedDisplayExtent[i*2] + 1);
     while( pow2[i] < baseSize[i] )
       {
       pow2[i] *= 2;
@@ -589,17 +626,17 @@ void vtkOpenGLImageActor::Render(vtkRenderer *ren)
       {
       if ( i != idx )
         {
-        newDisplayExtent[i*2] = this->DisplayExtent[i*2];
-        newDisplayExtent[i*2+1] = this->DisplayExtent[i*2+1];        
+        newDisplayExtent[i*2] = this->ComputedDisplayExtent[i*2];
+        newDisplayExtent[i*2+1] = this->ComputedDisplayExtent[i*2+1];        
         }
       }
     
     // For the biggest side - divide the power of two size in 1/2
     // This is the first half
-    newDisplayExtent[idx*2] = savedDisplayExtent[idx*2];
-    newDisplayExtent[idx*2+1] = 
-      this->DisplayExtent[idx*2] + baseSize[idx]/2 - 1;
-    
+    int tempDisplayExtent = this->ComputedDisplayExtent[idx*2+1];
+    newDisplayExtent[idx*2] = this->ComputedDisplayExtent[idx*2];
+    newDisplayExtent[idx*2+1] = (newDisplayExtent[idx*2] +
+                                 baseSize[idx]/2 - 1);
     
     // Set it as the display extent and render
     this->SetDisplayExtent( newDisplayExtent );
@@ -607,9 +644,9 @@ void vtkOpenGLImageActor::Render(vtkRenderer *ren)
 
     // This is the remaining side (since the display extent is not 
     // necessarily a power of 2, this is likely to be less than half
-    newDisplayExtent[idx*2] = 
-      this->DisplayExtent[idx*2] + baseSize[idx]/2 - 1;
-    newDisplayExtent[idx*2+1] = savedDisplayExtent[idx*2+1];
+    newDisplayExtent[idx*2] = (this->ComputedDisplayExtent[idx*2] +
+                               baseSize[idx]/2 - 1);
+    newDisplayExtent[idx*2+1] = tempDisplayExtent;
     
     // Set it as the display extent and render
     this->SetDisplayExtent( newDisplayExtent );
@@ -618,6 +655,8 @@ void vtkOpenGLImageActor::Render(vtkRenderer *ren)
   
   // Restore the old display extent
   this->SetDisplayExtent( savedDisplayExtent ); 
+  
+  glPopAttrib();
 }
 
 // This is the non-recursive render that will not check the
@@ -625,7 +664,6 @@ void vtkOpenGLImageActor::Render(vtkRenderer *ren)
 // be fine)
 void vtkOpenGLImageActor::InternalRender(vtkRenderer *ren)
 {
-
   // for picking
   glDepthMask (GL_TRUE);
 
