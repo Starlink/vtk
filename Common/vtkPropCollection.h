@@ -21,8 +21,8 @@
 // .SECTION see also
 // vtkProp vtkCollection 
 
-#ifndef __vtkPropC_h
-#define __vtkPropC_h
+#ifndef __vtkPropCollection_h
+#define __vtkPropCollection_h
 
 #include "vtkCollection.h"
 
@@ -77,7 +77,7 @@ private:
 
 inline void vtkPropCollection::AddItem(vtkProp *a) 
 {
-  this->vtkCollection::AddItem((vtkObject *)a);
+  this->vtkCollection::AddItem(a);
 }
 
 inline vtkProp *vtkPropCollection::GetNextProp() 

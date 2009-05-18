@@ -1,15 +1,15 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWin32OpenGLRenderWindow.h,v $
+Program:   Visualization Toolkit
+Module:    $RCSfile: vtkWin32OpenGLRenderWindow.h,v $
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 // .NAME vtkWin32OpenGLRenderWindow - OpenGL rendering window
@@ -70,12 +70,12 @@ public:
   virtual void PrefFullScreen(void);
 
   // Description:
-  // Set the size of the window.
+  // Set the size of the window in pixels.
   virtual void SetSize(int,int);
   virtual void SetSize(int a[2]) {vtkOpenGLRenderWindow::SetSize(a);};
   
   // Description:
-  // Get the current size of the window.
+  // Get the current size of the window in pixels.
   virtual int *GetSize();
 
   // Description:
@@ -84,7 +84,7 @@ public:
   virtual void SetPosition(int a[2]) {vtkOpenGLRenderWindow::SetPosition(a);};
   
   // Description:
-  // Return the screen size.
+  // Get the current size of the screen in pixels.
   virtual int *GetScreenSize();
 
   // Description:
@@ -240,6 +240,8 @@ protected:
   int ScreenDoubleBuffer;
   HGLRC ScreenContextId;
 
+  int CreatingOffScreenWindow; // to avoid recursion (and memory leaks...)
+  
   //BTX
   // message handler
   virtual LRESULT MessageProc(HWND hWnd, UINT message, 
@@ -252,13 +254,18 @@ protected:
   int ForceMakeCurrent;
 
   char   *Capabilities;
-
+  int WindowIdReferenceCount;
   void ResizeWhileOffscreen(int xsize, int ysize);
-  void CreateAWindow(int x, int y, int width, int height);
+  virtual void CreateAWindow();
+  virtual void DestroyWindow();
   void InitializeApplication();
   void CleanUpOffScreenRendering(void);
   void CreateOffScreenDC(int xsize, int ysize, HDC aHdc);
   void CreateOffScreenDC(HBITMAP hbmp, HDC aHdc);
+  void CreateOffScreenWindow(int width,int height);
+  void SaveScreenRendering();
+  void CleanUpRenderers();
+
 private:
   vtkWin32OpenGLRenderWindow(const vtkWin32OpenGLRenderWindow&);  // Not implemented.
   void operator=(const vtkWin32OpenGLRenderWindow&);  // Not implemented.

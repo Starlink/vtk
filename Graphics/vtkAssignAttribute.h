@@ -54,16 +54,16 @@
 #ifndef __vtkAssignAttribute_h
 #define __vtkAssignAttribute_h
 
-#include "vtkDataSetAlgorithm.h"
+#include "vtkPassInputTypeAlgorithm.h"
 
 #include "vtkDataSetAttributes.h" // Needed for NUM_ATTRIBUTES
 
 class vtkFieldData;
 
-class VTK_GRAPHICS_EXPORT vtkAssignAttribute : public vtkDataSetAlgorithm
+class VTK_GRAPHICS_EXPORT vtkAssignAttribute : public vtkPassInputTypeAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkAssignAttribute,vtkDataSetAlgorithm);
+  vtkTypeRevisionMacro(vtkAssignAttribute,vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -86,10 +86,14 @@ public:
 
 
 //BTX
+  // Always keep NUM_ATTRIBUTE_LOCS as the last entry
   enum AttributeLocation
   {
     POINT_DATA=0,
-    CELL_DATA=1
+    CELL_DATA=1,
+    VERTEX_DATA=2,
+    EDGE_DATA=3,
+    NUM_ATTRIBUTE_LOCS
   };
 //ETX
 
@@ -108,15 +112,16 @@ protected:
 
   int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int FillInputPortInformation(int, vtkInformation *);
 
   char* FieldName;
-  int FieldType;
+  int FieldTypeAssignment;
   int AttributeType;
   int InputAttributeType;
-  int AttributeLocation;
+  int AttributeLocationAssignment;
 
-  static char AttributeLocationNames[2][12];
-  static char AttributeNames[vtkDataSetAttributes::NUM_ATTRIBUTES][10];
+  static char AttributeLocationNames[vtkAssignAttribute::NUM_ATTRIBUTE_LOCS][12];
+  static char AttributeNames[vtkDataSetAttributes::NUM_ATTRIBUTES][20];
 private:
   vtkAssignAttribute(const vtkAssignAttribute&);  // Not implemented.
   void operator=(const vtkAssignAttribute&);  // Not implemented.

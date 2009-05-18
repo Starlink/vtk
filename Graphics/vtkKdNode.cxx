@@ -26,7 +26,7 @@
 #include "vtkPlanesIntersection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkKdNode, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkKdNode, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkKdNode);
 vtkCxxSetObjectMacro(vtkKdNode, Left, vtkKdNode);
 vtkCxxSetObjectMacro(vtkKdNode, Right, vtkKdNode);
@@ -46,6 +46,9 @@ vtkKdNode::vtkKdNode()
 //----------------------------------------------------------------------------
 vtkKdNode::~vtkKdNode()
 {
+  this->SetLeft(0);
+  this->SetRight(0);
+  this->SetUp(0);
 }
 
 //----------------------------------------------------------------------------
@@ -198,6 +201,25 @@ void vtkKdNode::GetDataBounds(double *b) const
    b[0] = this->MinVal[0]; b[1] = this->MaxVal[0];
    b[2] = this->MinVal[1]; b[3] = this->MaxVal[1];
    b[4] = this->MinVal[2]; b[5] = this->MaxVal[2];
+}
+
+//-----------------------------------------------------------------------------
+double vtkKdNode::GetDivisionPosition()
+{
+  if (this->Dim == 3)
+    {
+    vtkErrorMacro("Called GetDivisionPosition() on a leaf node.");
+    return 0.0;
+    }
+
+  vtkKdNode *left = this->GetLeft();
+  if (!left)
+    {
+    vtkErrorMacro("Called GetDivisionPosition() on a leaf node.");
+    return 0.0;
+    }
+
+  return left->GetMaxBounds()[this->Dim];
 }
 
 //----------------------------------------------------------------------------
@@ -368,7 +390,11 @@ double vtkKdNode::_GetDistance2ToBoundary(
         }
       }
 
-    minDistance *= minDistance;
+    // if there are no inner boundaries we dont want to square.
+    if(minDistance != VTK_LARGE_FLOAT)
+      {
+      minDistance *= minDistance;
+      }
 
     if (p)
       {
@@ -518,12 +544,12 @@ int vtkKdNode::IntersectsBox(double x0, double x1, double y0, double y1,
     max = this->Max;
     }
 
-  if ( (min[0] >= x1) ||
-       (max[0] <  x0) ||
-       (min[1] >= y1) ||
-       (max[1] <  y0) ||
-       (min[2] >= z1) ||
-       (max[2] <  z0))
+  if ( (min[0] > x1) ||
+       (max[0] < x0) ||
+       (min[1] > y1) ||
+       (max[1] < y0) ||
+       (min[2] > z1) ||
+       (max[2] < z0))
     {
     return 0;
     }
@@ -571,12 +597,12 @@ int vtkKdNode::ContainsBox(double x0, double x1, double y0, double y1,
     max = this->Max;
     }
 
-  if ( (min[0] >= x0) ||
-       (max[0] <  x1) ||
-       (min[1] >= y0) ||
-       (max[1] <  y1) ||
-       (min[2] >= z0) ||
-       (max[2] <  z1))
+  if ( (min[0] > x0) ||
+       (max[0] < x1) ||
+       (min[1] > y0) ||
+       (max[1] < y1) ||
+       (min[2] > z0) ||
+       (max[2] < z1))
     {
     return 0;
     }
@@ -602,15 +628,12 @@ int vtkKdNode::ContainsPoint(double x, double y, double z, int useDataBounds=0)
     max = this->Max;
     }
 
-  // points on a boundary are arbitrarily assigned to the region
-  // for which they are on the upper boundary
-
-  if ( (min[0] >= x) ||
-       (max[0] <  x) ||
-       (min[1] >= y) ||
-       (max[1] <  y) ||
-       (min[2] >= z) ||
-       (max[2] <  z))
+  if ( (min[0] > x) ||
+       (max[0] < x) ||
+       (min[1] > y) ||
+       (max[1] < y) ||
+       (min[2] > z) ||
+       (max[2] < z))
     {
     return 0;
     }

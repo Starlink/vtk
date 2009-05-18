@@ -17,7 +17,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkAnimationCue, "$Revision: 1.3.6.1 $");
+vtkCxxRevisionMacro(vtkAnimationCue, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkAnimationCue);
 
 //----------------------------------------------------------------------------
@@ -26,6 +26,9 @@ vtkAnimationCue::vtkAnimationCue()
   this->StartTime = this->EndTime = 0.0;
   this->CueState = vtkAnimationCue::UNINITIALIZED;
   this->TimeMode = TIMEMODE_RELATIVE;
+  this->AnimationTime = 0;
+  this->DeltaTime = 0;
+  this->ClockTime = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -41,6 +44,7 @@ void vtkAnimationCue::StartCueInternal()
   info.EndTime = this->EndTime;
   info.AnimationTime = 0.0;
   info.DeltaTime = 0.0;
+  info.ClockTime = 0.0;
   this->InvokeEvent(vtkCommand::StartAnimationCueEvent, &info);
 }
 
@@ -52,24 +56,35 @@ void vtkAnimationCue::EndCueInternal()
   info.EndTime = this->EndTime;
   info.AnimationTime = this->EndTime;
   info.DeltaTime = 0.0;
+  info.ClockTime = 0.0;
   this->InvokeEvent(vtkCommand::EndAnimationCueEvent, &info);
 }
 
 //----------------------------------------------------------------------------
-void vtkAnimationCue::TickInternal(double currenttime, double deltatime)
+void vtkAnimationCue::TickInternal(
+  double currenttime, double deltatime, double clocktime)
 {
   vtkAnimationCue::AnimationCueInfo info;
   info.StartTime = this->StartTime;
   info.EndTime = this->EndTime;
   info.DeltaTime = deltatime; 
   info.AnimationTime = currenttime;
+  info.ClockTime =clocktime;
+
+  this->AnimationTime = currenttime;
+  this->DeltaTime = deltatime;
+  this->ClockTime = clocktime;
 
   this->InvokeEvent(vtkCommand::AnimationCueTickEvent, &info);
+
+  this->AnimationTime = 0;
+  this->DeltaTime = 0;
+  this->ClockTime = 0;
 }
 
 
 //----------------------------------------------------------------------------
-void vtkAnimationCue::Tick(double currenttime, double deltatime)
+void vtkAnimationCue::Tick(double currenttime, double deltatime, double clocktime)
 {
   // Check to see if we have crossed the Cue start.
   if (currenttime >= this->StartTime && 
@@ -85,7 +100,7 @@ void vtkAnimationCue::Tick(double currenttime, double deltatime)
     {
     if (currenttime <= this->EndTime)
       {
-      this->TickInternal(currenttime, deltatime);
+      this->TickInternal(currenttime, deltatime, clocktime);
       }
     if (currenttime >= this->EndTime)
       {
@@ -125,4 +140,7 @@ void vtkAnimationCue::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "EndTime: " << this->EndTime << endl;
   os << indent << "CueState: " << this->CueState << endl;
   os << indent << "TimeMode: " << this->TimeMode << endl;
+  os << indent << "AnimationTime: " << this->AnimationTime << endl;
+  os << indent << "DeltaTime: " << this->DeltaTime << endl;
+  os << indent << "ClockTime: " << this->ClockTime << endl;
 }

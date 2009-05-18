@@ -15,16 +15,18 @@
 #include "vtkImageReader2.h"
 
 #include "vtkByteSwap.h"
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkStringArray.h"
 
 #include <sys/stat.h>
 
-vtkCxxRevisionMacro(vtkImageReader2, "$Revision: 1.38 $");
+vtkCxxRevisionMacro(vtkImageReader2, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkImageReader2);
 
 #ifdef read
@@ -56,6 +58,8 @@ vtkImageReader2::vtkImageReader2()
   this->DataIncrements[0] = this->DataIncrements[1] = 
   this->DataIncrements[2] = this->DataIncrements[3] = 1;
   
+  this->FileNames = NULL;
+
   this->FileName = NULL;
   this->InternalFileName = NULL;
   
@@ -74,7 +78,7 @@ vtkImageReader2::vtkImageReader2()
 
 //----------------------------------------------------------------------------
 vtkImageReader2::~vtkImageReader2()
-{ 
+{
   if (this->File)
     {
     this->File->close();
@@ -82,6 +86,11 @@ vtkImageReader2::~vtkImageReader2()
     this->File = NULL;
     }
   
+  if (this->FileNames)
+    {
+    this->FileNames->Delete();
+    this->FileNames = NULL;
+    }
   if (this->FileName)
     {
     delete [] this->FileName;
@@ -115,14 +124,21 @@ void vtkImageReader2::ComputeInternalFileName(int slice)
     this->InternalFileName = NULL;
     }
   
-  if (!this->FileName && !this->FilePattern)
+  if (!this->FileName && !this->FilePattern && !this->FileNames)
     {
-    vtkErrorMacro(<<"Either a FileName or FilePattern must be specified.");
+    vtkErrorMacro(<<"Either a FileName, FileNames, or FilePattern"
+                  <<" must be specified.");
     return;
     }
 
   // make sure we figure out a filename to open
-  if (this->FileName)
+  if (this->FileNames)
+    {
+    const char *filename = this->FileNames->GetValue(slice);
+    this->InternalFileName = new char [strlen(filename) + 10];
+    sprintf(this->InternalFileName,"%s",filename);
+    }
+  else if (this->FileName)
     {
     this->InternalFileName = new char [strlen(this->FileName) + 10];
     sprintf(this->InternalFileName,"%s",this->FileName);
@@ -185,20 +201,60 @@ void vtkImageReader2::SetFileName(const char *name)
   if (this->FileName)
     {
     delete [] this->FileName;
-    }
-  if (this->FilePrefix)
-    {
-    delete [] this->FilePrefix;
-    this->FilePrefix = NULL;
+    this->FileName = NULL;
     }
   if (name)
     {
     this->FileName = new char[strlen(name) + 1];
     strcpy(this->FileName, name);
+
+    if (this->FilePrefix)
+      {
+      delete [] this->FilePrefix;
+      this->FilePrefix = NULL;
+      }
+    if (this->FileNames)
+      {
+      this->FileNames->Delete();
+      this->FileNames = NULL;
+      }
     }
-  else
+
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+// This function sets an array containing file names 
+void vtkImageReader2::SetFileNames(vtkStringArray *filenames)
+{
+  if (filenames == this->FileNames)
     {
-    this->FileName = NULL;
+    return;
+    }
+  if (this->FileNames)
+    {
+    this->FileNames->Delete();
+    this->FileNames = 0;
+    }
+  if (filenames)
+    {
+    this->FileNames = filenames;
+    this->FileNames->Register(this);
+    if (this->FileNames->GetNumberOfValues() > 0)
+      {
+      this->DataExtent[4] = 0;
+      this->DataExtent[5] = this->FileNames->GetNumberOfValues() - 1;
+      }
+    if (this->FilePrefix)
+      {
+      delete [] this->FilePrefix;
+      this->FilePrefix = NULL;
+      }
+    if (this->FileName)
+      {
+      delete [] this->FileName;
+      this->FileName = NULL;
+      }
     }
 
   this->Modified();
@@ -220,20 +276,31 @@ void vtkImageReader2::SetFilePrefix(const char *prefix)
   if (this->FilePrefix)
     {
     delete [] this->FilePrefix;
+    this->FilePrefix = NULL;
     }
-  if (this->FileName)
+  if (prefix)
     {
-    delete [] this->FileName;
-    this->FileName = NULL;
-    }  
-  this->FilePrefix = new char[strlen(prefix) + 1];
-  strcpy(this->FilePrefix, prefix);
+    this->FilePrefix = new char[strlen(prefix) + 1];
+    strcpy(this->FilePrefix, prefix);
+
+    if (this->FileName)
+      {
+      delete [] this->FileName;
+      this->FileName = NULL;
+      }
+    if (this->FileNames)
+      {
+      this->FileNames->Delete();
+      this->FileNames = NULL;
+      }
+    }
+
   this->Modified();
 }
 
 //----------------------------------------------------------------------------
 // This function sets the pattern of the file name which turn a prefix
-// into a file name. "%s.%3d" would be the
+// into a file name. "%s.%03d" would be the
 // pattern of a series: image.001, image.002 ...
 void vtkImageReader2::SetFilePattern(const char *pattern)
 {
@@ -249,14 +316,25 @@ void vtkImageReader2::SetFilePattern(const char *pattern)
   if (this->FilePattern)
     {
     delete [] this->FilePattern;
+    this->FilePattern = NULL;
     }
-  if (this->FileName)
+  if (pattern)
     {
-    delete [] this->FileName;
-    this->FileName = NULL;
+    this->FilePattern = new char[strlen(pattern) + 1];
+    strcpy(this->FilePattern, pattern);
+
+    if (this->FileName)
+      {
+      delete [] this->FileName;
+      this->FileName = NULL;
+      }
+    if (this->FileNames)
+      {
+      this->FileNames->Delete();
+      this->FileNames = NULL;
+      }
     }
-  this->FilePattern = new char[strlen(pattern) + 1];
-  strcpy(this->FilePattern, pattern);
+
   this->Modified();
 }
 
@@ -352,6 +430,7 @@ void vtkImageReader2::PrintSelf(ostream& os, vtkIndent indent)
   // this->File, this->Colors need not be printed  
   os << indent << "FileName: " <<
     (this->FileName ? this->FileName : "(none)") << "\n";
+  os << indent << "FileNames: " << this->FileNames << "\n";
   os << indent << "FilePrefix: " << 
     (this->FilePrefix ? this->FilePrefix : "(none)") << "\n";
   os << indent << "FilePattern: " << 
@@ -435,6 +514,13 @@ int vtkImageReader2::RequestInformation (
   
   // get the info objects
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
+
+  // if a list of file names is supplied, set slice extent
+  if (this->FileNames && this->FileNames->GetNumberOfValues() > 0)
+    {
+    this->DataExtent[4] = 0;
+    this->DataExtent[5] = this->FileNames->GetNumberOfValues()-1;
+    }
  
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
                this->DataExtent, 6);
@@ -503,7 +589,8 @@ int vtkImageReader2::OpenFile()
 {
   if (!this->FileName && !this->FilePattern)
     {
-    vtkErrorMacro(<<"Either a FileName or FilePattern must be specified.");
+    vtkErrorMacro(<<"Either a FileName, FileNames, or FilePattern"
+                  << " must be specified.");
     return 0;
     }
 
@@ -528,7 +615,8 @@ int vtkImageReader2::OpenFile()
     }
   if (! this->File || this->File->fail())
     {
-    vtkErrorMacro(<< "Initialize: Could not open file " << this->InternalFileName);
+    vtkErrorMacro(<< "Initialize: Could not open file "
+                  << this->InternalFileName);
     return 0;
     }
   return 1;
@@ -538,7 +626,20 @@ int vtkImageReader2::OpenFile()
 //----------------------------------------------------------------------------
 unsigned long vtkImageReader2::GetHeaderSize()
 {
-  return this->GetHeaderSize(this->DataExtent[4]);
+  unsigned long firstIdx;
+
+  if (this->FileNames)
+    {
+    // if FileNames is used, indexing always starts at zero
+    firstIdx = 0;
+    }
+  else
+    {
+    // FilePrefix uses the DataExtent to figure out the first slice index
+    firstIdx = this->DataExtent[4];
+    }
+
+  return this->GetHeaderSize(firstIdx);
 }
 
 //----------------------------------------------------------------------------
@@ -723,7 +824,7 @@ void vtkImageReader2::ExecuteData(vtkDataObject *output)
 
 
 //----------------------------------------------------------------------------
-// Set the data type of pixles in the file.  
+// Set the data type of pixels in the file.  
 // If you want the output scalar type to have a different value, set it
 // after this method is called.
 void vtkImageReader2::SetDataScalarType(int type)

@@ -18,7 +18,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkGenericAttribute.h"
 #include "vtkGenericAttributeCollection.h"
 #include "vtkGenericPointIterator.h"
-//#include "vtkGenericCell.h"
 
 #include "vtkCell.h"
 #include "vtkDoubleArray.h"
@@ -36,7 +35,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTransform.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkGenericGlyph3DFilter, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkGenericGlyph3DFilter, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkGenericGlyph3DFilter);
 
 // Construct object with scaling on, scaling mode is by scalar value,
@@ -65,17 +64,19 @@ vtkGenericGlyph3DFilter::vtkGenericGlyph3DFilter()
   this->SetNumberOfInputPorts(2);
 }
 
+//-----------------------------------------------------------------------------
 vtkGenericGlyph3DFilter::~vtkGenericGlyph3DFilter()
 {
   if (this->PointIdsName)
     {
-    delete []PointIdsName;
+    delete[] this->PointIdsName;
     }
   this->SetInputScalarsSelection(NULL);
   this->SetInputVectorsSelection(NULL);
   this->SetInputNormalsSelection(NULL);
 }
 
+//-----------------------------------------------------------------------------
 int vtkGenericGlyph3DFilter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -425,7 +426,7 @@ int vtkGenericGlyph3DFilter::RequestData(
     scalex = scaley = scalez = 1.0;
     if ( ! (inPtId % 10000) )
       {
-      this->UpdateProgress ((double)inPtId/numPts);
+      this->UpdateProgress(static_cast<double>(inPtId)/numPts);
       if (this->GetAbortExecute())
         {
         break;
@@ -500,7 +501,8 @@ int vtkGenericGlyph3DFilter::RequestData(
         value = vMag;
         }
       
-      index = (int) ((double)(value - this->Range[0]) * numberOfSources / den);
+      index = static_cast<int>(
+        static_cast<double>(value - this->Range[0]) * numberOfSources / den);
       index = (index < 0 ? 0 :
                (index >= numberOfSources ? (numberOfSources-1) : index));
       
@@ -575,7 +577,8 @@ int vtkGenericGlyph3DFilter::RequestData(
           vNew[0] = (v[0]+vMag) / 2.0;
           vNew[1] = v[1] / 2.0;
           vNew[2] = v[2] / 2.0;
-          trans->RotateWXYZ((double)180.0,vNew[0],vNew[1],vNew[2]);
+          trans->RotateWXYZ(static_cast<double>(180.0),vNew[0],vNew[1],
+                            vNew[2]);
           }
         }
       }
@@ -720,6 +723,7 @@ int vtkGenericGlyph3DFilter::RequestInformation(
   return 1;
 }
 
+//-----------------------------------------------------------------------------
 // Specify a source object at a specified table location.
 void vtkGenericGlyph3DFilter::SetSource(int id, vtkPolyData *pd)
 {
@@ -754,6 +758,7 @@ void vtkGenericGlyph3DFilter::SetSource(int id, vtkPolyData *pd)
     }
 }
 
+//-----------------------------------------------------------------------------
 // Get a pointer to a source object at a specified table location.
 vtkPolyData *vtkGenericGlyph3DFilter::GetSource(int id)
 {
@@ -768,6 +773,7 @@ vtkPolyData *vtkGenericGlyph3DFilter::GetSource(int id)
     }
 }
 
+//-----------------------------------------------------------------------------
 void vtkGenericGlyph3DFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -839,6 +845,7 @@ void vtkGenericGlyph3DFilter::PrintSelf(ostream& os, vtkIndent indent)
      << (this->InputNormalsSelection ? this->InputNormalsSelection : "(none)") << "\n";
 }
 
+//-----------------------------------------------------------------------------
 int vtkGenericGlyph3DFilter::RequestUpdateExtent(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,

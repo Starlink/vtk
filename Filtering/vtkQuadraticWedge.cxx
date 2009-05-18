@@ -24,8 +24,9 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkQuadraticQuad.h"
 #include "vtkQuadraticTriangle.h"
+#include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticWedge, "$Revision: 1.6.8.1 $");
+vtkCxxRevisionMacro(vtkQuadraticWedge, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkQuadraticWedge);
 
 //----------------------------------------------------------------------------
@@ -96,6 +97,16 @@ static int WedgeEdges[9][3] = { {0,1,6}, {1,2,7},  {2,0,8},
 static double MidPoints[3][3] = { {0.5,0.0,0.5},
                                   {0.5,0.5,0.5}, 
                                   {0.0,0.5,0.5} };
+//----------------------------------------------------------------------------
+int *vtkQuadraticWedge::GetEdgeArray(int edgeId)
+{
+  return WedgeEdges[edgeId];
+}
+//----------------------------------------------------------------------------
+int *vtkQuadraticWedge::GetFaceArray(int faceId)
+{
+  return WedgeFaces[faceId];
+}
 
 //----------------------------------------------------------------------------
 vtkCell *vtkQuadraticWedge::GetEdge(int edgeId)
@@ -265,7 +276,8 @@ int vtkQuadraticWedge::EvaluatePosition(double* x,
           pc[i] = pcoords[i];
           }
         }
-      this->EvaluateLocation(subId, pc, closestPoint, (double *)w);
+      this->EvaluateLocation(subId, pc, closestPoint,
+                             static_cast<double *>(w));
       dist2 = vtkMath::Distance2BetweenPoints(closestPoint,x);
       }
     return 0;
@@ -311,14 +323,24 @@ void vtkQuadraticWedge::Subdivide(vtkPointData *inPd, vtkCellData *inCd,
   //Copy point and cell attribute data, first make sure it's empty:
   this->PointData->Initialize();
   this->CellData->Initialize();
+  // Make sure to copy ALL arrays. These field data have to be 
+  // identical to the input field data. Otherwise, CopyData
+  // that occurs later may not work because the output field
+  // data was initialized (CopyAllocate) with the input field
+  // data.
+  this->PointData->CopyAllOn();
+  this->CellData->CopyAllOn();
   this->PointData->CopyAllocate(inPd,18);
-  this->CellData->CopyAllocate(inCd,6);
+  this->CellData->CopyAllocate(inCd,8);
   for (i=0; i<15; i++)
     {
     this->PointData->CopyData(inPd,this->PointIds->GetId(i),i);
     this->CellScalars->SetValue( i, cellScalars->GetTuple1(i));
     }
-  this->CellData->CopyData(inCd,cellId,0);
+  for (i=0; i<8; i++)
+    {
+    this->CellData->CopyData(inCd,cellId,i);
+    }
   
   //Interpolate new values
   double p[3];

@@ -24,6 +24,9 @@
 #include "vtkDataArray.h"
 
 template <class T>
+class vtkDataArrayTemplateLookup;
+
+template <class T>
 class vtkDataArrayTemplate: public vtkDataArray
 {
 public:
@@ -47,6 +50,24 @@ public:
   // Set the number of n-tuples in the array.
   void SetNumberOfTuples(vtkIdType number);
 
+  // Description:
+  // Set the tuple at the ith location using the jth tuple in the source array.
+  // This method assumes that the two arrays have the same type
+  // and structure. Note that range checking and memory allocation is not 
+  // performed; use in conjunction with SetNumberOfTuples() to allocate space.
+  virtual void SetTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source);
+
+  // Description:
+  // Insert the jth tuple in the source array, at ith location in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  virtual void InsertTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source);
+
+  // Description:
+  // Insert the jth tuple in the source array, at the end in this array. 
+  // Note that memory allocation is performed as necessary to hold the data.
+  // Returns the location at which the data was inserted.
+  virtual vtkIdType InsertNextTuple(vtkIdType j, vtkAbstractArray* source);
+  
   // Description:
   // Get a pointer to a tuple at the ith location. This is a dangerous method
   // (it is not thread safe since a pointer is returned).
@@ -109,6 +130,14 @@ public:
   vtkIdType InsertNextValue(T f);
 
   // Description:
+  // These methods remove tuples from the data array. They shift data and
+  // resize array, so the data array is still valid after this operation. Note,
+  // this operation is fairly slow.
+  virtual void RemoveTuple(vtkIdType id);
+  virtual void RemoveFirstTuple();
+  virtual void RemoveLastTuple();
+
+  // Description:
   // Return the data component at the ith tuple and jth component location.
   // Note that i is less then NumberOfTuples and j is less then
   // NumberOfComponents.
@@ -131,56 +160,114 @@ public:
   // for the number of items requested. Set MaxId according to the number of
   // data values requested.
   T* WritePointer(vtkIdType id, vtkIdType number);
-  void* WriteVoidPointer(vtkIdType id, vtkIdType number)
+  virtual void* WriteVoidPointer(vtkIdType id, vtkIdType number)
     { return this->WritePointer(id, number); }
 
   // Description:
   // Get the address of a particular data index. Performs no checks
   // to verify that the memory has been allocated etc.
   T* GetPointer(vtkIdType id) { return this->Array + id; }
-  void* GetVoidPointer(vtkIdType id) { return this->GetPointer(id); }
+  virtual void* GetVoidPointer(vtkIdType id) { return this->GetPointer(id); }
 
   // Description:
   // Deep copy of another double array.
   void DeepCopy(vtkDataArray* da);
+  void DeepCopy(vtkAbstractArray* aa)
+    { this->Superclass::DeepCopy(aa); }
+
+//BTX
+  enum DeleteMethod
+  {
+    VTK_DATA_ARRAY_FREE,
+    VTK_DATA_ARRAY_DELETE
+  };
+//ETX
 
   // Description:
   // This method lets the user specify data to be held by the array.  The
-  // array argument is a pointer to the data.  size is the size of
-  // the array supplied by the user.  Set save to 1 to keep the class
-  // from deleting the array when it cleans up or reallocates memory.
-  // The class uses the actual array provided; it does not copy the data
-  // from the suppled array.
-  void SetArray(T* array, vtkIdType size, int save);
-  void SetVoidArray(void* array, vtkIdType size, int save)
+  // array argument is a pointer to the data.  size is the size of the
+  // array supplied by the user.  Set save to 1 to keep the class from
+  // deleting the array when it cleans up or reallocates memory.  The class
+  // uses the actual array provided; it does not copy the data from the
+  // suppled array. If specified, the delete method determines how the data
+  // array will be deallocated. If the delete method is
+  // VTK_DATA_ARRAY_FREE, free() will be used. If the delete method is
+  // DELETE, delete[] will be used. The default is FREE.
+  void SetArray(T* array, vtkIdType size, int save, int deleteMethod);
+  void SetArray(T* array, vtkIdType size, int save)
+    { this->SetArray(array, size, save, VTK_DATA_ARRAY_FREE); }
+  virtual void SetVoidArray(void* array, vtkIdType size, int save)
     { this->SetArray(static_cast<T*>(array), size, save); }
+  virtual void SetVoidArray(void* array, 
+                            vtkIdType size, 
+                            int save, 
+                            int deleteMethod)
+    { 
+      this->SetArray(static_cast<T*>(array), size, save, deleteMethod); 
+    }
 
   // Description:
   // This method copies the array data to the void pointer specified
   // by the user.  It is up to the user to allocate enough memory for
   // the void pointer.
-  void ExportToVoidPointer(void *out_ptr);
+  virtual void ExportToVoidPointer(void *out_ptr);
 
   // Description:
   // Do not call.  Use GetRange.
   virtual void ComputeRange(int comp);
+
+  // Description:
+  // Returns a vtkArrayIteratorTemplate<T>.
+  virtual vtkArrayIterator* NewIterator();
+  
+  //BTX
+  // Description:
+  // Return the indices where a specific value appears.
+  virtual vtkIdType LookupValue(vtkVariant value);
+  virtual void LookupValue(vtkVariant value, vtkIdList* ids);
+  //ETX
+  vtkIdType LookupValue(T value);
+  void LookupValue(T value, vtkIdList* ids);
+  
+  // Description:
+  // Tell the array explicitly that the data has changed.
+  // This is only necessary to call when you modify the array contents
+  // without using the array's API (i.e. you retrieve a pointer to the
+  // data and modify the array contents).  You need to call this so that
+  // the fast lookup will know to rebuild itself.  Otherwise, the lookup
+  // functions will give incorrect results.
+  virtual void DataChanged();
+  
+  // Description:
+  // Delete the associated fast lookup data structure on this array,
+  // if it exists.  The lookup will be rebuilt on the next call to a lookup
+  // function.
+  virtual void ClearLookup();
+  
 protected:
   vtkDataArrayTemplate(vtkIdType numComp);
   ~vtkDataArrayTemplate();
 
   T* Array;   // pointer to data
   T* ResizeAndExtend(vtkIdType sz);  // function to resize data
-
+  T* Realloc(vtkIdType sz);
+  
   int TupleSize; //used for data conversion
   double* Tuple;
 
   int SaveUserArray;
+  int DeleteMethod;
 
   void ComputeScalarRange(int comp);
   void ComputeVectorRange();
 private:
   vtkDataArrayTemplate(const vtkDataArrayTemplate&);  // Not implemented.
   void operator=(const vtkDataArrayTemplate&);  // Not implemented.
+
+  vtkDataArrayTemplateLookup<T>* Lookup;
+  void UpdateLookup();
+
+  void DeleteArray();
 };
 
 #if !defined(VTK_NO_EXPLICIT_TEMPLATE_INSTANTIATION)
@@ -202,6 +289,20 @@ private:
 #  pragma warning (disable: 4091) // warning C4091: 'extern ' : 
    // ignored on left of 'int' when no variable is declared
 #  pragma warning (disable: 4231) // Compiler-specific extension warning.
+
+   // We need to disable warning 4910 and do an extern dllexport
+   // anyway.  When deriving vtkCharArray and other types from an
+   // instantiation of this template the compiler does an explicit
+   // instantiation of the base class.  From outside the vtkCommon
+   // library we block this using an extern dllimport instantiation.
+   // For classes inside vtkCommon we should be able to just do an
+   // extern instantiation, but VS 2008 complains about missing
+   // definitions.  We cannot do an extern dllimport inside vtkCommon
+   // since the symbols are local to the dll.  An extern dllexport
+   // seems to be the only way to convince VS 2008 to do the right
+   // thing, so we just disable the warning.
+#  pragma warning (disable: 4910) // extern and dllexport incompatible
+
    // Use an "extern explicit instantiation" to give the class a DLL
    // interface.  This is a compiler-specific extension.
    extern VTK_DATA_ARRAY_TEMPLATE_INSTANTIATE(VTK_DATA_ARRAY_TEMPLATE_TYPE);

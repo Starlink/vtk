@@ -18,7 +18,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkWindows.h"
 
-vtkCxxRevisionMacro(vtkMultiThreader, "$Revision: 1.50.12.1 $");
+vtkCxxRevisionMacro(vtkMultiThreader, "$Revision: 1.51 $");
 vtkStandardNewMacro(vtkMultiThreader);
 
 // These are the includes necessary for multithreaded rendering on an SGI

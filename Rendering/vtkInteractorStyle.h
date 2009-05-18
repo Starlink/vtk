@@ -65,6 +65,10 @@
 // surfaces.  
 // - Keypress u: invoke the user-defined function. Typically,
 // this keypress will bring up an interactor that you can type commands in.
+// Typing u calls UserCallBack() on the vtkRenderWindowInteractor, which
+// invokes a vtkCommand::UserEvent. In other words, to define a user-defined
+// callback, just add an observer to the vtkCommand::UserEvent on the
+// vtkRenderWindowInteractor object. 
 // - Keypress w: modify the representation of all actors so that they are
 // wireframe.
 //
@@ -109,6 +113,7 @@
 class vtkActor2D;
 class vtkActor;
 class vtkCallbackCommand;
+class vtkEventForwarderCommand;
 class vtkOutlineSource;
 class vtkPolyDataMapper;
 class vtkProp3D;
@@ -165,6 +170,14 @@ public:
   vtkGetMacro(UseTimers,int);
   vtkSetMacro(UseTimers,int);
   vtkBooleanMacro(UseTimers,int);
+
+  // Description:
+  // If using timers, specify the default timer interval (in
+  // milliseconds). Care must be taken when adjusting the timer interval from
+  // the default value of 10 milliseconds--it may adversely affect the
+  // interactors.
+  vtkSetClampMacro(TimerDuration,unsigned long,1,100000);
+  vtkGetMacro(TimerDuration,unsigned long);
 
   // Description:
   // Does ProcessEvents handle observers on this class or not
@@ -275,19 +288,17 @@ protected:
                             void* calldata);
   
   // Keep track of current state
-
   int State;  
   int AnimState;  
 
   // Should observers be handled here, should we fire timers
-
   int HandleObservers; 
   int UseTimers;       
+  int TimerId; //keep track of the timers that are created/destroyed
 
   int AutoAdjustCameraClippingRange;
 
   // For picking and highlighting props
-
   vtkOutlineSource   *Outline;
   vtkPolyDataMapper  *OutlineMapper;
   vtkActor           *OutlineActor;
@@ -297,6 +308,12 @@ protected:
   int                PropPicked;      // bool: prop picked?
   double             PickColor[3];    // support 2D picking
   double             MouseWheelMotionFactor;
+
+  // Control the timer duration
+  unsigned long  TimerDuration; //in milliseconds
+  
+  // Forward evets to the RenderWindowInteractor
+  vtkEventForwarderCommand * EventForwarder;
 
 private:
   vtkInteractorStyle(const vtkInteractorStyle&);  // Not implemented.

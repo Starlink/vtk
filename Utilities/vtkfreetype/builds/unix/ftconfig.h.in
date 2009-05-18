@@ -1,10 +1,18 @@
+/*
+ *  VTK_FREETYPE_CHANGE this file is new for VTK.
+ *
+ *  This file is based on freetype's builds/unix/ftconfig.in.
+ *  Be sure to keep it in sync with the original file when updating freetype
+ *
+ */
+
 /***************************************************************************/
 /*                                                                         */
 /*  ftconfig.in                                                            */
 /*                                                                         */
 /*    UNIX-specific configuration file (specification only).               */
 /*                                                                         */
-/*  Copyright 1996-2001, 2002, 2003, 2004 by                               */
+/*  Copyright 1996-2001, 2002, 2003, 2004, 2006, 2007 by                   */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -57,6 +65,7 @@ FT_BEGIN_HEADER
   /*************************************************************************/
 
 
+/* VTK_FREETYPE_CHANGE use cmakedefine */
 #cmakedefine HAVE_FCNTL_H ${HAVE_FCNTL_H}
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
@@ -64,6 +73,7 @@ FT_BEGIN_HEADER
 #undef SIZEOF_LONG
 
 
+/* VTK_FREETYPE_CHANGE use cmakedefine */
 #define FT_SIZEOF_INT   ${CMAKE_SIZEOF_INT}
 #define FT_SIZEOF_LONG  ${CMAKE_SIZEOF_LONG}
 
@@ -102,10 +112,19 @@ FT_BEGIN_HEADER
     ( defined( __MWERKS__ ) && defined( macintosh )        )
   /* no Carbon frameworks for 64bit 10.4.x */
 #include "AvailabilityMacros.h"
-#if defined( __LP64__ )
+#if defined( __LP64__ ) && \
+    ( MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_4 )
 #define DARWIN_NO_CARBON 1
 #else
 #define FT_MACINTOSH 1
+#endif
+#endif
+
+
+  /* Fix compiler warning with sgi compiler */
+#if defined( __sgi ) && !defined( __GNUC__ )
+#if defined( _COMPILER_VERSION ) && ( _COMPILER_VERSION >= 730 )
+#pragma set woff 3505
 #endif
 #endif
 
@@ -182,7 +201,7 @@ FT_BEGIN_HEADER
 
 #elif defined( __GNUC__ )
 
-  /* GCC provides the "long long" type */
+  /* GCC provides the `long long' type */
 #define FT_LONG64
 #define FT_INT64  long long int
 
@@ -209,6 +228,7 @@ FT_BEGIN_HEADER
   /* Since `#undef' doesn't survive in configuration header files */
   /* we use the postprocessing facility of AC_CONFIG_HEADERS to   */
   /* replace the leading `/' with `#'.                            */
+  /* VTK_FREETYPE_CHANGE with cmake `#' is fine                   */
 #undef FT_LONG64
 #undef FT_INT64
 
@@ -249,9 +269,9 @@ FT_BEGIN_HEADER
 #ifndef FT_BASE_DEF
 
 #ifdef __cplusplus
-#define FT_BASE_DEF( x )  extern "C"  x
+#define FT_BASE_DEF( x )  x
 #else
-#define FT_BASE_DEF( x )  extern  x
+#define FT_BASE_DEF( x )  x
 #endif
 
 #endif /* !FT_BASE_DEF */

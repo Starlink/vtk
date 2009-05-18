@@ -18,21 +18,33 @@
 // vtkRenderWindowInteractor provides a platform-independent interaction
 // mechanism for mouse/key/time events. It serves as a base class for
 // platform-dependent implementations that handle routing of mouse/key/timer
-// messages to vtkInteractorStyle and its subclasses. 
-// vtkRenderWindowInteractor also provides controls for picking,
-// rendering frame rate, and headlights.
+// messages to vtkInteractorObserver and its subclasses. vtkRenderWindowInteractor 
+// also provides controls for picking, rendering frame rate, and headlights.
 //
 // vtkRenderWindowInteractor has changed from previous implementations and
-// now serves only as a shell to hold user preferences and route messages
-// to vtkInteractorStyle. Callbacks are available for many Events.
-// Platform specific subclasses should provide methods for
-// CreateTimer/DestroyTimer, TerminateApp, and an event loop if required
-// via Initialize/Start/Enable/Disable.
+// now serves only as a shell to hold user preferences and route messages to
+// vtkInteractorStyle. Callbacks are available for many events.  Platform
+// specific subclasses should provide methods for manipulating timers,
+// TerminateApp, and an event loop if required via
+// Initialize/Start/Enable/Disable.
+
+// .SECTION Caveats
+// vtkRenderWindowInteractor routes events through VTK's command/observer
+// design pattern. That is, when vtkRenderWindowInteractor (actually, one of
+// its subclasses) sees a platform-dependent event, it translates this into
+// a VTK event using the InvokeEvent() method. Then any vtkInteractorObservers
+// registered for that event are expected to respond as appropriate.
+
+// .SECTION See Also
+// vtkInteractorObserver
 
 #ifndef __vtkRenderWindowInteractor_h
 #define __vtkRenderWindowInteractor_h
 
 #include "vtkObject.h"
+
+class vtkTimerIdMap;
+
 
 // Timer flags for win32/X compatibility
 #define VTKI_TIMER_FIRST  0
@@ -41,12 +53,16 @@
 class vtkAbstractPicker;
 class vtkAbstractPropPicker;
 class vtkInteractorObserver;
-class vtkInteractorObserver;
 class vtkRenderWindow;
 class vtkRenderer;
+class vtkObserverMediator;
+class vtkInteractorEventRecorder;
 
 class VTK_RENDERING_EXPORT vtkRenderWindowInteractor : public vtkObject
 {
+  //BTX
+  friend class vtkInteractorEventRecorder;
+  //ETX
 public:
   static vtkRenderWindowInteractor *New();
   vtkTypeRevisionMacro(vtkRenderWindowInteractor,vtkObject);
@@ -68,7 +84,7 @@ public:
   // Start the event loop. This is provided so that you do not have to
   // implement your own event loop. You still can use your own
   // event loop if you want. Initialize should be called before Start.
-  virtual void Start() {};
+  virtual void Start() {}
 
   // Description:
   // Enable/Disable interactions.  By default interactors are enabled when
@@ -78,8 +94,8 @@ public:
   // display where one interactor is active when its data is to be displayed
   // and all other interactors associated with the widget are disabled
   // when their data is not displayed.
-  virtual void Enable() { this->Enabled = 1; this->Modified();};
-  virtual void Disable() { this->Enabled = 0; this->Modified();};
+  virtual void Enable() { this->Enabled = 1; this->Modified();}
+  virtual void Disable() { this->Enabled = 0; this->Modified();}
   vtkGetMacro(Enabled, int);
 
   // Description:
@@ -88,26 +104,81 @@ public:
   vtkGetObjectMacro(RenderWindow,vtkRenderWindow);
 
   // Description:
-  // Event loop notification member for Window size change
+  // Event loop notification member for window size change.
+  // Window size is measured in pixels.
   virtual void UpdateSize(int x,int y);
 
   // Description:
-  // Timer methods must be overridden by platform dependent subclasses.
-  // flag is passed to indicate if this is first timer set or an update
-  // as Win32 uses repeating timers, whereas X uses One shot more timer
-  // if flag==VTKXI_TIMER_FIRST Win32 and X should createtimer
-  // otherwise Win32 should exit and X should perform AddTimeOut()
-  virtual int CreateTimer(int )  { return 1; };
-  virtual int DestroyTimer()    { return 1; };
+  // This class provides two groups of methods for manipulating timers.  The
+  // first group (CreateTimer(timerType) and DestroyTimer()) implicitly use
+  // an internal timer id (and are present for backward compatibility). The
+  // second group (CreateRepeatingTimer(long),CreateOneShotTimer(long),
+  // ResetTimer(int),DestroyTimer(int)) use timer ids so multiple timers can
+  // be independently managed. In the first group, the CreateTimer() method
+  // takes an argument indicating whether the timer is created the first time
+  // (timerType==VTKI_TIMER_FIRST) or whether it is being reset
+  // (timerType==VTKI_TIMER_UPDATE). (In initial implementations of VTK this
+  // was how one shot and repeating timers were managed.) In the second
+  // group, the create methods take a timer duration argument (in
+  // milliseconds) and return a timer id. Thus the ResetTimer(timerId) and
+  // DestroyTimer(timerId) methods take this timer id and operate on the
+  // timer as appropriate. Methods are also available for determining
+  virtual int CreateTimer(int timerType); //first group, for backward compatibility
+  virtual int DestroyTimer(); //first group, for backward compatibility
+  int CreateRepeatingTimer(unsigned long duration);
+  int CreateOneShotTimer(unsigned long duration);
+  int IsOneShotTimer(int timerId);
+  unsigned long GetTimerDuration(int timerId);
+  int ResetTimer(int timerId);
+  int DestroyTimer(int timerId);
+  virtual int GetVTKTimerId(int platformTimerId);
+
+  //BTX
+  // Moved into the public section of the class so that classless timer procs
+  // can access these enum members without being "friends"...
+  enum {OneShotTimer=1,RepeatingTimer};
+  //ETX
+
+  // Description:
+  // Specify the default timer interval (in milliseconds). (This is used in
+  // conjunction with the timer methods described previously, e.g.,
+  // CreateTimer() uses this value; and CreateRepeatingTimer(duration) and
+  // CreateOneShotTimer(duration) use the default value if the parameter
+  // "duration" is less than or equal to zero.) Care must be taken when
+  // adjusting the timer interval from the default value of 10
+  // milliseconds--it may adversely affect the interactors.
+  vtkSetClampMacro(TimerDuration,unsigned long,1,100000);
+  vtkGetMacro(TimerDuration,unsigned long);
+
+  // Description:
+  // These methods are used to communicate information about the currently
+  // firing CreateTimerEvent or DestroyTimerEvent. The caller of
+  // CreateTimerEvent sets up TimerEventId, TimerEventType and
+  // TimerEventDuration. The observer of CreateTimerEvent should set up an
+  // appropriate platform specific timer based on those values and set the
+  // TimerEventPlatformId before returning. The caller of DestroyTimerEvent
+  // sets up TimerEventPlatformId. The observer of DestroyTimerEvent should
+  // simply destroy the platform specific timer created by CreateTimerEvent.
+  // See vtkGenericRenderWindowInteractor's InternalCreateTimer and
+  // InternalDestroyTimer for an example.
+  vtkSetMacro(TimerEventId, int);
+  vtkGetMacro(TimerEventId, int);
+  vtkSetMacro(TimerEventType, int);
+  vtkGetMacro(TimerEventType, int);
+  vtkSetMacro(TimerEventDuration, int);
+  vtkGetMacro(TimerEventDuration, int);
+  vtkSetMacro(TimerEventPlatformId, int);
+  vtkGetMacro(TimerEventPlatformId, int);
 
   // Description:
   // This function is called on 'q','e' keypress if exitmethod is not
   // specified and should be overridden by platform dependent subclasses
   // to provide a termination procedure if one is required.
-  virtual void TerminateApp(void) {};
+  virtual void TerminateApp(void) {}
 
   // Description:
-  // External switching between joystick/trackball/new? modes.
+  // External switching between joystick/trackball/new? modes. Initial value
+  // is a vtkInteractorStyleSwitch object.
   virtual void SetInteractorStyle(vtkInteractorObserver *);
   vtkGetObjectMacro(InteractorStyle,vtkInteractorObserver);
 
@@ -197,7 +268,8 @@ public:
   // Set/Get information about the current event. 
   // The current x,y position is in the EventPosition, and the previous
   // event position is in LastEventPosition, updated automatically each
-  // time EventPosition is set using its Set() method. 
+  // time EventPosition is set using its Set() method. Mouse positions
+  // are measured in pixels.
   // The other information is about key board input.
   vtkGetVector2Macro(EventPosition,int);
   vtkGetVector2Macro(LastEventPosition,int);
@@ -214,7 +286,7 @@ public:
       this->EventPosition[1] = y;
       this->Modified();
       }
-  };
+  }
   virtual void SetEventPosition(int pos[2])
   {
     this->SetEventPosition(pos[0], pos[1]);
@@ -227,6 +299,8 @@ public:
   {
     this->SetEventPositionFlipY(pos[0], pos[1]);
   } 
+  vtkSetMacro(AltKey, int);
+  vtkGetMacro(AltKey, int);
   vtkSetMacro(ControlKey, int);
   vtkGetMacro(ControlKey, int);
   vtkSetMacro(ShiftKey, int);
@@ -311,6 +385,7 @@ public:
   // know about the change.
   // The current event width/height (if any) is in EventSize 
   // (Expose event, for example).
+  // Window size is measured in pixels.
   vtkSetVector2Macro(Size,int);
   vtkGetVector2Macro(Size,int);
   vtkSetVector2Macro(EventSize,int);
@@ -322,25 +397,34 @@ public:
   // renderers.
   virtual vtkRenderer *FindPokedRenderer(int,int);
 
+  // Description:
+  // Return the object used to mediate between vtkInteractorObservers
+  // contending for resources. Multiple interactor observers will often
+  // request different resources (e.g., cursor shape); the mediator uses a
+  // strategy to provide the resource based on priority of the observer plus
+  // the particular request (default versus non-default cursor shape).
+  vtkObserverMediator *GetObserverMediator();
+
 protected:
   vtkRenderWindowInteractor();
   ~vtkRenderWindowInteractor();
 
-  vtkRenderWindow    *RenderWindow;
+  vtkRenderWindow       *RenderWindow;
   vtkInteractorObserver *InteractorStyle;
 
   // Used as a helper object to pick instances of vtkProp
-  vtkAbstractPicker          *Picker;
+  vtkAbstractPicker     *Picker;
 
-  int   Initialized;
-  int   Enabled;
-  int   Style;
-  int   LightFollowCamera;
-  int   ActorMode;
+  int    Initialized;
+  int    Enabled;
+  int    Style;
+  int    LightFollowCamera;
+  int    ActorMode;
   double DesiredUpdateRate;
   double StillUpdateRate;  
 
   // Event information
+  int   AltKey;
   int   ControlKey;
   int   ShiftKey;
   char  KeyCode;
@@ -350,10 +434,53 @@ protected:
   int   LastEventPosition[2];
   int   EventSize[2];
   int   Size[2];
-  
+  int   TimerEventId;
+  int   TimerEventType;
+  int   TimerEventDuration;
+  int   TimerEventPlatformId;
+
   // control the fly to
   int NumberOfFlyFrames;
   double Dolly;
+
+  // Description:
+  // These methods allow the interactor to control which events are
+  // processed.  When the GrabFocus() method is called, then only events that
+  // the supplied vtkCommands have registered are invoked. (This method is
+  // typically used by widgets, i.e., subclasses of vtkInteractorObserver, to
+  // grab events once an event sequence begins.) Note that the friend
+  // declaration is done here to avoid doing so in the superclass vtkObject.
+  //BTX
+  friend class vtkInteractorObserver;
+  void GrabFocus(vtkCommand *mouseEvents, vtkCommand *keypressEvents=NULL)
+    {this->Superclass::InternalGrabFocus(mouseEvents,keypressEvents);}
+  void ReleaseFocus()
+    {this->Superclass::InternalReleaseFocus();}
+  //ETX
+
+  // Description:
+  // Widget mediators are used to resolve contention for cursors and other resources.
+  vtkObserverMediator *ObserverMediator;
+
+  // Timer related members
+  //BTX
+  friend struct vtkTimerStruct;
+  vtkTimerIdMap *TimerMap; // An internal, PIMPLd map of timers and associated attributes
+  unsigned long  TimerDuration; //in milliseconds
+  // Description
+  // Internal methods for creating and destroying timers that must be
+  // implemented by subclasses. InternalCreateTimer() returns a
+  // platform-specific timerId and InternalDestroyTimer() returns
+  // non-zero value on success.
+  virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
+  virtual int InternalDestroyTimer(int platformTimerId);
+  int GetCurrentTimerId();
+  //ETX
+
+  // Force the interactor to handle the Start() event loop, ignoring any 
+  // overrides. (Overrides are registered by observing StartEvent on the 
+  // interactor.)
+  int HandleEventLoop;
   
 private:
   vtkRenderWindowInteractor(const vtkRenderWindowInteractor&);  // Not implemented.

@@ -54,13 +54,18 @@ public:
   virtual void SetPosition(int a[2]);
 
   // Description:
-  // Set/Get the size of the window in screen coordinates.
+  // Set/Get the size of the window in screen coordinates in pixels.
   virtual int *GetSize();
   virtual void SetSize(int,int);
   virtual void SetSize(int a[2]);
 
   // Description:
-  // Get the size of the screen in pixels
+  // GetSize() returns the size * this->TileScale, whereas this method returns
+  // the size without multiplying with the tile scale.
+  int *GetActualSize();
+
+  // Description:
+  // Get the current size of the screen in pixels.
   virtual int     *GetScreenSize() = 0;
 
   // Description:
@@ -87,7 +92,7 @@ public:
   // Description:
   // Get name of rendering window
   vtkGetStringMacro(WindowName);
-  virtual void SetWindowName(const char *);
+  vtkSetStringMacro(WindowName);
 
   // Description:
   // Ask each viewport owned by this Window to render its image and 
@@ -103,9 +108,12 @@ public:
   // of the screen is in the lower left corner. The y axis increases as
   // you go up the screen. So the storage of pixels is from left to right
   // and from bottom to top.
-  virtual unsigned char *GetPixelData(int, int, int, int, int) = 0;
-  virtual int GetPixelData(int ,int ,int ,int , int,
-                           vtkUnsignedCharArray*) = 0;
+  // (x,y) is any corner of the rectangle. (x2,y2) is its opposite corner on
+  // the diagonal.
+  virtual unsigned char *GetPixelData(int x, int y, int x2, int y2,
+                                      int front) = 0;
+  virtual int GetPixelData(int x, int y, int x2, int y2, int front,
+                           vtkUnsignedCharArray *data) = 0;
 
   // Description:
   // Return a best estimate to the dots per inch of the display

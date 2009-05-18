@@ -26,6 +26,23 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
 
 #include "vtkConfigure.h"
 
+/*
+ * This is a support for files on the disk that are larger than 2GB.
+ * Since this is the first place that any include should happen, do this here.
+ */
+#ifdef VTK_REQUIRE_LARGE_FILE_SUPPORT
+#  ifndef _LARGEFILE_SOURCE
+#    define _LARGEFILE_SOURCE
+#  endif
+#  ifndef _LARGE_FILES
+#    define _LARGE_FILES
+#  endif
+#  ifndef _FILE_OFFSET_BITS
+#    define _FILE_OFFSET_BITS 64
+#  endif
+#endif
+
+
 //
 // Windows specific stuff------------------------------------------
 #if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__)
@@ -69,6 +86,25 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
   // Enable workaround for windows header name mangling.
   // See VTK/Utilities/Upgrading/README.WindowsMangling.txt for details.
 # define VTK_WORKAROUND_WINDOWS_MANGLE
+
+#if ( _MSC_VER >= 1300 ) // Visual studio .NET
+#pragma warning ( disable : 4311 )
+#pragma warning ( disable : 4312 )
+#  define vtkGetWindowLong GetWindowLongPtr
+#  define vtkSetWindowLong SetWindowLongPtr
+#  define vtkLONG LONG_PTR
+#  define vtkGWL_WNDPROC GWLP_WNDPROC
+#  define vtkGWL_HINSTANCE GWLP_HINSTANCE
+#  define vtkGWL_USERDATA GWLP_USERDATA
+#else // older or non-Visual studio
+#  define vtkGetWindowLong GetWindowLong
+#  define vtkSetWindowLong SetWindowLong
+#  define vtkLONG LONG
+#  define vtkGWL_WNDPROC GWL_WNDPROC
+#  define vtkGWL_HINSTANCE GWL_HINSTANCE
+#  define vtkGWL_USERDATA GWL_USERDATA
+#endif //
+
 #endif
 
 #if defined(_MSC_VER)
@@ -76,6 +112,7 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
 # pragma warning ( default : 4263 ) /* no override, call convention differs */
   // Disable MSVC compiler warning messages that often occur in valid code.
 # if !defined(VTK_DISPLAY_WIN32_WARNINGS)
+#  pragma warning ( disable : 4003 ) /* not enough actual parameters for macro */
 #  pragma warning ( disable : 4097 ) /* typedef is synonym for class */
 #  pragma warning ( disable : 4127 ) /* conditional expression is constant */
 #  pragma warning ( disable : 4244 ) /* possible loss in conversion */
@@ -96,6 +133,19 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
 #if defined(_MSC_VER) && (_MSC_VER < 1300) && defined(NDEBUG)
 # pragma warning ( disable : 4701 ) /* Variable may be used uninitialized.  */
 # pragma warning ( disable : 4702 ) /* Unreachable code.  */
+#endif
+
+#if defined(__BORLANDC__)
+  // Disable Borland compiler warning messages that often occur in valid code.
+# if !defined(VTK_DISPLAY_WIN32_WARNINGS)
+#  pragma warn -8004 /* assigned a value that is never used */
+#  pragma warn -8008 /* condition is always false */
+#  pragma warn -8026 /* funcs w/class-by-value args not expanded inline */
+#  pragma warn -8027 /* functions w/ do/for/while not expanded inline */
+#  pragma warn -8060 /* possibly incorrect assignment */
+#  pragma warn -8066 /* unreachable code */
+#  pragma warn -8072 /* suspicious pointer arithmetic */
+# endif
 #endif
 
 #if defined(WIN32) && defined(VTK_BUILD_SHARED_LIBS)
@@ -129,6 +179,12 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
   #define VTK_GRAPHICS_EXPORT __declspec( dllexport ) 
  #else
   #define VTK_GRAPHICS_EXPORT __declspec( dllimport ) 
+ #endif
+
+ #if defined(vtkInfovis_EXPORTS)
+  #define VTK_INFOVIS_EXPORT __declspec( dllexport ) 
+ #else
+  #define VTK_INFOVIS_EXPORT __declspec( dllimport ) 
  #endif
 
  #if defined(vtkIO_EXPORTS)
@@ -167,18 +223,26 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
   #define VTK_PARALLEL_EXPORT __declspec( dllimport ) 
  #endif
 
+ #if defined(vtkViews_EXPORTS)
+  #define VTK_VIEWS_EXPORT __declspec( dllexport ) 
+ #else
+  #define VTK_VIEWS_EXPORT __declspec( dllimport ) 
+ #endif
+
 #else
  #define VTK_COMMON_EXPORT
  #define VTK_FILTERING_EXPORT
  #define VTK_GENERIC_FILTERING_EXPORT
  #define VTK_GRAPHICS_EXPORT
  #define VTK_IMAGING_EXPORT
+ #define VTK_INFOVIS_EXPORT
  #define VTK_IO_EXPORT
  #define VTK_RENDERING_EXPORT
  #define VTK_VOLUMERENDERING_EXPORT
  #define VTK_HYBRID_EXPORT
  #define VTK_WIDGETS_EXPORT
  #define VTK_PARALLEL_EXPORT
+ #define VTK_VIEWS_EXPORT
  #define VTK_EXPORT
 #endif
 

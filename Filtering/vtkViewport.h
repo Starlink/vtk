@@ -79,6 +79,20 @@ public:
   vtkGetVector3Macro(Background,double);
 
   // Description:
+  // Set/Get the second background color of the rendering screen 
+  // for gradient backgrounds using an rgb color specification.
+  vtkSetVector3Macro(Background2,double);
+  vtkGetVector3Macro(Background2,double);
+
+  // Description:
+  // Set/Get whether this viewport should have a gradient background
+  // using the Background (top) and Background2 (bottom) colors.
+  // Default is off.
+  vtkSetMacro(GradientBackground,bool);
+  vtkGetMacro(GradientBackground,bool);
+  vtkBooleanMacro(GradientBackground,bool);
+
+  // Description:
   // Set the aspect ratio of the rendered image. This is computed 
   // automatically and should not be set by the user.
   vtkSetVector2Macro(Aspect,double);
@@ -178,11 +192,11 @@ public:
   // Get the size and origin of the viewport in display coordinates. Note:
   // if the window has not yet been realized, GetSize() and GetOrigin() 
   // return (0,0).
-  int *GetSize();
-  int *GetOrigin();
+  virtual int *GetSize();
+  virtual int *GetOrigin();
   void GetTiledSize(int *width, int *height);
-  void GetTiledSizeAndOrigin(int *width, int *height, 
-                             int *lowerLeftX, int *lowerLeftY);
+  virtual void GetTiledSizeAndOrigin(int *width, int *height, 
+                                     int *lowerLeftX, int *lowerLeftY);
   
   // The following methods describe the public pick interface for picking
   // Props in a viewport.
@@ -204,9 +218,16 @@ public:
   // Description:
   // Methods used to return the pick (x,y) in local display coordinates (i.e.,
   // it's that same as selectionX and selectionY).
-  vtkGetMacro(PickX, double);
-  vtkGetMacro(PickY, double);
+  double GetPickX() const {return (this->PickX1 + this->PickX2)*0.5;}
+  double GetPickY() const {return (this->PickY1 + this->PickY2)*0.5;}
+  double GetPickWidth() const {return this->PickX2 - this->PickX1 + 1;};
+  double GetPickHeight() const {return this->PickY2 - this->PickY1 + 1;};
+  double GetPickX1() const {return this->PickX1;}
+  double GetPickY1() const {return this->PickY1;}
+  double GetPickX2() const {return this->PickX2;}
+  double GetPickY2() const {return this->PickY2;}
   vtkGetMacro(IsPicking, int);
+  vtkGetObjectMacro(PickResultProps, vtkPropCollection);
 
   // Description: 
   // Return the Z value for the last picked Prop.
@@ -265,27 +286,37 @@ protected:
   virtual void DonePick() = 0; 
   // Return the id of the picked object, only valid after a call to DonePick
   virtual unsigned int GetPickedId() = 0;
+  // Return the number of objects picked, only valid after a call to DonePick
+  virtual unsigned int GetNumPickedIds() = 0;
+  // Put no more than atMost picked object ids into the callerBuffer and
+  // return the number of picked objects returned.
+  virtual int GetPickedIds(unsigned int atMost, unsigned int *callerBuffer) = 0;
   //ETX
 
   // Ivars for picking
   // Store a picked Prop (contained in an assembly path)
   vtkAssemblyPath* PickedProp;
   vtkPropCollection* PickFromProps;
+  vtkPropCollection* PickResultProps;
   // Boolean flag to determine if picking is enabled for this render
   int IsPicking;
   unsigned int CurrentPickId;
-  double PickX;
-  double PickY;
+  double PickX1;
+  double PickY1;
+  double PickX2;
+  double PickY2;
   // End Ivars for picking
-  
+
   vtkPropCollection *Props;
   vtkActor2DCollection *Actors2D;
   vtkWindow *VTKWindow;
   double Background[3];  
+  double Background2[3];  
   double Viewport[4];
   double Aspect[2];
   double PixelAspect[2];
   double Center[2];
+  bool GradientBackground;
 
   int Size[2];
   int Origin[2];

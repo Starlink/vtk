@@ -23,8 +23,8 @@
 
 #include "vtkAlgorithm.h"
 
+class vtkAbstractArray;
 class vtkCallbackCommand;
-class vtkDataArray;
 class vtkDataArraySelection;
 class vtkDataSet;
 class vtkDataSetAttributes;
@@ -116,6 +116,10 @@ protected:
   // Setup the output's information.
   virtual void SetupOutputInformation(vtkInformation *vtkNotUsed(outInfo)) {}
   
+  // Setup the output's information for the update extent
+  virtual void SetupUpdateExtentInformation
+  (vtkInformation *vtkNotUsed(outInfo)) {}
+
   // Setup the output's data with allocation.
   virtual void SetupOutputData();
   
@@ -127,17 +131,23 @@ protected:
   // VTKFile element.
   int ReadVTKFile(vtkXMLDataElement* eVTKFile);  
   
-  // Create a vtkDataArray from its cooresponding XML representation.
+  // Create a vtkAbstractArray from its cooresponding XML representation.
   // Does not allocate.
-  vtkDataArray* CreateDataArray(vtkXMLDataElement* da);
+  vtkAbstractArray* CreateArray(vtkXMLDataElement* da);
   
   // Internal utility methods.
-  int OpenVTKFile();
-  void CloseVTKFile();
+  virtual int OpenVTKFile();
+  virtual void CloseVTKFile();
   virtual void CreateXMLParser();
   virtual void DestroyXMLParser();
   void SetupCompressor(const char* type);
   int CanReadFileVersionString(const char* version);
+
+  // Returns the major version for the file being read. -1 when invalid.
+  vtkGetMacro(FileMajorVersion, int);
+
+  // Returns the minor version for the file being read. -1 when invalid.
+  vtkGetMacro(FileMinorVersion, int);
   
   // Utility methods for subclasses.
   int IntersectExtents(int* extent1, int* extent2, int* result);
@@ -222,6 +232,10 @@ protected:
   virtual int RequestInformation(vtkInformation *request,
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector);
+  virtual int RequestUpdateExtentInformation
+  (vtkInformation *request,
+   vtkInformationVector **inputVector,
+   vtkInformationVector *outputVector);
 
   vtkTimeStamp ReadMTime;
 
@@ -256,7 +270,9 @@ private:
   // The stream used to read the input if it is in a file.
   ifstream* FileStream;  
   int TimeStepWasReadOnce;
-  
+
+  int FileMajorVersion;
+  int FileMinorVersion;
 private:
   vtkXMLReader(const vtkXMLReader&);  // Not implemented.
   void operator=(const vtkXMLReader&);  // Not implemented.

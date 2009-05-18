@@ -48,7 +48,10 @@
 (((type) == VTK_FLOAT) ? "float" : \
 (((type) == VTK_DOUBLE) ? "double" : \
 (((type) == VTK_ID_TYPE) ? "idtype" : \
-"Undefined"))))))))))))))))))
+(((type) == VTK_STRING) ? "string" : \
+(((type) == VTK_VARIANT) ? "variant" : \
+(((type) == VTK_OBJECT) ? "object" : \
+"Undefined")))))))))))))))))))))
   
 //
 // Set built-in type.  Creates member Set"name"() (e.g., SetVisibility());
@@ -206,8 +209,8 @@ virtual type *Get##name ()                                              \
 // Set method must be defined to use this macro.
 //
 #define vtkBooleanMacro(name,type) \
-virtual void name##On () { this->Set##name((type)1);}; \
-virtual void name##Off () { this->Set##name((type)0);}
+  virtual void name##On () { this->Set##name(static_cast<type>(1));};   \
+  virtual void name##Off () { this->Set##name(static_cast<type>(0));}
 
 //
 // Following set macros for vectors define two members for each macro.  The first 
@@ -554,7 +557,6 @@ virtual double *Get##name() \
 
 // Macro used to determine whether a class is the same class or
 // a subclass of the named class.
-//
 #define vtkTypeMacro(thisClass,superclass) \
   typedef superclass Superclass; \
   private: \
@@ -592,11 +594,18 @@ virtual double *Get##name() \
   }
 
 // Version of vtkTypeMacro that adds the CollectRevisions method.
-#define vtkTypeRevisionMacro(thisClass,superclass) \
+// This version takes a third argument that may be VTK_COMMON_EXPORT,
+// VTK_FILTERING_EXPORT, etc. You should not use this version unless you
+// have split the implementation of a class across multiple VTK libraries.
+// When in doubt, use vtkTypeRevisionMacro instead.
+#define vtkExportedTypeRevisionMacro(thisClass,superclass,dllExport) \
   protected: \
-  void CollectRevisions(ostream& os); \
+  dllExport void CollectRevisions(ostream& os); \
   public: \
   vtkTypeMacro(thisClass,superclass)
+
+// Version of vtkTypeMacro that adds the CollectRevisions method.
+#define vtkTypeRevisionMacro(thisClass,superclass) vtkExportedTypeRevisionMacro(thisClass,superclass,)
 
 // Macro to implement the standard CollectRevisions method.
 #define vtkCxxRevisionMacro(thisClass, revision) \
@@ -660,20 +669,73 @@ virtual double *Get##name() \
   vtkTemplateMacroCase(VTK_SIGNED_CHAR, signed char, call);                 \
   vtkTemplateMacroCase(VTK_UNSIGNED_CHAR, unsigned char, call)
 
+// This is same as Template macro with additional case for VTK_STRING.
+#define vtkExtendedTemplateMacro(call)                                 \
+  vtkTemplateMacro(call);                                                   \
+  vtkTemplateMacroCase(VTK_STRING, vtkStdString, call)
+
+// The vtkArrayIteratorTemplateMacro is used to centralize the set of types
+// supported by Execute methods.  It also avoids duplication of long
+// switch statement case lists.
+//
+// This version of the macro allows the template to take any number of
+// arguments.  
+//
+// Note that in this macro VTK_TT is defined to be the type of the iterator
+// for the given type of array. One must include the 
+// vtkArrayIteratorIncludes.h header file to provide for extending of this macro
+// by addition of new iterators.
+//
+// Example usage:
+// vtkArrayIter* iter = array->NewIterator();
+// switch(array->GetDataType())
+//   {
+//   vtkArrayIteratorTemplateMacro(myFunc(static_cast<VTK_TT*>(iter), arg2));
+//   }
+// iter->Delete();
+// 
+#define vtkArrayIteratorTemplateMacroCase(typeN, type, call)  \
+  vtkTemplateMacroCase(typeN, vtkArrayIteratorTemplate<type>, call)
+#define vtkArrayIteratorTemplateMacro(call)                                 \
+  vtkArrayIteratorTemplateMacroCase(VTK_DOUBLE, double, call);              \
+  vtkArrayIteratorTemplateMacroCase(VTK_FLOAT, float, call);                             \
+  vtkArrayIteratorTemplateMacroCase_ll(VTK_LONG_LONG, long long, call);                  \
+  vtkArrayIteratorTemplateMacroCase_ll(VTK_UNSIGNED_LONG_LONG, unsigned long long, call);\
+  vtkArrayIteratorTemplateMacroCase_si64(VTK___INT64, __int64, call);                    \
+  vtkArrayIteratorTemplateMacroCase_ui64(VTK_UNSIGNED___INT64, unsigned __int64, call);  \
+  vtkArrayIteratorTemplateMacroCase(VTK_ID_TYPE, vtkIdType, call);                       \
+  vtkArrayIteratorTemplateMacroCase(VTK_LONG, long, call);                               \
+  vtkArrayIteratorTemplateMacroCase(VTK_UNSIGNED_LONG, unsigned long, call);             \
+  vtkArrayIteratorTemplateMacroCase(VTK_INT, int, call);                                 \
+  vtkArrayIteratorTemplateMacroCase(VTK_UNSIGNED_INT, unsigned int, call);               \
+  vtkArrayIteratorTemplateMacroCase(VTK_SHORT, short, call);                             \
+  vtkArrayIteratorTemplateMacroCase(VTK_UNSIGNED_SHORT, unsigned short, call);           \
+  vtkArrayIteratorTemplateMacroCase(VTK_CHAR, char, call);                               \
+  vtkArrayIteratorTemplateMacroCase(VTK_SIGNED_CHAR, signed char, call);                 \
+  vtkArrayIteratorTemplateMacroCase(VTK_UNSIGNED_CHAR, unsigned char, call);             \
+  vtkArrayIteratorTemplateMacroCase(VTK_STRING, vtkStdString, call);                     \
+  vtkTemplateMacroCase(VTK_BIT, vtkBitArrayIterator, call);
+
 // Add "long long" to the template macro if it is enabled.
 #if defined(VTK_TYPE_USE_LONG_LONG)
 # define vtkTemplateMacroCase_ll(typeN, type, call) \
             vtkTemplateMacroCase(typeN, type, call);
+# define vtkArrayIteratorTemplateMacroCase_ll(typeN, type, call) \
+            vtkArrayIteratorTemplateMacroCase(typeN, type, call)
 #else
 # define vtkTemplateMacroCase_ll(typeN, type, call)
+# define vtkArrayIteratorTemplateMacroCase_ll(typeN, type, call)
 #endif
 
 // Add "__int64" to the template macro if it is enabled.
 #if defined(VTK_TYPE_USE___INT64)
 # define vtkTemplateMacroCase_si64(typeN, type, call) \
              vtkTemplateMacroCase(typeN, type, call);
+# define vtkArrayIteratorTemplateMacroCase_si64(typeN, type, call) \
+             vtkArrayIteratorTemplateMacroCase(typeN, type, call)
 #else
 # define vtkTemplateMacroCase_si64(typeN, type, call)
+# define vtkArrayIteratorTemplateMacroCase_si64(typeN, type, call) 
 #endif
 
 // Add "unsigned __int64" to the template macro if it is enabled and
@@ -681,8 +743,11 @@ virtual double *Get##name() \
 #if defined(VTK_TYPE_USE___INT64) && defined(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
 # define vtkTemplateMacroCase_ui64(typeN, type, call) \
              vtkTemplateMacroCase(typeN, type, call);
+# define vtkArrayIteratorTemplateMacroCase_ui64(typeN, type, call) \
+             vtkArrayIteratorTemplateMacroCase(typeN, type, call);
 #else
 # define vtkTemplateMacroCase_ui64(typeN, type, call)
+# define vtkArrayIteratorTemplateMacroCase_ui64(typeN, type, call) 
 #endif
 
 // Legacy versions of vtkTemplateMacro:
@@ -748,16 +813,20 @@ virtual double *Get##name() \
 // Macros to create runtime deprecation warning messages in function
 // bodies.  Example usage:
 //
+//   #if !defined(VTK_LEGACY_REMOVE)
 //   void vtkMyClass::MyOldMethod()
 //   {
 //     VTK_LEGACY_BODY(vtkMyClass::MyOldMethod, "VTK 5.0");
 //   }
+//   #endif
 //
+//   #if !defined(VTK_LEGACY_REMOVE)
 //   void vtkMyClass::MyMethod()
 //   {
 //     VTK_LEGACY_REPLACED_BODY(vtkMyClass::MyMethod, "VTK 5.0",
 //                              vtkMyClass::MyOtherMethod);
 //   }
+//   #endif
 #if defined(VTK_LEGACY_REMOVE) || defined(VTK_LEGACY_SILENT)
 # define VTK_LEGACY_BODY(method, version)
 # define VTK_LEGACY_REPLACED_BODY(method, version, replace)

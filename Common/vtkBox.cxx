@@ -15,106 +15,153 @@
 #include "vtkBox.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkBoundingBox.h"
+#include <assert.h>
 
-vtkCxxRevisionMacro(vtkBox, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkBox, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBox);
 
 // Construct the box centered at the origin and each side length 1.0.
+//----------------------------------------------------------------------------
 vtkBox::vtkBox()
 {
-  this->XMin[0] = -0.5;
-  this->XMin[1] = -0.5;
-  this->XMin[2] = -0.5;
-
-  this->XMax[0] =  0.5;
-  this->XMax[1] =  0.5;
-  this->XMax[2] =  0.5;
+  this->BBox = new vtkBoundingBox;
 }
 
+//----------------------------------------------------------------------------
+// Destroy the bounding box
+vtkBox::~vtkBox()
+{
+  delete this->BBox;
+}
+
+//----------------------------------------------------------------------------
 // Set the bounds in various ways
 void vtkBox::SetBounds(double xMin, double xMax,
                        double yMin, double yMax,
                        double zMin, double zMax)
 {
-  if ( this->XMin[0] != xMin || this->XMax[0] != xMax || 
-       this->XMin[1] != yMin || this->XMax[1] != yMax || 
-       this->XMin[2] != zMin || this->XMax[2] != yMax )
+  const double *minP = this->BBox->GetMinPoint();
+  const double *maxP = this->BBox->GetMaxPoint();
+  if ( (minP[0] == xMin) &&
+       (maxP[0] == xMax) &&
+       (minP[1] == yMin) &&
+       (maxP[1] == yMax) &&
+       (minP[2] == zMin) &&
+       (maxP[2] == zMax))
     {
-    this->XMin[0] = xMin;
-    this->XMax[0] = xMax;
-    this->XMin[1] = yMin;
-    this->XMax[1] = yMax;
-    this->XMin[2] = zMin;
-    this->XMax[2] = zMax;
-    for (int i=0; i<3; i++)
-      {
-      if ( this->XMax[i] < this->XMin[i] )
-        {
-        this->XMax[i] = this->XMin[i];
-        }
-      }
-    this->Modified();
+    return;
     }
+  this->BBox->SetBounds(xMin, xMax, yMin, yMax, zMin, zMax);
+  this->Modified();
 }
 
+//----------------------------------------------------------------------------
 void vtkBox::SetBounds(double bounds[6])
 {
   this->SetBounds(bounds[0],bounds[1], bounds[2],bounds[3], 
                   bounds[4],bounds[5]);
 }
 
+//----------------------------------------------------------------------------
+void vtkBox::SetXMin(double x, double y, double z)
+{
+  vtkDebugMacro(<< this->GetClassName() << " (" << this 
+                << "): setting XMin to (" 
+                << x  << "," << y << "," << z << ")"); 
+  const double *p = this->BBox->GetMinPoint();
+  if ((p[0] == x) && (p[1] == y) && (p[2] == z))
+    {
+    return;
+    }
+  this->BBox->SetMinPoint(x, y, z);
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkBox::SetXMax(double x, double y, double z)
+{
+  vtkDebugMacro(<< this->GetClassName() << " (" << this 
+                << "): setting XMax to (" 
+                << x  << "," << y << "," << z << ")"); 
+  const double *p = this->BBox->GetMaxPoint();
+  if ((p[0] == x) && (p[1] == y) && (p[2] == z))
+    {
+    return;
+    }
+  this->BBox->SetMaxPoint(x, y, z);
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
 void vtkBox::GetBounds(double &xMin, double &xMax,
                        double &yMin, double &yMax,
                        double &zMin, double &zMax)
 {
-  xMin = this->XMin[0];
-  yMin = this->XMin[1];
-  zMin = this->XMin[2];
-  xMax = this->XMax[0];
-  yMax = this->XMax[1];
-  zMax = this->XMax[2];
+  this->BBox->GetBounds(xMin, xMax, yMin, yMax, zMin, zMax);
 }
 
+//----------------------------------------------------------------------------
 void vtkBox::GetBounds(double bounds[6])
 {
-  for (int i=0; i<3; i++)
+  this->BBox->GetBounds(bounds);
+}
+
+//----------------------------------------------------------------------------
+double* vtkBox::GetBounds()
+{
+  this->BBox->GetBounds(this->Bounds);
+  return this->Bounds;
+}
+
+//----------------------------------------------------------------------------
+void vtkBox::AddBounds(double bounds[6])
+{
+  vtkBoundingBox bbox(*(this->BBox));
+  this->BBox->AddBounds(bounds);
+  // If the unioned bounding has changed called modified
+  if ((*this->BBox) != bbox)
     {
-    bounds[2*i] = this->XMin[i];
-    bounds[2*i+1] = this->XMax[i];
+    this->Modified();
     }
 }
 
+
+//----------------------------------------------------------------------------
 // Evaluate box equation. This differs from the similar vtkPlanes
 // (with six planes) because of the "rounded" nature of the corners.
 double vtkBox::EvaluateFunction(double x[3])
 {
   double diff, dist, minDistance=(-VTK_DOUBLE_MAX), t, distance=0.0;
   int inside=1;
+  const double *minP = this->BBox->GetMinPoint();
+  const double *maxP = this->BBox->GetMaxPoint();
+
   for (int i=0; i<3; i++)
     {
-    diff = this->XMax[i] - this->XMin[i];
+    diff = this->BBox->GetLength(i);
     if ( diff != 0.0 )
       {
-      t = (x[i]-this->XMin[i]) / (this->XMax[i]-this->XMin[i]);
+      t = (x[i]-minP[i]) / diff;
       if ( t < 0.0 )
         {
         inside = 0;
-        dist = this->XMin[i] - x[i];
+        dist = minP[i] - x[i];
         }
       else if ( t > 1.0 )
         {
         inside = 0;
-        dist = x[i] - this->XMax[i];
+        dist = x[i] - maxP[i];
         }
       else
         {//want negative distance, we are inside
         if ( t <= 0.5 )
           {
-          dist = this->XMin[i] - x[i];
+          dist = minP[i] - x[i];
           }
         else
           {
-          dist = x[i] - this->XMax[i];
+          dist = x[i] - maxP[i];
           }
         if ( dist > minDistance ) //remember, it's negative
           {
@@ -124,8 +171,8 @@ double vtkBox::EvaluateFunction(double x[3])
       }
     else
       {
-      dist = fabs(x[i]-this->XMin[i]);
-      if ( x[i] != this->XMin[i] )
+      dist = fabs(x[i]-minP[i]);
+      if (dist)
         {
         inside = 0;
         }
@@ -147,28 +194,31 @@ double vtkBox::EvaluateFunction(double x[3])
     }
 }
 
+//----------------------------------------------------------------------------
 // Evaluate box gradient.
 void vtkBox::EvaluateGradient(double x[3], double n[3])
 {
   int i, loc[3], minAxis=0;
   double dist, minDist=VTK_DOUBLE_MAX, center[3];
   double inDir[3], outDir[3];
-  
+  const double *minP = this->BBox->GetMinPoint();
+  const double *maxP = this->BBox->GetMaxPoint();
+ 
   // Compute the location of the point with respect to the box.
   // Ultimately the point will lie in one of 27 separate regions around
   // or within the box. The gradient vector is computed differently in
   // each of the regions.
   inDir[0] = inDir[1] = inDir[2] = 0.0;
   outDir[0] = outDir[1] = outDir[2] = 0.0;
+  this->BBox->GetCenter(center);
   for (i=0; i<3; i++)
     {
-    center[i] = (this->XMin[i] + this->XMax[i])/2.0;
-    if ( x[i] < this->XMin[i] )
+    if ( x[i] < minP[i] )
       {
       loc[i] = 0;
       outDir[i] = -1.0;
       }
-    else if ( x[i] > this->XMax[i] )
+    else if ( x[i] > maxP[i] )
       {
       loc[i] = 2;
       outDir[i] = 1.0;
@@ -178,12 +228,12 @@ void vtkBox::EvaluateGradient(double x[3], double n[3])
       loc[i] = 1;
       if ( x[i] <= center[i] )
         {
-        dist = x[i] - this->XMin[i];
+        dist = x[i] - minP[i];
         inDir[i] = -1.0;
         }
       else
         {
-        dist = this->XMax[i] - x[i];
+        dist = maxP[i] - x[i];
         inDir[i] = 1.0;
         }
       if ( dist < minDist ) //remember, it's negative
@@ -238,6 +288,9 @@ void vtkBox::EvaluateGradient(double x[3], double n[3])
       n[0] = n[1] = n[2] = 0.0;
       n[minAxis] = inDir[minAxis];
       break;
+    default:
+      assert("check: impossible case." && 0); // reaching this line is a bug.
+      break;
     }
 }
 
@@ -245,6 +298,7 @@ void vtkBox::EvaluateGradient(double x[3], double n[3])
 #define VTK_LEFT 1
 #define VTK_MIDDLE 2
 
+//----------------------------------------------------------------------------
 // Bounding box intersection modified from Graphics Gems Vol I. The method
 // returns a non-zero value if the bounding box is hit. Origin[3] starts
 // the ray, dir[3] is the vector components of the ray in the x-y-z
@@ -352,12 +406,38 @@ char vtkBox::IntersectBox (double bounds[6], double origin[3], double dir[3],
 #undef VTK_MIDDLE
 
 
+//----------------------------------------------------------------------------
 void vtkBox::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+  const double *minP = this->BBox->GetMinPoint();
+  const double *maxP = this->BBox->GetMaxPoint();
 
-  os << indent << "XMin: (" << this->XMin[0] << ", " 
-               << this->XMin[1] << ", " << this->XMin[2] << ")\n";
-  os << indent << "XMax: (" << this->XMax[0] << ", " 
-               << this->XMax[1] << ", " << this->XMax[2] << ")\n";
+  os << indent << "XMin: (" << minP[0] << ", " 
+               << minP[1] << ", " << minP[2] << ")\n";
+  os << indent << "XMax: (" << maxP[0] << ", " 
+               << maxP[1] << ", " << maxP[2] << ")\n";
+}
+//----------------------------------------------------------------------------
+void vtkBox::GetXMin(double p[3]) 
+{
+  this->BBox->GetMinPoint(p[0], p[1], p[2]);
+}
+
+//----------------------------------------------------------------------------
+void vtkBox::GetXMin(double &x , double &y, double &z)
+{
+  this->BBox->GetMinPoint(x, y, z);
+}
+
+//----------------------------------------------------------------------------
+void vtkBox::GetXMax(double p[3]) 
+{
+  this->BBox->GetMaxPoint(p[0], p[1], p[2]);
+}
+
+//----------------------------------------------------------------------------
+void vtkBox::GetXMax(double &x , double &y, double &z)
+{
+  this->BBox->GetMaxPoint(x, y, z);
 }

@@ -21,9 +21,9 @@
 class vtkWin32OpenGLRenderWindow;
 class vtkRenderWindowInteractor;
 
-#include "vtkConfigure.h"
+#include "vtkMFCConfigure.h"
 
-#if defined(VTK_BUILD_SHARED_LIBS)
+#if !defined(VTK_MFC_STATIC)
 #  if defined(vtkMFC_EXPORTS)
 #    define VTK_MFC_EXPORT __declspec( dllexport )
 #  else
@@ -80,7 +80,7 @@ protected:
   afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
   afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
   afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
-  afx_msg void OnTimer(UINT nIDEvent);
+  afx_msg void OnTimer(UINT_PTR nIDEvent);
 
   //! the vtk window
   vtkWin32OpenGLRenderWindow* pvtkWin32OpenGLRW;

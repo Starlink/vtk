@@ -86,7 +86,7 @@
 
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkEnSightWriter);
-vtkCxxRevisionMacro(vtkEnSightWriter, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkEnSightWriter, "$Revision: 1.5 $");
 
 vtkCxxSetObjectMacro(vtkEnSightWriter, ModelMetadata, vtkModelMetadata);
 
@@ -142,7 +142,7 @@ void vtkEnSightWriter::PrintSelf(ostream& os, vtkIndent indent)
     }
   else
     {
-    cout << indent << "ModelMetadata: (none)" << "\n";
+    os << indent << "ModelMetadata: (none)" << "\n";
     }
 
   os << indent << "TimeStep: " << this->TimeStep << "\n";
@@ -475,7 +475,7 @@ void vtkEnSightWriter::WriteData()
     //write the number of nodes 
     if (this->ShouldWriteGeometry())
       {
-      this->WriteIntToFile(NodesPerPart.size(),fd);
+      this->WriteIntToFile(static_cast<int>(NodesPerPart.size()),fd);
 
 
       //write the Node ID's to the file
@@ -598,7 +598,8 @@ void vtkEnSightWriter::WriteData()
           this->WriteElementTypeToFile(elementType,fd);
 
           //number of elements
-          this->WriteIntToFile(CellsByElement[elementType].size(),fd);
+          this->WriteIntToFile(
+            static_cast<int>(CellsByElement[elementType].size()),fd);
 
           //element ID's
           for (k=0;k<CellsByElement[elementType].size();k++)

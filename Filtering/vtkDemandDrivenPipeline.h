@@ -23,6 +23,7 @@
 
 #include "vtkExecutive.h"
 
+class vtkAbstractArray;
 class vtkDataArray;
 class vtkDataSetAttributes;
 class vtkDemandDrivenPipelineInternals;
@@ -125,6 +126,8 @@ public:
 
   // Description:
   // Create (New) and return a data object of the given type.
+  // This is here for backwards compatibility. Use 
+  // vtkDataObjectTypes::NewDataObject() instead.
   static vtkDataObject* NewDataObject(const char* type);
 
 protected:
@@ -156,15 +159,15 @@ protected:
   int InputCountIsValid(int port,vtkInformationVector **);
   int InputTypeIsValid(vtkInformationVector **);
   int InputTypeIsValid(int port,vtkInformationVector **);
-  int InputTypeIsValid(int port, int index,vtkInformationVector **);
+  virtual int InputTypeIsValid(int port, int index,vtkInformationVector **);
   int InputFieldsAreValid(vtkInformationVector **);
   int InputFieldsAreValid(int port,vtkInformationVector **);
-  int InputFieldsAreValid(int port, int index,vtkInformationVector **);
+  virtual int InputFieldsAreValid(int port, int index,vtkInformationVector **);
 
   // Field existence checkers.
   int DataSetAttributeExists(vtkDataSetAttributes* dsa, vtkInformation* field);
   int FieldArrayExists(vtkFieldData* data, vtkInformation* field);
-  int ArrayIsValid(vtkDataArray* array, vtkInformation* field);
+  int ArrayIsValid(vtkAbstractArray* array, vtkInformation* field);
 
   // Input port information checkers.
   int InputIsOptional(int port);

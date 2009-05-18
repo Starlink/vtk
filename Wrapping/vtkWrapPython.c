@@ -31,7 +31,10 @@ static int class_has_new = 0;
 void use_hints(FILE *fp)
 {
   int  i;
-  
+
+  fprintf(fp,"    if(temp%i)\n",MAX_ARGS);
+  fprintf(fp,"      {\n");
+
   switch (currentFunction->ReturnType % 0x1000)
     {
     case 0x301:
@@ -62,6 +65,16 @@ void use_hints(FILE *fp)
       for (i = 0; i < currentFunction->HintSize; i++) 
         {
         fprintf(fp,",temp%i[%d]",MAX_ARGS,i);
+        }
+      fprintf(fp,");\n");
+      break;
+    case 0x30E:
+      fprintf(fp,"    return Py_BuildValue((char*)\"");
+      for (i = 0; i < currentFunction->HintSize; i++) fprintf(fp,"b");
+      fprintf(fp,"\"");
+      for (i = 0; i < currentFunction->HintSize; i++)
+        {
+        fprintf(fp,",(int)temp%i[%d]",MAX_ARGS,i);
         }
       fprintf(fp,");\n");
       break;
@@ -101,6 +114,13 @@ void use_hints(FILE *fp)
     case 0x31A: case 0x31B: case 0x31C: case 0x315: case 0x316:
       break;
     }
+
+  fprintf(fp,"      }\n");
+  fprintf(fp,"    else\n");
+  fprintf(fp,"      {\n");
+  fprintf(fp,"      return Py_BuildValue((char*)\"\");\n");
+  fprintf(fp,"      }\n");
+
   return;
 }
 
@@ -149,6 +169,7 @@ void output_temp(FILE *fp, int i, int aType, char *Id, int aCount)
     case 0xB:     fprintf(fp,"long long "); break;
     case 0xC:     fprintf(fp,"__int64 "); break;
     case 0xD:     fprintf(fp,"signed char "); break;
+    case 0xE:     fprintf(fp,"bool "); break;
     case 0x8: return;
     }
   
@@ -220,7 +241,7 @@ void do_return(FILE *fp)
     /* handle functions returning vectors */
     /* this is done by looking them up in a hint file */
     case 0x301: case 0x307: case 0x30A: case 0x30B: case 0x30C: case 0x30D:
-    case 0x304: case 0x305: case 0x306:
+    case 0x304: case 0x305: case 0x306: case 0x30E:
       use_hints(fp);
       break;
     case 0x302:
@@ -251,7 +272,20 @@ void do_return(FILE *fp)
       fprintf(fp,"    return PyInt_FromLong(temp%i);\n", MAX_ARGS); 
       break;
       }
-    case 0x16:   
+    case 0xE:
+      {
+      /* PyBool_FromLong was introduced in Python 2.3.
+         Use PyInt_FromLong as a bool substitute in
+         earlier versions of python...
+      */
+      fprintf(fp,"#if PY_VERSION_HEX >= 0x02030000\n");
+      fprintf(fp,"    return PyBool_FromLong(temp%i);\n", MAX_ARGS);
+      fprintf(fp,"#else\n");
+      fprintf(fp,"    return PyInt_FromLong((long)temp%i);\n", MAX_ARGS);
+      fprintf(fp,"#endif\n");
+      break;
+      }
+    case 0x16:
       {
 #if (PY_VERSION_HEX >= 0x02020000)
       fprintf(fp,"    return PyLong_FromUnsignedLong(temp%i);\n",
@@ -461,6 +495,7 @@ char *get_format_string()
       case 0xD:   result[currPos] = 'i'; currPos++; break;
       case 0x3:   result[currPos] = 'c'; currPos++; break;
       case 0x13:   result[currPos] = 'b'; currPos++; break;
+      case 0xE:   result[currPos] = 'b'; currPos++; break;
       }
     }
 
@@ -577,6 +612,7 @@ void get_python_signature()
       case 0x6:   add_to_sig(result,"int",&currPos); break;
       case 0x3:   add_to_sig(result,"char",&currPos); break;
       case 0x13:  add_to_sig(result,"int",&currPos); break;
+      case 0xE:   add_to_sig(result,"bool",&currPos); break;
       }
     }
 
@@ -664,6 +700,7 @@ void get_python_signature()
       case 0x5:
       case 0x6: add_to_sig(result,"int",&currPos); break;
       case 0x3: add_to_sig(result,"char",&currPos); break;
+      case 0xE: add_to_sig(result,"bool",&currPos); break;
       }
     }
   
@@ -748,6 +785,7 @@ static const char *quote_string(const char *comment, int maxlen)
 void outputFunction2(FILE *fp, FileInfo *data)
 {
   int i, j, k, is_static, is_vtkobject, fnum, occ, backnum, goto_used;
+  int all_legacy;
   FunctionInfo *theFunc;
   FunctionInfo *backFunc;
 
@@ -798,8 +836,9 @@ void outputFunction2(FILE *fp, FileInfo *data)
       {
       fprintf(fp,"\n");
 
-      /* check whether all signatures are static methods */
+      /* check whether all signatures are static methods or legacy */
       is_static = 1;
+      all_legacy = 1;
       for (occ = fnum; occ < numberOfWrappedFunctions; occ++)
         {
         /* is it the same name */
@@ -811,10 +850,16 @@ void outputFunction2(FILE *fp, FileInfo *data)
             {
             is_static = 0;
             }
+
+          /* check for legacy */
+          if (!wrappedFunctions[occ]->IsLegacy)
+            {
+            all_legacy = 0;
+            }
           }
         }
-        
-      if(currentFunction->IsLegacy)
+
+      if(all_legacy)
         {
         fprintf(fp,"#if !defined(VTK_LEGACY_REMOVE)\n");
         }
@@ -839,6 +884,25 @@ void outputFunction2(FILE *fp, FileInfo *data)
             is_static = 1;
             }
 
+          currentFunction = wrappedFunctions[occ];
+
+          if(currentFunction->IsLegacy && !all_legacy)
+            {
+            fprintf(fp,"#if defined(VTK_LEGACY_REMOVE)\n");
+
+            /* avoid warnings if all signatures are legacy and removed */
+            if(!is_static)
+              {
+              fprintf(fp,
+                      "  (void)self;"
+                      " /* avoid warning if all signatures removed */\n");
+              }
+            fprintf(fp,
+                    "  (void)args;"
+                    " /* avoid warning if all signatures removed */\n");
+            fprintf(fp,"#else\n");
+            }
+
           fprintf(fp,"  /* handle an occurrence */\n  {\n");
           /* declare the variables */
           if (!is_static)
@@ -853,7 +917,6 @@ void outputFunction2(FILE *fp, FileInfo *data)
               }
             }
 
-          currentFunction = wrappedFunctions[occ];
           /* process the args */
           for (i = 0; i < currentFunction->NumberOfArguments; i++)
             {
@@ -875,7 +938,7 @@ void outputFunction2(FILE *fp, FileInfo *data)
             }
           else
             {
-            fprintf(fp,"  if ((op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"%s\"",
+            fprintf(fp,"  op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"%s\"",
                     data->ClassName,get_format_string());
             }
           for (i = 0; i < currentFunction->NumberOfArguments; i++)
@@ -904,7 +967,15 @@ void outputFunction2(FILE *fp, FileInfo *data)
                 }
               }
             }
-          fprintf(fp,")))\n    {\n");
+          if (is_static || !is_vtkobject)
+            {
+            fprintf(fp,")))\n    {\n");
+            }
+          else
+            {
+            fprintf(fp,");\n");
+            fprintf(fp,"  if (op)\n    {\n");
+            }
 
           /* lookup and required objects */
           for (i = 0; i < currentFunction->NumberOfArguments; i++)
@@ -1048,10 +1119,14 @@ void outputFunction2(FILE *fp, FileInfo *data)
             {
             fprintf(fp," break%d:\n",occ);
             }
+          if(currentFunction->IsLegacy && !all_legacy)
+            {
+            fprintf(fp,"#endif\n");
+            }
           }
         }
       fprintf(fp,"  return NULL;\n}\n");
-      if(currentFunction->IsLegacy)
+      if(all_legacy)
         {
         fprintf(fp,"#endif\n");
         }
@@ -1064,7 +1139,7 @@ void outputFunction2(FILE *fp, FileInfo *data)
         if (wrappedFunctions[occ]->Name && 
             !strcmp(theFunc->Name,wrappedFunctions[occ]->Name))
           {
-          int siglen = (int)strlen(wrappedFunctions[fnum]->Signature);
+          size_t siglen = strlen(wrappedFunctions[fnum]->Signature);
           /* memory leak here but ... */
           wrappedFunctions[occ]->Name = NULL;
           wrappedFunctions[fnum]->Signature = (char *)
@@ -1181,7 +1256,7 @@ void outputFunction(FILE *fp, FileInfo *data)
   /* if we need a return type hint make sure we have one */
   switch (currentFunction->ReturnType % 0x1000)
     {
-    case 0x301: case 0x307: case 0x30A: case 0x30B: case 0x30C: case 0x30D:
+    case 0x301: case 0x307: case 0x30A: case 0x30B: case 0x30C: case 0x30D: case 0x30E:
     case 0x304: case 0x305: case 0x306:
       args_ok = currentFunction->HaveHint;
       break;
@@ -1213,7 +1288,7 @@ void outputFunction(FILE *fp, FileInfo *data)
 static void create_class_doc(FILE *fp, FileInfo *data)
 {
   const char *text;
-  int i, n;
+  size_t i, n;
   char temp[500];
 
   if (data->NameComment) 
@@ -1239,7 +1314,7 @@ static void create_class_doc(FILE *fp, FileInfo *data)
 
   if (data->Description)
     {
-    n = (int)((strlen(data->Description) + 400-1)/400);
+    n = (strlen(data->Description) + 400-1)/400;
     for (i = 0; i < n; i++)
       {
       strncpy(temp, &data->Description[400*i], 400);
@@ -1300,12 +1375,10 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
   fprintf(fp,"#include \"vtkPython.h\"\n");
   fprintf(fp,"#undef _XOPEN_SOURCE /* Conflicts with standards.h.  */\n");
   fprintf(fp,"#undef _THREAD_SAFE /* Conflicts with pthread.h.  */\n");
-  fprintf(fp,"#include \"vtkPythonUtil.h\"\n");
   #endif
+  fprintf(fp,"#include \"vtkPythonUtil.h\"\n");
+  fprintf(fp,"#include <vtksys/ios/sstream>\n");
   fprintf(fp,"#include \"%s.h\"\n",data->ClassName);
-  #if defined(__APPLE__)
-  fprintf(fp,"#include \"vtkPythonUtil.h\"\n");
-  #endif
 
   fprintf(fp,"#if defined(WIN32)\n");
   fprintf(fp,"extern \"C\" { __declspec( dllexport ) PyObject *PyVTKClass_%sNew(char *); }\n",
@@ -1330,7 +1403,8 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"  PyObject *temp1;\n");
     fprintf(fp,"  float temp2;\n");
     fprintf(fp,"  unsigned long     temp20 = 0;\n");
-    fprintf(fp,"  if ((op = (vtkObject *)PyArg_VTKParseTuple(self, args, (char*)\"zO\", &temp0, &temp1)))\n");
+    fprintf(fp,"  op = (vtkObject *)PyArg_VTKParseTuple(self, args, (char*)\"zO\", &temp0, &temp1);\n");
+    fprintf(fp,"  if (op)\n");
     fprintf(fp,"    {\n");
     fprintf(fp,"    if (!PyCallable_Check(temp1) && temp1 != Py_None)\n");
     fprintf(fp,"      {\n");
@@ -1345,7 +1419,8 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"    return PyInt_FromLong((long)temp20);\n");
     fprintf(fp,"    }\n");
     fprintf(fp,"  PyErr_Clear();\n");
-    fprintf(fp,"  if ((op = (vtkObject *)PyArg_VTKParseTuple(self, args, (char*)\"zOf\", &temp0, &temp1, &temp2)))\n");
+    fprintf(fp,"  op = (vtkObject *)PyArg_VTKParseTuple(self, args, (char*)\"zOf\", &temp0, &temp1, &temp2);\n");
+    fprintf(fp,"  if (op)\n");
     fprintf(fp,"    {\n");
     fprintf(fp,"    if (!PyCallable_Check(temp1) && temp1 != Py_None)\n");
     fprintf(fp,"      {\n");
@@ -1374,7 +1449,8 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
 
     /* handle unbound method call if 'self' is a PyVTKClass */
     fprintf(fp,"  char *typecast;\n\n");
-    fprintf(fp,"  if ((op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"s\", &typecast)))\n",data->ClassName);
+    fprintf(fp,"  op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"s\", &typecast);\n",data->ClassName);
+    fprintf(fp,"  if (op)\n");
     fprintf(fp,"    {\n    char temp20[256];\n");
     fprintf(fp,"    sprintf(temp20,\"Addr=%%p\",op);\n");
     fprintf(fp,"    return PyString_FromString(temp20);\n");
@@ -1385,13 +1461,13 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"PyObject *PyvtkObjectBase_PrintRevisions(PyObject *self, PyObject *args)\n");
     fprintf(fp,"{\n");
     fprintf(fp,"  %s *op;\n",data->ClassName);
-    fprintf(fp,"  if ((op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"\")))\n",data->ClassName);
+    fprintf(fp,"  op = (%s *)PyArg_VTKParseTuple(self, args, (char*)\"\");\n",data->ClassName);
+    fprintf(fp,"  if (op)\n");
     fprintf(fp,"    {\n");
-    fprintf(fp,"    ostrstream vtkmsg_with_warning_C4701;\n");
+    fprintf(fp,"    vtksys_ios::ostringstream vtkmsg_with_warning_C4701;\n");
     fprintf(fp,"    op->PrintRevisions(vtkmsg_with_warning_C4701);\n");
     fprintf(fp,"    vtkmsg_with_warning_C4701.put('\\0');\n");
-    fprintf(fp,"    PyObject *result = PyString_FromString(vtkmsg_with_warning_C4701.str());\n");
-    fprintf(fp,"    delete vtkmsg_with_warning_C4701.str();\n");
+    fprintf(fp,"    PyObject *result = PyString_FromString(vtkmsg_with_warning_C4701.str().c_str());\n");
     fprintf(fp,"    return result;\n");
     fprintf(fp,"    }\n");
     fprintf(fp,"  return NULL;\n}\n\n");

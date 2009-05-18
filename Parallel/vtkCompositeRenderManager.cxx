@@ -23,7 +23,7 @@
 #include "vtkTimerLog.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkCompositeRenderManager, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkCompositeRenderManager, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkCompositeRenderManager);
 
 vtkCxxSetObjectMacro(vtkCompositeRenderManager, Compositer, vtkCompositer);
@@ -66,11 +66,27 @@ void vtkCompositeRenderManager::PrintSelf(ostream &os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkCompositeRenderManager::PreRenderProcessing()
 {
+  // Turn swap buffers off before the render so the end render method has a
+  // chance to add to the back buffer.
+  if (this->UseBackBuffer)
+    {
+    this->RenderWindow->SwapBuffersOff();
+    }
+
+  this->SavedMultiSamplesSetting = this->RenderWindow->GetMultiSamples();
+  this->RenderWindow->SetMultiSamples(0);
 }
 
 //----------------------------------------------------------------------------
 void vtkCompositeRenderManager::PostRenderProcessing()
 {
+  this->RenderWindow->SetMultiSamples(this->SavedMultiSamplesSetting);
+
+  if (!this->UseCompositing || this->CheckForAbortComposite())
+    {
+    return;
+    }
+
   if (this->Controller->GetNumberOfProcesses() > 1)
     {
     // Read in data.
@@ -99,6 +115,13 @@ void vtkCompositeRenderManager::PostRenderProcessing()
     }
 
   this->WriteFullImage();
+
+  // Swap buffers here
+  if (this->UseBackBuffer)
+    {
+    this->RenderWindow->SwapBuffersOn();
+    }
+  this->RenderWindow->Frame();
 }
 
 

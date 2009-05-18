@@ -18,6 +18,8 @@
 // All satellite processes send the result to the first process which
 // collects and renders them.
 
+#include <mpi.h>
+
 #include "vtkActor.h"
 #include "vtkAppendPolyData.h"
 #include "vtkCamera.h"
@@ -42,8 +44,6 @@
 #include "vtkInformation.h"
 
 #include "vtkDebugLeaks.h"
-
-#include <mpi.h>
 
 static const float ISO_START=4250.0;
 static const float ISO_STEP=-1250.0;
@@ -132,15 +132,15 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
   if (myid != 0)
     {
     // If I am not the root process
-    ParallelIsoRMIArgs_tmp args;
-    args.ContourFilter = iso;
-    args.Controller = controller;
-    args.Elevation = elev;
+    ParallelIsoRMIArgs_tmp args2;
+    args2.ContourFilter = iso;
+    args2.Controller = controller;
+    args2.Elevation = elev;
 
     // Last, set up a RMI call back to change the iso surface value.
     // This is done so that the root process can let this process
     // know that it wants the contour value to change.
-    controller->AddRMI(SetIsoValueRMI, (void *)&args, ISO_VALUE_RMI_TAG);
+    controller->AddRMI(SetIsoValueRMI, (void *)&args2, ISO_VALUE_RMI_TAG);
     controller->ProcessRMIs();
     }
   else

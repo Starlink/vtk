@@ -59,6 +59,10 @@ public:
   static vtkExodusReader *New();
   vtkTypeRevisionMacro(vtkExodusReader,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+  
+  // Description:
+  // Determine if the file can be readed with this reader.
+  int CanReadFile(const char* fname);
 
   // Description:
   // Specify file name of the Exodus file.
@@ -67,7 +71,7 @@ public:
 
   // Description:
   // Specify file name of the xml file.
-  void SetXMLFileName(const char *filename); 
+  vtkSetStringMacro(XMLFileName);
   vtkGetStringMacro(XMLFileName);
 
   // Description:
@@ -103,6 +107,7 @@ public:
   };
 //ETX
   static const char *GetGlobalElementIdArrayName() { return "GlobalElementId"; }
+  static const char *GetPedigreeElementIdArrayName() { return "PedigreeElementId"; }
   static int GetGlobalElementID( vtkDataSet *data, int localID );
   static int GetGlobalElementID ( vtkDataSet *data, int localID, 
       int searchType );
@@ -116,6 +121,7 @@ public:
   vtkGetMacro(GenerateGlobalNodeIdArray, int);
   vtkBooleanMacro(GenerateGlobalNodeIdArray, int);
   static const char *GetGlobalNodeIdArrayName() { return "GlobalNodeId"; }  
+  static const char *GetPedigreeNodeIdArrayName() { return "PedigreeNodeId"; }  
   static int GetGlobalNodeID( vtkDataSet *data, int localID );
   static int GetGlobalNodeID( vtkDataSet *data, int localID, 
       int searchType );
@@ -146,6 +152,7 @@ public:
   int GetNumberOfNodes() { return this->NumberOfUsedNodes; }
   int GetNumberOfElementsInBlock(int block_idx);
   int GetBlockId(int block_idx);
+  virtual int GetTotalNumberOfNodes() { return this->NumberOfNodesInFile; }
   
   
   // Descriptions:
@@ -170,6 +177,8 @@ public:
   void SetCellArrayStatus(const char*, int flag);
   int GetCellArrayStatus(int index);
   int GetCellArrayStatus(const char*);
+  virtual int GetTotalNumberOfElements() 
+      { return this->NumberOfElementsInFile; }
 
   // Descriptions:
   // By default all blocks are loaded. These methods allow the user to select
@@ -259,6 +268,17 @@ public:
   void SetHierarchyArrayStatus(const char*, int flag);
   int GetHierarchyArrayStatus(int index);
   int GetHierarchyArrayStatus(const char*);
+
+  // Description:
+  // Some simulations overload the Exodus time steps to represent mode shapes.
+  // In this case, it does not make sense to iterate over the "time steps",
+  // because they are not meant to be played in order.  Rather, each represents
+  // the vibration at a different "mode."  Setting this to 1 changes the
+  // semantics of the reader to not report the time steps to downstream filters.
+  // By default, this is off, which is the case for most Exodus files.
+  vtkGetMacro(HasModeShapes, int);
+  vtkSetMacro(HasModeShapes, int);
+  vtkBooleanMacro(HasModeShapes, int);
 
   vtkGetMacro(DisplayType,int);
   virtual void SetDisplayType(int type);
@@ -415,7 +435,6 @@ protected:
   static int GetGlobalID( const char *arrayName, vtkDataSet *data, int localID, 
       int searchType );
   
-  
   // This method is a helper for determining the
   // number of additional cell scalar field
   // values needed to 'pad' for node and side sets
@@ -430,6 +449,7 @@ protected:
   char *XMLFileName;
   int TimeStep;
   int ActualTimeStep;
+  double TimeValue;
   int GenerateBlockIdCellArray;
   int GenerateGlobalElementIdArray;
   int GenerateGlobalNodeIdArray;
@@ -514,16 +534,24 @@ protected:
 
   // Time query function. Called by ExecuteInformation().
   // Fills the TimestepValues array.
-  void GetAllTimes(vtkInformationVector *); 
+  void GetAllTimes(vtkInformationVector *);
+
+  int HasModeShapes;
 
   vtkExodusModel *ExodusModel;
   int PackExodusModelOntoOutput;
   int ExodusModelMetadata;
 
+  double *TimeSteps;
+
   int RequestInformation(
     vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int RequestData(
     vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+
+  // Used to determine current progress.
+  double ProgressOffset;
+  double ProgressScale;
 
 private:
   vtkExodusReader(const vtkExodusReader&); // Not implemented

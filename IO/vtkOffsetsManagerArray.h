@@ -16,7 +16,7 @@
 // .SECTION Description
 // This class is deisgned to work within vtkXMLWriter. It store a position
 // in a file (unsigned long) and associate a offset in the file. This is
-// usefull when writting TimeStep XML file when you want to forward the 
+// usefull when writing TimeStep XML file when you want to forward the 
 // same offset from the AppendData section on every entry in let say
 // <Points> definition
 // Example:
@@ -49,10 +49,16 @@
 class OffsetsManager
 {
 public:
+  // A type used for data sizes and offsets for stream i/o.  Using
+  // vtkIdType should satisfy most users.  This could be streamoff if
+  // it is deemed portable.  It could also be split into OffsetType
+  // (streamoff) and PositionType (streampos).
+  typedef vtkIdType OffsetType;
+
   // Construct with default (unsigned long)-1  MTime
   OffsetsManager()
     {
-    this->LastMTime = (unsigned long)-1; //almost invalid state
+      this->LastMTime = static_cast<unsigned long>(-1); //almost invalid state
     }
   ~OffsetsManager()
     {
@@ -61,14 +67,26 @@ public:
     {
     assert( numTimeStep > 0);
     this->Positions.resize(numTimeStep);
+    this->RangeMinPositions.resize(numTimeStep);
+    this->RangeMaxPositions.resize(numTimeStep);
     this->OffsetValues.resize(numTimeStep);
     }
-  unsigned long &GetPosition(unsigned int t)
+  OffsetType &GetPosition(unsigned int t)
     {
     assert( t < this->Positions.size());
     return this->Positions[t];
     }
-  unsigned long &GetOffsetValue(unsigned int t)
+  OffsetType &GetRangeMinPosition(unsigned int t)
+    {
+    assert( t < this->RangeMinPositions.size());
+    return this->RangeMinPositions[t];
+    }
+  OffsetType &GetRangeMaxPosition(unsigned int t)
+    {
+    assert( t < this->RangeMaxPositions.size());
+    return this->RangeMaxPositions[t];
+    }
+  OffsetType &GetOffsetValue(unsigned int t)
     {
     assert( t < this->OffsetValues.size());
     return this->OffsetValues[t];
@@ -79,19 +97,28 @@ public:
     }
 private:
   unsigned long LastMTime; // Previously written dataarray mtime 
-  vtkstd::vector<unsigned long> Positions; // Position in the stream to write the offset
-  vtkstd::vector<unsigned long> OffsetValues;    // Value of offset
+  // at some point these vectors could become a vector of map <string,ul>
+  // where the string is the name of the offset, but that would be pretty fat
+  // and slow, but if another couple offsets are added then we should
+  // consider doing it
+  // Position in the stream to write the offset
+  vtkstd::vector<OffsetType> Positions; 
+  vtkstd::vector<OffsetType> RangeMinPositions; // Where is this
+  vtkstd::vector<OffsetType> RangeMaxPositions; // Whee is this
+
+  vtkstd::vector<OffsetType> OffsetValues;    // Value of offset
 };
 
 //----------------------------------------------------------------------------
 class OffsetsManagerGroup
 {
 public:
-  // This is kind of a hack since we need to consider both the case of Points with
-  // only one array over time and PointData with possibly multiple array over time
-  // therefore we need to use a OffsetsManagerGroup for representing offset from
-  // Points but OffsetsManagerArray for PointData. In both case the toplevel structure
-  // is a container of Pieces...
+  // This is kind of a hack since we need to consider both the case of Points
+  // with only one array over time and PointData with possibly multiple array
+  // over time therefore we need to use a OffsetsManagerGroup for
+  // representing offset from Points but OffsetsManagerArray for
+  // PointData. In both case the toplevel structure is a container of
+  // Pieces...
   OffsetsManager &GetPiece(unsigned int index)
     {
     assert( index < this->Internals.size());
@@ -101,16 +128,16 @@ public:
   // GetElement should be used when manipulating a OffsetsManagerArray
   OffsetsManager &GetElement(unsigned int index)
     {
-    // commenting the following out, this is an heisenbug which only appears on gcc
-    // when exporting GLIBCPP_NEW=1. If you try to print the value or run through gdb
-    // it desepears
-    //assert( index < this->Internals.size());
+    // commenting the following out, this is an heisenbug which only appears
+    // on gcc when exporting GLIBCPP_NEW=1. If you try to print the value or
+    // run through gdb it desepears //assert( index <
+    // this->Internals.size());
     OffsetsManager &e = this->Internals[index];
     return e;
     }
   unsigned int GetNumberOfElements()
     {
-    return this->Internals.size();
+    return static_cast<unsigned int>(this->Internals.size());
     }
   void Allocate(int numElements)
     {

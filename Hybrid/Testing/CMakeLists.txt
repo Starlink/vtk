@@ -1,6 +1,6 @@
 # Commented out to avoid problems with Borland dashboards
 # until new tests are added to Cxx/CMakeLists.txt.
-#SUBDIRS(Cxx)
+SUBDIRS(Cxx)
 
 IF (VTK_WRAP_TCL)
   SUBDIRS(Tcl)
@@ -16,6 +16,7 @@ IF(PYTHON_EXECUTABLE)
     "${VTK_SOURCE_DIR}/Hybrid"
     VTK_HYBRID_EXPORT
     vtk3DS.h
+    vtkExodusIIReaderPrivate.h
     vtkVRML.h
     )
 ENDIF(PYTHON_EXECUTABLE)

@@ -1,31 +1,56 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCarbonRenderWindow.h,v $
+Program:   Visualization Toolkit
+Module:    $RCSfile: vtkCarbonRenderWindow.h,v $
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 // .NAME vtkCarbonRenderWindow - Carbon OpenGL rendering window
 //
 // .SECTION Description
 // vtkCarbonRenderWindow is a concrete implementation of the abstract
-// class vtkOpenGLRenderWindow. vtkCarbonRenderWindow interfaces to the
-// OpenGL graphics library using the Carbon API on Mac OSX.
+// class vtkOpenGLRenderWindow. It is only available on Mac OS X 10.3
+// and later.
+// To use this class, build VTK with VTK_USE_CARBON turned ON.
+// This class can be used only by 32 bit processes, as Carbon is
+// unavailable in 64 bit. If you need 64 bit support, use
+// vtkCocoaRenderWindow.
+// vtkCarbonRenderWindow interfaces to the OpenGL graphics library using
+// the Carbon AGL APIs.
+//
+// .SECTION See Also
+// vtkOpenGLRenderWindow vtkCocoaRenderWindow
 
 #ifndef __vtkCarbonRenderWindow_h
 #define __vtkCarbonRenderWindow_h
 
+#if defined(__LP64__) && __LP64__
+  #error vtkCarbonRenderWindow does not work in 64 bit
+#endif
+
 #include "vtkOpenGLRenderWindow.h"
 
-#include <Carbon/Carbon.h> // Carbon and MAC specific
-#include <AGL/agl.h> // Carbon and MAC specific
+// The 10.3.9 SDK (and older probably) have a bug in fp.h (in the Carbon
+// umbrella framework) which this works around. Without this, there
+// would be a compile error from the Carbon header if Python wrappings
+// were enabled.
+#include <AvailabilityMacros.h> // Needed for MAC_OS_X_VERSION_MAX_ALLOWED
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1040
+  #define scalb scalbn
+#endif
+
+#include <Carbon/Carbon.h> // Carbon and Mac specific
+#include <AGL/agl.h> // Carbon and Mac specific
+
+class vtkCarbonRenderWindowInternal;
+
 
 class VTK_RENDERING_EXPORT vtkCarbonRenderWindow : public vtkOpenGLRenderWindow
 {
@@ -64,6 +89,10 @@ public:
   virtual void Finalize();
 
   // Description:
+  // Create a rendering area in memory.
+  void SetOffScreenRendering(int);
+
+  // Description:
   // Change the window to fill the entire screen.
   virtual void SetFullScreen(int);
 
@@ -76,12 +105,12 @@ public:
   virtual void PrefFullScreen();
 
   // Description:
-  // Set the size of the window.
+  // Set the size of the window in pixels.
   virtual void SetSize(int a[2]);
   virtual void SetSize(int,int);
 
   // Description:
-  // Get the current size of the window.
+  // Get the current size of the window in pixels.
   virtual int *GetSize();
 
   // Description:
@@ -90,7 +119,7 @@ public:
   virtual void SetPosition(int,int);
 
   // Description:
-  // Return the scrren size.
+  // Get the current size of the screen in pixels.
   virtual int *GetScreenSize();
 
   // Description:
@@ -107,17 +136,17 @@ public:
   void SetWindowInfo(char *);
 
   void SetNextWindowInfo(char *)
-     {
+    {
       vtkWarningMacro("SetNextWindowInfo not implemented (WindowRemap not implemented).");
-     }
+    }
 
   //BTX
-  virtual void *GetGenericDisplayId() {return NULL;};
-  virtual void *GetGenericWindowId()  {return (void *)this->WindowId;};
-  virtual void *GetGenericParentId()  {return (void *)this->ParentId;};
-  virtual AGLContext GetContextId()   {return this->ContextId;};
-  virtual void *GetGenericContext()   {return (void *)this->ContextId;};
-  virtual void SetDisplayId(void *) {};
+  virtual void *GetGenericDisplayId() {return NULL;}
+  virtual void *GetGenericWindowId()  {return (void *)this->WindowId;}
+  virtual void *GetGenericParentId()  {return (void *)this->ParentId;}
+  virtual AGLContext GetContextId();
+  virtual void *GetGenericContext()  {return (void*)this->GetContextId();}
+  virtual void SetDisplayId(void *) {}
 
   virtual void* GetGenericDrawable()
     {
@@ -137,7 +166,7 @@ public:
   void  SetWindowId(void *foo) {this->SetWindowId((HIViewRef)foo);};
   void SetNextWindowId(void*)
     {
-       vtkWarningMacro("SetNextWindowId not implemented (WindowRemap not implemented).");
+      vtkWarningMacro("SetNextWindowId not implemented (WindowRemap not implemented).");
     }
 
   // Description:
@@ -183,16 +212,6 @@ public:
   virtual  int GetEventPending();
 
   // Description:
-  // Initialize OpenGL for this window.
-  virtual void SetupPalette(void *hDC);
-  virtual void SetupPixelFormat(void *hDC, void *dwFlags, int debug, 
-                                int bpp=16, int zbpp=16);
-  
-  // Description:
-  // Clean up device contexts, rendering contexts, etc.
-  void Clean();
-
-  // Description:
   // Get the size of the depth buffer.
   int GetDepthBufferSize();
 
@@ -213,16 +232,11 @@ protected:
   vtkCarbonRenderWindow();
   ~vtkCarbonRenderWindow();
 
+  vtkCarbonRenderWindowInternal* Internal;
+
   int ApplicationInitialized; // Toolboxen initialized?
-  Boolean fAcceleratedMust;   // input: must renderer be accelerated?
-  Boolean draggable;          // input: is the window draggable?
   GLint aglAttributes[64];    // input: pixel format attributes always required
                               //   (reset to what was actually allocated)
-  SInt32 VRAM;                // input: minimum VRAM; output: actual
-                              //   (if successful otherwise input)
-  SInt32 textureRAM;          // input: amount of texture RAM required on card;
-                              // output: same (used in allocation)
-  AGLPixelFormat fmt;         // input: none; output pixel format...
   AGLContext ContextId;
   HIViewRef WindowId;
   HIViewRef ParentId;
@@ -234,13 +248,21 @@ protected:
   int ForceMakeCurrent;
 
 
- // data and handlers to keep the GL view coincident with the HIView
+  // data and handlers to keep the GL view coincident with the HIView
   EventHandlerUPP RegionEventHandlerUPP;
   EventHandlerRef RegionEventHandler;
-  static OSStatus RegionEventProcessor(EventHandlerCallRef er, EventRef event, void*);
+  static OSStatus RegionEventProcessor(EventHandlerCallRef er,
+                                       EventRef event,
+                                       void*);
 
-  void CreateAWindow(int x, int y, int width, int height);
   void InitializeApplication();
+
+  void CreateAWindow();
+  void DestroyWindow();
+  
+  void CreateOffScreenWindow(int x, int y);
+  void DestroyOffScreenWindow();
+  void ResizeOffScreenWindow(int x, int y);
 
 private:
   vtkCarbonRenderWindow(const vtkCarbonRenderWindow&);  // Not implemented.

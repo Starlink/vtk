@@ -19,18 +19,17 @@
 
 #include "vtkGenericEnSightReader.h"
 
+class vtkDataSet;
 class vtkDataSetCollection;
-class vtkIdList;
 class vtkEnSightReaderCellIdsType;
+class vtkIdList;
+class vtkMultiBlockDataSet;
 
 class VTK_IO_EXPORT vtkEnSightReader : public vtkGenericEnSightReader
 {
 public:
   vtkTypeRevisionMacro(vtkEnSightReader, vtkGenericEnSightReader);
   void PrintSelf(ostream& os, vtkIndent indent);
-  
-  void Update();
-  void ExecuteInformation();
   
   //BTX
   enum ElementTypesList
@@ -43,14 +42,16 @@ public:
     TRIA6     = 5,
     QUAD4     = 6,
     QUAD8     = 7,
-    TETRA4    = 8,
-    TETRA10   = 9,
-    PYRAMID5  = 10,
-    PYRAMID13 = 11,
-    HEXA8     = 12,
-    HEXA20    = 13,
-    PENTA6    = 14,
-    PENTA15   = 15
+    NFACED    = 8,
+    TETRA4    = 9,
+    TETRA10   = 10,
+    PYRAMID5  = 11,
+    PYRAMID13 = 12,
+    HEXA8     = 13,
+    HEXA20    = 14,
+    PENTA6    = 15,
+    PENTA15   = 16,
+    NUMBER_OF_ELEMENT_TYPES  = 17
   };
 
   enum VariableTypesList
@@ -78,25 +79,48 @@ public:
   //ETX
 
   // Description:
-  // This method sets/replaces one of the outputs of the
-  // reader without changing it's modification time.
-  // Make sure that you pass the right type of data object.
-  void ReplaceNthOutput(int n, vtkDataObject* output);
-  
+  // Get the Measured file name. Made public to allow access from 
+  // apps requiring detailed info about the Data contents
+  vtkGetStringMacro(MeasuredFileName);
+
   // Description:
-  // OutputsAreValid indicates whether the outputs from this reader have
-  // changed in a consistent way.  If during re-reading (because of a change in
-  // time step or data set) the number of outputs becomes less than the current
-  // number or the type of a particular output changes (e.g., from
-  // vtkUnstructuredGrid to vtkImageData), then this flag is set to 0.
-  // Otherwise it is set to 1.
-  vtkGetMacro(OutputsAreValid, int);
-  
+  // Get the Match file name. Made public to allow access from 
+  // apps requiring detailed info about the Data contents
+  vtkGetStringMacro(MatchFileName);
+
+  // Description:
+  // The MeasuredGeometryFile should list particle coordinates
+  // from 0->N-1.
+  // If a file is loaded where point Ids are listed from 1-N
+  // the Id to points reference will be wrong and the data
+  // will be generated incorrectly.
+  // Setting ParticleCoordinatesByIndex to true will force
+  // all Id's to increment from 0->N-1 (relative to their order
+  // in the file) and regardless of the actual Id of of the point.
+  // Warning, if the Points are listed in non sequential order
+  // then setting this flag will reorder them.
+  vtkSetMacro(ParticleCoordinatesByIndex, int);
+  vtkGetMacro(ParticleCoordinatesByIndex, int);
+  vtkBooleanMacro(ParticleCoordinatesByIndex, int);
+
 protected:
   vtkEnSightReader();
   ~vtkEnSightReader();
   
-  void Execute();
+  virtual int RequestInformation(vtkInformation*, 
+                                 vtkInformationVector**, 
+                                 vtkInformationVector*);
+  virtual int RequestData(vtkInformation*, 
+                          vtkInformationVector**, 
+                          vtkInformationVector*);
+
+  // Description:
+  // Set the Measured file name.
+  vtkSetStringMacro(MeasuredFileName);
+
+  // Description:
+  // Set the Match file name.
+  vtkSetStringMacro(MatchFileName);
 
   // Description:
   // Read the case file.  If an error occurred, 0 is returned; otherwise 1.
@@ -107,85 +131,76 @@ protected:
   
   // Description:
   // Read the geometry file.  If an error occurred, 0 is returned; otherwise 1.
-  virtual int ReadGeometryFile(const char* fileName, int timeStep) = 0;
+  virtual int ReadGeometryFile(const char* fileName, int timeStep,
+                               vtkMultiBlockDataSet *output) = 0;
 
   // Description:
   // Read the measured geometry file.  If an error occurred, 0 is returned;
   // otherwise 1.
-  virtual int ReadMeasuredGeometryFile(const char* fileName, int timeStep) = 0;
+  virtual int ReadMeasuredGeometryFile(const char* fileName, int timeStep,
+                                       vtkMultiBlockDataSet *output) = 0;
 
   // Description:
   // Read the variable files. If an error occurred, 0 is returned; otherwise 1.
-  int ReadVariableFiles();
+  int ReadVariableFiles(vtkMultiBlockDataSet *output);
 
   // Description:
   // Read scalars per node for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadScalarsPerNode(const char* fileName, const char* description,
-                                 int timeStep, int measured = 0,
-                                 int numberOfComponents = 1,
+                                 int timeStep, vtkMultiBlockDataSet *output,
+                                 int measured = 0, int numberOfComponents = 1,
                                  int component = 0) = 0;
   
   // Description:
   // Read vectors per node for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadVectorsPerNode(const char* fileName, const char* description,
-                                 int timeStep, int measured = 0) = 0;
+                                 int timeStep, vtkMultiBlockDataSet *output,
+                                 int measured = 0) = 0;
 
   // Description:
   // Read tensors per node for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadTensorsPerNode(const char* fileName, const char* description,
-                                 int timeStep) = 0;
+                                 int timeStep, vtkMultiBlockDataSet *output) = 0;
 
   // Description:
   // Read scalars per element for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadScalarsPerElement(const char* fileName, const char* description,
-                                    int timeStep, int numberOfComponents = 1,
+                                    int timeStep, vtkMultiBlockDataSet *output,
+                                    int numberOfComponents = 1,
                                     int component = 0) = 0;
 
   // Description:
   // Read vectors per element for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadVectorsPerElement(const char* fileName, const char* description,
-                                    int timeStep) = 0;
+                                    int timeStep, vtkMultiBlockDataSet *output) = 0;
 
   // Description:
   // Read tensors per element for this dataset.  If an error occurred, 0 is
   // returned; otherwise 1.
   virtual int ReadTensorsPerElement(const char* fileName, const char* description,
-                                    int timeStep) = 0;
+                                    int timeStep, vtkMultiBlockDataSet *output) = 0;
 
   // Description:
   // Read an unstructured part (partId) from the geometry file and create a
   // vtkUnstructuredGrid output.  Return 0 if EOF reached.
   virtual int CreateUnstructuredGridOutput(int partId, 
                                            char line[80],
-                                           const char* name) = 0;
+                                           const char* name,
+                                           vtkMultiBlockDataSet *output) = 0;
   
   // Description:
   // Read a structured part from the geometry file and create a
   // vtkStructuredGridOutput.  Return 0 if EOF reached.
   virtual int CreateStructuredGridOutput(int partId, 
                                          char line[80],
-                                         const char* name) = 0;
-  
-  // Description:
-  // Set/Get the Model file name.
-  vtkSetStringMacro(GeometryFileName);
-  vtkGetStringMacro(GeometryFileName);
-
-  // Description:
-  // Set/Get the Measured file name.
-  vtkSetStringMacro(MeasuredFileName);
-  vtkGetStringMacro(MeasuredFileName);
-
-  // Description:
-  // Set/Get the Match file name.
-  vtkSetStringMacro(MatchFileName);
-  vtkGetStringMacro(MatchFileName);
-  
+                                         const char* name,
+                                         vtkMultiBlockDataSet *output) = 0;
+    
   // Description:
   // Add another file name to the list for a particular variable type.
   void AddVariableFileName(const char* fileName1, const char* fileName2 = NULL);
@@ -211,9 +226,26 @@ protected:
   // Description:
   // Replace the *'s in the filename with the given filename number.
   void ReplaceWildcards(char* filename, int num);
-  
+
+  // Description:
+  // Remove leading blank spaces from a string.
+  void RemoveLeadingBlanks(char *line);
+
   // Get the vtkIdList for the given output index and cell type.
   vtkIdList* GetCellIds(int index, int cellType);
+
+  // Description:
+  // Convenience method use to convert the readers from VTK 5 multiblock API 
+  // to the current composite data infrastructure.
+  void AddToBlock(vtkMultiBlockDataSet* output, 
+                  unsigned int blockNo, 
+                  vtkDataSet* dataset);
+
+  // Description:
+  // Convenience method use to convert the readers from VTK 5 multiblock API 
+  // to the current composite data infrastructure.
+  vtkDataSet* GetDataSetFromBlock(vtkMultiBlockDataSet* output,
+                                  unsigned int blockNo);
   
   char* MeasuredFileName;
   char* MatchFileName; // may not actually be necessary to read this file
@@ -273,17 +305,18 @@ protected:
   
   int NumberOfGeometryParts;
   
-  void SetNumberOfOutputsInternal(int num);
-
   // global list of points for measured geometry
   int NumberOfMeasuredPoints;
   
   int NumberOfNewOutputs;
-  int OutputsAreValid;
   int InitialRead;
   
   int CheckOutputConsistency();
+
+  int ParticleCoordinatesByIndex;
   
+  double ActualTimeValue;
+
 private:
   vtkEnSightReader(const vtkEnSightReader&);  // Not implemented.
   void operator=(const vtkEnSightReader&);  // Not implemented.

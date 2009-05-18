@@ -20,7 +20,7 @@
 #include "vtkPointData.h"
 #include "vtk_tiff.h"
 
-vtkCxxRevisionMacro(vtkTIFFWriter, "$Revision: 1.39.6.1 $");
+vtkCxxRevisionMacro(vtkTIFFWriter, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkTIFFWriter);
 
 //----------------------------------------------------------------------------
@@ -121,7 +121,7 @@ void vtkTIFFWriter::WriteFileHeader(ofstream *file, vtkImageData *data)
   width = (max0 - min0 + 1);
   height = (max1 - min1 + 1);
 
-  TIFF* tif = TIFFClientOpen(this->GetFileName(), "w",
+  TIFF* tif = TIFFClientOpen(this->InternalFileName, "w",
     (thandle_t) ost,
     reinterpret_cast<TIFFReadWriteProc>(vtkTIFFWriterIO::TIFFRead), 
     reinterpret_cast<TIFFReadWriteProc>(vtkTIFFWriterIO::TIFFWrite),
@@ -228,7 +228,7 @@ void vtkTIFFWriter::WriteFile(ofstream *, vtkImageData *data,
   TIFF* tif = reinterpret_cast<TIFF*>(this->TIFFPtr);
   if ( !tif )
     {
-    vtkErrorMacro("Problem writting trailer.");
+    vtkErrorMacro("Problem writing trailer.");
     this->SetErrorCode(vtkErrorCode::FileFormatError);
     return;
     }

@@ -24,7 +24,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkSource.h"
 
-vtkCxxRevisionMacro(vtkProcessObject, "$Revision: 1.6.12.1 $");
+vtkCxxRevisionMacro(vtkProcessObject, "$Revision: 1.7 $");
 
 //----------------------------------------------------------------------------
 vtkProcessObject::vtkProcessObject()

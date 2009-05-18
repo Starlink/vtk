@@ -17,6 +17,8 @@
 #include "vtkDebugLeaks.h"
 #include "vtkGarbageCollector.h"
 
+#include <vtksys/ios/sstream>
+
 #define vtkBaseDebugMacro(x)
 
 class vtkObjectBaseToGarbageCollectorFriendship
@@ -112,7 +114,7 @@ int vtkObjectBase::IsA(const char *type)
 // will not work with reference counting.
 void vtkObjectBase::Delete() 
 {
-  this->UnRegister((vtkObjectBase *)NULL);
+  this->UnRegister(static_cast<vtkObjectBase *>(NULL));
 }
 
 void vtkObjectBase::FastDelete()
@@ -126,9 +128,9 @@ void vtkObjectBase::Print(ostream& os)
 {
   vtkIndent indent;
 
-  this->PrintHeader(os,0); 
+  this->PrintHeader(os,vtkIndent(0)); 
   this->PrintSelf(os, indent.GetNextIndent());
-  this->PrintTrailer(os,0);
+  this->PrintTrailer(os,vtkIndent(0));
 }
 
 void vtkObjectBase::PrintHeader(ostream& os, vtkIndent indent)
@@ -172,15 +174,15 @@ void vtkObjectBase::UnRegister(vtkObjectBase* o)
 
 void vtkObjectBase::CollectRevisions(ostream& os)
 {
-  os << "vtkObjectBase $Revision: 1.14.6.1 $\n";
+  os << "vtkObjectBase $Revision: 1.18 $\n";
 }
 
 void vtkObjectBase::PrintRevisions(ostream& os)
 {
-  ostrstream revisions;
+  vtksys_ios::ostringstream revisions;
   this->CollectRevisions(revisions);
-  revisions << ends;
-  const char* c = revisions.str();
+  vtksys_stl::string s = revisions.str();
+  const char* c = s.c_str();
   while(*c)
     {
     const char* beginClass = 0;
@@ -222,7 +224,6 @@ void vtkObjectBase::PrintRevisions(ostream& os)
       ++c;
       }
     }
-  revisions.rdbuf()->freeze(0);
 }
 
 //----------------------------------------------------------------------------

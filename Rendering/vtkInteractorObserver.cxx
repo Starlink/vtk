@@ -19,8 +19,9 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkObserverMediator.h" 
 
-vtkCxxRevisionMacro(vtkInteractorObserver, "$Revision: 1.32 $");
+vtkCxxRevisionMacro(vtkInteractorObserver, "$Revision: 1.38 $");
 
 vtkCxxSetObjectMacro(vtkInteractorObserver,DefaultRenderer,vtkRenderer);
 
@@ -43,13 +44,15 @@ vtkInteractorObserver::vtkInteractorObserver()
   this->CurrentRenderer = NULL;
   this->DefaultRenderer = NULL;
 
-  this->Priority = 0.0;
+  this->Priority = 0.0f;
 
   this->KeyPressActivation = 1;
   this->KeyPressActivationValue = 'i';
 
   this->CharObserverTag = 0;
   this->DeleteObserverTag = 0;
+
+  this->ObserverMediator = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -115,6 +118,17 @@ void vtkInteractorObserver::SetInteractor(vtkRenderWindowInteractor* i)
   if (i == this->Interactor)
     {
     return;
+    }
+
+  // Since the observer mediator is bound to the interactor, reset it to
+  // 0 so that the next time it is requested, it is queried from the
+  // new interactor.
+  // Furthermore, remove ourself from the mediator queue.
+
+  if (this->ObserverMediator)
+    {
+    this->ObserverMediator->RemoveAllCursorShapeRequests(this);
+    this->ObserverMediator = 0;
     }
 
   // if we already have an Interactor then stop observing it
@@ -277,6 +291,45 @@ void vtkInteractorObserver::OnChar()
       this->KeyPressCallbackCommand->SetAbortFlag(1);
       }
     }//if activation enabled
+}
+
+//----------------------------------------------------------------------------
+void vtkInteractorObserver::GrabFocus(vtkCommand *mouseEvents, vtkCommand *keypressEvents)
+{
+  if ( this->Interactor )
+    {
+    this->Interactor->GrabFocus(mouseEvents,keypressEvents);
+    }
+}
+
+
+//----------------------------------------------------------------------------
+void vtkInteractorObserver::ReleaseFocus()
+{
+  if ( this->Interactor )
+    {
+    this->Interactor->ReleaseFocus();
+    }
+}
+
+//----------------------------------------------------------------------------
+int vtkInteractorObserver::RequestCursorShape(int requestedShape)
+{
+  if ( !this->Interactor )
+    {
+    return 0;
+    }
+    
+  if ( ! this->ObserverMediator )
+    {
+    this->ObserverMediator = this->Interactor->GetObserverMediator();
+    }
+  int status = this->ObserverMediator->RequestCursorShape(this,requestedShape);
+  if ( status )
+    {
+    this->InvokeEvent(vtkCommand::CursorChangedEvent,NULL);
+    }
+  return status;
 }
 
 //----------------------------------------------------------------------------

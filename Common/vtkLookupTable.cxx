@@ -16,8 +16,9 @@
 #include "vtkBitArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
+#include <assert.h>
 
-vtkCxxRevisionMacro(vtkLookupTable, "$Revision: 1.103.4.1 $");
+vtkCxxRevisionMacro(vtkLookupTable, "$Revision: 1.106 $");
 vtkStandardNewMacro(vtkLookupTable);
 
 // Construct with range=(0,1); and hsv ranges set up for rainbow color table 
@@ -49,6 +50,8 @@ vtkLookupTable::vtkLookupTable(int sze, int ext)
 
   this->Ramp = VTK_RAMP_SCURVE;
   this->Scale = VTK_SCALE_LINEAR;
+  
+  this->OpaqueFlag=1;
 }
 
 //----------------------------------------------------------------------------
@@ -56,6 +59,30 @@ vtkLookupTable::~vtkLookupTable()
 {
   this->Table->UnRegister(this);
   this->Table = NULL;
+}
+
+//----------------------------------------------------------------------------
+// Description:
+// Return true if all of the values defining the mapping have an opacity
+// equal to 1. Default implementation return true.
+int vtkLookupTable::IsOpaque()
+{
+  if(this->OpaqueFlagBuildTime<this->GetMTime())
+    {
+    int opaque=1;
+    int size=this->Table->GetNumberOfTuples();
+    int i=0;
+    unsigned char *ptr=this->Table->GetPointer(0);
+    while(opaque && i<size)
+      {
+      opaque=ptr[3]==255;
+      ptr+=4;
+      ++i;
+      }
+    this->OpaqueFlag=opaque;
+    this->OpaqueFlagBuildTime.Modified();
+    }
+  return this->OpaqueFlag;
 }
 
 //----------------------------------------------------------------------------
@@ -204,6 +231,9 @@ void vtkLookupTable::ForceBuild()
         c_rgba[3] = static_cast<unsigned char>((sqrt(rgba[3]))*255.0f + 0.5f);
         }
         break;
+      default:
+        assert("check: impossible case."); // reaching this line is a bug.
+        break;
       }
     }
   this->BuildTime.Modified();
@@ -269,13 +299,13 @@ void vtkLookupTableLogRange(double range[2], double logRange[2])
     }
   if (rmin < 0 && rmax < 0)
     {
-    logRange[0] = log10(-(double)rmin);
-    logRange[1] = log10(-(double)rmax);
+    logRange[0] = log10(-static_cast<double>(rmin));
+    logRange[1] = log10(-static_cast<double>(rmax));
     }
   else if (rmin > 0 && rmax > 0)
     {
-    logRange[0] = log10((double)rmin);
-    logRange[1] = log10((double)rmax);
+    logRange[0] = log10(static_cast<double>(rmin));
+    logRange[1] = log10(static_cast<double>(rmax));
     }
 }
 
@@ -721,7 +751,7 @@ void vtkLookupTableMapMag(vtkLookupTable *self, T *input,
     sum = 0;
     for (j = 0; j < inIncr; ++j)
       {
-      tmp = (double)(*input);  
+      tmp = static_cast<double>(*input);  
       sum += (tmp * tmp);
       ++input;
       }

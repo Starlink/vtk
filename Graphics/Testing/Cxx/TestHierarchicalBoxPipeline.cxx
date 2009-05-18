@@ -35,11 +35,15 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkShrinkPolyData.h"
-#include "vtkTestHierarchicalDataReader.h"
 #include "vtkTestUtilities.h"
+#include "vtkXMLHierarchicalBoxDataReader.h"
 
 int TestHierarchicalBoxPipeline(int argc, char* argv[])
 {
+  vtkCompositeDataPipeline* prototype = vtkCompositeDataPipeline::New();
+  vtkAlgorithm::SetDefaultExecutivePrototype(prototype);
+  prototype->Delete();
+
   // Standard rendering classes
   vtkRenderer *ren = vtkRenderer::New();
   vtkCamera* cam = ren->GetActiveCamera();
@@ -53,9 +57,11 @@ int TestHierarchicalBoxPipeline(int argc, char* argv[])
   iren->SetRenderWindow(renWin);
 
   char* cfname = 
-    vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/chombo3d/chombo3d");
+    vtkTestUtilities::ExpandDataFileName(argc, argv, 
+                                         "Data/chombo3d/chombo3d.vtm");
 
-  vtkTestHierarchicalDataReader* reader = vtkTestHierarchicalDataReader::New();
+  vtkXMLHierarchicalBoxDataReader* reader = 
+    vtkXMLHierarchicalBoxDataReader::New();
   reader->SetFileName(cfname);
   delete[] cfname;
 
@@ -93,7 +99,7 @@ int TestHierarchicalBoxPipeline(int argc, char* argv[])
   // cell 2 point and contour
   vtkHierarchicalDataExtractLevel* el = vtkHierarchicalDataExtractLevel::New();
   el->SetInputConnection(0, reader->GetOutputPort(0));
-  el->SetLevelRange(2,2);
+  el->AddLevel(2);
 
   vtkCellDataToPointData* c2p = vtkCellDataToPointData::New();
   c2p->SetInputConnection(0, el->GetOutputPort(0));
@@ -139,6 +145,7 @@ int TestHierarchicalBoxPipeline(int argc, char* argv[])
   iren->Delete();
   reader->Delete();
   shrink->Delete();
-  
+ 
+  vtkAlgorithm::SetDefaultExecutivePrototype(0);
   return !retVal;
 }

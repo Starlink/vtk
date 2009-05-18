@@ -30,15 +30,16 @@
 #include "vtkDoubleArray.h"
 #include "vtkSmartPointer.h"
 
+#include <vtksys/ios/sstream>
 #include <sys/stat.h>
 #include <vtkstd/string>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkFacetReader, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkFacetReader, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkFacetReader);
 
 //------------------------------------------------------------------------------
-// Due to a buggy stream library on the HP and another on Mac OSX, we
+// Due to a buggy stream library on the HP and another on Mac OS X, we
 // need this very carefully written version of getline.  Returns true
 // if any data were read before the end-of-file was reached.
 // 
@@ -289,7 +290,8 @@ int vtkFacetReader::RequestData(
         }
       char* strPtr = &(*stringBuffer.begin());
       strcpy(strPtr, line.c_str());
-      istrstream lineStream(strPtr);
+      vtkstd::string str(strPtr, stringBuffer.size());
+      vtksys_ios::istringstream lineStream(str);
       vtkIdType kk;
       int material = -1, relativePartNumber = -1;
       for ( kk = 0; kk < num_points_per_cell; kk ++ )

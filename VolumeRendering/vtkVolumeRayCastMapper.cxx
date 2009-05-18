@@ -15,6 +15,7 @@
 #include "vtkVolumeRayCastMapper.h"
 
 #include "vtkCamera.h"
+#include "vtkDataArray.h"
 #include "vtkEncodedGradientEstimator.h"
 #include "vtkEncodedGradientShader.h"
 #include "vtkFiniteDifferenceGradientEstimator.h"
@@ -36,7 +37,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolumeRayCastMapper, "$Revision: 1.1.6.1 $");
+vtkCxxRevisionMacro(vtkVolumeRayCastMapper, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkVolumeRayCastMapper);
 
 vtkCxxSetObjectMacro(vtkVolumeRayCastMapper,VolumeRayCastFunction,
@@ -518,7 +519,7 @@ void vtkVolumeRayCastMapper::Render( vtkRenderer *ren, vtkVolume *vol )
     // Set the number of threads to use for ray casting,
     // then set the execution method and do it.
     this->Threader->SetSingleMethod( VolumeRayCastMapper_CastRays, 
-                                     (void *)staticInfo);
+                                     static_cast<void *>(staticInfo));
     this->Threader->SingleMethodExecute();
 
     if ( !ren->GetRenderWindow()->GetAbortRender() )
@@ -837,17 +838,17 @@ VTK_THREAD_RETURN_TYPE VolumeRayCastMapper_CastRays( void *arg )
           me->VolumeRayCastFunction->CastRay( dynamicInfo, staticInfo );
           if ( dynamicInfo->Color[3] > 0.0 )
             {
-            val = (dynamicInfo->Color[0]/dynamicInfo->Color[3])*255.0;
+            val = dynamicInfo->Color[0]*255.0;
             val = (val > 255.0)?(255.0):(val);
             val = (val <   0.0)?(  0.0):(val);
             ucptr[0] = static_cast<unsigned char>(val);
             
-            val = (dynamicInfo->Color[1]/dynamicInfo->Color[3])*255.0;
+            val = dynamicInfo->Color[1]*255.0;
             val = (val > 255.0)?(255.0):(val);
             val = (val <   0.0)?(  0.0):(val);
             ucptr[1] = static_cast<unsigned char>(val);
             
-            val = (dynamicInfo->Color[2]/dynamicInfo->Color[3])*255.0;
+            val = dynamicInfo->Color[2]*255.0;
             val = (val > 255.0)?(255.0):(val);
             val = (val <   0.0)?(  0.0):(val);
             ucptr[2] = static_cast<unsigned char>(val);
@@ -1165,17 +1166,17 @@ VTK_THREAD_RETURN_TYPE VolumeRayCastMapper_CastRays( void *arg )
             dynamicInfo->Color[3] = 1.0 - dynamicInfo->Color[3];
             }
           
-          val = (dynamicInfo->Color[0]/dynamicInfo->Color[3])*255.0;
+          val = dynamicInfo->Color[0]*255.0;
           val = (val > 255.0)?(255.0):(val);
           val = (val <   0.0)?(  0.0):(val);
           ucptr[0] = static_cast<unsigned char>(val);
           
-          val = (dynamicInfo->Color[1]/dynamicInfo->Color[3])*255.0;
+          val = dynamicInfo->Color[1]*255.0;
           val = (val > 255.0)?(255.0):(val);
           val = (val <   0.0)?(  0.0):(val);
           ucptr[1] = static_cast<unsigned char>(val);
           
-          val = (dynamicInfo->Color[2]/dynamicInfo->Color[3])*255.0;
+          val = dynamicInfo->Color[2]*255.0;
           val = (val > 255.0)?(255.0):(val);
           val = (val <   0.0)?(  0.0):(val);
           ucptr[2] = static_cast<unsigned char>(val);
@@ -1702,7 +1703,7 @@ void vtkVolumeRayCastMapper::InitializeClippingPlanes(
   // loop through all the clipping planes
   for ( i = 0; i < count; i++ )
     {
-    onePlane = (vtkPlane *)planes->GetItemAsObject(i);
+    onePlane = static_cast<vtkPlane *>(planes->GetItemAsObject(i));
     onePlane->GetNormal(worldNormal);
     onePlane->GetOrigin(worldOrigin);
     clippingPlane = staticInfo->ClippingPlane + 4*i;

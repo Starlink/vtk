@@ -40,7 +40,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkGridSynchronizedTemplates3D, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkGridSynchronizedTemplates3D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkGridSynchronizedTemplates3D);
 
 //----------------------------------------------------------------------------
@@ -336,7 +336,7 @@ if (ComputeScalars) \
 } 
 
 //----------------------------------------------------------------------------
-// Contouring filter specialized for images
+// Contouring filter specialized for structured grids
 template <class T, class PointsType>
 void ContourGrid(vtkGridSynchronizedTemplates3D *self,
                  int *exExt, T *scalars,
@@ -801,6 +801,10 @@ void vtkGridSynchronizedTemplates3D::ThreadedExecute(int *exExt, int ,
     ContourGrid(this, exExt, scalars, input, output, inScalars);
     image->Delete();
     }
+
+  // Some useful debugging information
+  vtkDebugMacro(<<"Produced: " << output->GetNumberOfPoints() << " points, "
+                << output->GetNumberOfCells() << " cells");
 
   // Lets set the name of the scalars here.
   if (this->ComputeScalars)

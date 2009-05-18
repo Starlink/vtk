@@ -18,7 +18,7 @@
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkInformationExecutivePortKey, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkInformationExecutivePortKey, "$Revision: 1.8 $");
 
 //----------------------------------------------------------------------------
 vtkInformationExecutivePortKey::vtkInformationExecutivePortKey(const char* name, const char* location):

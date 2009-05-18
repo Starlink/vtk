@@ -30,7 +30,7 @@
 #include "vtkObject.h"
 
 class vtkIdList;
-class vtkDataArray;
+class vtkAbstractArray;
 
 class VTK_GRAPHICS_EXPORT vtkSortDataArray : public vtkObject
 {
@@ -42,16 +42,24 @@ public:
   // Description:
   // Sorts the given array.
   static void Sort(vtkIdList *keys);
-  static void Sort(vtkDataArray *keys);
+  static void Sort(vtkAbstractArray *keys);
+
+  // Description:
+  // Sorts the given data array using the specified component as a key.
+  // Think of the array as a 2-D grid with each tuple representing a row.
+  // Tuples are swapped until the \a k-th column of the grid is
+  // monotonically increasing. Where two tuples have the same value for
+  // the \a k-th component, their order in the final result is unspecified.
+  static void SortArrayByComponent( vtkAbstractArray* arr, int k );
 
   // Description:
   // Sorts the given key/value pairs based on the keys.  A pair is given
   // as the entries at a given index of each of the arrays.  Obviously,
   // the two arrays must be of equal size.
   static void Sort(vtkIdList *keys, vtkIdList *values);
-  static void Sort(vtkIdList *keys, vtkDataArray *values);
-  static void Sort(vtkDataArray *keys, vtkIdList *values);
-  static void Sort(vtkDataArray *keys, vtkDataArray *values);
+  static void Sort(vtkIdList *keys, vtkAbstractArray *values);
+  static void Sort(vtkAbstractArray *keys, vtkIdList *values);
+  static void Sort(vtkAbstractArray *keys, vtkAbstractArray *values);
 
 protected:
   vtkSortDataArray();

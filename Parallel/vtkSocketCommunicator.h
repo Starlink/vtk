@@ -47,6 +47,9 @@
 # define vtkSwap8Range vtkByteSwap::Swap8BERange
 #endif
 
+class vtkClientSocket;
+class vtkServerSocket;
+
 class VTK_PARALLEL_EXPORT vtkSocketCommunicator : public vtkCommunicator
 {
 public:
@@ -55,24 +58,11 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Create a socket on the given port, if port is 0, then
-  // create a random port.  If network is specified, then use
-  // the given network.  The socket number is returned.
-  virtual int OpenSocket(int port, const char* network = 0);
-  
-  // Description:
-  // Return the port used by an open socket.
-  virtual int GetPort(int sock);
-  
-  // Description:
-  // Wait for a connection on an already bound port created
-  // by a call to BindPort. If the timeout is specified, then the call will
-  // fail after timeout expiers with resulting code of -1.
-  virtual int WaitForConnectionOnSocket(int socket, unsigned long timeout = 0);
-  
-  // Description:
   // Wait for connection on a given port.
+  // These methods return 1 on success, 0 on error.
   virtual int WaitForConnection(int port);
+  virtual int WaitForConnection(vtkServerSocket* socket,
+    unsigned  long msec = 0);
 
   // Description:
   // Close a connection.
@@ -88,44 +78,61 @@ public:
 
   // Description:
   // Is the communicator connected?.
-  vtkGetMacro(IsConnected, int);
+  int GetIsConnected();
+
+  // Description:
+  // Set the number of processes you will be using.
+  virtual void SetNumberOfProcesses(int num);
 
   //------------------ Communication --------------------
-  
-  // Description:
-  // This method sends data to another process.  Tag eliminates ambiguity
-  // when multiple sends or receives exist in the same process.
-  int Send(int *data, int length, int remoteProcessId, int tag);
-  int Send(unsigned long *data, int length, int remoteProcessId, int tag);
-  int Send(char *data, int length, int remoteProcessId, int tag);
-  int Send(unsigned char *data, int length, int remoteProcessId, int tag);
-  int Send(float *data, int length, int remoteProcessId, int tag);
-  int Send(double *data, int length, int remoteProcessId, int tag);
-#ifdef VTK_USE_64BIT_IDS
-  int Send(vtkIdType *data, int length, int remoteProcessId, int tag);
-#endif
-  int Send(vtkDataObject *data, int remoteId, int tag)
-    {return this->vtkCommunicator::Send(data,remoteId,tag);}
-  int Send(vtkDataArray *data, int remoteId, int tag)
-    {return this->vtkCommunicator::Send(data,remoteId,tag);}
 
   // Description:
-  // This method receives data from a corresponding send. It blocks
-  // until the receive is finished.  It calls methods in "data"
-  // to communicate the sending data.
-  int Receive(int *data, int length, int remoteProcessId, int tag);
-  int Receive(unsigned long *data, int length, int remoteProcessId, int tag);
-  int Receive(char *data, int length, int remoteProcessId, int tag);
-  int Receive(unsigned char *data, int length, int remoteProcessId, int tag);
-  int Receive(float *data, int length, int remoteProcessId, int tag);
-  int Receive(double *data, int length, int remoteProcessId, int tag);
-#ifdef VTK_USE_64BIT_IDS
-  int Receive(vtkIdType *data, int length, int remoteProcessId, int tag);
-#endif
-  int Receive(vtkDataObject *data, int remoteId, int tag)
-    {return this->vtkCommunicator::Receive(data, remoteId, tag);}
-  int Receive(vtkDataArray *data, int remoteId, int tag)
-    {return this->vtkCommunicator::Receive(data, remoteId, tag);}
+  // Performs the actual communication.  You will usually use the convenience
+  // Send functions defined in the superclass.
+  virtual int SendVoidArray(const void *data, vtkIdType length, int type,
+                            int remoteHandle, int tag);
+  virtual int ReceiveVoidArray(void *data, vtkIdType length, int type,
+                               int remoteHandle, int tag);
+
+  // Description:
+  // This class foolishly breaks the conventions of the superclass, so this
+  // overload fixes the method.
+  virtual void Barrier();
+
+  // Description:
+  // This class foolishly breaks the conventions of the superclass, so the
+  // default implementations of these methods do not work.  These just give
+  // errors instead.
+  virtual int BroadcastVoidArray(void *data, vtkIdType length, int type,
+                                 int srcProcessId);
+  virtual int GatherVoidArray(const void *sendBuffer, void *recvBuffer,
+                              vtkIdType length, int type, int destProcessId);
+  virtual int GatherVVoidArray(const void *sendBuffer, void *recvBuffer,
+                               vtkIdType sendLength, vtkIdType *recvLengths,
+                               vtkIdType *offsets, int type, int destProcessId);
+  virtual int ScatterVoidArray(const void *sendBuffer, void *recvBuffer,
+                               vtkIdType length, int type, int srcProcessId);
+  virtual int ScatterVVoidArray(const void *sendBuffer, void *recvBuffer,
+                                vtkIdType *sendLengths, vtkIdType *offsets,
+                                vtkIdType recvLength, int type,
+                                int srcProcessId);
+  virtual int AllGatherVoidArray(const void *sendBuffer, void *recvBuffer,
+                                 vtkIdType length, int type);
+  virtual int AllGatherVVoidArray(const void *sendBuffer, void *recvBuffer,
+                                  vtkIdType sendLength, vtkIdType *recvLengths,
+                                  vtkIdType *offsets, int type);
+  virtual int ReduceVoidArray(const void *sendBuffer, void *recvBuffer,
+                              vtkIdType length, int type,
+                              int operation, int destProcessId);
+  virtual int ReduceVoidArray(const void *sendBuffer, void *recvBuffer,
+                              vtkIdType length, int type,
+                              Operation *operation, int destProcessId);
+  virtual int AllReduceVoidArray(const void *sendBuffer, void *recvBuffer,
+                                 vtkIdType length, int type,
+                                 int operation);
+  virtual int AllReduceVoidArray(const void *sendBuffer, void *recvBuffer,
+                                 vtkIdType length, int type,
+                                 Operation *operation);
 
   // Description:
   // Set or get the PerformHandshake ivar. If it is on, the communicator
@@ -156,13 +163,35 @@ public:
   vtkSetMacro(ReportErrors, int);
   vtkGetMacro(ReportErrors, int);
 
+  // Description:
+  // Get/Set the actual socket used for communication.
+  vtkGetObjectMacro(Socket, vtkClientSocket);
+  void SetSocket(vtkClientSocket*);
+
+  // Description:
+  // Performs ServerSide handshake.
+  int ServerSideHandshake();
+
+  // Description:
+  // Performs ClientSide handshake.
+  int ClientSideHandshake();
+
+  // Description:
+  // Returns true if this side of the socket is the server.  The result
+  // is invalid if the socket is not connected.
+  vtkGetMacro(IsServer, int);
+
+  // Description:
+  // Uniquely identifies the version of this class.  If the versions match,
+  // then the socket communicators should be compatible.
+  static int GetVersion();
 protected:
 
-  int Socket;
-  int IsConnected;
-  int NumberOfProcesses;
+  vtkClientSocket* Socket;
   int SwapBytesInReceivedData;
+  int RemoteHas64BitIds;
   int PerformHandshake;
+  int IsServer;
   
   int ReportErrors;
 
@@ -174,9 +203,7 @@ protected:
   
   // Wrappers around send/recv calls to implement loops.  Return 1 for
   // success, and 0 for failure.
-  int SendInternal(int socket, void* data, int length);
-  int ReceiveInternal(int socket, void* data, int length);
-  int SendTagged(void* data, int wordSize, int numWords, int tag,
+  int SendTagged(const void* data, int wordSize, int numWords, int tag,
                  const char* logName);
   int ReceiveTagged(void* data, int wordSize, int numWords, int tag,
                     const char* logName);
@@ -184,7 +211,7 @@ protected:
                     const char* logName);
   
   // Internal utility methods.
-  void LogTagged(const char* name, void* data, int wordSize, int numWords,
+  void LogTagged(const char* name, const void* data, int wordSize, int numWords,
                  int tag, const char* logName);
   int CheckForErrorInternal(int id);
 private:

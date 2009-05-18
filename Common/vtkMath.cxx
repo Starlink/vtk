@@ -11,23 +11,67 @@
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
+=========================================================================
+  Copyright 2005 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
+  license for use of this work by or on behalf of the
+  U.S. Government. Redistribution and use in source and binary forms, with
+  or without modification, are permitted provided that this Notice and any
+  statement of authorship are reproduced on all copies.
+
+  Contact: pppebay@sandia.gov,dcthomp@sandia.gov,
+
 =========================================================================*/
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkDataArray.h"
+#include <assert.h>
 
-vtkCxxRevisionMacro(vtkMath, "$Revision: 1.97.4.1 $");
+#ifndef isnan
+// This is compiler specific not platform specific: MinGW doesn't need that.
+# if defined(_MSC_VER) || defined(__BORLANDC__)
+#  include <float.h>
+#  define isnan(x) _isnan(x)
+# endif
+#endif
+
+vtkCxxRevisionMacro(vtkMath, "$Revision: 1.128 $");
 vtkStandardNewMacro(vtkMath);
 
 long vtkMath::Seed = 1177; // One authors home address
+
+// Avoid aliasing optimization problems by using a union:
+union vtkIEEE754Bits {
+  vtkTypeInt64 i64v;
+  double d;
+};
+
+// I've always relied on the kindness of IEEE-754.
+#if defined(WIN32) && defined(_MSC_VER)
+// MSVC70 is broken; it doesn't accept the "LL" suffix. MSVC6 and MSVC71 do.
+static union vtkIEEE754Bits vtkMathNanBits    = { 0x7FF8000000000000i64 };
+static union vtkIEEE754Bits vtkMathInfBits    = { 0x7FF0000000000000i64 };
+static union vtkIEEE754Bits vtkMathNegInfBits = { 0xFFF0000000000000i64 };
+#elif defined(WIN32) && defined(__BORLANDC__)
+// Borland C++ union initializers are broken.
+// Use an otherwise-discouraged aliasing trick:
+static vtkTypeInt64 vtkMathNanBits            = 0x7FF8000000000000i64;
+static vtkTypeInt64 vtkMathInfBits            = 0x7FF0000000000000i64;
+static vtkTypeInt64 vtkMathNegInfBits         = 0xFFF0000000000000i64;
+#else
+static union vtkIEEE754Bits vtkMathNanBits    = { 0x7FF8000000000000LL };
+static union vtkIEEE754Bits vtkMathInfBits    = { 0x7FF0000000000000LL };
+static union vtkIEEE754Bits vtkMathNegInfBits = { 0xFFF0000000000000LL };
+#endif
 
 //
 // some constants we need
 //
 #define VTK_K_A 16807
-#define VTK_K_M 2147483647                      /* Mersenne prime 2^31 -1 */
+#define VTK_K_M 2147483647              /* Mersenne prime 2^31 -1 */
 #define VTK_K_Q 127773                  /* VTK_K_M div VTK_K_A */
 #define VTK_K_R 2836                    /* VTK_K_M mod VTK_K_A */
+
 //
 // Some useful macros and functions
 //
@@ -51,7 +95,7 @@ double vtkMath::Random()
     {
     Seed += VTK_K_M;
     }
-  return ((double) vtkMath::Seed / VTK_K_M);
+  return static_cast<double>(vtkMath::Seed)/VTK_K_M;
 }
 
 //----------------------------------------------------------------------------
@@ -68,6 +112,110 @@ void vtkMath::RandomSeed(long s)
   vtkMath::Random();
   vtkMath::Random();
   vtkMath::Random();
+}
+
+//----------------------------------------------------------------------------
+// Description:
+// Return the current seed used by the random number generator.
+long vtkMath::GetSeed()
+{
+  return vtkMath::Seed;
+}
+
+//----------------------------------------------------------------------------
+// The number of combinations of n objects from a pool of m objects (m>n).
+//
+vtkTypeInt64 vtkMath::Binomial( int m, int n )
+{
+  if ( m < n )
+    {
+    return -1;
+    }
+  else if ( m == n )
+    {
+    return 1;
+    }
+
+  int n1 = n;
+  int n2 = m - n;
+  if ( n2 > n1 )
+    {
+    n1 = n2;
+    n2 = n;
+    }
+  vtkTypeInt64 r = 1;
+  while ( m > n1 )
+    {
+    r *= m--;
+    }
+  while ( n2 > 1 )
+    {
+    r /= n2--;
+    }
+  return r;
+}
+
+//----------------------------------------------------------------------------
+// Start iterating over "m choose n" objects.
+// This function returns an array of n integers, each from 0 to m-1.
+// These integers represent the n items chosen from the set [0,m[. 
+//
+int* vtkMath::BeginCombination( int m, int n )
+{
+  if ( m < n )
+    {
+    return 0;
+    }
+
+  int* r = new int[ n ];
+  for ( int i=0; i<n; ++i )
+    {
+    r[i] = i;
+    }
+  return r;
+}
+
+//----------------------------------------------------------------------------
+// Given \a m, \a n, and a valid \a combination of \a n integers in
+// the range [0,m[, this function alters the integers into the next
+// combination in a sequence of all combinations of \a n items from
+// a pool of \a m.
+// If the \a combination is the last item in the sequence on input,
+// then \a combination is unaltered and 0 is returned.
+// Otherwise, 1 is returned and \a combination is updated.
+//
+int vtkMath::NextCombination( int m, int n, int* r )
+{
+  int a = n - 1;
+  if ( r[a] == m - 1 ) {
+    int i = 1;
+    while ( (a >= 0) && (r[a] == m - i) )
+      {
+      --a;
+      ++i;
+      }
+    if ( a < 0 )
+      {
+      // we're done
+      return 1;
+      }
+    r[a]++;
+    for ( i=a+1; i<=n-1; ++i )
+      {
+      r[i] = r[i-1] + 1;
+      }
+  } else {
+    r[a]++;
+  }
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+// Free the "iterator" array created by vtkMath::BeginCombination.
+//
+void vtkMath::FreeCombination( int* r )
+{
+  delete [] r;
 }
 
 //----------------------------------------------------------------------------
@@ -277,8 +425,8 @@ int vtkMath::SolveLinearSystem(double **A, double *x, int size)
 // if inverse not computed.
 int vtkMath::InvertMatrix(double **A, double **AI, int size)
 {
-  int *index=NULL, iScratch[10];
-  double *column=NULL, dScratch[10];
+  int *index, iScratch[10];
+  double *column, dScratch[10];
 
   // Check on allocation of working vectors
   //
@@ -708,7 +856,7 @@ int vtkMath::Jacobi(double **a, double *w, double **v)
 double vtkMath::EstimateMatrixCondition(double **A, int size)
 {
   int i;
-  int j = 0;
+  int j;
   double min=VTK_LARGE_FLOAT, max=(-VTK_LARGE_FLOAT);
 
   // find the maximum value
@@ -952,6 +1100,59 @@ int vtkMath::SolveQuadratic( double c1, double c2, double c3,
     {
     // Okay this was not quadratic - lets try linear
     return vtkMath::SolveLinear( c2, c3, r1, num_roots );
+    }
+}
+
+//----------------------------------------------------------------------------
+// Algebraically extracts REAL roots of the quadratic polynomial with 
+// REAL coefficients c[0] X^2 + c[1] X + c[2]
+// and stores them (when they exist) and their respective multiplicities.
+// Returns either the number of roots, or -1 if ininite number of roots.
+int vtkMath::SolveQuadratic( double* c, double* r, int* m )
+{
+  if( ! c[0] )
+    {
+    if( c[1] )
+      {
+      r[0] = -c[2] / c[1];
+      m[0] = 1;
+      return 1;
+      }
+    else
+      {
+      if ( c[2] ) return 0;
+      else return -1;
+      }
+    }
+
+  double delta = c[1] * c[1] - 4. * c[0] * c[2];
+
+  if ( delta >= 0. )
+    {
+    double fac = 1. / ( 2. *  c[0] );
+    // check whether there are 2 simple or 1 double root(s)
+    if ( delta )
+      {
+      delta = sqrt( delta );
+      // insert 1st simple real root 
+      r[0] = ( - delta - c[1] ) * fac;
+      m[0] = 1;
+      // insert 2nd simple real root 
+      r[1] = ( delta - c[1] ) * fac ;
+      m[1] = 1;
+      return 2;
+      }
+    else
+      {
+      // insert single double real root 
+      r[0] = - c[1] * fac;
+      m[0] = 2;
+      return 1;
+      }
+    }
+  else
+    {
+    return 0;
     }
 }
 
@@ -1703,6 +1904,37 @@ void vtkMath::Multiply3x3(const double A[3][3],
 }
 
 //----------------------------------------------------------------------------
+void vtkMath::MultiplyMatrix(const double **A, const double **B,
+                             unsigned int rowA, unsigned int colA, 
+                             unsigned int rowB, unsigned int colB,
+                             double **C)
+{
+  // we need colA == rowB 
+  if (colA != rowB)
+    {
+    vtkGenericWarningMacro(
+      "Number of columns of A must match number of rows of B.");
+    }
+  
+  // output matrix is rowA*colB
+
+  // output row 
+  for (unsigned int i=0; i < rowA; i++)
+    {
+    // output col
+    for (unsigned int j=0; j < colB; j++)
+      {
+      C[i][j] = 0;
+      // sum for this point
+      for (unsigned int k=0; k < colA; k++)
+        {
+        C[i][j] += A[i][k]*B[k][j];
+        }
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
 template<class T1, class T2>
 inline void vtkTranspose3x3(const T1 A[3][3], T2 AT[3][3])
 {
@@ -2335,7 +2567,7 @@ void vtkMath::RGBToHSV(float r, float g, float b,
 }
 
 //----------------------------------------------------------------------------
-double* vtkMath::RGBToHSV(double rgb[3])
+double* vtkMath::RGBToHSV(const double rgb[3])
 {
   return vtkMath::RGBToHSV(rgb[0], rgb[1], rgb[2]);
 }
@@ -2423,7 +2655,7 @@ void vtkMath::HSVToRGB(float h, float s, float v,
 }
 
 //----------------------------------------------------------------------------
-double* vtkMath::HSVToRGB(double hsv[3])
+double* vtkMath::HSVToRGB(const double hsv[3])
 {
   return vtkMath::HSVToRGB(hsv[0], hsv[1], hsv[2]);
 }
@@ -2440,10 +2672,10 @@ double* vtkMath::HSVToRGB(double h, double s, double v)
 void vtkMath::HSVToRGB(double h, double s, double v, 
                        double *r, double *g, double *b)
 {
-  double onethird = 1.0 / 3.0;
-  double onesixth = 1.0 / 6.0;
-  double twothird = 2.0 / 3.0;
-  double fivesixth = 5.0 / 6.0;
+  const double onethird = 1.0 / 3.0;
+  const double onesixth = 1.0 / 6.0;
+  const double twothird = 2.0 / 3.0;
+  const double fivesixth = 5.0 / 6.0;
 
   // compute RGB from HSV
   if (h > onesixth && h <= onethird) // green/red
@@ -2494,67 +2726,189 @@ void vtkMath::HSVToRGB(double h, double s, double v,
 }
 
 //----------------------------------------------------------------------------
-void vtkMath::LabToXYZ(double lab[3], double xyz[3])
+void vtkMath::LabToXYZ(double L, double a, double b,
+                       double *x, double *y, double *z)
 {
   //LAB to XYZ
-  double var_Y = ( lab[0] + 16 ) / 116;
-  double var_X = lab[1] / 500 + var_Y;
-  double var_Z = var_Y - lab[2] / 200;
+  double var_Y = ( L + 16 ) / 116;
+  double var_X = a / 500 + var_Y;
+  double var_Z = var_Y - b / 200;
     
   if ( pow(var_Y,3) > 0.008856 ) var_Y = pow(var_Y,3);
-  else var_Y = ( var_Y - 16 / 116 ) / 7.787;
+  else var_Y = ( var_Y - 16.0 / 116.0 ) / 7.787;
                                                             
   if ( pow(var_X,3) > 0.008856 ) var_X = pow(var_X,3);
-  else var_X = ( var_X - 16 / 116 ) / 7.787;
+  else var_X = ( var_X - 16.0 / 116.0 ) / 7.787;
 
   if ( pow(var_Z,3) > 0.008856 ) var_Z = pow(var_Z,3);
-  else var_Z = ( var_Z - 16 / 116 ) / 7.787;
-  double ref_X =  95.047;
-  double ref_Y = 100.000;
-  double ref_Z = 108.883;
-  xyz[0] = ref_X * var_X;     //ref_X =  95.047  Observer= 2 Illuminant= D65
-  xyz[1] = ref_Y * var_Y;     //ref_Y = 100.000
-  xyz[2] = ref_Z * var_Z;     //ref_Z = 108.883
+  else var_Z = ( var_Z - 16.0 / 116.0 ) / 7.787;
+  const double ref_X = 0.9505;
+  const double ref_Y = 1.000;
+  const double ref_Z = 1.089;
+  *x = ref_X * var_X;     //ref_X = 0.9505  Observer= 2 deg Illuminant= D65
+  *y = ref_Y * var_Y;     //ref_Y = 1.000
+  *z = ref_Z * var_Z;     //ref_Z = 1.089
 }
 
+//-----------------------------------------------------------------------------
+double *vtkMath::LabToXYZ(const double lab[3])
+{
+  static double xyz[3];
+  vtkMath::LabToXYZ(lab[0], lab[1], lab[2], xyz+0, xyz+1, xyz+2);
+  return xyz;
+}
+
+//-----------------------------------------------------------------------------
+void vtkMath::XYZToLab(double x, double y, double z,
+                       double *L, double *a, double *b)
+{
+  const double ref_X = 0.9505;
+  const double ref_Y = 1.000;
+  const double ref_Z = 1.089;
+  double var_X = x / ref_X;  //ref_X = 0.9505  Observer= 2 deg, Illuminant= D65
+  double var_Y = y / ref_Y;  //ref_Y = 1.000
+  double var_Z = z / ref_Z;  //ref_Z = 1.089
+
+  if ( var_X > 0.008856 ) var_X = pow(var_X, 1.0/3.0);
+  else                    var_X = ( 7.787 * var_X ) + ( 16.0 / 116.0 );
+  if ( var_Y > 0.008856 ) var_Y = pow(var_Y, 1.0/3.0);
+  else                    var_Y = ( 7.787 * var_Y ) + ( 16.0 / 116.0 );
+  if ( var_Z > 0.008856 ) var_Z = pow(var_Z, 1.0/3.0);
+  else                    var_Z = ( 7.787 * var_Z ) + ( 16.0 / 116.0 );
+
+  *L = ( 116 * var_Y ) - 16;
+  *a = 500 * ( var_X - var_Y );
+  *b = 200 * ( var_Y - var_Z );
+}
+
+//-----------------------------------------------------------------------------
+double *vtkMath::XYZToLab(const double xyz[3])
+{
+  static double lab[3];
+  vtkMath::XYZToLab(xyz[0], xyz[1], xyz[2], lab+0, lab+1, lab+2);
+  return lab;
+}
 
 //----------------------------------------------------------------------------
-void vtkMath::XYZToRGB(double xyz[3], double rgb[3])
+void vtkMath::XYZToRGB(double x, double y, double z,
+                       double *r, double *g, double *b)
 {
+  //double ref_X = 0.9505;        //Observer = 2 deg Illuminant = D65
+  //double ref_Y = 1.000;
+  //double ref_Z = 1.089;
+ 
+  *r = x *  3.2406 + y * -1.5372 + z * -0.4986;
+  *g = x * -0.9689 + y *  1.8758 + z *  0.0415;
+  *b = x *  0.0557 + y * -0.2040 + z *  1.0570;
+
+  // The following performs a "gamma correction" specified by the sRGB color
+  // space.  sRGB is defined by a cononical definition of a display monitor and
+  // has been standardized by the International Electrotechnical Commission (IEC
+  // 61966-2-1).  However, it is a non-linear color space, which means that it
+  // will invalidate the color computations done by OpenGL.  Furthermore, most
+  // OS or display drivers will do some gamma correction on there own, so
+  // displaying these colors directly usually results in overly bright images.
+  // Thus, the non-linear RGB values are inappropriate for VTK, so the code is
+  // commented out.  If someone needs sRGB values in the future, there should be
+  // a separate set of color conversion functions for that.
+//   if (*r > 0.0031308) *r = 1.055 * (pow(*r, ( 1 / 2.4 ))) - 0.055;
+//   else *r = 12.92 * (*r);
+//   if (*g > 0.0031308) *g = 1.055 * (pow(*g ,( 1 / 2.4 ))) - 0.055;
+//   else  *g = 12.92 * )*g);
+//   if (*b > 0.0031308) *b = 1.055 * (pow(*b, ( 1 / 2.4 ))) - 0.055;
+//   else *b = 12.92 * (*b);
   
-  //double ref_X =  95.047;        //Observer = 2° Illuminant = D65
-  //double ref_Y = 100.000;
-  //double ref_Z = 108.883;
- 
-  double var_X = xyz[0] / 100;        //X = From 0 to ref_X
-  double var_Y = xyz[1] / 100;        //Y = From 0 to ref_Y
-  double var_Z = xyz[2] / 100;        //Z = From 0 to ref_Y
- 
-  double var_R = var_X *  3.2406 + var_Y * -1.5372 + var_Z * -0.4986;
-  double var_G = var_X * -0.9689 + var_Y *  1.8758 + var_Z *  0.0415;
-  double var_B = var_X *  0.0557 + var_Y * -0.2040 + var_Z *  1.0570;
- 
-  if ( var_R > 0.0031308 ) var_R = 1.055 * ( pow(var_R, ( 1 / 2.4 )) ) - 0.055;
-  else var_R = 12.92 * var_R;
-  if ( var_G > 0.0031308 ) var_G = 1.055 * ( pow(var_G ,( 1 / 2.4 )) ) - 0.055;
-  else  var_G = 12.92 * var_G;
-  if ( var_B > 0.0031308 ) var_B = 1.055 * ( pow(var_B, ( 1 / 2.4 )) ) - 0.055;
-  else var_B = 12.92 * var_B;
-                                                                                                 
-  rgb[0] = var_R;
-  rgb[1] = var_G;
-  rgb[2] = var_B;
-  
-  //clip colors. ideally we would do something different for colors
-  //out of gamut, but not really sure what to do atm.
-  if (rgb[0]<0) rgb[0]=0;
-  if (rgb[1]<0) rgb[1]=0;
-  if (rgb[2]<0) rgb[2]=0;
-  if (rgb[0]>1) rgb[0]=1;
-  if (rgb[1]>1) rgb[1]=1;
-  if (rgb[2]>1) rgb[2]=1;
+  // Clip colors. ideally we would do something that is perceptually closest
+  // (since we can see colors outside of the display gamut), but this seems to
+  // work well enough.
+  double maxVal = *r;
+  if (maxVal < *g) maxVal = *g;
+  if (maxVal < *b) maxVal = *b;
+  if (maxVal > 1.0)
+    {
+    *r /= maxVal;
+    *g /= maxVal;
+    *b /= maxVal;
+    }
+  if (*r<0) *r=0;
+  if (*g<0) *g=0;
+  if (*b<0) *b=0;
 
 }
+
+//-----------------------------------------------------------------------------
+double *vtkMath::XYZToRGB(const double xyz[3])
+{
+  static double rgb[3];
+  vtkMath::XYZToRGB(xyz[0], xyz[1], xyz[2], rgb+0, rgb+1, rgb+2);
+  return rgb;
+}
+
+//-----------------------------------------------------------------------------
+void vtkMath::RGBToXYZ(double r, double g, double b,
+                       double *x, double *y, double *z)
+{
+  // The following performs an inverse "gamma correction" specified by the sRGB
+  // color space.  sRGB is defined by a cononical definition of a display
+  // monitor and has been standardized by the International Electrotechnical
+  // Commission (IEC 61966-2-1).  However, it is a non-linear color space, which
+  // means that it will invalidate the color computations done by OpenGL.
+  // Furthermore, most OS or display drivers will do some gamma correction on
+  // there own, so displaying these colors directly usually results in overly
+  // bright images.  Thus, the non-linear RGB values are inappropriate for VTK,
+  // so the code is commented out.  If someone needs sRGB values in the future,
+  // there should be a separate set of color conversion functions for that.
+//   if ( r > 0.04045 ) r = pow(( r + 0.055 ) / 1.055, 2.4);
+//   else               r = r / 12.92;
+//   if ( g > 0.04045 ) g = pow(( g + 0.055 ) / 1.055, 2.4);
+//   else               g = g / 12.92;
+//   if ( b > 0.04045 ) b = pow(( b + 0.055 ) / 1.055, 2.4);
+//   else               b = b / 12.92;
+
+  //Observer. = 2 deg, Illuminant = D65
+  *x = r * 0.4124 + g * 0.3576 + b * 0.1805;
+  *y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  *z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+}
+
+//-----------------------------------------------------------------------------
+double *vtkMath::RGBToXYZ(const double rgb[3])
+{
+  static double xyz[3];
+  vtkMath::RGBToXYZ(rgb[0], rgb[1], rgb[2], xyz+0, xyz+1, xyz+2);
+  return xyz;
+}
+
+//-----------------------------------------------------------------------------
+void vtkMath::RGBToLab(double red, double green, double blue,
+                       double *L, double *a, double *b)
+{
+  double x, y, z;
+  vtkMath::RGBToXYZ(red, green, blue, &x, &y, &z);
+  vtkMath::XYZToLab(x, y, z, L, a, b);
+}
+
+//-----------------------------------------------------------------------------
+double *vtkMath::RGBToLab(const double rgb[3])
+{
+  return vtkMath::XYZToLab(vtkMath::RGBToXYZ(rgb));
+}
+
+//-----------------------------------------------------------------------------
+void vtkMath::LabToRGB(double L, double a, double b,
+                       double *red, double *green, double *blue)
+{
+  double x, y, z;
+  vtkMath::LabToXYZ(L, a, b, &x, &y, &z);
+  vtkMath::XYZToRGB(x, y, z, red, green, blue);
+}
+
+//-----------------------------------------------------------------------------
+double *vtkMath::LabToRGB(const double lab[3])
+{
+  return vtkMath::XYZToRGB(vtkMath::LabToXYZ(lab));
+}
+
 //----------------------------------------------------------------------------
 void vtkMath::ClampValues(double *values, 
                           int nb_values, 
@@ -2707,12 +3061,12 @@ int vtkMath::GetAdjustedScalarRange(
   switch (array->GetDataType())
     {
     case VTK_UNSIGNED_CHAR:
-      range[0] = (double)array->GetDataTypeMin();
-      range[1] = (double)array->GetDataTypeMax();
+      range[0] = static_cast<double>(array->GetDataTypeMin());
+      range[1] = static_cast<double>(array->GetDataTypeMax());
       break;
 
     case VTK_UNSIGNED_SHORT:
-      range[0] = (double)array->GetDataTypeMin();
+      range[0] = static_cast<double>(array->GetDataTypeMin());
       if (range[1] <= 4095.0)
         {
         if (range[1] > VTK_UNSIGNED_CHAR_MAX)
@@ -2722,8 +3076,11 @@ int vtkMath::GetAdjustedScalarRange(
         }
       else
         {
-        range[1] = (double)array->GetDataTypeMax();
+        range[1] = static_cast<double>(array->GetDataTypeMax());
         }
+      break;
+    default:
+      assert("check: impossible case."); // reaching this line is a bug.
       break;
     }
 
@@ -2777,8 +3134,12 @@ int vtkMath::PointIsWithinBounds(double point[3], double bounds[6], double delta
     return 0;
     }
   for(int i=0;i<3;i++)
+    {
     if(point[i]+delta[i] < bounds[2*i] || point[i]-delta[i] > bounds[2*i+1])
+      {
       return 0;
+      }
+    }
   return 1;
   
 } 
@@ -2790,4 +3151,36 @@ void vtkMath::PrintSelf(ostream& os, vtkIndent indent)
   
   os << indent << "Seed: " << this->Seed << "\n";
 }
+
+
+//----------------------------------------------------------------------------
+double vtkMath::Inf()
+{
+#if defined(WIN32) && defined(__BORLANDC__)
+  return *( (double*) vtkMathInfBits );
+#else
+  return vtkMathInfBits.d;
+#endif
+}
+
+//----------------------------------------------------------------------------
+double vtkMath::NegInf()
+{
+#if defined(WIN32) && defined(__BORLANDC__)
+  return *( (double*) vtkMathNegInfBits );
+#else
+  return vtkMathNegInfBits.d;
+#endif
+}
+
+//----------------------------------------------------------------------------
+double vtkMath::Nan()
+{
+#if defined(WIN32) && defined(__BORLANDC__)
+  return *( (double*) vtkMathNanBits );
+#else
+  return vtkMathNanBits.d;
+#endif
+}
+
 

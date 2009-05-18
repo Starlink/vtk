@@ -18,12 +18,14 @@
 #include "vtkAlgorithmOutput.h"
 #include "vtkCellData.h"
 #include "vtkCommand.h"
+#include "vtkDataArray.h"
 #include "vtkDataObject.h"
+#include "vtkDataObjectTypes.h"
 #include "vtkDataSet.h"
 #include "vtkGarbageCollector.h"
-#include "vtkHierarchicalBoxDataSet.h"
-#include "vtkHierarchicalDataSet.h"
 #include "vtkInformation.h"
+#include "vtkInformationExecutivePortKey.h"
+#include "vtkInformationExecutivePortVectorKey.h"
 #include "vtkInformationIntegerKey.h"
 #include "vtkInformationKeyVectorKey.h"
 #include "vtkInformationRequestKey.h"
@@ -33,16 +35,9 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-#include "vtkImageData.h"
-#include "vtkPolyData.h"
-#include "vtkRectilinearGrid.h"
-#include "vtkStructuredGrid.h"
-#include "vtkStructuredPoints.h"
-#include "vtkUnstructuredGrid.h"
-
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkDemandDrivenPipeline, "$Revision: 1.37.4.5 $");
+vtkCxxRevisionMacro(vtkDemandDrivenPipeline, "$Revision: 1.57 $");
 vtkStandardNewMacro(vtkDemandDrivenPipeline);
 
 vtkInformationKeyMacro(vtkDemandDrivenPipeline, DATA_NOT_GENERATED, Integer);
@@ -58,6 +53,7 @@ vtkDemandDrivenPipeline::vtkDemandDrivenPipeline()
   this->InfoRequest = 0;
   this->DataObjectRequest = 0;
   this->DataRequest = 0;
+  this->PipelineMTime = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -137,7 +133,7 @@ vtkDemandDrivenPipeline::ComputePipelineMTime(vtkInformation* request,
         // call ComputePipelineMTime on the input
         vtkExecutive* e;
         int producerPort;
-        info->Get(vtkExecutive::PRODUCER(),e,producerPort);
+        vtkExecutive::PRODUCER()->Get(info,e,producerPort);
         if(e)
           {
           unsigned long pmtime;
@@ -501,8 +497,16 @@ int vtkDemandDrivenPipeline::ExecuteData(vtkInformation* request,
 {
   this->ExecuteDataStart(request, inInfo, outInfo);
   // Invoke the request on the algorithm.
+//   unsigned long mTimeBefore = this->Algorithm->GetMTime();
   int result = this->CallAlgorithm(request, vtkExecutive::RequestDownstream,
                                    inInfo, outInfo);
+//   if (mTimeBefore != this->Algorithm->GetMTime())
+//     {
+//     vtkWarningMacro(<< this->Algorithm->GetClassName() 
+//                     << " modified it's MTime during RequestData(). "
+//                     << "This may lead to unnecessary pipeline "
+//                     << "executions");
+//     }
   this->ExecuteDataEnd(request, inInfo, outInfo);
 
   return result;
@@ -546,7 +550,10 @@ void vtkDemandDrivenPipeline::ExecuteDataStart(vtkInformation* request,
         {
         vtkInformation* outInfo = outputs->GetInformationObject(i);
         vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
-        if(output)
+        // We want to pass the field data unless it is a table.
+        // Since a table's data is stored in the field data, we want
+        // table algorithms to start with an empty field data.
+        if(output && !output->IsA("vtkTable"))
           {
           output->GetFieldData()->PassData(input->GetFieldData());
           }
@@ -631,15 +638,23 @@ int vtkDemandDrivenPipeline::CheckDataObject(int port,
   vtkInformation* portInfo = this->Algorithm->GetOutputPortInformation(port);
   if(const char* dt = portInfo->Get(vtkDataObject::DATA_TYPE_NAME()))
     {
+    int incorrectdata = data && (!data->IsA(dt) ||
+      (!strcmp(data->GetClassName(),"vtkTemporalDataSet") &&
+       strcmp(dt,"vtkTemporalDataSet")) );
     // The output port specifies a data type.  Make sure the data
     // object exists and is of the right type.
-    if(!data || !data->IsA(dt))
+    if(!data || incorrectdata)
       {
+      if (data) 
+        {
+        vtkDebugMacro(<< "CHECKDATAOBJECT Replacing " << data->GetClassName());
+        }
       // Try to create an instance of the correct type.
-      data = this->NewDataObject(dt);
+      data = vtkDataObjectTypes::NewDataObject(dt);
       this->SetOutputData(port, data, outInfo);
       if(data)
         {
+        vtkDebugMacro(<< "CHECKDATAOBJECT Created " << dt);
         data->FastDelete();
         }
       }
@@ -771,7 +786,8 @@ int vtkDemandDrivenPipeline::InputTypeIsValid
   vtkDataObject* input = this->GetInputData(port, index, inInfoVec);
 
   // Enforce required type, if any.
-  if(const char* dt = info->Get(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE()))
+  if(info->Has(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE()) 
+     && info->Length(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE()) > 0)
     {
     // The input cannot be NULL unless the port is optional.
     if(!input && !info->Get(vtkAlgorithm::INPUT_IS_OPTIONAL()))
@@ -779,19 +795,33 @@ int vtkDemandDrivenPipeline::InputTypeIsValid
       vtkErrorMacro("Input for connection index " << index
                     << " on input port index " << port
                     << " for algorithm " << this->Algorithm->GetClassName()
-                    << "(" << this->Algorithm << ") is NULL, but a " << dt
+                    << "(" << this->Algorithm << ") is NULL, but a " 
+                    << info->Get(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), 0)
                     << " is required.");
       return 0;
       }
 
-    // The input must be of required type or NULL.
-    if(input && !input->IsA(dt))
+    // The input must be one of the required types or NULL.
+    bool foundMatch = false;
+    if(input)
+      {
+      int size = info->Length(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
+      for(int i = 0; i < size; ++i)
+        {
+        if(input->IsA(info->Get(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), i)))
+          {
+          foundMatch = true;
+          }
+        }
+      }
+    if(input && !foundMatch)
       {
       vtkErrorMacro("Input for connection index " << index
                     << " on input port index " << port
                     << " for algorithm " << this->Algorithm->GetClassName()
                     << "(" << this->Algorithm << ") is of type "
-                    << input->GetClassName() << ", but a " << dt
+                    << input->GetClassName() << ", but a " 
+                    << info->Get(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), 0)
                     << " is required.");
       return 0;
       }
@@ -909,7 +939,7 @@ int vtkDemandDrivenPipeline::DataSetAttributeExists(vtkDataSetAttributes* dsa,
     {
     // A specific attribute must match the requirements.
     int attrType = field->Get(vtkDataObject::FIELD_ATTRIBUTE_TYPE());
-    return this->ArrayIsValid(dsa->GetAttribute(attrType), field);
+    return this->ArrayIsValid(dsa->GetAbstractAttribute(attrType), field);
     }
   else
     {
@@ -935,7 +965,7 @@ int vtkDemandDrivenPipeline::FieldArrayExists(vtkFieldData* data,
 }
 
 //----------------------------------------------------------------------------
-int vtkDemandDrivenPipeline::ArrayIsValid(vtkDataArray* array,
+int vtkDemandDrivenPipeline::ArrayIsValid(vtkAbstractArray* array,
                                           vtkInformation* field)
 {
   // Enforce existence of the array.
@@ -1012,52 +1042,7 @@ int vtkDemandDrivenPipeline::InputIsRepeatable(int port)
 //----------------------------------------------------------------------------
 vtkDataObject* vtkDemandDrivenPipeline::NewDataObject(const char* type)
 {
-  // Check for some standard types and then try the instantiator.
-  if(strcmp(type, "vtkImageData") == 0)
-    {
-    return vtkImageData::New();
-    }
-  else if(strcmp(type, "vtkPolyData") == 0)
-    {
-    return vtkPolyData::New();
-    }
-  else if(strcmp(type, "vtkRectilinearGrid") == 0)
-    {
-    return vtkRectilinearGrid::New();
-    }
-  else if(strcmp(type, "vtkStructuredGrid") == 0)
-    {
-    return vtkStructuredGrid::New();
-    }
-  else if(strcmp(type, "vtkStructuredPoints") == 0)
-    {
-    return vtkStructuredPoints::New();
-    }
-  else if(strcmp(type, "vtkUnstructuredGrid") == 0)
-    {
-    return vtkUnstructuredGrid::New();
-    }
-  else if(strcmp(type, "vtkHierarchicalDataSet") == 0)
-    {
-    return vtkHierarchicalDataSet::New();
-    }
-  else if(strcmp(type, "vtkHierarchicalBoxDataSet") == 0)
-    {
-    return vtkHierarchicalBoxDataSet::New();
-    }
-  else if(vtkObject* obj = vtkInstantiator::CreateInstance(type))
-    {
-    vtkDataObject* data = vtkDataObject::SafeDownCast(obj);
-    if(!data)
-      {
-      obj->Delete();
-      }
-    return data;
-    }
-  else
-    {
-    return 0;
-    }
+  return vtkDataObjectTypes::NewDataObject(type);
 }
 
 //----------------------------------------------------------------------------

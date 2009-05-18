@@ -74,7 +74,7 @@ public:
   virtual void PrefFullScreen(void);
 
   // Description:
-  // Specify the size of the rendering window.
+  // Specify the size of the rendering window in pixels.
   virtual void SetSize(int,int);
   virtual void SetSize(int a[2]) {this->SetSize(a[0], a[1]);};
 
@@ -116,16 +116,27 @@ public:
 
   // Description:
   // Xwindow get set functions
-  virtual void *GetGenericDisplayId() {return (void *)this->GetDisplayId();};
+  virtual void *GetGenericDisplayId()
+    {
+      return this->GetDisplayId();
+    }
+  
   virtual void *GetGenericWindowId();
-  virtual void *GetGenericParentId()  {return (void *)this->ParentId;};
+  virtual void *GetGenericParentId()
+    {
+      return reinterpret_cast<void *>(this->ParentId);
+    }
+  
   virtual void *GetGenericContext();
-  virtual void *GetGenericDrawable()  {return (void *)this->WindowId;};
+  virtual void *GetGenericDrawable()
+    {
+      return reinterpret_cast<void *>(this->WindowId);
+    }
   
   // Description:
-  // Get the size of the screen in pixels
+  // Get the current size of the screen in pixels.
   virtual int     *GetScreenSize();
-
+  
   // Description:
   // Get the position in screen coordinates (pixels) of the window.
   virtual int     *GetPosition();
@@ -217,7 +228,7 @@ protected:
   ~vtkXOpenGLRenderWindow();
 
   vtkXOpenGLRenderWindowInternal *Internal;
-  
+
   Window   ParentId;
   Window   WindowId;
   Window   NextWindowId;
@@ -240,6 +251,15 @@ protected:
   Cursor XCSizeNW;
   Cursor XCSizeSE;
   Cursor XCSizeSW;
+  Cursor XCHand;
+
+
+  void CreateAWindow();
+  void DestroyWindow();
+  void CreateOffScreenWindow(int width, int height);
+  void DestroyOffScreenWindow();
+  void ResizeOffScreenWindow(int width, int height);
+
   
 private:
   vtkXOpenGLRenderWindow(const vtkXOpenGLRenderWindow&);  // Not implemented.

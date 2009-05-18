@@ -74,6 +74,7 @@ void output_proto_vars(FILE *fp, int i)
     case 0xB:   fprintf(fp,"jint "); break;
     case 0xC:   fprintf(fp,"jint "); break;
     case 0xD:     fprintf(fp,"jint "); break;
+    case 0xE:     fprintf(fp,"jboolean "); break;
     case 0x2:     fprintf(fp,"void "); break;
     case 0x3:     fprintf(fp,"jchar "); break;
     case 0x9:     fprintf(fp,"jobject "); break;
@@ -133,6 +134,10 @@ void use_hints(FILE *fp)
       fprintf(fp,"    return vtkJavaMakeJArrayOfIntFromSignedChar(env,temp%i,%i);\n",
               MAX_ARGS, currentFunction->HintSize);
       break;
+    case 0x30E:
+      fprintf(fp,"    return vtkJavaMakeJArrayOfIntFromBool(env,temp%i,%i);\n",
+              MAX_ARGS, currentFunction->HintSize);
+      break;
     case 0x305: case 0x306: case 0x314: case 0x315: case 0x316:
     case 0x31A: case 0x31B: case 0x31C:
       break;
@@ -151,14 +156,17 @@ void return_result(FILE *fp)
     case 0x13: case 0x14: case 0x15: case 0x16: case 0x1A: case 0x1B: case 0x1C:
       fprintf(fp,"jint "); 
       break;
+    case 0xE:
+      fprintf(fp,"jboolean ");
+      break;
     case 0x303: fprintf(fp,"jstring "); break;
     case 0x109:
     case 0x309:  
-      fprintf(fp,"jobject "); break;
+      fprintf(fp,"jlong "); break;
       
     case 0x301: case 0x307: case 0x313:
     case 0x304: case 0x305: case 0x306: case 0x30A: case 0x30B: case 0x30C:
-    case 0x30D: case 0x31A: case 0x31B: case 0x31C:
+    case 0x30D: case 0x30E: case 0x31A: case 0x31B: case 0x31C:
       fprintf(fp,"jarray "); break;
     }
 }
@@ -207,6 +215,7 @@ void output_temp(FILE *fp, int i, int aType, char *Id, int aCount)
     case 0xB:   fprintf(fp,"long long "); break;
     case 0xC:   fprintf(fp,"__int64 "); break;
     case 0xD:     fprintf(fp,"signed char "); break;
+    case 0xE:     fprintf(fp,"bool "); break;
     case 0x9:     
       fprintf(fp,"%s ",Id); break;
     case 0x8: return;
@@ -238,10 +247,6 @@ void output_temp(FILE *fp, int i, int aType, char *Id, int aCount)
     }
 
   fprintf(fp,";\n");
-  if ((i == MAX_ARGS) && ((aType % 0x1000 == 0x309)||(aType % 0x1000 == 0x109)))
-    {
-    fprintf(fp,"  jobject tempH;\n");
-    }
 }
 
 void get_args(FILE *fp, int i)
@@ -269,12 +274,15 @@ void get_args(FILE *fp, int i)
     case 0x3:
       fprintf(fp,"  temp%i = (char)(0xff & id%i);\n",i,i);
       break;
+    case 0xE:
+      fprintf(fp,"  temp%i = (id%i != 0) ? true : false;\n",i,i);
+      break;
     case 0x303:
       fprintf(fp,"  temp%i = vtkJavaUTFToChar(env,id%i);\n",i,i);
       break;
     case 0x109:
     case 0x309:
-      fprintf(fp,"  temp%i = (%s *)(vtkJavaGetPointerFromObject(env,id%i,(char *) \"%s\"));\n",i,currentFunction->ArgClasses[i],i,currentFunction->ArgClasses[i]);
+      fprintf(fp,"  temp%i = (%s *)(vtkJavaGetPointerFromObject(env,id%i));\n",i,currentFunction->ArgClasses[i],i);
       break;
     case 0x301:
     case 0x307:
@@ -290,6 +298,7 @@ void get_args(FILE *fp, int i)
     case 0x30B:
     case 0x30C:
     case 0x30D:
+    case 0x30E:
       fprintf(fp,"  tempArray%i = (void *)(env->GetIntArrayElements(id%i,NULL));\n",i,i);
       for (j = 0; j < currentFunction->ArgCounts[i]; j++)
         {
@@ -336,6 +345,7 @@ void copy_and_release_args(FILE *fp, int i)
     case 0x30B:
     case 0x30C:
     case 0x30D:
+    case 0x30E:
       for (j = 0; j < currentFunction->ArgCounts[i]; j++)
         {
         fprintf(fp,"  ((jint *)tempArray%i)[%i] = temp%i[%i];\n",i,j,i,j);
@@ -366,19 +376,7 @@ void do_return(FILE *fp)
     case 0x109:
     case 0x309:  
       {
-      fprintf(fp,"  if (temp%i == NULL) { return NULL; }\n", MAX_ARGS);
-      fprintf(fp,"  tempH = vtkJavaGetObjectFromPointer((void *)temp%i);\n", MAX_ARGS);
-      fprintf(fp,"  if (!tempH)\n    {\n");
-      fprintf(fp,"    tempH = vtkJavaCreateNewJavaStubForObject(env, (vtkObject *)temp%i);\n", MAX_ARGS);
-      fprintf(fp,"    if (!tempH)\n      {\n");
-      fprintf(fp,"      // clear the exception first\n");
-      fprintf(fp,"      env->ExceptionClear();\n");
-      fprintf(fp,"      // no java stub for this class exists? Use function return type\n");
-      fprintf(fp,"      tempH = vtkJavaCreateNewJavaStub(env, \"vtk/%s\", (void *)temp%i);\n",
-                  currentFunction->ReturnClass, MAX_ARGS);
-      fprintf(fp,"      }\n");
-      fprintf(fp,"    }\n");      
-      fprintf(fp,"  return tempH;\n");
+      fprintf(fp,"  return (jlong)(size_t)temp%i;", MAX_ARGS);
       break;
       }
       
@@ -386,7 +384,7 @@ void do_return(FILE *fp)
     /* this is done by looking them up in a hint file */
     case 0x301: case 0x307: case 0x313:
     case 0x304: case 0x305: case 0x306:
-    case 0x30A: case 0x30B: case 0x30C: case 0x30D:
+    case 0x30A: case 0x30B: case 0x30C: case 0x30D: case 0x30E:
       use_hints(fp);
       break;
     default: fprintf(fp,"  return temp%i;\n", MAX_ARGS); break;
@@ -589,8 +587,8 @@ void HandleDataReader(FILE *fp, FileInfo *data)
             data->ClassName,currentFunction->Name, numberOfWrappedFunctions);
     fprintf(fp,"{\n");
     fprintf(fp,"  %s *op;\n",data->ClassName);
-    fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj,(char *) \"%s\");\n",
-            data->ClassName, data->ClassName);
+    fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n",
+            data->ClassName);
     fprintf(fp,"  jboolean isCopy;\n");
     fprintf(fp,"  jbyte *data = env->GetByteArrayElements(id0,&isCopy);\n");
     fprintf(fp,"  op->SetBinaryInputString((const char *)data,id1);\n");
@@ -689,8 +687,8 @@ void HandleDataArray(FILE *fp, FileInfo *data)
   fprintf(fp,"  %s  *temp20;\n", type);
   fprintf(fp,"  vtkIdType size;\n");
   fprintf(fp,"\n");
-  fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj,(char *) \"%s\");\n", 
-    data->ClassName, data->ClassName);
+  fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n", 
+    data->ClassName);
   fprintf(fp,"  temp20 = static_cast<%s*>(op->GetVoidPointer(0));\n", type);
   fprintf(fp,"  size = op->GetMaxId()+1;\n");
   fprintf(fp,"  return vtkJavaMakeJArrayOf%sFrom%s(env,temp20,size);\n", fromtype, fromtype);
@@ -704,8 +702,8 @@ void HandleDataArray(FILE *fp, FileInfo *data)
   fprintf(fp,"  int length;\n");
   fprintf(fp,"  tempArray0 = (%s *)(env->Get%sArrayElements(id0,NULL));\n", type, jfromtype);
   fprintf(fp,"  length = env->GetArrayLength(id0);\n");
-  fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj,(char *) \"%s\");\n", 
-    data->ClassName, data->ClassName);
+  fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n", 
+    data->ClassName);
   fprintf(fp,"  op->SetNumberOfTuples(length/op->GetNumberOfComponents());\n");
   fprintf(fp,"  memcpy(op->GetVoidPointer(0), tempArray0, length*sizeof(%s));\n", type);
   fprintf(fp,"  env->Release%sArrayElements(id0,(j%s *)tempArray0,0);\n", jfromtype, jtype);
@@ -791,7 +789,7 @@ void outputFunction(FILE *fp, FileInfo *data)
     {
     case 0x301: case 0x302: case 0x307:
     case 0x304: case 0x305: case 0x306:
-    case 0x30A: case 0x30B: case 0x30C: case 0x30D:
+    case 0x30A: case 0x30B: case 0x30C: case 0x30D: case 0x30E:
     case 0x313:
       args_ok = currentFunction->HaveHint;
       break;
@@ -870,8 +868,8 @@ void outputFunction(FILE *fp, FileInfo *data)
         get_args(fp, i);
         }
       
-      fprintf(fp,"\n  op = (%s *)vtkJavaGetPointerFromObject(env,obj,(char *) \"%s\");\n",
-              data->ClassName,data->ClassName);
+      fprintf(fp,"\n  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n",
+              data->ClassName);
       
       
       switch (currentFunction->ReturnType % 0x1000)
@@ -944,13 +942,14 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
   fprintf(fp,"#include \"vtkSystemIncludes.h\"\n");
   fprintf(fp,"#include \"%s.h\"\n",data->ClassName);
   fprintf(fp,"#include \"vtkJavaUtil.h\"\n\n");
+  fprintf(fp,"#include <vtksys/ios/sstream>\n");
   
   for (i = 0; i < data->NumberOfSuperClasses; i++)
     {
     fprintf(fp,"extern \"C\" JNIEXPORT void* %s_Typecast(void *op,char *dType);\n",
             data->SuperClasses[i]);
     }
-  
+
   fprintf(fp,"\nextern \"C\" JNIEXPORT void* %s_Typecast(void *me,char *dType)\n{\n",data->ClassName);
   if (data->NumberOfSuperClasses > 0)
     {
@@ -981,72 +980,70 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"\nextern \"C\" JNIEXPORT void JNICALL Java_vtk_%s_VTKDelete(JNIEnv *env,jobject obj)\n",
             data->ClassName);
     fprintf(fp,"{\n  %s *op;\n",data->ClassName);
-    fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj,(char *) \"%s\");\n",
-            data->ClassName,data->ClassName);
-    fprintf(fp,"  vtkJavaDeleteObject(env,obj);\n");
+    fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n",
+            data->ClassName);
     fprintf(fp,"  op->Delete();\n");
+    fprintf(fp,"}\n");
+    
+    fprintf(fp,"\nextern \"C\" JNIEXPORT void JNICALL Java_vtk_%s_VTKRegister(JNIEnv *env,jobject obj)\n",
+            data->ClassName);
+    fprintf(fp,"{\n  %s *op;\n",data->ClassName);
+    fprintf(fp,"  op = (%s *)vtkJavaGetPointerFromObject(env,obj);\n",
+            data->ClassName);
+    fprintf(fp,"  op->Register(op);\n");
     fprintf(fp,"}\n");
     }
   if (data->IsConcrete)
     {
-    fprintf(fp,"\nextern \"C\" JNIEXPORT void JNICALL Java_vtk_%s_VTKInit(JNIEnv *env, jobject obj)",
+    fprintf(fp,"\nextern \"C\" JNIEXPORT jlong JNICALL Java_vtk_%s_VTKInit(JNIEnv *, jobject)",
             data->ClassName);
     fprintf(fp,"\n{");
     fprintf(fp,"\n  %s *aNewOne = %s::New();",data->ClassName, data->ClassName);
-    fprintf(fp,"\n  int id= vtkJavaRegisterNewObject(env,obj,(void *)aNewOne);");
-    fprintf(fp,"\n  vtkJavaRegisterCastFunction(env,obj,id,(void *)%s_Typecast);", data->ClassName);
+    fprintf(fp,"\n  return (jlong)(size_t)(void*)aNewOne;");
     fprintf(fp,"\n}\n");  
     } 
 
-  fprintf(fp,"\nextern \"C\" JNIEXPORT void JNICALL Java_vtk_%s_VTKCastInit(JNIEnv *env, jobject obj)",
-                data->ClassName);
-  fprintf(fp,"\n{");
-  fprintf(fp,"\n  int id= vtkJavaGetId(env,obj);");
-  fprintf(fp,"\n  vtkJavaRegisterCastFunction(env,obj,id,(void *)%s_Typecast);", 
-            data->ClassName);
-  fprintf(fp,"\n}\n");
-
-  /* for vtkRenderWindow we want to add a special method to support */
-  /* native AWT rendering */
+  /* for vtkRenderWindow we want to add a special method to support
+   * native AWT rendering
+   *
+   * Including vtkJavaAwt.h provides inline implementations of
+   * Java_vtk_vtkPanel_RenderCreate, Java_vtk_vtkPanel_Lock and
+   * Java_vtk_vtkPanel_UnLock. */
   if (!strcmp("vtkRenderWindow",data->ClassName))
     {
     fprintf(fp,"\n#include \"vtkJavaAwt.h\"\n\n");
     }
-  
+
   if (!strcmp("vtkObject",data->ClassName))
     {
     /* Add the Print method to vtkObject. */
     fprintf(fp,"\nextern \"C\" JNIEXPORT jstring JNICALL Java_vtk_vtkObject_Print(JNIEnv *env,jobject obj)\n");
     fprintf(fp,"{\n  vtkObject *op;\n");
     fprintf(fp,"  jstring tmp;\n\n");
-    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj,(char *) \"vtkObject\");\n");
+    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj);\n");
     
-    fprintf(fp,"  ostrstream vtkmsg_with_warning_C4701;\n");
+    fprintf(fp,"  vtksys_ios::ostringstream vtkmsg_with_warning_C4701;\n");
     fprintf(fp,"  op->Print(vtkmsg_with_warning_C4701);\n");
     fprintf(fp,"  vtkmsg_with_warning_C4701.put('\\0');\n");  
-    fprintf(fp,"  tmp = vtkJavaMakeJavaString(env,vtkmsg_with_warning_C4701.str());\n");
-    fprintf(fp,"  delete vtkmsg_with_warning_C4701.str();\n");
+    fprintf(fp,"  tmp = vtkJavaMakeJavaString(env,vtkmsg_with_warning_C4701.str().c_str());\n");
 
     fprintf(fp,"  return tmp;\n");
     fprintf(fp,"}\n");
+
     /* Add the PrintRevisions method to vtkObject. */
     fprintf(fp,"\nextern \"C\" JNIEXPORT jstring JNICALL Java_vtk_vtkObject_PrintRevisions(JNIEnv *env,jobject obj)\n");
     fprintf(fp,"{\n  vtkObject *op;\n");
     fprintf(fp,"  jstring tmp;\n\n");
-    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj,(char *) \"vtkObject\");\n");
+    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj);\n");
     
-    fprintf(fp,"  ostrstream vtkmsg_with_warning_C4701;\n");
+    fprintf(fp,"  vtksys_ios::ostringstream vtkmsg_with_warning_C4701;\n");
     fprintf(fp,"  op->PrintRevisions(vtkmsg_with_warning_C4701);\n");
     fprintf(fp,"  vtkmsg_with_warning_C4701.put('\\0');\n");  
-    fprintf(fp,"  tmp = vtkJavaMakeJavaString(env,vtkmsg_with_warning_C4701.str());\n");
-    fprintf(fp,"  delete vtkmsg_with_warning_C4701.str();\n");
+    fprintf(fp,"  tmp = vtkJavaMakeJavaString(env,vtkmsg_with_warning_C4701.str().c_str());\n");
 
     fprintf(fp,"  return tmp;\n");
     fprintf(fp,"}\n");
-    }
 
-  if (!strcmp("vtkObject",data->ClassName))
-    {
     fprintf(fp,"\nextern \"C\" JNIEXPORT jint JNICALL Java_vtk_vtkObject_AddObserver(JNIEnv *env,jobject obj, jstring id0, jobject id1, jstring id2)\n");
     fprintf(fp,"{\n  vtkObject *op;\n");
 
@@ -1056,11 +1053,10 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"  cbc->SetMethodID(env->GetMethodID(env->GetObjectClass(id1),vtkJavaUTFToChar(env,id2),\"()V\"));\n");
     fprintf(fp,"  char    *temp0;\n");
     fprintf(fp,"  temp0 = vtkJavaUTFToChar(env,id0);\n");
-    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj,(char *) \"vtkObject\");\n");
+    fprintf(fp,"  op = (vtkObject *)vtkJavaGetPointerFromObject(env,obj);\n");
     fprintf(fp,"  unsigned long     temp20;\n");
     fprintf(fp,"  temp20 = op->AddObserver(temp0,cbc);\n");
     fprintf(fp,"  cbc->Delete();\n");
     fprintf(fp,"  return temp20;\n}\n");
    }
 }
-

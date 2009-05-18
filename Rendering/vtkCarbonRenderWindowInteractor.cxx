@@ -24,9 +24,7 @@
 #include "vtkInteractorStyle.h"
 #include "vtkObjectFactory.h"
 
-#import <Carbon/Carbon.h>
-
-vtkCxxRevisionMacro(vtkCarbonRenderWindowInteractor, "$Revision: 1.15 $");
+vtkCxxRevisionMacro(vtkCarbonRenderWindowInteractor, "$Revision: 1.23 $");
 vtkStandardNewMacro(vtkCarbonRenderWindowInteractor);
 
 void (*vtkCarbonRenderWindowInteractor::ClassExitMethod)(void *) 
@@ -42,7 +40,7 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
                                      EventRef event, void* userData)
 {
   OSStatus                         result = eventNotHandledErr;
-  Point                            mouseLoc;
+  HIPoint                          mouseLoc;
   vtkCarbonRenderWindow            *ren;
   vtkCarbonRenderWindowInteractor  *me;
   UInt32                           eventClass = GetEventClass(event);
@@ -66,7 +64,13 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
                     sizeof(modifierKeys), NULL, &modifierKeys);
   int controlDown = (modifierKeys & controlKey);
   int shiftDown = (modifierKeys & shiftKey);
-
+ 
+  // Even though the option key is the one with a small 'alt' label on top
+  // of it, VNC (as well as some Mac users) uses the command key as 'alt'.
+  // Let's use both then. 
+  UInt32 altKey = cmdKey | optionKey;
+  int altDown = (modifierKeys & altKey);
+  
   switch (eventClass)
     {
     case kEventClassControl:
@@ -109,6 +113,7 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
             {
             me->SetKeyEventInformation(controlDown, shiftDown,
                                        (int)charCode,1,(char*)&charCode);
+            me->SetAltKey(altDown);
             me->InvokeEvent(vtkCommand::KeyPressEvent, NULL);
             me->InvokeEvent(vtkCommand::CharEvent, NULL);
             result = noErr;
@@ -118,6 +123,7 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
             {
             me->SetKeyEventInformation(controlDown, shiftDown,
                                        (int)charCode,1,(char*)&charCode);
+            me->SetAltKey(altDown);
             me->InvokeEvent(vtkCommand::KeyPressEvent, NULL);
             me->InvokeEvent(vtkCommand::CharEvent, NULL);
             result = noErr;
@@ -127,6 +133,7 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
             {
             me->SetKeyEventInformation(controlDown, shiftDown,
                                        (int)charCode,1,(char*)&charCode);
+            me->SetAltKey(altDown);
             me->InvokeEvent(vtkCommand::KeyReleaseEvent, NULL);
             result = noErr;
             break;
@@ -139,22 +146,26 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
       {
       // see if the event is for this view
       HIViewRef view_for_mouse;
-      HIViewGetViewForMouseEvent(HIViewGetRoot(ren->GetRootWindow()), event, &view_for_mouse);
+      HIViewRef root_window = HIViewGetRoot(ren->GetRootWindow());
+      HIViewGetViewForMouseEvent(root_window, event, &view_for_mouse);
       if(view_for_mouse != ren->GetWindowId())
         return eventNotHandledErr;
 
-      GetEventParameter(event, kEventParamMouseLocation, typeQDPoint,
-                        NULL, sizeof(Point), NULL, &mouseLoc);
-      SetPortWindowPort(FrontWindow());
-      GlobalToLocal(&mouseLoc);
+      GetEventParameter(event, kEventParamMouseLocation, typeHIPoint,
+                        NULL, sizeof(HIPoint), NULL, &mouseLoc);
+      
+      HIViewConvertPoint(&mouseLoc, root_window, ren->GetWindowId());
+
       GetEventParameter(event, kEventParamKeyModifiers,typeUInt32, NULL,
                         sizeof(modifierKeys), NULL, &modifierKeys);
       UInt16 buttonNumber;
       GetEventParameter(event, kEventParamMouseButton, typeMouseButton, NULL,
                         sizeof(buttonNumber), NULL, &buttonNumber);
-      me->SetEventInformationFlipY(mouseLoc.h, mouseLoc.v,
+      
+      me->SetEventInformationFlipY((int)mouseLoc.x, (int)mouseLoc.y,
                                    (modifierKeys & controlKey),
                                    (modifierKeys & shiftKey));
+      me->SetAltKey(modifierKeys & altKey);
       switch (GetEventKind(event))
         {
         case kEventMouseDown:
@@ -251,7 +262,6 @@ static pascal OSStatus myWinEvtHndlr(EventHandlerCallRef,
 // Construct object so that light follows camera motion.
 vtkCarbonRenderWindowInteractor::vtkCarbonRenderWindowInteractor()
 {
-  this->TimerId            = 0;
   this->InstallMessageProc = 1;
   this->ViewProcUPP        = NULL;
   this->WindowProcUPP      = NULL;
@@ -267,7 +277,7 @@ vtkCarbonRenderWindowInteractor::~vtkCarbonRenderWindowInteractor()
 void  vtkCarbonRenderWindowInteractor::Start()
 {
   // Let the compositing handle the event loop if it wants to.
-  if (this->HasObserver(vtkCommand::StartEvent))
+  if (this->HasObserver(vtkCommand::StartEvent) && !this->HandleEventLoop)
     {
     this->InvokeEvent(vtkCommand::StartEvent,NULL);
     return;
@@ -368,41 +378,52 @@ void vtkCarbonRenderWindowInteractor::Disable()
 //--------------------------------------------------------------------------
 void vtkCarbonRenderWindowInteractor::TerminateApp(void)
 {
-  cout << "vtkCarbonRenderWindowInteractor::TerminateApp\n";
+  QuitApplicationEventLoop();
 }
 
 //--------------------------------------------------------------------------
-pascal void TimerAction (EventLoopTimerRef, void* userData)
+pascal void TimerAction(EventLoopTimerRef platformTimerId, void* userData)
 {
   if (NULL != userData)
     {
-    ((vtkCarbonRenderWindowInteractor *)userData)->
-      InvokeEvent(vtkCommand::TimerEvent,NULL);
+    vtkCarbonRenderWindowInteractor *rwi =
+      static_cast<vtkCarbonRenderWindowInteractor *>(userData);
+    int vtkTimerId = rwi->GetVTKTimerId((int) platformTimerId);
+    rwi->InvokeEvent(vtkCommand::TimerEvent, (void *) &vtkTimerId);
     }
 }
 
 //--------------------------------------------------------------------------
-int vtkCarbonRenderWindowInteractor::CreateTimer(int timertype)
+int vtkCarbonRenderWindowInteractor::InternalCreateTimer(
+  int vtkNotUsed(timerId), int timerType, unsigned long duration)
 {
+  EventLoopTimerRef  platformTimerId;
   EventLoopRef       mainLoop = GetMainEventLoop();
   EventLoopTimerUPP  timerUPP = NewEventLoopTimerUPP(TimerAction);
-  
-  if (timertype == VTKI_TIMER_FIRST)
-    {  
-      InstallEventLoopTimer (mainLoop,
-                             10*kEventDurationMillisecond,
-                             10*kEventDurationMillisecond,
-                             timerUPP,
-                             this,
-                             &this->TimerId);
+  EventTimerInterval interval = 0;
+
+  // Carbon's InstallEventLoopTimer can create either one-shot or repeating
+  // timers... interval == 0 indicates a one-shot timer.
+
+  if (RepeatingTimer == timerType)
+    {
+    interval = duration*kEventDurationMillisecond;
     }
-  return 1;
+
+  InstallEventLoopTimer(mainLoop,
+                        duration*kEventDurationMillisecond,
+                        interval,
+                        timerUPP,
+                        this,
+                        &platformTimerId);
+
+  return (int) platformTimerId;
 }
 
 //--------------------------------------------------------------------------
-int vtkCarbonRenderWindowInteractor::DestroyTimer(void)
+int vtkCarbonRenderWindowInteractor::InternalDestroyTimer(int platformTimerId)
 {
-  RemoveEventLoopTimer(this->TimerId);
+  RemoveEventLoopTimer((EventLoopTimerRef) platformTimerId);
   return 1;
 }
 

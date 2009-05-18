@@ -17,12 +17,10 @@ IF(PYTHON_EXECUTABLE)
     vtkTkInternals.h
     vtkTkImageViewerWidget.h
     vtkCocoaGLView.h
-    vtkCocoaWindow.h
     vtkFreeTypeUtilities.h
     vtkgluPickMatrix.h
     vtkOpenGL.h
     vtkOpenGLStateCache.h
-    vtkVolumeShearWarpDataStructure.h
     vtkgl.h
     vtkOpenGLExtensionManagerConfigure.h
     )

@@ -31,7 +31,7 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkRectilinearGrid, "$Revision: 1.5.4.1 $");
+vtkCxxRevisionMacro(vtkRectilinearGrid, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkRectilinearGrid);
 
 vtkCxxSetObjectMacro(vtkRectilinearGrid,XCoordinates,vtkDataArray);
@@ -113,7 +113,7 @@ void vtkRectilinearGrid::Initialize()
 // object.
 void vtkRectilinearGrid::CopyStructure(vtkDataSet *ds)
 {
-  vtkRectilinearGrid *rGrid=(vtkRectilinearGrid *)ds;
+  vtkRectilinearGrid *rGrid=static_cast<vtkRectilinearGrid *>(ds);
   int i;
   this->Initialize();
 
@@ -420,7 +420,7 @@ void vtkRectilinearGrid::GetCellBounds(vtkIdType cellId, double bounds[6])
 double *vtkRectilinearGrid::GetPoint(vtkIdType ptId)
 {
   int loc[3];
-  
+
   switch (this->DataDescription)
     {
     case VTK_EMPTY: 
@@ -472,6 +472,13 @@ double *vtkRectilinearGrid::GetPoint(vtkIdType ptId)
       loc[1] = (ptId / this->Dimensions[0]) % this->Dimensions[1];
       loc[2] = ptId / (this->Dimensions[0]*this->Dimensions[1]);
       break;
+
+    default:
+      vtkErrorMacro( << "Unexpected value for DataDescription ("
+        << this->DataDescription
+        << ") in vtkRectilinearGrid::GetPoint" );
+      loc[0] = loc[1] = loc[2] = 0;
+      break;
     }
 
   this->PointReturn[0] = this->XCoordinates->GetComponent(loc[0], 0);
@@ -484,7 +491,7 @@ double *vtkRectilinearGrid::GetPoint(vtkIdType ptId)
 void vtkRectilinearGrid::GetPoint(vtkIdType ptId, double x[3])
 {
   int loc[3];
-  
+
   switch (this->DataDescription)
     {
     case VTK_EMPTY:
@@ -534,12 +541,18 @@ void vtkRectilinearGrid::GetPoint(vtkIdType ptId, double x[3])
       loc[1] = (ptId / this->Dimensions[0]) % this->Dimensions[1];
       loc[2] = ptId / (this->Dimensions[0]*this->Dimensions[1]);
       break;
+
+    default:
+      vtkErrorMacro( << "Unexpected value for DataDescription ("
+        << this->DataDescription
+        << ") in vtkRectilinearGrid::GetPoint" );
+      loc[0] = loc[1] = loc[2] = 0;
+      break;
     }
 
   x[0] = this->XCoordinates->GetComponent(loc[0], 0);
   x[1] = this->YCoordinates->GetComponent(loc[1], 0);
   x[2] = this->ZCoordinates->GetComponent(loc[2], 0);
-
 }
 
 //----------------------------------------------------------------------------
@@ -596,8 +609,8 @@ vtkIdType vtkRectilinearGrid::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
                                        int& subId, double pcoords[3], 
                                        double *weights)
 {
-  return
-    this->FindCell( x, (vtkCell *)NULL, 0, 0.0, subId, pcoords, weights );
+  return this->FindCell(x, static_cast<vtkCell *>(NULL), 0, 0.0, subId,
+                        pcoords, weights );
 }
 
 //----------------------------------------------------------------------------
@@ -614,11 +627,11 @@ vtkIdType vtkRectilinearGrid::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
     return -1;
     }
 
-  vtkVoxel::InterpolationFunctions(pcoords,weights);
+  this->Voxel->InterpolationFunctions(pcoords,weights);
 
-//
-//  From this location get the cell id
-//
+  //
+  //  From this location get the cell id
+  //
   subId = 0;
   return loc[2] * (this->Dimensions[0]-1)*(this->Dimensions[1]-1) +
          loc[1] * (this->Dimensions[0]-1) + loc[0];
@@ -643,7 +656,7 @@ vtkCell *vtkRectilinearGrid::FindAndGetCell(double x[3],
   //
   // Get the parametric coordinates and weights for interpolation
   //
-  vtkVoxel::InterpolationFunctions(pcoords,weights);
+  this->Voxel->InterpolationFunctions(pcoords,weights);
   //
   // Get the cell
   //
@@ -1002,8 +1015,9 @@ void vtkRectilinearGrid::Crop()
     newCoords->SetNumberOfTuples(uExt[1] - uExt[0] + 1);
     for (idx = uExt[0]; idx <= uExt[1]; ++idx)
       {
-      newCoords->InsertComponent(idx-(vtkIdType)uExt[0], 0,
-                    coords->GetComponent(idx-(vtkIdType)ext[0],0));
+      newCoords->InsertComponent(idx-static_cast<vtkIdType>(uExt[0]), 0,
+                                 coords->GetComponent(
+                                   idx-static_cast<vtkIdType>(ext[0]),0));
       }
     newGrid->SetXCoordinates(newCoords);
     newCoords->Delete();
@@ -1014,8 +1028,9 @@ void vtkRectilinearGrid::Crop()
     newCoords->SetNumberOfTuples(uExt[3] - uExt[2] + 1);
     for (idx = uExt[2]; idx <= uExt[3]; ++idx)
       {
-      newCoords->InsertComponent(idx-(vtkIdType)uExt[2], 0,
-                    coords->GetComponent(idx-(vtkIdType)ext[2],0));
+      newCoords->InsertComponent(idx-static_cast<vtkIdType>(uExt[2]), 0,
+                                 coords->GetComponent(
+                                   idx-static_cast<vtkIdType>(ext[2]),0));
       }
     newGrid->SetYCoordinates(newCoords);
     newCoords->Delete();
@@ -1026,8 +1041,9 @@ void vtkRectilinearGrid::Crop()
     newCoords->SetNumberOfTuples(uExt[5] - uExt[4] + 1);
     for (idx = uExt[4]; idx <= uExt[5]; ++idx)
       {
-      newCoords->InsertComponent(idx-(vtkIdType)uExt[4], 0,
-                    coords->GetComponent(idx-(vtkIdType)ext[4],0));
+      newCoords->InsertComponent(idx-static_cast<vtkIdType>(uExt[4]), 0,
+                                 coords->GetComponent(
+                                   idx-static_cast<vtkIdType>(ext[4]),0));
       }
     newGrid->SetZCoordinates(newCoords);
     newCoords->Delete();

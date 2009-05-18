@@ -20,7 +20,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkBMPReader, "$Revision: 1.53 $");
+vtkCxxRevisionMacro(vtkBMPReader, "$Revision: 1.55 $");
 vtkStandardNewMacro(vtkBMPReader);
 
 #ifdef read
@@ -57,6 +57,7 @@ vtkBMPReader::~vtkBMPReader()
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkBMPReader::ExecuteInformation()
 {
   int xsize, ysize;
@@ -547,6 +548,7 @@ void vtkBMPReader::ExecuteData(vtkDataObject *output)
     }  
 }
 
+//----------------------------------------------------------------------------
 void vtkBMPReader::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -564,6 +566,7 @@ void vtkBMPReader::PrintSelf(ostream& os, vtkIndent indent)
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkBMPReader::CanReadFile(const char* fname)
 {
   // get the magic number by reading in a file

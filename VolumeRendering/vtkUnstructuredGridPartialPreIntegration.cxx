@@ -264,9 +264,13 @@ inline void vtkPartialPreIntegrationTransferFunction::GetColor(double x,
                                                                double c[4])
 {
   unsigned int i = 1;
-  unsigned int size = this->ControlPoints.size();
+  unsigned int size = static_cast<unsigned int>(this->ControlPoints.size());
   if( !size )
     {
+      c[0] = 0.0;
+      c[1] = 0.0;
+      c[2] = 0.0;
+      c[3] = 0.0;
     return;
     }
   while (this->ControlPoints[i] < x && i < size-1) 
@@ -289,7 +293,7 @@ inline void vtkPartialPreIntegrationTransferFunction::GetColor(double x,
 
 //-----------------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkUnstructuredGridPartialPreIntegration, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkUnstructuredGridPartialPreIntegration, "$Revision: 1.6.2.1 $");
 vtkStandardNewMacro(vtkUnstructuredGridPartialPreIntegration);
 
 float vtkUnstructuredGridPartialPreIntegration::PsiTable[PSI_TABLE_SIZE*PSI_TABLE_SIZE];
@@ -348,6 +352,16 @@ void vtkUnstructuredGridPartialPreIntegration::Initialize(
     if ((numcomponents != 4) && (numcomponents != 2) )
       {
       vtkErrorMacro("Only 2-tuples and 4-tuples allowed for dependent components.");
+      }
+    if (numcomponents == 2)
+      {
+      this->TransferFunctions
+        = new vtkPartialPreIntegrationTransferFunction[1];
+      this->TransferFunctions[0]
+        .GetTransferFunction(property->GetRGBTransferFunction(0),
+                             property->GetScalarOpacity(0),
+                             property->GetScalarOpacityUnitDistance(0),
+                             scalars->GetRange(0));
       }
     return;
     }
@@ -523,13 +537,20 @@ void vtkUnstructuredGridPartialPreIntegration::Integrate(
       }
     else  // Two components.
       {
+      double nearColor[4], farColor[4], tmpColor[4];
       for (vtkIdType i = 0; i < numintersections; i++)
         {
         double length = intersectionLengths->GetValue(i);
-        double *nearcolor = nearIntersections->GetTuple(i);
-        double *farcolor = farIntersections->GetTuple(i);
-        this->IntegrateRay(length, nearcolor[0], nearcolor[1]/unitdistance,
-                           farcolor[0], farcolor[1]/unitdistance, color);
+        double *nearScalars = nearIntersections->GetTuple(i);
+        double *farScalars = farIntersections->GetTuple(i);
+        this->TransferFunctions[0].GetColor(nearScalars[0], nearColor);
+        this->TransferFunctions[0].GetColor(nearScalars[1], tmpColor);
+        nearColor[3] = tmpColor[3];
+        this->TransferFunctions[0].GetColor(farScalars[0], farColor);
+        this->TransferFunctions[0].GetColor(farScalars[1], tmpColor);
+        farColor[3] = tmpColor[3];
+        this->IntegrateRay(length, nearColor, nearColor[3]/unitdistance,
+                           farColor, farColor[3]/unitdistance, color);
         }
       }
     }

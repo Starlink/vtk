@@ -1,5 +1,5 @@
-This directory contains a subset of the Freetype library (2.1.9) + some recent
-updates made to the cache subsystem.
+This directory contains a subset of the Freetype2 library (2.3.5) and
+some custom changes that VTK needs.
 
 We only include enough of the distribution to provide the functionalities
 required by VTK.
@@ -9,40 +9,49 @@ http://www.freetype.org
 
 Modifications
 -------------
-builds\win32\freetype\config\ftoption.h: 
-  new file, created from include\freetype\config\ftoption.h, used to 
-  support DLL build for Windows
+You can search for code for "VTK_FREETYPE_CHANGE" to find modifications
+vs the original freetype code
 
-builds\unix\ftconfig.h.in: 
-  new file, created from ftconfig.in, use CMake vars
+There are two fixes to compiler warnings. These changes come from
+freetype's CVS (post-2.3.5)
 
-include\ft2build.h:
-  added:
-#if defined(VTKFREETYPE)
-#include "vtkFreeTypeConfig.h"
-#endif
+Added Files
+-----------
+builds/win32/freetype/config/ftoption.h: 
+  -new file, created from include/freetype/config/ftoption.h
+  -additions to support DLL build for Windows
+  -comment out FT_CONFIG_OPTION_USE_ZLIB and FT_CONFIG_OPTION_USE_LZW
 
-include\freetype\config\ftoption.h:
-builds\win32\freetype\config\ftoption.h: 
-  comment out FT_CONFIG_OPTION_USE_ZLIB and FT_CONFIG_OPTION_USE_LZW:
-/* #define FT_CONFIG_OPTION_USE_ZLIB */
-/* #define FT_CONFIG_OPTION_USE_LZW */
+builds/unix/ftconfig.h.in: 
+  -new file, created from builds/unix/ftconfig.in
+  -use CMake variables
 
----- DO NOT APPLY ANYMORE BUT KEEP AN EYE ON MAC -------
-src\base\ftmac.c:
-  added: 
-#if defined(FT_USE_CARBON_HEADER)
-#include <Carbon/Carbon.h>
-#else
-[...]
-#endif
----- DO NOT APPLY ANYMORE BUT KEEP AN EYE ON MAC -------
-    
----- DO NOT APPLY ANYMORE BUT KEEP AN EYE ON MAC -------
-src\raster\ftrend1.c:
-  replaced:
-   pitch = ( ( width + 15 ) >> 4 ) << 1;
-  by the old code:
-   pitch = ( width + 7 ) >> 3;
----- DO NOT APPLY ANYMORE BUT KEEP AN EYE ON MAC -------
+CMakeLists.txt
+  -to support CMake builds
 
+include/vtk_freetype_mangle.h
+  -mangles all symbols exported from the freetype library
+
+include/vtk_ftmodule.h
+  -override the default module headers
+
+include/vtkFreeTypeConfig.h.in
+  -purpose unknown
+
+Changed Files
+-------------
+include/ft2build.h:
+  -extensive changes, see file for comments
+
+include/freetype/config/ftoption.h:
+  -comment out FT_CONFIG_OPTION_USE_ZLIB and FT_CONFIG_OPTION_USE_LZW
+
+src/base/ftmac.c
+  - applied several changes from freetype CVS to fix compilation issues
+  
+other files have changes too, search for "VTK_FREETYPE_CHANGE"
+
+Renamed Files
+-------------
+docs/FTL.TXT -> FTL.txt
+docs/LICENSE.TXT -> license.txt

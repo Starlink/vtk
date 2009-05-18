@@ -72,7 +72,7 @@
 #ifndef __vtkMultiBlockPLOT3DReader_h
 #define __vtkMultiBlockPLOT3DReader_h
 
-#include "vtkHierarchicalDataSetAlgorithm.h"
+#include "vtkMultiBlockDataSetAlgorithm.h"
 
 class vtkUnsignedCharArray;
 class vtkIntArray;
@@ -81,11 +81,11 @@ class vtkStructuredGrid;
 //BTX
 struct vtkMultiBlockPLOT3DReaderInternals;
 //ETX
-class VTK_IO_EXPORT vtkMultiBlockPLOT3DReader : public vtkHierarchicalDataSetAlgorithm 
+class VTK_IO_EXPORT vtkMultiBlockPLOT3DReader : public vtkMultiBlockDataSetAlgorithm 
 {
 public:
   static vtkMultiBlockPLOT3DReader *New();
-  vtkTypeRevisionMacro(vtkMultiBlockPLOT3DReader,vtkHierarchicalDataSetAlgorithm);
+  vtkTypeRevisionMacro(vtkMultiBlockPLOT3DReader,vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -220,9 +220,6 @@ public:
   // for binary files.
   virtual int CanReadBinaryFile(const char* fname);
 
-  // Description:
-  int GenerateDefaultConfiguration();
-
 //BTX
   enum 
   {
@@ -301,7 +298,10 @@ protected:
   vtkFloatArray** PointCache;
   vtkUnsignedCharArray** IBlankCache;
 
+  // First pass at automatically detecting configuration
+  int GenerateDefaultConfiguration();
   int VerifySettings(char* buf, int bufSize);
+  
   void ReadIntBlockV(char** buf, int n, int* block);
   void SkipByteCountV(char** buf);
 

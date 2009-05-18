@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkJPEGReader.h"
 
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
@@ -30,9 +31,15 @@ extern "C" {
 }
 
 
-vtkCxxRevisionMacro(vtkJPEGReader, "$Revision: 1.24 $");
+vtkCxxRevisionMacro(vtkJPEGReader, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkJPEGReader);
 
+
+#if defined ( _MSC_VER )
+#if defined ( _WIN64 )
+#pragma warning ( disable : 4324 ) // structure was padded at end...
+#endif
+#endif
 
 // create an error handler for jpeg that
 // can longjmp out of the jpeg library 

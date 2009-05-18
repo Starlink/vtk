@@ -91,15 +91,18 @@ protected:
   void SetupEmptyOutput();
   void SetupPieces(int numPieces);
   void DestroyPieces();
-  int ReadArrayForPoints(vtkXMLDataElement* da, vtkDataArray* outArray);
-  int ReadArrayForCells(vtkXMLDataElement* da, vtkDataArray* outArray);
+  virtual int ReadArrayForPoints(vtkXMLDataElement* da, 
+    vtkAbstractArray* outArray);
+  virtual int ReadArrayForCells(vtkXMLDataElement* da, 
+    vtkAbstractArray* outArray);
   
   // Internal utility methods.
   int ReadPiece(vtkXMLDataElement* ePiece);
-  int ReadSubExtent(int* inExtent, int* inDimensions, vtkIdType* inIncrements,
-                    int* outExtent,int* outDimensions,vtkIdType* outIncrements,
-                    int* subExtent, int* subDimensions, vtkXMLDataElement* da,
-                    vtkDataArray* array);
+  virtual int ReadSubExtent(
+      int* inExtent, int* inDimensions, vtkIdType* inIncrements,
+      int* outExtent,int* outDimensions,vtkIdType* outIncrements,
+      int* subExtent, int* subDimensions, vtkXMLDataElement* da,
+      vtkAbstractArray* array);
   
 private:
   vtkXMLStructuredDataReader(const vtkXMLStructuredDataReader&);  // Not implemented.

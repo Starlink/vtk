@@ -1,8 +1,16 @@
+/*
+
+VTK_FREETYPE_CHANGE this file is new for VTK.
+
+*/
+
 #ifndef _freetypeConfig_h
 #define _freetypeConfig_h
 
 #if defined(__BORLANDC__)
-#pragma warn -8004 /* Disable "foo is assigned a value that is never used." */
+#pragma warn -8004 /* "assigned a value that is never used" */
+#pragma warn -8012 /* "comparing signed and unsigned values" */
+#pragma warn -8060 /* "possibly incorrect assignment" */
 #endif
 
 /* 
@@ -20,11 +28,14 @@
 #endif
 
 /* 
-   Carbon framework
+   Enable or disable freetype's Mac font support.
+   DARWIN_NO_CARBON is the freetype define that makes the choice.
 */
-#cmakedefine VTKFREETYPE_USE_CARBON
-#if defined(VTKFREETYPE_USE_CARBON) && !defined(FT_USE_CARBON_HEADER)
-#define FT_USE_CARBON_HEADER
+#cmakedefine VTKFREETYPE_MAC_FONT_SUPPORT
+#if !defined(VTKFREETYPE_MAC_FONT_SUPPORT) && !defined(DARWIN_NO_CARBON)
+#define DARWIN_NO_CARBON
 #endif
+
+#define FT2_BUILD_LIBRARY 1
 
 #endif

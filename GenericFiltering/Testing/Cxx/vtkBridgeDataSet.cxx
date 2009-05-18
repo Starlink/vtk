@@ -38,7 +38,7 @@
 #include "vtkGenericEdgeTable.h"
 #include "vtkSimpleCellTessellator.h"
 
-vtkCxxRevisionMacro(vtkBridgeDataSet, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkBridgeDataSet, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBridgeDataSet);
 
 //----------------------------------------------------------------------------
@@ -46,18 +46,19 @@ vtkStandardNewMacro(vtkBridgeDataSet);
 vtkBridgeDataSet::vtkBridgeDataSet(  )
 {
   this->Implementation = 0;
-  this->Types=vtkCellTypes::New();
-  this->Tessellator=vtkSimpleCellTessellator::New();
+  this->Types = vtkCellTypes::New();
+  this->Tessellator = vtkSimpleCellTessellator::New();
 }
 
 //----------------------------------------------------------------------------
 vtkBridgeDataSet::~vtkBridgeDataSet(  )
 {
-  if(this->Implementation!=0)
+  if(this->Implementation)
     {
     this->Implementation->Delete();
     }
   this->Types->Delete();
+  // this->Tessellator is deleted in the superclass
 }
 
 //----------------------------------------------------------------------------
@@ -68,13 +69,20 @@ void vtkBridgeDataSet::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "implementation: ";
   if(this->Implementation==0)
     {
-    os << 0 << endl;
+    os << "(none)" << endl;
     }
   else
     {
-    os << endl;
-    this->Implementation->PrintSelf(os,indent.GetNextIndent());
+    this->Implementation->PrintSelf(os << endl, indent.GetNextIndent());
     }
+}
+
+//----------------------------------------------------------------------------
+// Description:
+// Return the dataset that will be manipulated through the adaptor interface.
+vtkDataSet *vtkBridgeDataSet::GetDataSet()
+{
+  return this->Implementation;
 }
 
 //----------------------------------------------------------------------------
@@ -130,10 +138,10 @@ void vtkBridgeDataSet::SetDataSet(vtkDataSet *ds)
 // \post positive_result: result>=0
 vtkIdType vtkBridgeDataSet::GetNumberOfPoints()
 {
-  vtkIdType result=0;
-  if(this->Implementation!=0)
+  vtkIdType result = 0;
+  if(this->Implementation)
     {
-    result=Implementation->GetNumberOfPoints();
+    result = this->Implementation->GetNumberOfPoints();
     }
   assert("post: positive_result" && result>=0);
   return result;
@@ -153,7 +161,7 @@ void vtkBridgeDataSet::ComputeNumberOfCellsAndTypes()
 
   if ( this->GetMTime() > this->ComputeNumberOfCellsTime ) // cache is obsolete
      {
-     numCells=this->GetNumberOfCells();
+     numCells = this->GetNumberOfCells();
      this->NumberOf0DCells=0;
      this->NumberOf1DCells=0;
      this->NumberOf2DCells=0;
@@ -183,9 +191,9 @@ void vtkBridgeDataSet::ComputeNumberOfCellsAndTypes()
              break;
            }
          type=c->GetCellType();
-         if(!Types->IsType(type))
+         if(!this->Types->IsType(type))
            {
-           Types->InsertNextType(type);
+           this->Types->InsertNextType(type);
            }
          cellId++;
          }
@@ -222,7 +230,7 @@ vtkIdType vtkBridgeDataSet::GetNumberOfCells(int dim)
       }
     else
       {
-      ComputeNumberOfCellsAndTypes();
+      this->ComputeNumberOfCellsAndTypes();
       switch(dim)
         {
         case 0:
@@ -483,7 +491,7 @@ unsigned long int vtkBridgeDataSet::GetMTime()
   unsigned long result;
   unsigned long mtime;
   
-  result = vtkGenericDataSet::GetMTime();
+  result = this->Superclass::GetMTime();
   
   if(this->Implementation!=0)
     {

@@ -101,14 +101,14 @@ void Form1::init()
   connections->Connect(qVTK1->GetRenderWindow()->GetInteractor(),
                        vtkCommand::RightButtonPressEvent,
                        this,
-                       SLOT(popup( vtkObject*, unsigned long, void*, vtkCommand*)),
+                       SLOT(popup( vtkObject*, unsigned long, void*, void*, vtkCommand*)),
                        popup1, 1.0);
   
   // get right mouse pressed with high priority
   connections->Connect(qVTK2->GetRenderWindow()->GetInteractor(),
                        vtkCommand::RightButtonPressEvent,
                        this,
-                       SLOT(popup( vtkObject*, unsigned long, void*, vtkCommand*)),
+                       SLOT(popup( vtkObject*, unsigned long, void*, void*, vtkCommand*)),
                        popup2, 1.0);
   
   // connect window enter event to radio button slot
@@ -169,7 +169,7 @@ void Form1::updateCoords( vtkObject * obj)
 }
 
 
-void Form1::popup( vtkObject * obj, unsigned long , void * client_data, vtkCommand* command)
+void Form1::popup( vtkObject * obj, unsigned long , void * client_data, void* /*call_data*/, vtkCommand* command)
 {
 
   // A note about context menus in Qt and the QVTKWidget
@@ -189,16 +189,16 @@ void Form1::popup( vtkObject * obj, unsigned long , void * client_data, vtkComma
   // consume event so the interactor style doesn't get it
   command->AbortFlagOn();
   // get popup menu
-  QPopupMenu* popup = static_cast<QPopupMenu*>(client_data);
+  QPopupMenu* popupMenu = static_cast<QPopupMenu*>(client_data);
   // get event location
-  int* size = iren->GetSize();
-  int* pos = iren->GetEventPosition();
+  int* sz = iren->GetSize();
+  int* position = iren->GetEventPosition();
   // remember to flip y
-  QPoint pt = QPoint(pos[0], size[1]-pos[1]);
+  QPoint pt = QPoint(position[0], sz[1]-position[1]);
   // map to global
-  QPoint global_pt = popup->parentWidget()->mapToGlobal(pt);
+  QPoint global_pt = popupMenu->parentWidget()->mapToGlobal(pt);
   // show popup menu at global point
-  popup->popup(global_pt);
+  popupMenu->popup(global_pt);
 }
 
 

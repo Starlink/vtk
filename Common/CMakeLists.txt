@@ -3,7 +3,7 @@ SET(UKIT COMMON)
 SET(KIT_TCL_LIBS ${VTK_TCL_LIBRARIES})
 SET(KIT_PYTHON_LIBS)
 SET(KIT_JAVA_LIBS)
-SET(KIT_LIBS vtksys)
+SET(KIT_LIBS ${KWSYS_NAMESPACE})
 
 IF(WIN32)
   IF (NOT VTK_USE_X)
@@ -12,9 +12,6 @@ IF(WIN32)
   ENDIF (NOT VTK_USE_X)
 ENDIF(WIN32)
 
-IF (APPLE)
-  SET(KIT_LIBS ${KIT_LIBS} "-framework AppKit")
-ENDIF (APPLE)
 IF (UNIX)
   SET(KIT_LIBS ${KIT_LIBS} ${CMAKE_THREAD_LIBS} ${CMAKE_DL_LIBS} -lm)
 ENDIF (UNIX)
@@ -25,17 +22,22 @@ vtkAbstractTransform.cxx
 vtkAmoebaMinimizer.cxx
 vtkAnimationCue.cxx
 vtkAnimationScene.cxx
+vtkArrayIterator.cxx
 vtkAssemblyNode.cxx
 vtkAssemblyPath.cxx
 vtkAssemblyPaths.cxx
 vtkBitArray.cxx
+vtkBitArrayIterator.cxx
+vtkBoundingBox.cxx
 vtkBox.cxx
 vtkByteSwap.cxx
 vtkCallbackCommand.cxx
 vtkCharArray.cxx
+vtkClientSocket.cxx
 vtkCollection.cxx
 vtkCollectionIterator.cxx
 vtkCommand.cxx
+vtkCommonInformationKeyManager.cxx
 vtkContourValues.cxx
 vtkCriticalSection.cxx
 vtkCylindricalTransform.cxx
@@ -56,6 +58,7 @@ vtkExtentTranslator.cxx
 vtkFastNumericConversion.cxx
 vtkFileOutputWindow.cxx
 vtkFloatArray.cxx
+vtkFloatingPointExceptions.cxx
 vtkFunctionParser.cxx
 vtkFunctionSet.cxx
 vtkGarbageCollector.cxx
@@ -71,6 +74,25 @@ vtkIdentityTransform.cxx
 vtkImplicitFunction.cxx
 vtkImplicitFunctionCollection.cxx
 vtkIndent.cxx
+vtkInformation.cxx
+vtkInformationDataObjectKey.cxx
+vtkInformationDoubleKey.cxx
+vtkInformationDoubleVectorKey.cxx
+vtkInformationIdTypeKey.cxx
+vtkInformationInformationKey.cxx
+vtkInformationInformationVectorKey.cxx
+vtkInformationIntegerKey.cxx
+vtkInformationIntegerPointerKey.cxx
+vtkInformationIntegerVectorKey.cxx
+vtkInformationIterator.cxx
+vtkInformationKey.cxx
+vtkInformationKeyVectorKey.cxx
+vtkInformationObjectBaseKey.cxx
+vtkInformationRequestKey.cxx
+vtkInformationStringKey.cxx
+vtkInformationStringVectorKey.cxx
+vtkInformationUnsignedLongKey.cxx
+vtkInformationVector.cxx
 vtkInitialValueProblemSolver.cxx
 vtkInstantiator.cxx
 vtkIntArray.cxx
@@ -83,7 +105,6 @@ vtkMath.cxx
 vtkMatrix4x4.cxx
 vtkMatrixToHomogeneousTransform.cxx
 vtkMatrixToLinearTransform.cxx
-vtkMultiPartExtentTranslator.cxx
 vtkMultiThreader.cxx
 vtkMutexLock.cxx
 vtkOStrStreamWrapper.cxx
@@ -93,6 +114,7 @@ vtkObjectBase.cxx
 vtkObjectFactory.cxx
 vtkObjectFactoryCollection.cxx
 vtkOldStyleCallbackCommand.cxx
+vtkOnePieceExtentTranslator.cxx
 vtkOutputWindow.cxx
 vtkOverrideInformation.cxx
 vtkOverrideInformationCollection.cxx
@@ -116,6 +138,7 @@ vtkPlane.cxx
 vtkPlaneCollection.cxx
 vtkPlanes.cxx
 vtkPoints.cxx
+vtkPolynomialSolversUnivariate.cxx
 vtkPriorityQueue.cxx
 vtkProp.cxx
 vtkPropCollection.cxx
@@ -126,9 +149,13 @@ vtkRungeKutta2.cxx
 vtkRungeKutta4.cxx
 vtkRungeKutta45.cxx
 vtkScalarsToColors.cxx
+vtkServerSocket.cxx
 vtkShortArray.cxx
 vtkSignedCharArray.cxx
 vtkSmartPointerBase.cxx
+vtkSocket.cxx
+vtkSocketCollection.cxx
+vtkSortDataArray.cxx
 vtkSphericalTransform.cxx
 vtkStdString.cxx
 vtkStringArray.cxx
@@ -145,13 +172,24 @@ vtkUnsignedCharArray.cxx
 vtkUnsignedIntArray.cxx
 vtkUnsignedLongArray.cxx
 vtkUnsignedShortArray.cxx
+vtkVariant.cxx
+vtkVariantArray.cxx
 vtkVersion.cxx
 vtkVoidArray.cxx
 vtkWarpTransform.cxx
+vtkWeakPointerBase.cxx
 vtkWindow.cxx
 vtkWindowLevelLookupTable.cxx
 vtkXMLFileOutputWindow.cxx
 )
+
+IF(CMAKE_COMPILER_IS_GNUCXX)
+  SET_SOURCE_FILES_PROPERTIES(
+   vtkPolynomialSolversUnivariate.cxx
+   PROPERTIES
+   COMPILE_FLAGS -O0
+   )
+ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 IF(VTK_TYPE_USE_LONG_LONG)
   SET(Kit_SRCS ${Kit_SRCS}
@@ -173,27 +211,28 @@ IF(VTK_TYPE_CHAR_IS_SIGNED)
 ELSE(VTK_TYPE_CHAR_IS_SIGNED)
   SET(VTK_TYPE_NATIVE_Int8 SignedChar)
 ENDIF(VTK_TYPE_CHAR_IS_SIGNED)
-SET(VTK_TYPE_NATIVE_Int16 UnsignedShort)
-SET(VTK_TYPE_NATIVE_Int32 UnsignedInt)
+SET(VTK_TYPE_NATIVE_Int16 Short)
+SET(VTK_TYPE_NATIVE_Int32 Int)
 SET(VTK_TYPE_NATIVE_UInt8 UnsignedChar)
 SET(VTK_TYPE_NATIVE_UInt16 UnsignedShort)
 SET(VTK_TYPE_NATIVE_UInt32 UnsignedInt)
-IF(VTK_SIZEOF_LONG MATCHES "^8$")
-  SET(VTK_TYPE_NATIVE_Int64 Long)
-  SET(VTK_TYPE_NATIVE_UInt64 UnsignedLong)
-ELSE(VTK_SIZEOF_LONG MATCHES "^8$")
-  IF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
-    SET(VTK_TYPE_NATIVE_Int64 LongLong)
-    SET(VTK_TYPE_NATIVE_UInt64 UnsignedLongLong)
-  ELSE(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
+
+IF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
+  SET(VTK_TYPE_NATIVE_Int64 LongLong)
+  SET(VTK_TYPE_NATIVE_UInt64 UnsignedLongLong)
+ELSE(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
+  IF(VTK_SIZEOF_LONG MATCHES "^8$")
+    SET(VTK_TYPE_NATIVE_Int64 Long)
+    SET(VTK_TYPE_NATIVE_UInt64 UnsignedLong)
+  ELSE(VTK_SIZEOF_LONG MATCHES "^8$")
     IF(VTK_SIZEOF___INT64 MATCHES "^8$")
       SET(VTK_TYPE_NATIVE_Int64 __Int64)
       IF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
         SET(VTK_TYPE_NATIVE_UInt64 Unsigned__Int64)
       ENDIF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
     ENDIF(VTK_SIZEOF___INT64 MATCHES "^8$")
-  ENDIF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
-ENDIF(VTK_SIZEOF_LONG MATCHES "^8$")
+  ENDIF(VTK_SIZEOF_LONG MATCHES "^8$")
+ENDIF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
 SET(VTK_TYPE_NATIVE_Float32 Float)
 SET(VTK_TYPE_NATIVE_Float64 Double)
 FOREACH(t Int8 Int16 Int32 Int64 UInt8 UInt16 UInt32 UInt64 Float32 Float64)
@@ -213,14 +252,34 @@ ENDFOREACH(t)
 SET_SOURCE_FILES_PROPERTIES(
 # vtkObjectBase is marked ABSTRACT so that instantiators are happy.
 vtkAbstractArray
+vtkArrayIterator
+vtkArrayIteratorTemplate
 vtkAbstractTransform
 vtkCallbackCommand
 vtkCommand
+vtkCommonInformationKeyManager
 vtkDataArray
 vtkEventForwarderCommand
+vtkFloatingPointExceptions
 vtkFunctionSet
 vtkHomogeneousTransform
 vtkImplicitFunction
+vtkInformationDataObjectKey
+vtkInformationDoubleKey
+vtkInformationDoubleVectorKey
+vtkInformationIdTypeKey
+vtkInformationInformationKey
+vtkInformationInformationVectorKey
+vtkInformationIntegerKey
+vtkInformationIntegerPointerKey
+vtkInformationIntegerVectorKey
+vtkInformationKey
+vtkInformationKeyVectorKey
+vtkInformationObjectBaseKey
+vtkInformationRequestKey
+vtkInformationStringKey
+vtkInformationStringVectorKey
+vtkInformationUnsignedLongKey
 vtkInitialValueProblemSolver
 vtkLinearTransform
 vtkObjectBase
@@ -231,6 +290,7 @@ vtkOverrideInformationCollection
 vtkParametricFunction
 vtkProp
 vtkScalarsToColors
+vtkSocket
 vtkStructuredData
 vtkWarpTransform
 vtkWindow
@@ -238,11 +298,15 @@ ABSTRACT
 )
 
 SET_SOURCE_FILES_PROPERTIES(
+  vtkArrayIteratorTemplate.txx
+  vtkBoundingBox.cxx
   vtkCallbackCommand.cxx
   vtkCommand.cxx
+  vtkCommonInformationKeyManager.cxx
   vtkDebugLeaksManager.cxx
   vtkErrorCode.cxx
   vtkEventForwarderCommand.cxx
+  vtkFloatingPointExceptions
   vtkGarbageCollectorManager.cxx
   vtkIOStream.cxx
   vtkIndent.cxx
@@ -253,6 +317,8 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkSmartPointerBase.cxx
   vtkStdString.cxx
   vtkTimeStamp.cxx
+  vtkVariant.cxx
+  vtkWeakPointerBase.cxx
 
   WRAP_EXCLUDE
 )
@@ -276,60 +342,92 @@ IF (WIN32)
   ENDIF (NOT VTK_USE_X)
 ENDIF (WIN32)
 
+IF (WIN32)
+  IF (NOT BORLAND)
+    SET(KIT_LIBS ${KIT_LIBS} wsock32)
+  ENDIF (NOT BORLAND)
+ENDIF (WIN32)
+
+IF(NOT HAVE_SOCKETS)
+  # Tell vtkSocket.cxx that there are no sockets on this platform.
+  SET_SOURCE_FILES_PROPERTIES(vtkSocket.cxx PROPERTIES
+    COMPILE_FLAGS -DVTK_SOCKET_FAKE_API)
+ENDIF(NOT HAVE_SOCKETS)
+
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
-INCLUDE(${VTK_SOURCE_DIR}/CMake/KitCommonBlock.cmake)
+INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
 #-----------------------------------------------------------------------------
 
+IF(CMAKE_COMPILER_IS_GNUCXX AND MINGW)
+  # MinGW fails to dllexport the explicit instantiations of
+  # vtkDataArrayTemplate, so we must export all symbols.
+  GET_TARGET_PROPERTY(VTK_COMMON_LINK_FLAGS vtkCommon LINK_FLAGS)
+  IF(VTK_COMMON_LINK_FLAGS)
+    SET(VTK_COMMON_LINK_FLAGS "${VTK_COMMON_LINK_FLAGS} ")
+  ELSE(VTK_COMMON_LINK_FLAGS)
+    SET(VTK_COMMON_LINK_FLAGS)
+  ENDIF(VTK_COMMON_LINK_FLAGS)
+  SET_TARGET_PROPERTIES(vtkCommon PROPERTIES
+    LINK_FLAGS "${VTK_COMMON_LINK_FLAGS}-Wl,--export-all-symbols")
+ENDIF(CMAKE_COMPILER_IS_GNUCXX AND MINGW)
+
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-  INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-    vtkDataArrayTemplate
-    vtkIOStream
-    vtkIOStreamFwd
-    vtkSetGet
-    vtkSmartPointer
-    vtkSystemIncludes
-    vtkType
-    vtkTypeTraits
-    vtkWin32Header
-    vtkWindows
+  SET(__inst_files
+    vtkArrayIteratorTemplate.h
+    vtkDataArrayTemplate.h
+    vtkIOStream.h
+    vtkIOStreamFwd.h
+    vtkSetGet.h
+    vtkSmartPointer.h
+    vtkSystemIncludes.h
+    vtkType.h
+    vtkTypeTraits.h
+    vtkWeakPointer.h
+    vtkWin32Header.h
+    vtkWindows.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Testing/Cxx/vtkTestDriver.h
     )
 
   IF(VTK_WRAP_TCL)
-    INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-      vtkTcl
-      vtkTclUtil
-      vtkTk
+    SET(__inst_files ${__inst_files}
+      vtkTcl.h
+      vtkTclUtil.h
+      vtkTk.h
       )
   ENDIF(VTK_WRAP_TCL)
   IF(VTK_WRAP_PYTHON)
-    INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-      vtkPythonUtil
-      )
-    INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} FILES
+    SET(__inst_files ${__inst_files}
+      vtkPythonUtil.h
       vtkPython.h
       )
-    IF (TK_LIBRARY)
+    IF (TK_FOUND)
       IF(NOT VTK_USE_COCOA)
-        INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-          vtkTcl
-          vtkTk
+        SET(__inst_files ${__inst_files}
+          vtkTcl.h
+          vtkTk.h
           )
       ENDIF(NOT VTK_USE_COCOA)
-    ENDIF (TK_LIBRARY)
+    ENDIF (TK_FOUND)
   ENDIF(VTK_WRAP_PYTHON)
   IF(VTK_WRAP_JAVA)
-    INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-      vtkJavaUtil
+    SET(__inst_files ${__inst_files}
+      vtkJavaUtil.h
       )
   ENDIF(VTK_WRAP_JAVA)
 
-  INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .txx
-    vtkDataArrayTemplate
-    vtkDataArrayTemplateImplicit
-    )
+  SET(__inst_files ${__inst_files}
+    vtkArrayIteratorTemplate.txx
+    vtkArrayIteratorTemplateImplicit.txx
+    vtkDataArrayTemplate.txx
+    vtkDataArrayTemplateImplicit.txx
+    ${VTK_SOURCE_DIR}/${KIT}/Testing/Cxx/vtkTestUtilities.h)
 
-  INSTALL_FILES(${VTK_INSTALL_PACKAGE_DIR}/testing FILES
+  INSTALL(FILES ${__inst_files}
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
+    COMPONENT Development)
+
+  SET(__inst_files
     ${VTK_SOURCE_DIR}/${KIT}/Testing/HeaderTesting.py
     ${VTK_SOURCE_DIR}/${KIT}/Testing/WindowsMangleList.py
     ${VTK_SOURCE_DIR}/${KIT}/Testing/Tcl/FindString.tcl
@@ -337,10 +435,12 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     ${VTK_SOURCE_DIR}/${KIT}/Testing/Tcl/rtImageTest.tcl
     ${VTK_SOURCE_DIR}/${KIT}/Testing/Tcl/TestSetGet.tcl
     )
-  INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} FILES
-    ${VTK_SOURCE_DIR}/${KIT}/Testing/Cxx/vtkTestUtilities.h)
   IF(VTK_USE_PARALLEL)
-    INSTALL_FILES(${VTK_INSTALL_PACKAGE_DIR}/testing FILES
+    SET(__inst_files ${__inst_files}
       ${VTK_SOURCE_DIR}/${KIT}/Testing/Tcl/prtImageTest.tcl)
   ENDIF(VTK_USE_PARALLEL)
+
+  INSTALL(FILES ${__inst_files}
+    DESTINATION ${VTK_INSTALL_PACKAGE_DIR_CM24}/testing
+    COMPONENT Development)
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)

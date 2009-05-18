@@ -20,8 +20,9 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkTriangle.h"
 #include "vtkDoubleArray.h"
+#include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticTriangle, "$Revision: 1.4.8.2 $");
+vtkCxxRevisionMacro(vtkQuadraticTriangle, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkQuadraticTriangle);
 
 //----------------------------------------------------------------------------
@@ -73,7 +74,7 @@ vtkCell *vtkQuadraticTriangle::GetEdge(int edgeId)
 // order picked carefully for parametric coordinate conversion
 static int LinearTris[4][3] = { {0,3,5}, {3, 1,4}, {5,4,2}, {4,5,3} };
 
-int vtkQuadraticTriangle::EvaluatePosition(double* x, double* closestPoint, 
+int vtkQuadraticTriangle::EvaluatePosition(double* x, double* closestPoint,
                                            int& subId, double pcoords[3],
                                            double& minDist2, double *weights)
 {

@@ -36,6 +36,7 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkVoxel.h"
 #include "vtkWedge.h"
+#include "vtkIdTypeArray.h"
 
 // Helper structure for hashing faces.
 struct vtkFastGeomQuadStruct
@@ -50,7 +51,7 @@ struct vtkFastGeomQuadStruct
   struct vtkFastGeomQuadStruct *Next;
 };
 
-vtkCxxRevisionMacro(vtkDataSetSurfaceFilter, "$Revision: 1.49 $");
+vtkCxxRevisionMacro(vtkDataSetSurfaceFilter, "$Revision: 1.62 $");
 vtkStandardNewMacro(vtkDataSetSurfaceFilter);
 
 //----------------------------------------------------------------------------
@@ -70,6 +71,11 @@ vtkDataSetSurfaceFilter::vtkDataSetSurfaceFilter()
   this->NextQuadIndex = 0;
 
   this->PieceInvariant = 0;
+
+  this->PassThroughCellIds = 0;
+  this->PassThroughPointIds = 0;
+  this->OriginalCellIds = NULL;
+  this->OriginalPointIds = NULL;
 }
 
 //----------------------------------------------------------------------------
@@ -78,6 +84,11 @@ vtkDataSetSurfaceFilter::~vtkDataSetSurfaceFilter()
   if (this->QuadHash)
     {
     this->DeleteQuadHash();
+    }
+  if (this->OriginalCellIds != NULL)
+    {
+    this->OriginalCellIds->Delete();
+    this->OriginalCellIds = NULL;
     }
 }
 
@@ -98,7 +109,7 @@ int vtkDataSetSurfaceFilter::RequestData(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   vtkIdType numCells = input->GetNumberOfCells();
-  int *ext;
+  vtkIdType ext[6];
 
   if (input->CheckAttributes())
     {
@@ -124,37 +135,87 @@ int vtkDataSetSurfaceFilter::RequestData(
     case VTK_RECTILINEAR_GRID:
       {
       vtkRectilinearGrid *grid = vtkRectilinearGrid::SafeDownCast(input);
-      ext = grid->GetExtent();      
+      int* tmpext = grid->GetExtent();
+      ext[0] = tmpext[0]; ext[1] = tmpext[1];
+      ext[2] = tmpext[2]; ext[3] = tmpext[3];
+      ext[4] = tmpext[4]; ext[5] = tmpext[5];
       return this->StructuredExecute(grid, output, ext, inInfo);
       }
     case VTK_STRUCTURED_GRID:
       {
       vtkStructuredGrid *grid = vtkStructuredGrid::SafeDownCast(input);
-      ext = grid->GetExtent();      
+      int* tmpext = grid->GetExtent();
+      ext[0] = tmpext[0]; ext[1] = tmpext[1];
+      ext[2] = tmpext[2]; ext[3] = tmpext[3];
+      ext[4] = tmpext[4]; ext[5] = tmpext[5];
       return this->StructuredExecute(grid, output, ext, inInfo);
       }
     case VTK_UNIFORM_GRID:
       {
       vtkUniformGrid *grid = vtkUniformGrid::SafeDownCast(input);
-      ext = grid->GetExtent();
+      int* tmpext = grid->GetExtent();
+      ext[0] = tmpext[0]; ext[1] = tmpext[1];
+      ext[2] = tmpext[2]; ext[3] = tmpext[3];
+      ext[4] = tmpext[4]; ext[5] = tmpext[5];
       return this->StructuredExecute(grid, output, ext, inInfo);
       }
     case VTK_STRUCTURED_POINTS:      
       {
       vtkStructuredPoints *image = vtkStructuredPoints::SafeDownCast(input);
-      ext = image->GetExtent();      
+      int* tmpext = image->GetExtent();
+      ext[0] = tmpext[0]; ext[1] = tmpext[1];
+      ext[2] = tmpext[2]; ext[3] = tmpext[3];
+      ext[4] = tmpext[4]; ext[5] = tmpext[5];
       return this->StructuredExecute(image, output, ext, inInfo);
       }
      case VTK_IMAGE_DATA:      
       {
       vtkImageData *image = vtkImageData::SafeDownCast(input);
-      ext = image->GetExtent();      
+      int* tmpext = image->GetExtent();
+      ext[0] = tmpext[0]; ext[1] = tmpext[1];
+      ext[2] = tmpext[2]; ext[3] = tmpext[3];
+      ext[4] = tmpext[4]; ext[5] = tmpext[5];
       return this->StructuredExecute(image, output, ext, inInfo);
       }
-    case VTK_POLY_DATA:      
+    case VTK_POLY_DATA:
       {
       vtkPolyData *inPd = vtkPolyData::SafeDownCast(input);
       output->ShallowCopy(inPd);
+      if (this->PassThroughCellIds)
+        {
+        //make a 1:1 mapping
+        this->OriginalCellIds = vtkIdTypeArray::New();
+        this->OriginalCellIds->SetName("vtkOriginalCellIds");
+        this->OriginalCellIds->SetNumberOfComponents(1);
+        vtkCellData *outputCD = output->GetCellData();
+        outputCD->AddArray(this->OriginalCellIds);        
+        vtkIdType numTup = output->GetNumberOfCells();
+        this->OriginalCellIds->SetNumberOfValues(numTup);
+        for (vtkIdType cId = 0; cId < numTup; cId++)
+          {
+          this->OriginalCellIds->SetValue(cId, cId);
+          }
+        this->OriginalCellIds->Delete();
+        this->OriginalCellIds = NULL;
+        }
+      if (this->PassThroughPointIds)
+        {
+        //make a 1:1 mapping
+        this->OriginalPointIds = vtkIdTypeArray::New();
+        this->OriginalPointIds->SetName("vtkOriginalPointIds");
+        this->OriginalPointIds->SetNumberOfComponents(1);
+        vtkPointData *outputPD = output->GetPointData();
+        outputPD->AddArray(this->OriginalPointIds);        
+        vtkIdType numTup = output->GetNumberOfPoints();
+        this->OriginalPointIds->SetNumberOfValues(numTup);
+        for (vtkIdType cId = 0; cId < numTup; cId++)
+          {
+          this->OriginalPointIds->SetValue(cId, cId);
+          }
+        this->OriginalPointIds->Delete();
+        this->OriginalPointIds = NULL;
+        }
+
       return 1;
       }
     default:
@@ -167,10 +228,11 @@ int vtkDataSetSurfaceFilter::RequestData(
 // other than data set, and data set does not allow access to extent!
 int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
                                                vtkPolyData *output,
-                                               int *ext,
+                                               vtkIdType *ext,
                                                vtkInformation *inInfo)
 {
-  int *wholeExt;
+  const int *wholeExt32;
+  vtkIdType     wholeExt[6];
   vtkIdType numPoints, cellArraySize;
   vtkCellArray *outStrips;
   vtkCellArray *outPolys;
@@ -178,8 +240,13 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
 
   // Cell Array Size is a pretty good estimate.  
   // Does not consider direction of strip.
-
-  wholeExt = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  wholeExt32 = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  wholeExt[0] = wholeExt32[0]; 
+  wholeExt[1] = wholeExt32[1]; 
+  wholeExt[2] = wholeExt32[2];
+  wholeExt[3] = wholeExt32[3]; 
+  wholeExt[4] = wholeExt32[4]; 
+  wholeExt[5] = wholeExt32[5];
 
   // Lets figure out how many cells and points we are going to have.
   // It may be overkill comptuing the exact amount, but we can do it, so ...
@@ -220,13 +287,17 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
     cellArraySize += 2*(ext[1]-ext[0]+1)*(ext[3]-ext[2]+1);
     numPoints += (ext[1]-ext[0]+1)*(ext[3]-ext[2]+1);
     }
-  
+ 
+  int originalPassThroughCellIds = this->PassThroughCellIds;
   if (this->UseStrips)
     {
     outStrips = vtkCellArray::New();
     outStrips->Allocate(cellArraySize);
     output->SetStrips(outStrips);
     outStrips->Delete();
+
+    // disable cell ids passing since we are using tstrips.
+    this->PassThroughCellIds = 0;
     }
   else
     {
@@ -241,8 +312,25 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
   outPoints->Delete();
 
   // Allocate attributes for copying.
+  output->GetPointData()->CopyGlobalIdsOn();
   output->GetPointData()->CopyAllocate(input->GetPointData());
+  output->GetCellData()->CopyGlobalIdsOn();
   output->GetCellData()->CopyAllocate(input->GetCellData());
+
+  if (this->PassThroughCellIds)
+    {
+    this->OriginalCellIds = vtkIdTypeArray::New();
+    this->OriginalCellIds->SetName("vtkOriginalCellIds");
+    this->OriginalCellIds->SetNumberOfComponents(1);
+    output->GetCellData()->AddArray(this->OriginalCellIds);
+    }
+  if (this->PassThroughPointIds)
+    {
+    this->OriginalPointIds = vtkIdTypeArray::New();
+    this->OriginalPointIds->SetName("vtkOriginalPointIds");
+    this->OriginalPointIds->SetNumberOfComponents(1);
+    output->GetPointData()->AddArray(this->OriginalPointIds);
+    }
 
   if (this->UseStrips)
     {
@@ -262,7 +350,7 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
   else
     {
     // xMin face
-    this->ExecuteFaceQuads(input, output, 0, ext, 0,1,2, inInfo);
+    this->ExecuteFaceQuads(input, output, 0, ext, 0,1,2, inInfo); 
     // xMax face
     this->ExecuteFaceQuads(input, output, 1, ext, 0,2,1, inInfo);
     // yMin face
@@ -275,6 +363,18 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
     this->ExecuteFaceQuads(input, output, 1, ext, 2,1,0, inInfo);
     }
   output->Squeeze();
+  if (this->OriginalCellIds != NULL)
+    {
+    this->OriginalCellIds->Delete();
+    this->OriginalCellIds = NULL;
+    }
+  if (this->OriginalPointIds != NULL)
+    {
+    this->OriginalPointIds->Delete();
+    this->OriginalPointIds = NULL;
+    }
+
+  this->PassThroughCellIds = originalPassThroughCellIds;
 
   return 1;
 }
@@ -282,23 +382,24 @@ int vtkDataSetSurfaceFilter::StructuredExecute(vtkDataSet *input,
 //----------------------------------------------------------------------------
 void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
                                                 vtkPolyData *output,
-                                              int maxFlag, int *ext,
-                                              int aAxis, int bAxis, int cAxis,
+                                                int maxFlag, vtkIdType *ext,
+                                                int aAxis, int bAxis, int cAxis,
                                                 vtkInformation *inInfo)
 {
   vtkPoints    *outPts;
   vtkCellArray *outStrips;
   vtkPointData *inPD, *outPD;
   int          *wholeExt;
-  int          pInc[3];
-  int          qInc[3];
-  int          cOutInc;
-  double        pt[3];
+  vtkIdType    pInc[3];
+  vtkIdType    qInc[3];
+  vtkIdType    ptCInc[3];
+  vtkIdType    cOutInc;
+  double       pt[3];
   vtkIdType    inStartPtId;
   vtkIdType    outStartPtId;
   vtkIdType    outPtId;
   vtkIdType    inId, outId;
-  int          ib, ic;
+  vtkIdType    ib, ic;
   int          aA2, bA2, cA2;
   int          rotatedFlag;
   vtkIdType    *stripArray;
@@ -316,6 +417,18 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
   qInc[0] = 1;
   qInc[1] = ext[1]-ext[0];
   qInc[2] = (ext[3]-ext[2]) * qInc[1];
+  ptCInc[0] = 1;
+  ptCInc[1] = ext[1]-ext[0];
+  if (ptCInc[1] == 0)
+    {
+    ptCInc[1] = 1;
+    }
+  ptCInc[2] = (ext[3]-ext[2]);
+  if (ptCInc[2] == 0)
+    {
+    ptCInc[2] = 1;
+    }
+  ptCInc[2] = ptCInc[2] * ptCInc[1];
 
   // Tempoprary variables to avoid many multiplications.
   aA2 = aAxis * 2;
@@ -358,9 +471,21 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
   
   // Assuming no ghost cells ...
   inStartPtId = 0;
-  if (maxFlag)
+  if( maxFlag)
     {
     inStartPtId = pInc[aAxis]*(ext[aA2+1]-ext[aA2]);
+    }
+
+  vtkIdType outCellId = 0;
+  vtkIdType inStartCellId = 0;
+  vtkIdType inCellId = 0;
+  if (this->PassThroughCellIds)
+    {
+    outCellId = this->OriginalCellIds->GetNumberOfTuples();
+    if (maxFlag && ext[aA2] < ext[1+aA2])
+      {
+      inStartCellId = qInc[aAxis]*(ext[aA2+1]-ext[aA2]-1);
+      }
     }
 
   outStartPtId = outPts->GetNumberOfPoints();
@@ -375,6 +500,7 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
       outId = outPts->InsertNextPoint(pt);
       // Copy point data.
       outPD->CopyData(inPD,inId,outId);
+      this->RecordOrigPointId(outId, inId);
       }
     }
 
@@ -382,15 +508,17 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
   cOutInc = ext[bA2+1] - ext[bA2] + 1;
 
   // Tri Strips (no cell data ...).
-  // Allocate the temporary array user to create the tri strips.
+  // Allocate the temporary array used to create the tri strips.
   stripArray = new vtkIdType[2*(ext[bA2+1]-ext[bA2]+1)];
   // Make the cells for this face.
   outStrips = output->GetStrips();
+
   for (ic = ext[cA2]; ic < ext[cA2+1]; ++ic)
     {
     // Fill in the array describing the strips.
     stripArrayIdx = 0;
     outPtId = outStartPtId + (ic-ext[cA2])*cOutInc;
+
     if (rotatedFlag)
       {
       for (ib = ext[bA2]; ib <= ext[bA2+1]; ++ib)
@@ -398,6 +526,17 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
         stripArray[stripArrayIdx++] = outPtId+cOutInc;
         stripArray[stripArrayIdx++] = outPtId;
         ++outPtId;
+        if (this->PassThroughCellIds && ib != ext[bA2])
+          {
+          //Record the two triangular output cells just defined
+          //both belong to the same input quad cell
+          inCellId = 
+            inStartCellId + 
+            (ib-ext[bA2]-1)*ptCInc[bAxis] + 
+            (ic-ext[cA2])*ptCInc[cAxis];    
+          this->RecordOrigCellId(outCellId++, inCellId);  
+          this->RecordOrigCellId(outCellId++, inCellId);  
+          }
         }
       }
     else
@@ -407,6 +546,17 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
         stripArray[stripArrayIdx++] = outPtId;
         stripArray[stripArrayIdx++] = outPtId+cOutInc;
         ++outPtId;
+        if (this->PassThroughCellIds && ib != ext[bA2])
+          {
+          //Record the two triangular output cells just defined
+          //both belong to the same input quad cell
+          inCellId = 
+            inStartCellId + 
+            (ib-ext[bA2]-1)*ptCInc[bAxis] + 
+            (ic-ext[cA2])*ptCInc[cAxis];
+          this->RecordOrigCellId(outCellId++, inCellId);  
+          this->RecordOrigCellId(outCellId++, inCellId);  
+          }
         }
       }
     outStrips->InsertNextCell(stripArrayIdx, stripArray);
@@ -417,25 +567,26 @@ void vtkDataSetSurfaceFilter::ExecuteFaceStrips(vtkDataSet *input,
 //----------------------------------------------------------------------------
 void vtkDataSetSurfaceFilter::ExecuteFaceQuads(vtkDataSet *input,
                                                vtkPolyData *output,
-                                             int maxFlag, int *ext,
-                                             int aAxis, int bAxis, int cAxis,
+                                               int maxFlag, vtkIdType *ext,
+                                               int aAxis, int bAxis, int cAxis,
                                                vtkInformation *inInfo)
 {
   vtkPoints    *outPts;
   vtkCellArray *outPolys;
   vtkPointData *inPD, *outPD;
   vtkCellData  *inCD, *outCD;
-  int          *wholeExt;
-  int          pInc[3];
-  int          qInc[3];
-  int          cOutInc;
+  const vtkTypeInt32 *wholeExt32;
+  vtkIdType    wholeExt[6];
+  vtkIdType    pInc[3];
+  vtkIdType    qInc[3];
+  vtkIdType    cOutInc;
   double        pt[3];
   vtkIdType    inStartPtId;
   vtkIdType    inStartCellId;
   vtkIdType    outStartPtId;
   vtkIdType    outPtId;
   vtkIdType    inId, outId;
-  int          ib, ic;
+  vtkIdType    ib, ic;
   int          aA2, bA2, cA2;
 
   outPts = output->GetPoints();
@@ -444,7 +595,11 @@ void vtkDataSetSurfaceFilter::ExecuteFaceQuads(vtkDataSet *input,
   outCD = output->GetCellData();
   inCD = input->GetCellData();
 
-  wholeExt = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  wholeExt32 = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  wholeExt[0] = wholeExt32[0]; wholeExt[1] = wholeExt32[1]; wholeExt[2] = wholeExt32[2];
+  wholeExt[3] = wholeExt32[3]; wholeExt[4] = wholeExt32[4]; wholeExt[5] = wholeExt32[5];
+  
+  
   pInc[0] = 1;
   pInc[1] = (ext[1]-ext[0]+1);
   pInc[2] = (ext[3]-ext[2]+1) * pInc[1];
@@ -490,9 +645,10 @@ void vtkDataSetSurfaceFilter::ExecuteFaceQuads(vtkDataSet *input,
   // Assuming no ghost cells ...
   inStartPtId = inStartCellId = 0;
   // I put this confusing conditional to fix a regression test.
-  // If we are creating a maximum face, then we indeed have to offset the input cell Ids.
-  // However, vtkGeometryFilter created a 2d image as a max face, but the cells are copied
-  // as a min face (no offset).  Hence maxFlag = 1 and there should be no offset.
+  // If we are creating a maximum face, then we indeed have to offset
+  // the input cell Ids.  However, vtkGeometryFilter created a 2d
+  // image as a max face, but the cells are copied as a min face (no
+  // offset).  Hence maxFlag = 1 and there should be no offset.
   if (maxFlag && ext[aA2] < ext[1+aA2])
     {
     inStartPtId = pInc[aAxis]*(ext[aA2+1]-ext[aA2]);
@@ -511,6 +667,7 @@ void vtkDataSetSurfaceFilter::ExecuteFaceQuads(vtkDataSet *input,
       outId = outPts->InsertNextPoint(pt);
       // Copy point data.
       outPD->CopyData(inPD,inId,outId);
+      this->RecordOrigPointId(outId, inId);     
       }
     }
 
@@ -534,6 +691,7 @@ void vtkDataSetSurfaceFilter::ExecuteFaceQuads(vtkDataSet *input,
       outPolys->InsertCellPoint(outPtId+1);
       // Copy cell data.
       outCD->CopyData(inCD,inId,outId);
+      this->RecordOrigCellId(outId, inId);      
       }
     }
 }
@@ -576,7 +734,9 @@ int vtkDataSetSurfaceFilter::DataSetExecute(vtkDataSet *input,
   newPts = vtkPoints::New();
   newPts->Allocate(numPts,numPts/2);
   output->Allocate(4*numCells,numCells/2);
+  outputPD->CopyGlobalIdsOn();
   outputPD->CopyAllocate(pd,numPts,numPts/2);
+  outputCD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(cd,numCells,numCells/2);
 
   // Traverse cells to extract geometry
@@ -590,7 +750,7 @@ int vtkDataSetSurfaceFilter::DataSetExecute(vtkDataSet *input,
     if ( !(cellId % progressInterval) )
       {
       vtkDebugMacro(<<"Process cell #" << cellId);
-      this->UpdateProgress ((double)cellId/numCells);
+      this->UpdateProgress (static_cast<double>(cellId)/numCells);
       abort = this->GetAbortExecute();
       }
     
@@ -608,10 +768,12 @@ int vtkDataSetSurfaceFilter::DataSetExecute(vtkDataSet *input,
           input->GetPoint(ptId, x);
           pt = newPts->InsertNextPoint(x);
           outputPD->CopyData(pd,ptId,pt);
+          this->RecordOrigPointId(pt, ptId);
           pts->InsertId(i,pt);
           }
         newCellId = output->InsertNextCell(cell->GetCellType(), pts);
         outputCD->CopyData(cd,cellId,newCellId);
+        this->RecordOrigCellId(newCellId, cellId);
         break;
        case 3:
         for (j=0; j < cell->GetNumberOfFaces(); j++)
@@ -628,10 +790,12 @@ int vtkDataSetSurfaceFilter::DataSetExecute(vtkDataSet *input,
               input->GetPoint(ptId, x);
               pt = newPts->InsertNextPoint(x);
               outputPD->CopyData(pd,ptId,pt);
+              this->RecordOrigPointId(pt, ptId);
               pts->InsertId(i,pt);
               }
             newCellId = output->InsertNextCell(face->GetCellType(), pts);
             outputCD->CopyData(cd,cellId,newCellId);
+            this->RecordOrigCellId(newCellId, cellId);
             }
           }
       break;
@@ -719,6 +883,9 @@ void vtkDataSetSurfaceFilter::PrintSelf(ostream& os, vtkIndent indent)
     }
 
   os << indent << "PieceInvariant: " << this->PieceInvariant << endl;
+  os << indent << "PassThroughCellIds: " << (this->PassThroughCellIds ? "On\n" : "Off\n");
+  os << indent << "PassThroughPointIds: " << (this->PassThroughPointIds ? "On\n" : "Off\n");
+
 }
 
 //========================================================================
@@ -778,9 +945,23 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
   newVerts = vtkCellArray::New();
   newLines = vtkCellArray::New();
 
+  outputPD->CopyGlobalIdsOn();
   outputPD->CopyAllocate(inputPD, numPts, numPts/2);
+  outputCD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(inputCD, numCells, numCells/2);
 
+  if (this->PassThroughCellIds)
+    {
+    this->OriginalCellIds = vtkIdTypeArray::New();
+    this->OriginalCellIds->SetName("vtkOriginalCellIds");
+    this->OriginalCellIds->SetNumberOfComponents(1);
+    }
+  if (this->PassThroughPointIds)
+    {
+    this->OriginalPointIds = vtkIdTypeArray::New();
+    this->OriginalPointIds->SetName("vtkOriginalPointIds");
+    this->OriginalPointIds->SetNumberOfComponents(1);
+    }
 
   // First insert all points.  Points have to come first in poly data.
   cellPointer = input->GetCells()->GetPointer();
@@ -803,6 +984,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPtId = this->GetOutputPointId(inPtId, input, newPts, outputPD); 
         newVerts->InsertCellPoint(outPtId);
         }
+      this->RecordOrigCellId(this->NumberOfNewCells, cellId);
       outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
       }
     }
@@ -823,12 +1005,12 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
     if ( progressCount >= progressInterval )
       {
       vtkDebugMacro(<<"Process cell #" << cellId);
-      this->UpdateProgress ((double)cellId/numCells);
+      this->UpdateProgress (static_cast<double>(cellId)/numCells);
       abort = this->GetAbortExecute();
       progressCount = 0;
       }
     progressCount++;
-  
+
     // Direct access to cells.
     cellType = cellTypes[cellId];
     numCellPts = cellPointer[0];
@@ -839,7 +1021,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
     // A couple of common cases to see if things go faster.
     if (cellType == VTK_VERTEX || cellType == VTK_POLY_VERTEX)
       {
-      // Do nothing.  This case was handled in the provious loop.
+      // Do nothing.  This case was handled in the previous loop.
       }
     else if (cellType == VTK_LINE || cellType == VTK_POLY_LINE)
       {
@@ -847,9 +1029,10 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
       for (i = 0; i < numCellPts; ++i)
         {
         inPtId = ids[i];
-        outPtId = this->GetOutputPointId(inPtId, input, newPts, outputPD); 
+        outPtId = this->GetOutputPointId(inPtId, input, newPts, outputPD);
         newLines->InsertCellPoint(outPtId);
         }
+      this->RecordOrigCellId(this->NumberOfNewCells, cellId);
       outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
       }
     else if (cellType == VTK_HEXAHEDRON)
@@ -900,11 +1083,13 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
       this->InsertHexInHash (ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], cellId);
       this->InsertHexInHash (ids[6], ids[7], ids[8], ids[9], ids[10], ids[11], cellId);
       }
-    else if (cellType == VTK_PIXEL || cellType == VTK_QUAD || 
-             cellType == VTK_TRIANGLE || cellType == VTK_POLYGON || 
-             cellType == VTK_TRIANGLE_STRIP || 
+    else if (cellType == VTK_PIXEL || cellType == VTK_QUAD ||
+             cellType == VTK_TRIANGLE || cellType == VTK_POLYGON ||
+             cellType == VTK_TRIANGLE_STRIP ||
              cellType == VTK_QUADRATIC_TRIANGLE ||
-             cellType == VTK_QUADRATIC_QUAD )
+             cellType == VTK_QUADRATIC_QUAD ||
+             cellType == VTK_QUADRATIC_LINEAR_QUAD ||
+             cellType == VTK_BIQUADRATIC_QUAD )
       { // save 2D cells for second pass
       flag2D = 1;
       }
@@ -957,6 +1142,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             {
             newLines->InsertNextCell(2);
             inPtId = pts->GetId(i);
+            this->RecordOrigCellId(this->NumberOfNewCells, cellId);
             outputCD->CopyData( cd, cellId, this->NumberOfNewCells++ );
             outPtId = this->GetOutputPointId(inPtId, input, newPts, outputPD); 
             newLines->InsertCellPoint(outPtId);
@@ -1020,6 +1206,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
       pts->InsertId(2, this->GetOutputPointId(ids[3], input, newPts, outputPD));
       pts->InsertId(3, this->GetOutputPointId(ids[2], input, newPts, outputPD));
       newPolys->InsertNextCell(pts);
+      this->RecordOrigCellId(this->NumberOfNewCells, cellId);
       outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
       }
     else if (cellType == VTK_POLYGON || cellType == VTK_TRIANGLE || cellType == VTK_QUAD)
@@ -1032,6 +1219,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         pts->InsertId(i, outPtId);
         }
       newPolys->InsertNextCell(pts);
+      this->RecordOrigCellId(this->NumberOfNewCells, cellId);
       outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
       }
     else if (cellType == VTK_TRIANGLE_STRIP)
@@ -1042,19 +1230,23 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
       // This check is not really necessary.  It was put here because of another (now fixed) bug.
       if (numCellPts > 1)
         {
-        ptIds[0] = this->GetOutputPointId(ids[0], input, newPts, outputPD); 
-        ptIds[1] = this->GetOutputPointId(ids[1], input, newPts, outputPD); 
+        ptIds[0] = this->GetOutputPointId(ids[0], input, newPts, outputPD);
+        ptIds[1] = this->GetOutputPointId(ids[1], input, newPts, outputPD);
         for (i = 2; i < numCellPts; ++i)
           {
-          ptIds[2] = this->GetOutputPointId(ids[i], input, newPts, outputPD); 
+          ptIds[2] = this->GetOutputPointId(ids[i], input, newPts, outputPD);
           newPolys->InsertNextCell(3, ptIds);
+          this->RecordOrigCellId(this->NumberOfNewCells, cellId);
           outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
           ptIds[toggle] = ptIds[2];
           toggle = !toggle;
           }
         }
       }
-    else if ( cellType == VTK_QUADRATIC_TRIANGLE || cellType == VTK_QUADRATIC_QUAD )
+    else if ( cellType == VTK_QUADRATIC_TRIANGLE
+           || cellType == VTK_QUADRATIC_QUAD
+           || cellType == VTK_BIQUADRATIC_QUAD
+           || cellType == VTK_QUADRATIC_LINEAR_QUAD)
       {
       input->GetCell( cellId, cell );
       cell->Triangulate( 0, pts, coords );
@@ -1064,6 +1256,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPts[1] = this->GetOutputPointId( pts->GetId(i+1), input, newPts, outputPD );
         outPts[2] = this->GetOutputPointId( pts->GetId(i+2), input, newPts, outputPD );
         newPolys->InsertNextCell( 3, outPts );
+        this->RecordOrigCellId(this->NumberOfNewCells, cellId);
         outputCD->CopyData(cd, cellId, this->NumberOfNewCells++);
         }
       }
@@ -1083,6 +1276,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPts[1] = this->GetOutputPointId(q->p1, input, newPts, outputPD);
         outPts[2] = this->GetOutputPointId(q->p2, input, newPts, outputPD);
         newPolys->InsertNextCell(3, outPts);
+        this->RecordOrigCellId(this->NumberOfNewCells, q->SourceId);
         outputCD->CopyData(inputCD, q->SourceId, this->NumberOfNewCells++);
         }
       else
@@ -1092,6 +1286,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPts[2] = this->GetOutputPointId(q->p2, input, newPts, outputPD);
         outPts[3] = this->GetOutputPointId(q->p3, input, newPts, outputPD);
         newPolys->InsertNextCell(4, outPts);
+        this->RecordOrigCellId(this->NumberOfNewCells, q->SourceId);
         outputCD->CopyData(inputCD, q->SourceId, this->NumberOfNewCells++);
         }
       }
@@ -1105,6 +1300,7 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPts[3] = this->GetOutputPointId(q->p3, input, newPts, outputPD);
         outPts[4] = this->GetOutputPointId(q->p4, input, newPts, outputPD);
         newPolys->InsertNextCell(5, outPts);
+        this->RecordOrigCellId(this->NumberOfNewCells, q->SourceId);
         outputCD->CopyData(inputCD, q->SourceId, this->NumberOfNewCells++);
         }
       else
@@ -1116,11 +1312,21 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         outPts[4] = this->GetOutputPointId(q->p4, input, newPts, outputPD);
         outPts[5] = this->GetOutputPointId(q->p5, input, newPts, outputPD);
         newPolys->InsertNextCell(6, outPts);
+        this->RecordOrigCellId(this->NumberOfNewCells, q->SourceId);
         outputCD->CopyData(inputCD, q->SourceId, this->NumberOfNewCells++);
         }
       }
     }
-  
+
+  if (this->PassThroughCellIds)
+    {
+    outputCD->AddArray(this->OriginalCellIds);
+    }
+  if (this->PassThroughPointIds)
+    {
+    outputPD->AddArray(this->OriginalPointIds);
+    }
+
   // Update ourselves and release memory
   //
   cell->Delete();
@@ -1145,7 +1351,16 @@ int vtkDataSetSurfaceFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
 
   //free storage
   output->Squeeze();
-
+  if (this->OriginalCellIds != NULL)
+    {
+    this->OriginalCellIds->Delete();
+    this->OriginalCellIds = NULL;
+    }
+  if (this->OriginalPointIds != NULL)
+    {
+    this->OriginalPointIds->Delete();
+    this->OriginalPointIds = NULL;
+    }
   int ghostLevels = output->GetUpdateGhostLevel();
   if (this->PieceInvariant)
     {
@@ -1611,7 +1826,28 @@ vtkIdType vtkDataSetSurfaceFilter::GetOutputPointId(vtkIdType inPtId,
     outPtId = outPts->InsertNextPoint(input->GetPoint(inPtId));
     outPD->CopyData(input->GetPointData(), inPtId, outPtId);
     this->PointMap[inPtId] = outPtId;
+    this->RecordOrigPointId(outPtId, inPtId);
     }
   
   return outPtId;
+}
+
+//----------------------------------------------------------------------------
+void vtkDataSetSurfaceFilter::RecordOrigCellId(vtkIdType destIndex, 
+                                               vtkIdType originalId)
+{
+  if (this->OriginalCellIds != NULL)
+    {
+    this->OriginalCellIds->InsertValue(destIndex, originalId);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkDataSetSurfaceFilter::RecordOrigPointId(vtkIdType destIndex, 
+                                               vtkIdType originalId)
+{
+  if (this->OriginalPointIds != NULL)
+    {
+    this->OriginalPointIds->InsertValue(destIndex, originalId);
+    }
 }

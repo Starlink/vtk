@@ -25,6 +25,14 @@
 //     only a vtkMultiProcessController. It does not require MPI.
 //     Users are vtkPKdTree and vtkDistributedDataFilter.
 //
+// .SECTION Note
+// This class will be deprecated soon.  Instead of using this class, use the
+// collective and subgrouping operations now built into
+// vtkMultiProcessController.  The only reason this class is not deprecated
+// already is because vtkPKdTree relies heavily on this class in ways that are
+// not easy to work around.  Since vtkPKdTree is due for a major overhaul
+// anyway, we are leaving things the way they are for now.
+//
 // .SECTION See Also
 //      vtkPKdTree vtkDistributedDataFilter
 
@@ -60,10 +68,16 @@ public:
   int Gather(int *data, int *to, int length, int root);
   int Gather(char *data, char *to, int length, int root);
   int Gather(float *data, float *to, int length, int root);
+#ifdef VTK_USE_64BIT_IDS
+  int Gather(vtkIdType *data, vtkIdType *to, int length, int root);
+#endif
   int Broadcast(float *data, int length, int root);
   int Broadcast(double *data, int length, int root);
   int Broadcast(int *data, int length, int root);
   int Broadcast(char *data, int length, int root);
+#ifdef VTK_USE_64BIT_IDS
+  int Broadcast(vtkIdType *data, int length, int root);
+#endif
   int ReduceSum(int *data, int *to, int length, int root);
   int ReduceMax(float *data, float *to, int length, int root);
   int ReduceMax(double *data, double *to, int length, int root);

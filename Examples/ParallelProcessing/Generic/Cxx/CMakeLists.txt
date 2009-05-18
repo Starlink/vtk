@@ -1,12 +1,15 @@
 INCLUDE_REGULAR_EXPRESSION("^(lex|vtk|png|j|Task|Pipe).*$")
 
 IF (VTK_USE_MPI)
+  # Needed for mpich 2
+  ADD_DEFINITIONS("-DMPICH_IGNORE_CXX_SEEK")
+
   IF (VTK_USE_RENDERING)
     ADD_EXECUTABLE(ParallelIso ParallelIso.cxx)
     TARGET_LINK_LIBRARIES(ParallelIso vtkParallel vtkHybrid)
-    IF(APPLE)
+    IF(APPLE AND VTK_USE_CARBON)
       TARGET_LINK_LIBRARIES(ParallelIso "-framework Carbon")
-    ENDIF(APPLE)
+    ENDIF(APPLE AND VTK_USE_CARBON)
   ENDIF (VTK_USE_RENDERING)
 
   SET(TaskPara_SRCS TaskParallelism.cxx task1.cxx task2.cxx)
@@ -14,7 +17,7 @@ IF (VTK_USE_MPI)
   ADD_EXECUTABLE(TaskParallelism          ${TaskPara_SRCS})
 
   TARGET_LINK_LIBRARIES (TaskParallelism          vtkParallel)
-  IF(APPLE)
+  IF(APPLE AND VTK_USE_CARBON)
    TARGET_LINK_LIBRARIES(TaskParallelism "-framework Carbon")
-  ENDIF(APPLE)
+  ENDIF(APPLE AND VTK_USE_CARBON)
 ENDIF (VTK_USE_MPI)

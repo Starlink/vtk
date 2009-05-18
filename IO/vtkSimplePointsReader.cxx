@@ -20,7 +20,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkSimplePointsReader, "$Revision: 1.1.4.1 $");
+vtkCxxRevisionMacro(vtkSimplePointsReader, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkSimplePointsReader);
 
 //----------------------------------------------------------------------------

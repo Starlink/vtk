@@ -113,7 +113,9 @@ The VTK source code repository is organized into four major sections.
          <li><b>Rendering</b>- Classes used to render a scene (surface primitives)
          <li><b>Graphics</b>- Filters that process 3D data
          <li><b>Imaging</b>- Specialized image processing filters (2D & 3D)
+         <li><b>Infovis</b>- Classes for information visualization
          <li><b>IO</b>- Classes for reading and writing data
+         <li><b>Views</b>- Classes for application-level views
          <li><b>VolumeRendering</b>- Classes for rendering volume data
          <li><b>Hybrid</b>- Complex classes that depend on imaging and graphics
          <li><b>Widgets</b>- Classes for interacting with the objects in the scene
@@ -186,7 +188,7 @@ Compiling VTK requires a complete VTK source tree.  Running VTK tests
 requires a complete VTK data tree.  Now is the time to extract the
 source and data archives if one has not done so already.  These
 instructions assume there is a directory "<code>VTK</code>" containing
-the source code and optionally a sibling direcory
+the source code and optionally a sibling directory
 "<code>VTKData</code>" containing the data.
 <p>
 
@@ -395,7 +397,8 @@ sentence, so additional documentation is provided here:
     shared libraries.
     </p>
     <p>
-    Warning: enabling VTK_USE_RPATH <b>DISABLES THE INSTALL TARGET</b>
+    Warning: When using CMake prior to 2.4 enabling
+    VTK_USE_RPATH <b>DISABLES THE INSTALL TARGET</b>
     so that the build cannot be used to install VTK!  This is
     necessary because the installed executables and libraries would
     contain references back to the build tree.  Running them would
@@ -513,7 +516,7 @@ rooted at the directory specified by CMAKE_INSTALL_PREFIX.
   <li>Link errors on Windows platforms. Make sure that the swap space is
       at least 300 MByte.
   <li>Link error with borland: TCL82.LIB contains invalid OMF record, 
-      type 0x21 (possibly COFF). You have to convert Tcl libraires 
+      type 0x21 (possibly COFF). You have to convert Tcl libraries
       from coff to omf with the Borland utilitiy coff2omf. Once you 
       have created OMF versions, re-run cmake to tell it where the Borland
       versions of Tcl and Tk are located. Also, make sure that you are using
@@ -534,7 +537,7 @@ be obtained much faster.
 <pre>
   1) Download the data at ftp://public.kitware.com/pub/vtk/VTKData.tgz
 
-  2) Checkout the data from CVS using the folling commands:
+  2) Checkout the data from CVS using the following commands:
      cvs -d :pserver:anoncvs@www.vtk.org:/cvsroot/VTK login
         (there is no password...just press enter)
      cvs -d :pserver:anoncvs@www.vtk.org:/cvsroot/VTK checkout VTKData

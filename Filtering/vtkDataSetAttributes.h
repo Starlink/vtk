@@ -16,15 +16,34 @@
 // .SECTION Description
 // vtkDataSetAttributes is a class that is used to represent and manipulate
 // attribute data (e.g., scalars, vectors, normals, texture coordinates,
-// tensors, and field data) Special methods are provided to work with filter
-// objects, such as passing data through filter, copying data from one
-// attribute set to another, and interpolating data given cell interpolation
-// weights.
+// tensors, global ids, pedigree ids, and field data). 
+//
+// This adds to vtkFieldData the ability to pick one of the arrays from the 
+// field as the currently active array for each attribute type. In other 
+// words, you pick one array to be called "THE" Scalars, and then filters down 
+// the pipeline will treat that array specially. For example vtkContourFilter 
+// will contour "THE" Scalar array unless a different array is asked for.
+//
+// Additionally vtkDataSetAttributes provides methods that filters call to 
+// pass data through, copy data into, and interpolate from Fields. PassData 
+// passes entire arrays from the source to the destination. Copy passes 
+// through some subset of the tuples from the source to the destination. 
+// Interpolate interpolates from the chosen tuple(s) in the source data, using 
+// the provided weights, to produce new tuples in the destination. 
+// Each attribute type has pass, copy and interpolate "copy" flags that 
+// can be set in the destination to choose which attribute arrays will be
+// transfered from the source to the destination. 
+// 
+// Finally this class provides a mechanism to determine which attributes a 
+// group of sources have in common, and to copy tuples from a source into 
+// the destination, for only those attributes that are held by all.
 
 #ifndef __vtkDataSetAttributes_h
 #define __vtkDataSetAttributes_h
 
 #include "vtkFieldData.h"
+
+class vtkLookupTable;
 
 class VTK_FILTERING_EXPORT vtkDataSetAttributes : public vtkFieldData
 {
@@ -46,88 +65,41 @@ public:
   // now this is ignored.
   virtual void Update() {}
 
-  // Description:
-  // Pass entire arrays of input data through to output. Obey the "copy"
-  // flags. When passing a field,  the following copying rules are 
-  // followed: 1) Check if a field is an attribute, if yes and if there
-  // is a copy flag for that attribute (on or off), obey the  flag for 
-  // that attribute, ignore (2) and (3), 2) if there is a copy field for
-  // that field (on or off), obey the flag, ignore (3) 3) obey
-  // CopyAllOn/Off
-  virtual void PassData(vtkFieldData* fd);
-
-  // Description:
-  // Allocates point data for point-by-point (or cell-by-cell) copy operation.
-  // If sze=0, then use the input DataSetAttributes to create (i.e., find 
-  // initial size of) new objects; otherwise use the sze variable.
-  // Note that pd HAS to be the vtkDataSetAttributes object which
-  // will later be used with CopyData. If this is not the case,
-  // consider using the alternative forms of CopyAllocate and CopyData.
-  // ext is no longer used.
-  void CopyAllocate(vtkDataSetAttributes* pd, vtkIdType sze=0,
-                    vtkIdType ext=1000);
-
-  // Description:
-  // Copy the attribute data from one id to another. Make sure CopyAllocate()
-  // has been invoked before using this method. When copying a field,  
-  // the following copying rules are 
-  // followed: 1) Check if a field is an attribute, if yes and if there
-  // is a copy flag for that attribute (on or off), obey the  flag for 
-  // that attribute, ignore (2) and (3), 2) if there is a copy field for
-  // that field (on or off), obey the flag, ignore (3) 3) obey
-  // CopyAllOn/Off
-  void CopyData(vtkDataSetAttributes *fromPd, vtkIdType fromId, vtkIdType toId);
-
-  // Description:
-  // Initialize point interpolation method.
-  // Note that pd HAS to be the vtkDataSetAttributes object which
-  // will later be used with InterpolatePoint or InterpolateEdge.
-  // ext is no longer used.
-  void InterpolateAllocate(vtkDataSetAttributes* pd, vtkIdType sze=0,
-                           vtkIdType ext=1000);
-  
-  // Description:
-  // This method is used to copy data arrays in images.
-  // You should not call "CopyAllocate" before calling this method.
-  // This method is called once to copy all of the data.
-  // If the two extents are the same, this method calls "PassData".
-  void CopyStructuredData(vtkDataSetAttributes *inDsa,
-                          const int *inExt, const int *outExt);
-
-  // Description:
-  // Interpolate data set attributes from other data set attributes
-  // given cell or point ids and associated interpolation weights.
-  void InterpolatePoint(vtkDataSetAttributes *fromPd, vtkIdType toId, 
-                        vtkIdList *ids, double *weights);
-  
-  // Description:
-  // Interpolate data from the two points p1,p2 (forming an edge) and an 
-  // interpolation factor, t, along the edge. The weight ranges from (0,1), 
-  // with t=0 located at p1. Make sure that the method InterpolateAllocate() 
-  // has been invoked before using this method.
-  void InterpolateEdge(vtkDataSetAttributes *fromPd, vtkIdType toId,
-                       vtkIdType p1, vtkIdType p2, double t);
-
-  // Description:
-  // Interpolate data from the same id (point or cell) at different points
-  // in time (parameter t). Two input data set attributes objects are input.
-  // The parameter t lies between (0<=t<=1). IMPORTANT: it is assumed that
-  // the number of attributes and number of components is the same for both
-  // from1 and from2, and the type of data for from1 and from2 are the same.
-  // Make sure that the method InterpolateAllocate() has been invoked before 
-  // using this method.
-  void InterpolateTime(vtkDataSetAttributes *from1, 
-                       vtkDataSetAttributes *from2,
-                       vtkIdType id, double t);
+  // -- shallow and deep copy -----------------------------------------------
 
   // Description:
   // Deep copy of data (i.e., create new data arrays and
-  // copy from input data).
+  // copy from input data). 
+  // Ignores the copy flags but preserves them in the output.
   virtual void DeepCopy(vtkFieldData *pd);
 
   // Description:
   // Shallow copy of data (i.e., use reference counting).
+  // Ignores the copy flags but preserves them in the output.
   virtual void ShallowCopy(vtkFieldData *pd);
+
+  // -- attribute types -----------------------------------------------------
+//BTX
+  // Always keep NUM_ATTRIBUTES as the last entry
+  enum AttributeTypes 
+  {
+    SCALARS=0,
+    VECTORS=1,
+    NORMALS=2,
+    TCOORDS=3,
+    TENSORS=4,
+    GLOBALIDS=5,
+    PEDIGREEIDS=6,
+    NUM_ATTRIBUTES
+  };
+
+  enum AttributeLimitTypes 
+  {
+    MAX, 
+    EXACT, 
+    NOLIMIT
+  };
+//ETX
 
   // Description:
   // Set/Get the scalar data.
@@ -160,6 +132,18 @@ public:
   vtkDataArray* GetTensors();
 
   // Description:
+  // Set/Get the global id data.
+  int SetGlobalIds(vtkDataArray* da);
+  int SetActiveGlobalIds(const char* name);
+  vtkDataArray* GetGlobalIds();
+
+  // Description:
+  // Set/Get the pedigree id data.
+  int SetPedigreeIds(vtkAbstractArray* da);
+  int SetActivePedigreeIds(const char* name);
+  vtkAbstractArray* GetPedigreeIds();
+
+  // Description:
   // This will first look for an array with the correct name.
   // If one exists, it is returned. Otherwise, the name argument
   // is ignored, and the active attribute is returned.
@@ -168,6 +152,8 @@ public:
   vtkDataArray* GetNormals(const char* name);
   vtkDataArray* GetTCoords(const char* name);
   vtkDataArray* GetTensors(const char* name);
+  vtkDataArray* GetGlobalIds(const char* name);
+  vtkAbstractArray* GetPedigreeIds(const char* name);
 
   // Description:
   // Make the array with the given name the active attribute.
@@ -177,6 +163,8 @@ public:
   //  vtkDataSetAttributes::NORMALS = 2
   //  vtkDataSetAttributes::TCOORDS = 3
   //  vtkDataSetAttributes::TENSORS = 4
+  //  vtkDataSetAttributes::GLOBALIDS = 5
+  //  vtkDataSetAttributes::PEDIGREEIDS = 6
   // Returns the index of the array if succesful, -1 if the array 
   // is not in the list of arrays.
   int SetActiveAttribute(const char* name, int attributeType);
@@ -184,112 +172,6 @@ public:
   // Description:
   // Make the array with the given index the active attribute.
   int SetActiveAttribute(int index, int attributeType);
-
-  // Description:
-  // Specify whether to copy the data attribute referred to by index i.
-  void SetCopyAttribute (int index, int value);
-
-  // Description:
-  // Turn on/off the copying of scalar data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  void SetCopyScalars(int i);
-  int GetCopyScalars();
-  vtkBooleanMacro(CopyScalars, int);
-
-  // Description:
-  // Turn on/off the copying of vector data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  void SetCopyVectors(int i);
-  int GetCopyVectors();
-  vtkBooleanMacro(CopyVectors, int);
-
-  // Description:
-  // Turn on/off the copying of normals data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  void SetCopyNormals(int i);
-  int GetCopyNormals();
-  vtkBooleanMacro(CopyNormals, int);
-
-  // Description:
-  // Turn on/off the copying of texture coordinates data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  void SetCopyTCoords(int i);
-  int GetCopyTCoords();
-  vtkBooleanMacro(CopyTCoords, int);
-
-  // Description:
-  // Turn on/off the copying of tensor data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  void SetCopyTensors(int i);
-  int GetCopyTensors();
-  vtkBooleanMacro(CopyTensors, int);
-
-  // Description:
-  // Turn on copying of all data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  virtual void CopyAllOn();
-
-  // Description:
-  // Turn off copying of all data.
-  // During the copy/pass, the following rules are followed for each
-  // array:
-  // 1. If the copy flag for an attribute is set (on or off), it is applied.
-  //    This overrides rules 2 and 3.
-  // 2. If the copy flag for an array is set (on or off), it is applied
-  //    This overrides rule 3.
-  // 3. If CopyAllOn is set, copy the array.
-  //    If CopyAllOff is set, do not copy the array
-  virtual void CopyAllOff();
-
-  // Description:
-  // Copy a tuple of data from one data array to another. This method (and
-  // following ones) assume that the fromData and toData objects are of the
-  // same type, and have the same number of components. This is true if you
-  // invoke CopyAllocate() or InterpolateAllocate().
-  void CopyTuple(vtkDataArray *fromData, vtkDataArray *toData, 
-                 vtkIdType fromId, vtkIdType toId);
 
   // Description:
   // Get the field data array indices corresponding to scalars, 
@@ -306,7 +188,17 @@ public:
   // Description:
   // Return an attribute given the attribute type
   // (see vtkDataSetAttributes::AttributeTypes).
+  // Some attributes (such as PEDIGREEIDS) may not be vtkDataArray subclass,
+  // so in that case use GetAbstractAttribute().
   vtkDataArray* GetAttribute(int attributeType);
+
+  // Description:
+  // Return an attribute given the attribute type
+  // (see vtkDataSetAttributes::AttributeTypes).
+  // This is the same as GetAttribute(), except that the returned array
+  // is a vtkAbstractArray instead of vtkDataArray.
+  // Some attributes (such as PEDIGREEIDS) may not be vtkDataArray subclass.
+  vtkAbstractArray* GetAbstractAttribute(int attributeType);
 
   // Description:
   // Remove an array (with the given name) from the list of arrays.
@@ -318,30 +210,324 @@ public:
   static const char* GetAttributeTypeAsString(int attributeType);
   static const char* GetLongAttributeTypeAsString(int attributeType);
 
+  // -- attribute copy properties ------------------------------------------
+
 //BTX
-  // Always keep NUM_ATTRIBUTES as the last entry
-  enum AttributeTypes 
+  enum AttributeCopyOperations
   {
-    SCALARS=0,
-    VECTORS=1,
-    NORMALS=2,
-    TCOORDS=3,
-    TENSORS=4,
-    NUM_ATTRIBUTES
+    COPYTUPLE=0,
+    INTERPOLATE=1,
+    PASSDATA=2,
+    ALLCOPY  //all of the above
   };
+//ETX
 
-  enum AttributeLimitTypes 
-  {
-    MAX, 
-    EXACT, 
-    NOLIMIT
-  };
+  // Description:
+  // Specify whether to copy the data attribute referred to by index.
+  // ctype selects from the AttributeCopyOperations.
+  // If ctype is set to ALLCOPY, then COPYTUPLE, INTERPOLATE, and 
+  // PASSDATA are set to value. If value is 0, copying is disallowed.
+  // otherwise it is allowed.
+  void SetCopyAttribute (int index, int value, int ctype=ALLCOPY);
 
+  // Description:
+  // Turn on/off the copying of scalar data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyScalars(int i, int ctype=ALLCOPY);
+  int GetCopyScalars(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyScalars, int);
+
+  // Description:
+  // Turn on/off the copying of vector data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyVectors(int i, int ctype=ALLCOPY);
+  int GetCopyVectors(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyVectors, int);
+
+  // Description:
+  // Turn on/off the copying of normals data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyNormals(int i, int ctype=ALLCOPY);
+  int GetCopyNormals(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyNormals, int);
+
+  // Description:
+  // Turn on/off the copying of texture coordinates data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyTCoords(int i, int ctype=ALLCOPY);
+  int GetCopyTCoords(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyTCoords, int);
+
+  // Description:
+  // Turn on/off the copying of tensor data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyTensors(int i, int ctype=ALLCOPY);
+  int GetCopyTensors(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyTensors, int);
+
+  // Description:
+  // Turn on/off the copying of global id data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyGlobalIds(int i, int ctype=ALLCOPY);
+  int GetCopyGlobalIds(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyGlobalIds, int);
+
+  // Description:
+  // Turn on/off the copying of pedigree id data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  void SetCopyPedigreeIds(int i, int ctype=ALLCOPY);
+  int GetCopyPedigreeIds(int ctype=ALLCOPY);
+  vtkBooleanMacro(CopyPedigreeIds, int);
+
+  // Description:
+  // Turn on copying of all data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  virtual void CopyAllOn(int ctype=ALLCOPY);
+
+  // Description:
+  // Turn off copying of all data.
+  // ctype is one of the AttributeCopyOperations, and controls copy, 
+  // interpolate and passdata behavior.
+  // For set, ctype=ALLCOPY means set all three flags to the same value.
+  // For get, ctype=ALLCOPY returns true only if all three flags are true.
+  //
+  // During copying, interpolation and passdata, the following rules are 
+  // followed for each array:
+  // 1. If the copy/interpolate/pass flag for an attribute is set (on or off), it is applied.
+  //    This overrides rules 2 and 3.
+  // 2. If the copy flag for an array is set (on or off), it is applied
+  //    This overrides rule 3.
+  // 3. If CopyAllOn is set, copy the array.
+  //    If CopyAllOff is set, do not copy the array
+  virtual void CopyAllOff(int ctype=ALLCOPY);
+
+  // -- passthrough operations ----------------------------------------------
+
+  // Description:
+  // Pass entire arrays of input data through to output. Obey the "copy"
+  // flags. When passing a field,  the following copying rules are 
+  // followed: 1) Check if a field is an attribute, if yes and if there
+  // is a PASSDATA copy flag for that attribute (on or off), obey the flag 
+  // for that attribute, ignore (2) and (3), 2) if there is a copy field for
+  // that field (on or off), obey the flag, ignore (3) 3) obey
+  // CopyAllOn/Off
+  virtual void PassData(vtkFieldData* fd);
+
+  // -- copytuple operations ------------------------------------------------
+
+  // Description:
+  // Allocates point data for point-by-point (or cell-by-cell) copy operation.
+  // If sze=0, then use the input DataSetAttributes to create (i.e., find 
+  // initial size of) new objects; otherwise use the sze variable.
+  // Note that pd HAS to be the vtkDataSetAttributes object which
+  // will later be used with CopyData. If this is not the case,
+  // consider using the alternative forms of CopyAllocate and CopyData.
+  // ext is no longer used.
+  // If shallowCopyArrays is true, input arrays are copied to the output
+  // instead of new ones being allocated.
+  // 
+  // Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
+  void CopyAllocate(vtkDataSetAttributes* pd, vtkIdType sze=0,
+                    vtkIdType ext=1000)
+    {
+      this->CopyAllocate(pd, sze, ext, 0);
+    }
+  void CopyAllocate(vtkDataSetAttributes* pd, vtkIdType sze,
+                    vtkIdType ext, int shallowCopyArrays);
+
+  // Description:
+  // This method is used to copy data arrays in images.
+  // You should call "CopyAllocate" before calling this method.
+  // 
+  // Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
+  void CopyStructuredData(vtkDataSetAttributes *inDsa,
+                          const int *inExt, const int *outExt);
+
+  // Description:
+  // Copy the attribute data from one id to another. Make sure CopyAllocate()
+  // has been invoked before using this method. When copying a field,  
+  // the following copying rules are 
+  // followed: 1) Check if a field is an attribute, if yes and if there
+  // is a COPYTUPLE copy flag for that attribute (on or off), obey the  flag 
+  // for that attribute, ignore (2) and (3), 2) if there is a copy field for
+  // that field (on or off), obey the flag, ignore (3) 3) obey
+  // CopyAllOn/Off
+  // 
+  // Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
+  void CopyData(vtkDataSetAttributes *fromPd, vtkIdType fromId, vtkIdType toId);
+
+
+  // Description:
+  // Copy a tuple of data from one data array to another. This method
+  // assumes that the fromData and toData objects are of the
+  // same type, and have the same number of components. This is true if you
+  // invoke CopyAllocate() or InterpolateAllocate().
+  void CopyTuple(vtkAbstractArray *fromData, vtkAbstractArray *toData, 
+                 vtkIdType fromId, vtkIdType toId);
+
+
+  // -- interpolate operations ----------------------------------------------
+
+  // Description:
+  // Initialize point interpolation method.
+  // Note that pd HAS to be the vtkDataSetAttributes object which
+  // will later be used with InterpolatePoint or InterpolateEdge.
+  // ext is no longer used.
+  // If shallowCopyArrays is true, input arrays are copied to the output
+  // instead of new ones being allocated.
+  void InterpolateAllocate(vtkDataSetAttributes* pd, vtkIdType sze=0,
+                           vtkIdType ext=1000)
+    {
+      this->InterpolateAllocate(pd, sze, ext, 0);
+    }
+  void InterpolateAllocate(vtkDataSetAttributes* pd, vtkIdType sze,
+                           vtkIdType ext, int shallowCopyArrays);
+  
+  // Description:
+  // Interpolate data set attributes from other data set attributes
+  // given cell or point ids and associated interpolation weights.
+  // If the INTERPOLATION copy flag is set to 0 for an array, interpolation
+  // is prevented. If the flag is set to 1, weighted interpolation occurs.
+  // If the flag is set to 2, nearest neighbor interpolation is used.
+  void InterpolatePoint(vtkDataSetAttributes *fromPd, vtkIdType toId, 
+                        vtkIdList *ids, double *weights);
+  
+  // Description:
+  // Interpolate data from the two points p1,p2 (forming an edge) and an 
+  // interpolation factor, t, along the edge. The weight ranges from (0,1), 
+  // with t=0 located at p1. Make sure that the method InterpolateAllocate() 
+  // has been invoked before using this method.
+  // If the INTERPOLATION copy flag is set to 0 for an array, interpolation
+  // is prevented. If the flag is set to 1, weighted interpolation occurs.
+  // If the flag is set to 2, nearest neighbor interpolation is used.
+  void InterpolateEdge(vtkDataSetAttributes *fromPd, vtkIdType toId,
+                       vtkIdType p1, vtkIdType p2, double t);
+
+  // Description:
+  // Interpolate data from the same id (point or cell) at different points
+  // in time (parameter t). Two input data set attributes objects are input.
+  // The parameter t lies between (0<=t<=1). IMPORTANT: it is assumed that
+  // the number of attributes and number of components is the same for both
+  // from1 and from2, and the type of data for from1 and from2 are the same.
+  // Make sure that the method InterpolateAllocate() has been invoked before 
+  // using this method.
+  // If the INTERPOLATION copy flag is set to 0 for an array, interpolation
+  // is prevented. If the flag is set to 1, weighted interpolation occurs.
+  // If the flag is set to 2, nearest neighbor interpolation is used.
+  void InterpolateTime(vtkDataSetAttributes *from1, 
+                       vtkDataSetAttributes *from2,
+                       vtkIdType id, double t);
+
+//BTX
   class FieldList;
+
+  // field list copy operations ------------------------------------------
 
   // Description:
   // A special form of CopyAllocate() to be used with FieldLists. Use it 
   // when you are copying data from a set of vtkDataSetAttributes.
+  // 
+  // Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
   void CopyAllocate(vtkDataSetAttributes::FieldList& list, vtkIdType sze=0, 
                     vtkIdType ext=1000);
 
@@ -350,6 +536,9 @@ public:
   // you are copying data from a set of vtkDataSetAttributes. Make sure 
   // that you have called the special form of CopyAllocate that accepts 
   // FieldLists.
+  // 
+  // Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
   void CopyData(vtkDataSetAttributes::FieldList& list, 
                 vtkDataSetAttributes* dsa, int idx, vtkIdType fromId,
                 vtkIdType toId);
@@ -361,21 +550,18 @@ protected:
   vtkDataSetAttributes();
   ~vtkDataSetAttributes();
 
-  // special methods to support managing data
-  void InterpolateTuple(vtkDataArray *fromData, vtkDataArray *toData,
-                        vtkIdType toId, vtkIdList *ptIds, double *weights);
-  void InterpolateTuple(vtkDataArray *fromData, vtkDataArray *toData,
-                        vtkIdType toId, vtkIdType id1, vtkIdType id2, 
-                        double t);
-  void InterpolateTuple(vtkDataArray *fromData1, vtkDataArray *fromData2, 
-                        vtkDataArray *toData, vtkIdType id, double t);
+  void InternalCopyAllocate(vtkDataSetAttributes* pd, 
+                            int ctype,
+                            vtkIdType sze=0,
+                            vtkIdType ext=1000,
+                            int shallowCopyArrays=0);
 
   // Description:
   // Initialize all of the object's data to NULL
   virtual void InitializeFields();
 
   int AttributeIndices[NUM_ATTRIBUTES]; //index to attribute array in field data
-  int CopyAttributeFlags[NUM_ATTRIBUTES]; //copy flag for attribute data
+  int CopyAttributeFlags[ALLCOPY][NUM_ATTRIBUTES]; //copy flag for attribute data
 
 //BTX
   vtkFieldData::BasicIterator RequiredArrays;
@@ -387,15 +573,15 @@ protected:
 
   static const int NumberOfAttributeComponents[NUM_ATTRIBUTES];
   static const int AttributeLimits[NUM_ATTRIBUTES];
-  static const char AttributeNames[NUM_ATTRIBUTES][10];
+  static const char AttributeNames[NUM_ATTRIBUTES][12];
   static const char LongAttributeNames[NUM_ATTRIBUTES][35];
 
 private:
-  int SetAttribute(vtkDataArray* da, int attributeType);
-  static int CheckNumberOfComponents(vtkDataArray* da, int attributeType);
+  int SetAttribute(vtkAbstractArray* da, int attributeType);
+  static int CheckNumberOfComponents(vtkAbstractArray* da, int attributeType);
 
 //BTX
-  vtkFieldData::BasicIterator  ComputeRequiredArrays(vtkDataSetAttributes* pd);
+  vtkFieldData::BasicIterator  ComputeRequiredArrays(vtkDataSetAttributes* pd, int ctype);
 
 private:
   vtkDataSetAttributes(const vtkDataSetAttributes&);  // Not implemented.
@@ -429,7 +615,7 @@ public:
     void operator=(const FieldList&) {}
 
   private:
-    void SetField(int index, vtkDataArray *da);
+    void SetField(int index, vtkAbstractArray *da);
     void RemoveField(const char *name);
     void ClearFields();
     

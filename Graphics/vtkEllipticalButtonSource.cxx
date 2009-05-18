@@ -25,10 +25,11 @@
 #include "vtkPolyData.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkEllipticalButtonSource, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkEllipticalButtonSource, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkEllipticalButtonSource);
 
-// Construct 
+//----------------------------------------------------------------------------
+// Construct
 vtkEllipticalButtonSource::vtkEllipticalButtonSource()
 {
   this->Width = 0.5;
@@ -42,6 +43,7 @@ vtkEllipticalButtonSource::vtkEllipticalButtonSource()
   this->RadialRatio = 1.1;
 }
 
+//----------------------------------------------------------------------------
 int vtkEllipticalButtonSource::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
@@ -54,14 +56,14 @@ int vtkEllipticalButtonSource::RequestData(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   vtkDebugMacro(<<"Generating elliptical button");
-  
+
   // Check input
   if ( this->Width <= 0.0 || this->Height <= 0.0 )
     {
     vtkErrorMacro(<<"Button must have non-zero height and width");
     return 1;
     }
-  
+
   // Create the button in several steps. First, create the button in
   // the x-y plane, this requires creating the texture region and then
   // the shoulder region. After this, the z-depth is created. And if
@@ -85,7 +87,7 @@ int vtkEllipticalButtonSource::RequestData(
   vtkCellArray *newPolys = vtkCellArray::New();
   newPolys->Allocate(this->CircumferentialResolution*
                      (this->TextureResolution*this->ShoulderResolution));
-  
+
   // Create the texture region.  --------------------------------------------
   // Start by determining the resolution in the width and height directions.
   // Setup the ellipsoid.
@@ -96,19 +98,20 @@ int vtkEllipticalButtonSource::RequestData(
   this->B2 = this->B*this->B;
   this->C = this->Depth;
   this->C2 = this->C*this->C;
-  
+
   double xP[3], dX, dY;
   if ( this->TextureStyle == VTK_TEXTURE_STYLE_FIT_IMAGE )
     {
-    dX = (double)this->TextureDimensions[0];
-    dY = (double)this->TextureDimensions[1];
+    dX = static_cast<double>(this->TextureDimensions[0]);
+    dY = static_cast<double>(this->TextureDimensions[1]);
     }
   else
     {
     dX = this->A;
     dY = this->B;
     }
-  int hRes = ((int)ceil(this->CircumferentialResolution * (dY/(dY+dX)))) / 2;
+  int hRes = static_cast<int>(
+    ceil(this->CircumferentialResolution * (dY/(dY+dX)))) / 2;
   hRes = (hRes <= 0 ? 1 : hRes);
   int wRes = (this->CircumferentialResolution - 2*hRes) / 2;
 
@@ -117,8 +120,8 @@ int vtkEllipticalButtonSource::RequestData(
                    this->Center[2]+this->Depth);
   normals->SetTuple3(0, 0.0,0.0,1.0);
   tcoords->SetTuple2(0, 0.5, 0.5);
-  
-  // Set up for points interior to the texture 
+
+  // Set up for points interior to the texture
   int offset = 1 + (this->TextureResolution-1)*this->CircumferentialResolution;
 
   // Determine the lower-left corner of the texture region
@@ -126,7 +129,7 @@ int vtkEllipticalButtonSource::RequestData(
   double a = this->A/this->RadialRatio;
   double b = this->B/this->RadialRatio;
   this->IntersectEllipseWithLine(a*a,b*b,dX,dY,xe,ye);
-  
+
   x0[0] = this->Center[0] - xe;
   x0[1] = this->Center[1] - ye;
   x0[2] = this->ComputeDepth(1,x0[0],x0[1],n);
@@ -141,7 +144,7 @@ int vtkEllipticalButtonSource::RequestData(
   newPts->SetPoint(offset + wRes, x1);
   normals->SetTuple(offset + wRes, n);
   tcoords->SetTuple2(offset + wRes, 1.0, 0.0);
-  
+
   // Create the upper right point
   x2[0] = this->Center[0] + xe;
   x2[1] = this->Center[1] + ye;
@@ -149,7 +152,7 @@ int vtkEllipticalButtonSource::RequestData(
   newPts->SetPoint(offset + wRes + hRes, x2);
   normals->SetTuple(offset + wRes + hRes, n);
   tcoords->SetTuple2(offset + wRes + hRes, 1.0, 1.0);
-  
+
   // Create the upper left point
   x3[0] = this->Center[0] - xe;
   x3[1] = this->Center[1] + ye;
@@ -157,12 +160,12 @@ int vtkEllipticalButtonSource::RequestData(
   newPts->SetPoint(offset + 2*wRes + hRes, x3);
   normals->SetTuple(offset + 2*wRes + hRes, n);
   tcoords->SetTuple2(offset + 2*wRes + hRes, 0.0, 1.0);
-  
+
   // Okay, now fill in the points along the edges
   double t;
   for (i=1; i < wRes; i++) //x0 -> x1
     {
-    t = (double)i/wRes;
+    t = static_cast<double>(i)/wRes;
     x[0] = x0[0] + t * (x1[0]-x0[0]);
     x[1] = x0[1];
     x[2] = this->ComputeDepth(1,x[0],x[1],n);
@@ -172,7 +175,7 @@ int vtkEllipticalButtonSource::RequestData(
     }
   for (i=1; i < hRes; i++) //x1 -> x2
     {
-    t = (double)i/hRes;
+    t = static_cast<double>(i)/hRes;
     x[0] = x1[0];
     x[1] = x1[1] + t * (x2[1]-x1[1]);
     x[2] = this->ComputeDepth(1,x[0],x[1],n);
@@ -182,7 +185,7 @@ int vtkEllipticalButtonSource::RequestData(
     }
   for (i=1; i < wRes; i++) //x2 -> x3
     {
-    t = (double)i/wRes;
+    t = static_cast<double>(i)/wRes;
     x[0] = x2[0] + t * (x3[0]-x2[0]);
     x[1] = x2[1];
     x[2] = this->ComputeDepth(1,x[0],x[1],n);
@@ -192,7 +195,7 @@ int vtkEllipticalButtonSource::RequestData(
     }
   for (i=1; i < hRes; i++) //x3 -> x0
     {
-    t = (double)i/hRes;
+    t = static_cast<double>(i)/hRes;
     x[0] = x3[0];
     x[1] = x3[1] + t * (x0[1]-x3[1]);
     x[2] = this->ComputeDepth(1,x[0],x[1],n);
@@ -224,7 +227,7 @@ int vtkEllipticalButtonSource::RequestData(
     }
 
   // Create the shoulder region.  --------------------------------------------
-  // Start by duplicating points around the texture region. These are 
+  // Start by duplicating points around the texture region. These are
   // copied to avoid texture interpolation pollution.
   int c1Start = offset + this->CircumferentialResolution;
   for ( i=0; i < this->CircumferentialResolution; i++)
@@ -233,7 +236,7 @@ int vtkEllipticalButtonSource::RequestData(
     normals->SetTuple(c1Start+i, normals->GetTuple(offset+i));
     tcoords->SetTuple(c1Start+i, this->ShoulderTextureCoordinate);
     }
-  
+
   // Now create points around the perimeter of the button. The locations
   // of the points (i.e., angles) are taken from the texture region.
   int c2Start = offset + (this->ShoulderResolution+1) *
@@ -254,11 +257,11 @@ int vtkEllipticalButtonSource::RequestData(
     normals->SetTuple(c2Start+i, n);
     tcoords->SetTuple(c2Start+i, this->ShoulderTextureCoordinate);
     }
-  
+
   // Interpolate points between the curves. Create polygons.
   this->InterpolateCurve(0, newPts, this->CircumferentialResolution,
                          normals, tcoords, this->ShoulderResolution,
-                         c1Start, 1, c2Start, 1, 
+                         c1Start, 1, c2Start, 1,
                          c1Start+this->CircumferentialResolution, 1);
   this->CreatePolygons(newPolys, this->CircumferentialResolution,
                        this->ShoulderResolution, c1Start);
@@ -283,7 +286,7 @@ int vtkEllipticalButtonSource::RequestData(
     //do the polygons
     vtkIdType *ipts = 0;
     vtkIdType opts[4];
-    
+
     vtkIdType npts = 0;
     int numPolys=newPolys->GetNumberOfCells();
     for ( j=0, newPolys->InitTraversal(); j < numPolys; j++ )
@@ -311,19 +314,20 @@ int vtkEllipticalButtonSource::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkEllipticalButtonSource::InterpolateCurve(int inTextureRegion,
                                        vtkPoints *newPts, int numPts,
                                        vtkFloatArray *normals,
                                        vtkFloatArray *tcoords, int res,
                                        int c1StartPt, int c1Incr,
-                                       int c2StartPt, int c2Incr, 
+                                       int c2StartPt, int c2Incr,
                                        int startPt, int incr)
 {
   int i, j, idx;
   double x0[3], x1[3], tc0[3], tc1[3], t, x[3], tc[2], n[3];
 
   //walk around the curves interpolating new points between them
-  for ( i=0; i < numPts; 
+  for ( i=0; i < numPts;
         i++, c1StartPt+=c1Incr, c2StartPt+=c2Incr, startPt+=incr)
     {
     newPts->GetPoint(c1StartPt, x0);
@@ -335,7 +339,7 @@ void vtkEllipticalButtonSource::InterpolateCurve(int inTextureRegion,
     for ( j=1; j < res; j++ )
       {
       idx = startPt+(j-1)*numPts;
-      t = (double)j / res;
+      t = static_cast<double>(j) / res;
       x[0] = x0[0] + t * (x1[0] - x0[0]);
       x[1] = x0[1] + t * (x1[1] - x0[1]);
       x[2] = this->ComputeDepth(inTextureRegion,x[0],x[1],n);
@@ -348,12 +352,13 @@ void vtkEllipticalButtonSource::InterpolateCurve(int inTextureRegion,
     }//for all points
 }
 
-void vtkEllipticalButtonSource::CreatePolygons(vtkCellArray *newPolys, int num, int res, 
-                                     int startIdx)
+//----------------------------------------------------------------------------
+void vtkEllipticalButtonSource::CreatePolygons(vtkCellArray *newPolys,
+                                               int num, int res, int startIdx)
 {
   int i, j;
   vtkIdType idx, pts[4];
-  
+
   for (i=0; i < res; i++, startIdx+=num)
     {
     idx = startIdx;
@@ -376,11 +381,12 @@ void vtkEllipticalButtonSource::CreatePolygons(vtkCellArray *newPolys, int num, 
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkEllipticalButtonSource::IntersectEllipseWithLine(double a2, double b2, double dX, 
                                                double dY, double& xe, double& ye)
 {
   double m;
-  
+
   if ( fabs(dY) <= fabs(dX) )
     {
     m = dY/dX;
@@ -397,6 +403,7 @@ void vtkEllipticalButtonSource::IntersectEllipseWithLine(double a2, double b2, d
     }
 }
 
+//----------------------------------------------------------------------------
 double vtkEllipticalButtonSource::ComputeDepth(int vtkNotUsed(inTextureRegion),
                                     double x, double y, double n[3])
 {
@@ -417,7 +424,8 @@ double vtkEllipticalButtonSource::ComputeDepth(int vtkNotUsed(inTextureRegion),
 
   return (z + this->Center[2]);
 }
-  
+
+//----------------------------------------------------------------------------
 void vtkEllipticalButtonSource::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -426,7 +434,7 @@ void vtkEllipticalButtonSource::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Height: " << this->Height << "\n";
   os << indent << "Depth: " << this->Depth << "\n";
 
-  os << indent << "Circumferential Resolution: " 
+  os << indent << "Circumferential Resolution: "
      << this->CircumferentialResolution << "\n";
   os << indent << "Texture Resolution: " << this->TextureResolution << "\n";
   os << indent << "Shoulder Resolution: " << this->ShoulderResolution << "\n";

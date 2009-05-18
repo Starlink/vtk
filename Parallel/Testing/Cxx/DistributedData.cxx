@@ -78,6 +78,9 @@ static void Run(vtkMultiProcessController *contr, void *arg)
     ds = dsr->GetOutput();
 
     dsr->Update();
+
+    delete [] fname;
+
     go = 1;
 
     if ((ds == NULL) || (ds->GetNumberOfCells() == 0))
@@ -166,7 +169,7 @@ static void Run(vtkMultiProcessController *contr, void *arg)
     {
     renderer->ResetCamera();
     vtkCamera *camera = renderer->GetActiveCamera();
-    camera->UpdateViewport(renderer);
+    //camera->UpdateViewport(renderer);
     camera->ParallelProjectionOn();
     camera->SetParallelScale(16);
 

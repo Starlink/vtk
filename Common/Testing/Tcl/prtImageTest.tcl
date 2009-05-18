@@ -42,7 +42,8 @@ proc ExitMaster { code } {
     for { set i 1 } { $i < $numProcs } { incr i } {
         # Send break to all the nodes
         #puts "Send break to: $i"
-        catch [ [ compManager GetController ] TriggerRMI $i 239954 ]
+        set contr [ compManager GetController ]
+        catch [ $contr TriggerRMI $i [$contr GetBreakRMITag] ]
     }
     
     vtkCommand DeleteAllObjects
@@ -87,7 +88,7 @@ if {[info commands wm] != ""} {
   # The vtkinteraction package requires Tk but since Tk is not
   # available it will never be used anyway.  Just pretend it is
   # already loaded so that tests that load it will not try to load Tk.
-  package provide vtkinteraction 5.0
+  package provide vtkinteraction 5.2
 }
 
 # Run the test.

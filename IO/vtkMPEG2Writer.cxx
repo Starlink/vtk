@@ -14,10 +14,13 @@
 =========================================================================*/
 #include "vtkMPEG2Writer.h"
 
+#include "vtkDataSetAttributes.h"
 #include "vtkDirectory.h"
 #include "vtkImageData.h"
+#include "vtkInformation.h"
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
+#include "vtkErrorCode.h"
 
 #include <vtkstd/map>
 #include <vtkstd/string>
@@ -98,6 +101,18 @@ int vtkMPEG2WriterInternal::StoreImage(const char* name, vtkImageData* iid)
   id->CopyStructure(iid);
   id->SetNumberOfScalarComponents(iid->GetNumberOfScalarComponents());
 
+  vtkInformation *pipelineInfo = id->GetPipelineInformation();
+  if (pipelineInfo)
+    {
+    vtkInformation *scalarInfo = vtkDataObject::GetActiveFieldInformation(
+      pipelineInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS,
+      vtkDataSetAttributes::SCALARS);
+    if (scalarInfo)
+      {
+      scalarInfo->Set(vtkDataObject::FIELD_ARRAY_TYPE(), iid->GetScalarType());
+      }
+    }
+  
   int dims[3];
   id->GetDimensions(dims);
 
@@ -163,7 +178,7 @@ int vtkMPEG2WriterInternal::RemoveImage(const char* fname)
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkMPEG2Writer);
-vtkCxxRevisionMacro(vtkMPEG2Writer, "$Revision: 1.3.4.1 $");
+vtkCxxRevisionMacro(vtkMPEG2Writer, "$Revision: 1.6.48.1 $");
 
 //---------------------------------------------------------------------------
 vtkMPEG2Writer::vtkMPEG2Writer()
@@ -188,16 +203,19 @@ void vtkMPEG2Writer::Start()
   if ( this->Internals )
     {
     vtkErrorMacro("Movie already started");
+    this->SetErrorCode(vtkGenericMovieWriter::InitError);
     return;
     }
   if ( this->GetInput() == NULL )
     {
     vtkErrorMacro(<<"Write:Please specify an input!");
+    this->SetErrorCode(vtkGenericMovieWriter::NoInputError);
     return;
     }
   if (!this->FileName)
     {
     vtkErrorMacro(<<"Write:Please specify a FileName");
+    this->SetErrorCode(vtkErrorCode::NoFileNameError);
     return;
     }
 
@@ -217,6 +235,7 @@ void vtkMPEG2Writer::Write()
     {
     vtkErrorMacro("Movie not started");
     this->Error = 1;
+    this->SetErrorCode(vtkGenericMovieWriter::InitError);
     return;
     }
 
@@ -237,6 +256,7 @@ void vtkMPEG2Writer::Write()
   if ( this->Internals->Dim[0] != dim[0] || this->Internals->Dim[1] != dim[1] )
     {
     vtkErrorMacro("Image not of the same size");
+    this->SetErrorCode(vtkGenericMovieWriter::ChangedResolutionError);
     return;
     }
 
@@ -283,6 +303,7 @@ void vtkMPEG2Writer::Initialize()
     {
     sprintf(str->errortext,"Couldn't create output file %s",this->FileName);
     (*(str->report_error))(str->errortext);
+    this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
     }
 
   this->Internals->Init();
@@ -491,6 +512,7 @@ void vtkMPEG2WriterInternal::ReadParmFile( )
   fgets(line,254,fd); sscanf(line,"%d",&this->Structure->d0b);
   */
 
+  strcpy(this->Structure->id_string, "vtkMPEG2Writer");
   strcpy(this->Structure->tplorg, "%d");
   strcpy(this->Structure->tplref, "-");
   strcpy(this->Structure->iqname, "-");
@@ -502,6 +524,7 @@ void vtkMPEG2WriterInternal::ReadParmFile( )
   this->Structure->N_val = 21;
   this->Structure->M_val = 3;
   this->Structure->mpeg1 = 0;
+  this->Structure->fieldpic = 0;
   this->Structure->horizontal_size = this->Dim[0];
   this->Structure->vertical_size = this->Dim[1];
   this->Structure->aspectratio = 1;

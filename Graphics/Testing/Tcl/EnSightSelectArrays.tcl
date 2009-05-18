@@ -12,6 +12,9 @@ vtkRenderWindowInteractor iren
 iren SetRenderWindow renWin
 
 vtkGenericEnSightReader reader
+# Make sure all algorithms use the composite data pipeline
+vtkCompositeDataPipeline cdp
+reader SetDefaultExecutivePrototype cdp
 reader SetCaseFileName "$VTK_DATA_ROOT/Data/EnSight/blow1_ascii.case"
 reader SetTimeValue 1
 reader ReadAllVariablesOff
@@ -20,12 +23,10 @@ reader SetPointArrayStatus "displacement" 1
 reader SetCellArrayStatus "thickness" 1
 reader SetCellArrayStatus "displacement" 1
 
-reader Update
-
 vtkGeometryFilter geom
 geom SetInputConnection [reader GetOutputPort]
 
-vtkPolyDataMapper mapper
+vtkHierarchicalPolyDataMapper mapper
 mapper SetInputConnection [geom GetOutputPort]
 mapper SetScalarRange 0.5 1.0
 
@@ -50,3 +51,4 @@ renWin Render
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
 
+reader SetDefaultExecutivePrototype {}

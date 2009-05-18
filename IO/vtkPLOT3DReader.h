@@ -73,6 +73,7 @@
 #define __vtkPLOT3DReader_h
 
 #include "vtkStructuredGridSource.h"
+#include "vtkIdList.h" // Needed for internal method
 
 class vtkUnsignedCharArray;
 class vtkIntArray;
@@ -97,6 +98,11 @@ public:
   // Set/Get the PLOT3D solution filename.
   vtkSetStringMacro(QFileName);
   vtkGetStringMacro(QFileName);
+
+  // Description:
+  // Set/Get the PLOT3D Function Filename (optional)
+  vtkSetStringMacro(FunctionFileName);
+  vtkGetStringMacro(FunctionFileName);
 
   // Description:
   // This returns the number of outputs this reader will produce.
@@ -232,9 +238,6 @@ public:
   // for binary files.
   virtual int CanReadBinaryFile(const char* fname);
 
-  // Description:
-  int GenerateDefaultConfiguration();
-
 //BTX
   enum 
   {
@@ -253,6 +256,7 @@ protected:
   int CheckFile(FILE*& fp, const char* fname);
   int CheckGeometryFile(FILE*& xyzFp);
   int CheckSolutionFile(FILE*& qFp);
+  int CheckFunctionFile(FILE*& fFp);
 
   void SkipByteCount (FILE* fp);
   int ReadIntBlock  (FILE* fp, int n, int*   block);
@@ -262,6 +266,7 @@ protected:
 
   int ReadGeometryHeader(FILE* fp);
   int ReadQHeader(FILE* fp);
+  int ReadFunctionHeader(FILE *fp, vtkIdList*& counts);
 
   void CalculateFileSize(FILE* fp);
   long EstimateSize(int ni, int nj, int nk);
@@ -288,6 +293,7 @@ protected:
   //plot3d FileNames
   char *XYZFileName;
   char *QFileName;
+  char *FunctionFileName;
 
   int BinaryFile;
   int HasByteCount;
@@ -317,7 +323,6 @@ protected:
   vtkFloatArray** PointCache;
   vtkUnsignedCharArray** IBlankCache;
 
-  int VerifySettings(char* buf, int bufSize);
   void ReadIntBlockV(char** buf, int n, int* block);
   void SkipByteCountV(char** buf);
 

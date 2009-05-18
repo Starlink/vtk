@@ -16,7 +16,6 @@
 
 #include "vtkAlgorithm.h"
 #include "vtkAlgorithmOutput.h"
-#include "vtkCompositeDataPipeline.h"
 #include "vtkDataObject.h"
 #include "vtkGarbageCollector.h"
 #include "vtkInformation.h"
@@ -31,7 +30,10 @@
 #include <vtkstd/vector>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkExecutive, "$Revision: 1.27.4.3 $");
+
+#include "vtkCompositeDataPipeline.h"
+
+vtkCxxRevisionMacro(vtkExecutive, "$Revision: 1.33 $");
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_DIRECTION, Integer);
@@ -258,7 +260,7 @@ vtkInformationVector* vtkExecutive::GetOutputInformation()
   for(int i = oldNumberOfPorts; i < nop; ++i)
     {
     vtkInformation* info = this->OutputInformation->GetInformationObject(i);
-    info->Set(vtkExecutive::PRODUCER(), this, i);
+    vtkExecutive::PRODUCER()->Set(info, this, i);
     }
 
   return this->OutputInformation;
@@ -412,7 +414,7 @@ vtkAlgorithmOutput* vtkExecutive::GetProducerPort(vtkDataObject* d)
     vtkInformation* info = d->GetPipelineInformation();
     vtkExecutive* dExecutive;
     int port;
-    info->Get(vtkExecutive::PRODUCER(),dExecutive,port);
+    vtkExecutive::PRODUCER()->Get(info,dExecutive,port);
     if(dExecutive == this)
       {
       return this->Algorithm->GetOutputPort(port);
@@ -446,7 +448,7 @@ vtkDataObject* vtkExecutive::GetOutputData(int port)
     {
     return 0;
     }
-  
+
   // for backward compatibility we bring Outputs up to date if they do not
   // already exist
   if (!this->InAlgorithm && !info->Has(vtkDataObject::DATA_OBJECT()))
@@ -454,7 +456,7 @@ vtkDataObject* vtkExecutive::GetOutputData(int port)
     // Bring the data object up to date only if it isn't already there
     this->UpdateDataObject();
     }
-  
+
   // Return the data object.
   return info->Get(vtkDataObject::DATA_OBJECT());
 }
@@ -507,7 +509,7 @@ vtkDataObject* vtkExecutive::GetInputData(int port, int index)
   vtkInformation* info = inVector->GetInformationObject(index);
   vtkExecutive* e;
   int producerPort;
-  info->Get(vtkExecutive::PRODUCER(),e,producerPort);
+  vtkExecutive::PRODUCER()->Get(info,e,producerPort);
   if(e)
     {
     return e->GetOutputData(producerPort);
@@ -635,7 +637,7 @@ int vtkExecutive::ForwardUpstream(vtkInformation* request)
       // it is a NULL input.
       vtkExecutive* e;
       int producerPort;
-      info->Get(vtkExecutive::PRODUCER(),e,producerPort);
+      vtkExecutive::PRODUCER()->Get(info,e,producerPort);
       if(e)
         {
         int port = request->Get(FROM_OUTPUT_PORT());
@@ -664,7 +666,6 @@ void vtkExecutive::CopyDefaultInformation(vtkInformation* request,
                                           int direction,
                                           vtkInformationVector** inInfoVec,
                                           vtkInformationVector* outInfoVec)
-                                          
 {
   if(direction == vtkExecutive::RequestDownstream)
     {
@@ -683,7 +684,7 @@ void vtkExecutive::CopyDefaultInformation(vtkInformation* request,
           {
           // Copy the entry.
           outInfo->CopyEntry(inInfo, keys[j]);
-          
+
           // If the entry is a key vector, copy all the keys listed.
           if(vtkInformationKeyVectorKey* vkey =
              vtkInformationKeyVectorKey::SafeDownCast(keys[j]))
@@ -705,7 +706,7 @@ void vtkExecutive::CopyDefaultInformation(vtkInformation* request,
       }
 
     // Copy information from the requesting output to all inputs.
-    if(outputPort >= 0 && 
+    if(outputPort >= 0 &&
        outputPort < outInfoVec->GetNumberOfInformationObjects())
       {
       vtkInformationKey** keys = request->Get(KEYS_TO_COPY());
@@ -741,7 +742,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
 {
   // Copy default information in the direction of information flow.
   this->CopyDefaultInformation(request, direction, inInfo, outInfo);
-  
+
   // Invoke the request on the algorithm.
   this->InAlgorithm = 1;
   int result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);

@@ -20,7 +20,7 @@
 #ifndef __vtkGenericEnSightReader_h
 #define __vtkGenericEnSightReader_h
 
-#include "vtkDataSetSource.h"
+#include "vtkMultiBlockDataSetAlgorithm.h"
 
 class vtkCallbackCommand;
 class vtkDataArrayCollection;
@@ -30,11 +30,11 @@ class vtkIdListCollection;
 class TranslationTableType;
 //ETX
 
-class VTK_IO_EXPORT vtkGenericEnSightReader : public vtkDataSetSource
+class VTK_IO_EXPORT vtkGenericEnSightReader : public vtkMultiBlockDataSetAlgorithm
 {
 public:
   static vtkGenericEnSightReader *New();
-  vtkTypeRevisionMacro(vtkGenericEnSightReader, vtkDataSetSource);
+  vtkTypeRevisionMacro(vtkGenericEnSightReader, vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -46,9 +46,6 @@ public:
   // Set/Get the file path.
   vtkSetStringMacro(FilePath);
   vtkGetStringMacro(FilePath);
-  
-  virtual void Update();
-  virtual void ExecuteInformation();
   
   // Description:
   // Get the number of variables listed in the case file.
@@ -177,11 +174,37 @@ public:
   };
 //ETX
 
+  // Description:
+  // Get the Geometry file name. Made public to allow access from 
+  // apps requiring detailed info about the Data contents
+  vtkGetStringMacro(GeometryFileName);
+
+  // Description:
+  // The MeasuredGeometryFile should list particle coordinates
+  // from 0->N-1.
+  // If a file is loaded where point Ids are listed from 1-N
+  // the Id to points reference will be wrong and the data
+  // will be generated incorrectly.
+  // Setting ParticleCoordinatesByIndex to true will force
+  // all Id's to increment from 0->N-1 (relative to their order
+  // in the file) and regardless of the actual Id of of the point.
+  // Warning, if the Points are listed in non sequential order
+  // then setting this flag will reorder them.
+  vtkSetMacro(ParticleCoordinatesByIndex, int);
+  vtkGetMacro(ParticleCoordinatesByIndex, int);
+  vtkBooleanMacro(ParticleCoordinatesByIndex, int);
+
 protected:
   vtkGenericEnSightReader();
   ~vtkGenericEnSightReader();
 
-  void Execute();
+  virtual int FillOutputPortInformation(int port, vtkInformation* info);
+  virtual int RequestInformation(vtkInformation*, 
+                                 vtkInformationVector**, 
+                                 vtkInformationVector*);
+  virtual int RequestData(vtkInformation*, 
+                          vtkInformationVector**, 
+                          vtkInformationVector*);
   
   // Description:
   // Internal function to read in a line up to 256 characters.
@@ -199,9 +222,8 @@ protected:
   int ReadNextDataLine(char result[256]);
 
   // Description:
-  // Set/Get the geometry file name.
+  // Set the geometry file name.
   vtkSetStringMacro(GeometryFileName);
-  vtkGetStringMacro(GeometryFileName);
   
   // Description:
   // Add a variable description to the appropriate array.
@@ -286,6 +308,7 @@ protected:
   int ReadAllVariables;
 
   int ByteOrder;
+  int ParticleCoordinatesByIndex;
   
   // The EnSight file version being read.  Valid after
   // UpdateInformation.  Value is -1 for unknown version.

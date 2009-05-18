@@ -32,7 +32,7 @@
 #include "vtkTextProperty.h"
 #include "vtkViewport.h"
 
-vtkCxxRevisionMacro(vtkCaptionActor2D, "$Revision: 1.32 $");
+vtkCxxRevisionMacro(vtkCaptionActor2D, "$Revision: 1.36.2.1 $");
 vtkStandardNewMacro(vtkCaptionActor2D);
 
 vtkCxxSetObjectMacro(vtkCaptionActor2D,LeaderGlyph,vtkPolyData);
@@ -59,6 +59,7 @@ vtkCaptionActor2D::vtkCaptionActor2D()
   this->Caption = NULL;
   this->Border = 1;
   this->Leader = 1;
+  this->AttachEdgeOnly = 0;
   this->ThreeDimensionalLeader = 1;
   this->LeaderGlyphSize = 0.025;
   this->MaximumLeaderGlyphSize = 20;
@@ -73,7 +74,7 @@ vtkCaptionActor2D::vtkCaptionActor2D()
   this->CaptionTextProperty->SetShadow(1);
   this->CaptionTextProperty->SetFontFamily(VTK_ARIAL);
   this->CaptionTextProperty->SetJustification(VTK_TEXT_LEFT);
-  this->CaptionTextProperty->SetVerticalJustification(VTK_TEXT_CENTERED);
+  this->CaptionTextProperty->SetVerticalJustification(VTK_TEXT_BOTTOM);
 
   // What is actually drawn
   this->TextActor = vtkTextActor::New();
@@ -81,7 +82,7 @@ vtkCaptionActor2D::vtkCaptionActor2D()
   this->TextActor->GetPositionCoordinate()->SetReferenceCoordinate(NULL);
   this->TextActor->GetPosition2Coordinate()->SetCoordinateSystemToDisplay();
   this->TextActor->GetPosition2Coordinate()->SetReferenceCoordinate(NULL);
-  this->TextActor->SetScaledText(1);
+  this->TextActor->SetTextScaleModeToProp();
   this->TextActor->SetTextProperty(this->CaptionTextProperty);
 
   this->BorderPolyData = vtkPolyData::New();
@@ -278,8 +279,12 @@ int vtkCaptionActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
   double d2, minD2, pt[3], minPt[3];
   minD2 = VTK_DOUBLE_MAX;
 
+  minPt[0] = p2[0];
+  minPt[1] = p2[1];
+
   pt[0] = p2[0]; pt[1] = p2[1]; pt[2] = minPt[2] = 0.0;
-  if ( (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
+  if ( !this->AttachEdgeOnly && 
+    (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
     {
     minD2 = d2;
     minPt[0] = pt[0]; minPt[1] = pt[1]; 
@@ -293,7 +298,8 @@ int vtkCaptionActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
     }
 
   pt[0] = p3[0];
-  if ( (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
+  if ( !this->AttachEdgeOnly && 
+    (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
     {
     minD2 = d2;
     minPt[0] = pt[0]; minPt[1] = pt[1]; 
@@ -307,7 +313,8 @@ int vtkCaptionActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
     }
 
   pt[1] = p3[1];
-  if ( (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
+  if ( !this->AttachEdgeOnly && 
+    (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
     {
     minD2 = d2;
     minPt[0] = pt[0]; minPt[1] = pt[1]; 
@@ -321,7 +328,8 @@ int vtkCaptionActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
     }
 
   pt[0] = p2[0];
-  if ( (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
+  if ( !this->AttachEdgeOnly && 
+    (d2 = vtkMath::Distance2BetweenPoints(p1,pt)) < minD2 )
     {
     minD2 = d2;
     minPt[0] = pt[0]; minPt[1] = pt[1]; 
@@ -455,6 +463,14 @@ int vtkCaptionActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
   return renderedSomething;
 }
 
+//-----------------------------------------------------------------------------
+// Description:
+// Does this prop have some translucent polygonal geometry?
+int vtkCaptionActor2D::HasTranslucentPolygonalGeometry()
+{
+  return 0;
+}
+
 //----------------------------------------------------------------------------
 void vtkCaptionActor2D::PrintSelf(ostream& os, vtkIndent indent)
 {
@@ -498,6 +514,7 @@ void vtkCaptionActor2D::PrintSelf(ostream& os, vtkIndent indent)
     }
   os << indent << "Padding: " << this->Padding << "\n";
   os << indent << "Border: " << (this->Border ? "On\n" : "Off\n");
+  os << indent << "AttachEdgeOnly: " << (this->AttachEdgeOnly ? "On\n" : "Off\n");
 }
 
 //----------------------------------------------------------------------------

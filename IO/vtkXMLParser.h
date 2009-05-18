@@ -81,6 +81,21 @@ public:
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
 
+  // Description:
+  // If this is off (the default), CharacterDataHandler will be called to 
+  // process text within XML Elements. If this is on, the text will be 
+  // ignored.
+  vtkSetMacro(IgnoreCharacterData, int);
+  vtkGetMacro(IgnoreCharacterData, int);
+
+  // Description:
+  // Set and get the encoding the parser should expect (NULL defaults to
+  // Expat's own default encoder, i.e UTF-8).
+  // This should be set before parsing (i.e. a call to Parse()) or
+  // even initializing the parser (i.e. a call to InitializeParser())
+  vtkSetStringMacro(Encoding);
+  vtkGetStringMacro(Encoding);
+
 protected:
   vtkXMLParser();
   ~vtkXMLParser();
@@ -90,6 +105,9 @@ protected:
 
   // File name to parse
   char* FileName;
+
+  // Encoding
+  char* Encoding;
 
   // This variable is true if there was a parse error while parsing in
   // chunks.
@@ -101,6 +119,9 @@ protected:
 
   // Expat parser structure.  Exists only during call to Parse().
   void* Parser;
+
+  // Create/Allocate the internal parser (can be overriden by subclasses).
+  virtual int CreateParser();
 
   // Called by Parse() to read the stream and call ParseBuffer.  Can
   // be replaced by subclasses to change how input is read.
@@ -161,6 +182,8 @@ protected:
   friend void vtkXMLParserEndElement(void*, const char*);
   friend void vtkXMLParserCharacterDataHandler(void*, const char*, int);
   //ETX
+
+  int IgnoreCharacterData;
 
 private:
   vtkXMLParser(const vtkXMLParser&);  // Not implemented.

@@ -14,12 +14,13 @@
 =========================================================================*/
 #include "vtkPNGReader.h"
 
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtk_png.h"
 
-vtkCxxRevisionMacro(vtkPNGReader, "$Revision: 1.25 $");
+vtkCxxRevisionMacro(vtkPNGReader, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkPNGReader);
 
 #ifdef _MSC_VER
@@ -29,6 +30,7 @@ vtkStandardNewMacro(vtkPNGReader);
 #pragma warning( disable : 4611 )
 #endif 
 
+//----------------------------------------------------------------------------
 void vtkPNGReader::ExecuteInformation()
 {
   this->ComputeInternalFileName(this->DataExtent[4]);
@@ -149,6 +151,7 @@ void vtkPNGReader::ExecuteInformation()
 }
 
 
+//----------------------------------------------------------------------------
 template <class OT>
 void vtkPNGReaderUpdate2(vtkPNGReader *self, OT *outPtr,
                          int *outExt, vtkIdType *outInc, long pixSize)
@@ -330,6 +333,7 @@ void vtkPNGReader::ExecuteData(vtkDataObject *output)
 }
 
 
+//----------------------------------------------------------------------------
 int vtkPNGReader::CanReadFile(const char* fname)
 {
   FILE* fp = fopen(fname, "rb");

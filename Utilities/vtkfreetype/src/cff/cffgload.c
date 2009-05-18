@@ -4,7 +4,7 @@
 /*                                                                         */
 /*    OpenType Glyph Loader (body).                                        */
 /*                                                                         */
-/*  Copyright 1996-2001, 2002, 2003, 2004 by                               */
+/*  Copyright 1996-2001, 2002, 2003, 2004, 2005, 2006, 2007 by             */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -372,12 +372,13 @@
 
 
   /* this function is used to select the locals subrs array */
-  FT_LOCAL_DEF( void )
+  FT_LOCAL_DEF( FT_Error )
   cff_decoder_prepare( CFF_Decoder*  decoder,
                        FT_UInt       glyph_index )
   {
-    CFF_Font     cff = (CFF_Font)decoder->builder.face->extra.data;
-    CFF_SubFont  sub = &cff->top_font;
+    CFF_Font     cff   = (CFF_Font)decoder->builder.face->extra.data;
+    CFF_SubFont  sub   = &cff->top_font;
+    FT_Error     error = CFF_Err_Ok;
 
 
     /* manage CID fonts */
@@ -386,6 +387,13 @@
       FT_Byte  fd_index = cff_fd_select_get( &cff->fd_select, glyph_index );
 
 
+      if ( fd_index >= cff->num_subfonts )
+      {
+        FT_TRACE4(( "cff_decoder_prepare: invalid CID subfont index\n" ));
+        error = CFF_Err_Invalid_File_Format;
+        goto Exit;
+      }
+        
       sub = cff->subfonts[fd_index];
     }
 
@@ -395,6 +403,9 @@
 
     decoder->glyph_width   = sub->private_dict.default_width;
     decoder->nominal_width = sub->private_dict.nominal_width;
+
+  Exit:
+    return error;
   }
 
 
@@ -403,7 +414,7 @@
   check_points( CFF_Builder*  builder,
                 FT_Int        count )
   {
-    return FT_GlyphLoader_CheckPoints( builder->loader, count, 0 );
+    return FT_GLYPHLOADER_CHECK_POINTS( builder->loader, count, 0 );
   }
 
 
@@ -465,7 +476,7 @@
       return CFF_Err_Ok;
     }
 
-    error = FT_GlyphLoader_CheckPoints( builder->loader, 0, 1 );
+    error = FT_GLYPHLOADER_CHECK_POINTS( builder->loader, 0, 1 );
     if ( !error )
     {
       if ( outline->n_contours > 0 )
@@ -507,6 +518,9 @@
   {
     FT_Outline*  outline = builder->current;
 
+
+    if ( !outline )
+      return;
 
     /* XXXX: We must not include the last point in the path if it */
     /*       is located on the first point.                       */
@@ -1296,7 +1310,7 @@
               goto Fail;
 
             args = stack;
-            while (args < decoder->top )
+            while ( args < decoder->top )
             {
               if ( phase )
                 x += args[0];
@@ -1422,7 +1436,7 @@
               goto Fail;
 
             args = stack;
-            if (num_args < 4 || ( num_args % 4 ) > 1 )
+            if ( num_args < 4 || ( num_args % 4 ) > 1 )
               goto Stack_Underflow;
 
             if ( check_points( builder, ( num_args / 4 ) * 3 ) )
@@ -1560,7 +1574,7 @@
                  check_points( builder, 6 )               )
               goto Fail;
 
-            /* Record the starting point's y postion for later use */
+            /* Record the starting point's y position for later use */
             start_y = y;
 
             /* first control point */
@@ -1663,7 +1677,7 @@
                  check_points( builder, 6 )               )
               goto Fail;
 
-            /* record the starting point's x, y postion for later use */
+            /* record the starting point's x, y position for later use */
             start_x = x;
             start_y = y;
 
@@ -1769,7 +1783,8 @@
             /* close hints recording session */
             if ( hinter )
             {
-              if (hinter->close( hinter->hints, builder->current->n_points ) )
+              if ( hinter->close( hinter->hints,
+                                  builder->current->n_points ) )
                 goto Syntax_Error;
 
               /* apply hints to the loaded glyph outline now */
@@ -2045,7 +2060,7 @@
 
         case cff_op_ifelse:
           {
-            FT_Fixed  cond = (args[2] <= args[3]);
+            FT_Fixed  cond = ( args[2] <= args[3] );
 
 
             FT_TRACE4(( " ifelse" ));
@@ -2067,7 +2082,7 @@
             if ( idx >= decoder->num_locals )
             {
               FT_ERROR(( "cff_decoder_parse_charstrings:" ));
-              FT_ERROR(( "  invalid local subr index\n" ));
+              FT_ERROR(( " invalid local subr index\n" ));
               goto Syntax_Error;
             }
 
@@ -2085,7 +2100,7 @@
             zone->limit  = decoder->locals[idx + 1];
             zone->cursor = zone->base;
 
-            if ( !zone->base )
+            if ( !zone->base || zone->limit == zone->base )
             {
               FT_ERROR(( "cff_decoder_parse_charstrings:"
                          " invoking empty subrs!\n" ));
@@ -2127,7 +2142,7 @@
             zone->limit  = decoder->globals[idx + 1];
             zone->cursor = zone->base;
 
-            if ( !zone->base )
+            if ( !zone->base || zone->limit == zone->base )
             {
               FT_ERROR(( "cff_decoder_parse_charstrings:"
                          " invoking empty subrs!\n" ));
@@ -2245,9 +2260,11 @@
                                   &charstring, &charstring_len );
       if ( !error )
       {
-        cff_decoder_prepare( &decoder, glyph_index );
-        error = cff_decoder_parse_charstrings( &decoder,
-                                               charstring, charstring_len );
+        error = cff_decoder_prepare( &decoder, glyph_index );
+        if ( !error )
+          error = cff_decoder_parse_charstrings( &decoder,
+                                                 charstring,
+                                                 charstring_len );
 
         cff_free_glyph_data( face, &charstring, &charstring_len );
       }
@@ -2265,37 +2282,34 @@
 #endif /* 0 */
 
 
-  /*************************************************************************/
-  /*************************************************************************/
-  /*************************************************************************/
-  /**********                                                      *********/
-  /**********                                                      *********/
-  /**********               UNHINTED GLYPH LOADER                  *********/
-  /**********                                                      *********/
-  /**********    The following code is in charge of loading a      *********/
-  /**********    single outline.  It completely ignores hinting    *********/
-  /**********    and is used when FT_LOAD_NO_HINTING is set.       *********/
-  /**********                                                      *********/
-  /*************************************************************************/
-  /*************************************************************************/
-  /*************************************************************************/
-
-
   FT_LOCAL_DEF( FT_Error )
   cff_slot_load( CFF_GlyphSlot  glyph,
                  CFF_Size       size,
-                 FT_Int         glyph_index,
+                 FT_UInt        glyph_index,
                  FT_Int32       load_flags )
   {
-    FT_Error      error;
-    CFF_Decoder   decoder;
-    TT_Face       face     = (TT_Face)glyph->root.face;
-    FT_Bool       hinting;
-    CFF_Font      cff      = (CFF_Font)face->extra.data;
+    FT_Error     error;
+    CFF_Decoder  decoder;
+    TT_Face      face     = (TT_Face)glyph->root.face;
+    FT_Bool      hinting;
+    CFF_Font     cff      = (CFF_Font)face->extra.data;
 
-    FT_Matrix     font_matrix;
-    FT_Vector     font_offset;
+    FT_Matrix    font_matrix;
+    FT_Vector    font_offset;
 
+
+    /* in a CID-keyed font, consider `glyph_index' as a CID and map */
+    /* it immediately to the real glyph_index -- if it isn't a      */
+    /* subsetted font, glyph_indices and CIDs are identical, though */
+    if ( cff->top_font.font_dict.cid_registry != 0xFFFFU &&
+         cff->charset.cids )
+    {
+      glyph_index = cff_charset_cid_to_gindex( &cff->charset, glyph_index );
+      if ( glyph_index == 0 )
+        return CFF_Err_Invalid_Argument;
+    }
+    else if ( glyph_index >= cff->num_glyphs )
+      return CFF_Err_Invalid_Argument;
 
     if ( load_flags & FT_LOAD_NO_RECURSE )
       load_flags |= FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING;
@@ -2321,16 +2335,16 @@
       FT_Stream     stream   = cff_face->root.stream;
 
 
-      if ( size->strike_index != 0xFFFFU           &&
-           sfnt->load_sbits                        &&
+      if ( size->strike_index != 0xFFFFFFFFUL      &&
+           sfnt->load_eblc                         &&
            ( load_flags & FT_LOAD_NO_BITMAP ) == 0 )
       {
         TT_SBit_MetricsRec  metrics;
 
 
         error = sfnt->load_sbit_image( face,
-                                       (FT_ULong)size->strike_index,
-                                       (FT_UInt)glyph_index,
+                                       size->strike_index,
+                                       glyph_index,
                                        (FT_Int)load_flags,
                                        stream,
                                        &glyph->root.bitmap,
@@ -2388,13 +2402,6 @@
       FT_ULong  charstring_len;
 
 
-      /* in a CID-keyed font, consider `glyph_index' as a CID and map */
-      /* it immediately to the real glyph_index -- if it isn't a      */
-      /* subsetted font, glyph_indices and CIDs are identical, though */
-      if ( cff->top_font.font_dict.cid_registry != 0xFFFFU &&
-           cff->charset.cids )
-        glyph_index = cff->charset.cids[glyph_index];
-
       cff_decoder_init( &decoder, face, size, glyph, hinting,
                         FT_LOAD_TARGET_MODE( load_flags ) );
 
@@ -2406,35 +2413,41 @@
                                   &charstring, &charstring_len );
       if ( !error )
       {
-        cff_decoder_prepare( &decoder, glyph_index );
-        error = cff_decoder_parse_charstrings( &decoder,
-                                               charstring, charstring_len );
+        error = cff_decoder_prepare( &decoder, glyph_index );
+        if ( !error )
+        {
+          error = cff_decoder_parse_charstrings( &decoder,
+                                                 charstring,
+                                                 charstring_len );
 
-        cff_free_glyph_data( face, &charstring, charstring_len );
+          cff_free_glyph_data( face, &charstring, charstring_len );
 
 
 #ifdef FT_CONFIG_OPTION_INCREMENTAL
-        /* Control data and length may not be available for incremental   */
-        /* fonts.                                                         */
-        if ( face->root.internal->incremental_interface )
-        {
-          glyph->root.control_data = 0;
-          glyph->root.control_len = 0;
-        }
-        else
+          /* Control data and length may not be available for incremental */
+          /* fonts.                                                       */
+          if ( face->root.internal->incremental_interface )
+          {
+            glyph->root.control_data = 0;
+            glyph->root.control_len = 0;
+          }
+          else
 #endif /* FT_CONFIG_OPTION_INCREMENTAL */
 
-        /* We set control_data and control_len if charstrings is loaded.  */
-        /* See how charstring loads at cff_index_access_element() in      */
-        /* cffload.c.                                                     */
-        {
-          CFF_IndexRec csindex = cff->charstrings_index;
+          /* We set control_data and control_len if charstrings is loaded. */
+          /* See how charstring loads at cff_index_access_element() in     */
+          /* cffload.c.                                                    */
+          {
+            CFF_Index  csindex = &cff->charstrings_index;
 
 
-          glyph->root.control_data =
-            csindex.bytes + csindex.offsets[glyph_index] - 1;
-          glyph->root.control_len =
-            charstring_len;
+            if ( csindex->offsets )
+            {
+              glyph->root.control_data = csindex->bytes +
+                                           csindex->offsets[glyph_index] - 1;
+              glyph->root.control_len  = charstring_len;
+            }
+          }
         }
       }
 
@@ -2466,14 +2479,27 @@
 
 #endif /* FT_CONFIG_OPTION_INCREMENTAL */
 
-    font_matrix = cff->top_font.font_dict.font_matrix;
-    font_offset = cff->top_font.font_dict.font_offset;
-
-    /* Now, set the metrics -- this is rather simple, as   */
-    /* the left side bearing is the xMin, and the top side */
-    /* bearing the yMax.                                   */
     if ( !error )
     {
+      if ( cff->num_subfonts >= 1 )
+      {
+        FT_Byte  fd_index = cff_fd_select_get( &cff->fd_select,
+                                               glyph_index );
+
+
+        font_matrix = cff->subfonts[fd_index]->font_dict.font_matrix;
+        font_offset = cff->subfonts[fd_index]->font_dict.font_offset;
+      }
+      else
+      {
+        font_matrix = cff->top_font.font_dict.font_matrix;
+        font_offset = cff->top_font.font_dict.font_offset;
+      }
+
+      /* Now, set the metrics -- this is rather simple, as   */
+      /* the left side bearing is the xMin, and the top side */
+      /* bearing the yMax.                                   */
+
       /* For composite glyphs, return only left side bearing and */
       /* advance width.                                          */
       if ( load_flags & FT_LOAD_NO_RECURSE )
@@ -2492,6 +2518,7 @@
         FT_BBox            cbox;
         FT_Glyph_Metrics*  metrics = &glyph->root.metrics;
         FT_Vector          advance;
+        FT_Bool            has_vertical_info;
 
 
         /* copy the _unscaled_ advance width */
@@ -2499,12 +2526,36 @@
         glyph->root.linearHoriAdvance           = decoder.glyph_width;
         glyph->root.internal->glyph_transformed = 0;
 
-        /* make up vertical metrics */
-        metrics->vertBearingX = 0;
-        metrics->vertBearingY = 0;
-        metrics->vertAdvance  = 0;
+        has_vertical_info = FT_BOOL( face->vertical_info                   &&
+                                     face->vertical.number_Of_VMetrics > 0 &&
+                                     face->vertical.long_metrics != 0 );
 
-        glyph->root.linearVertAdvance = 0;
+        /* get the vertical metrics from the vtmx table if we have one */
+        if ( has_vertical_info )
+        {
+          FT_Short   vertBearingY = 0;
+          FT_UShort  vertAdvance  = 0;
+
+
+          ( (SFNT_Service)face->sfnt )->get_metrics( face, 1,
+                                                     glyph_index,
+                                                     &vertBearingY,
+                                                     &vertAdvance );
+          metrics->vertBearingY = vertBearingY;
+          metrics->vertAdvance  = vertAdvance;
+        }
+        else
+        {
+          /* make up vertical ones */
+          if ( face->os2.version != 0xFFFFU )
+            metrics->vertAdvance = (FT_Pos)( face->os2.sTypoAscender -
+                                             face->os2.sTypoDescender );
+          else
+            metrics->vertAdvance = (FT_Pos)( face->horizontal.Ascender -
+                                             face->horizontal.Descender );
+        }
+
+        glyph->root.linearVertAdvance = metrics->vertAdvance;
 
         glyph->root.format = FT_GLYPH_FORMAT_OUTLINE;
 
@@ -2515,16 +2566,22 @@
         glyph->root.outline.flags |= FT_OUTLINE_REVERSE_FILL;
 
         /* apply the font matrix */
-        FT_Outline_Transform( &glyph->root.outline, &font_matrix );
+        if ( !( font_matrix.xx == 0x10000L &&
+                font_matrix.yy == 0x10000L &&
+                font_matrix.xy == 0        &&
+                font_matrix.yx == 0        ) )
+          FT_Outline_Transform( &glyph->root.outline, &font_matrix );
 
-        FT_Outline_Translate( &glyph->root.outline,
-                              font_offset.x,
-                              font_offset.y );
+        if ( !( font_offset.x == 0 &&
+                font_offset.y == 0 ) )
+          FT_Outline_Translate( &glyph->root.outline,
+                                font_offset.x, font_offset.y );
 
         advance.x = metrics->horiAdvance;
         advance.y = 0;
         FT_Vector_Transform( &advance, &font_matrix );
         metrics->horiAdvance = advance.x + font_offset.x;
+
         advance.x = 0;
         advance.y = metrics->vertAdvance;
         FT_Vector_Transform( &advance, &font_matrix );
@@ -2541,49 +2598,32 @@
 
 
           /* First of all, scale the points */
-          if ( !hinting )
+          if ( !hinting || !decoder.builder.hints_funcs )
             for ( n = cur->n_points; n > 0; n--, vec++ )
             {
               vec->x = FT_MulFix( vec->x, x_scale );
               vec->y = FT_MulFix( vec->y, y_scale );
             }
 
-          FT_Outline_Get_CBox( &glyph->root.outline, &cbox );
-
           /* Then scale the metrics */
-          metrics->horiAdvance  = FT_MulFix( metrics->horiAdvance,  x_scale );
-          metrics->vertAdvance  = FT_MulFix( metrics->vertAdvance,  y_scale );
-
-          metrics->vertBearingX = FT_MulFix( metrics->vertBearingX, x_scale );
-          metrics->vertBearingY = FT_MulFix( metrics->vertBearingY, y_scale );
-
-          if ( hinting )
-          {
-            metrics->horiAdvance  = FT_PIX_ROUND( metrics->horiAdvance );
-            metrics->vertAdvance  = FT_PIX_ROUND( metrics->vertAdvance );
-
-            metrics->vertBearingX = FT_PIX_ROUND( metrics->vertBearingX );
-            metrics->vertBearingY = FT_PIX_ROUND( metrics->vertBearingY );
-          }
+          metrics->horiAdvance = FT_MulFix( metrics->horiAdvance, x_scale );
+          metrics->vertAdvance = FT_MulFix( metrics->vertAdvance, y_scale );
         }
 
         /* compute the other metrics */
         FT_Outline_Get_CBox( &glyph->root.outline, &cbox );
-
-        /* grid fit the bounding box if necessary */
-        if ( hinting )
-        {
-          cbox.xMin &= -64;
-          cbox.yMin &= -64;
-          cbox.xMax  = ( cbox.xMax + 63 ) & -64;
-          cbox.yMax  = ( cbox.yMax + 63 ) & -64;
-        }
 
         metrics->width  = cbox.xMax - cbox.xMin;
         metrics->height = cbox.yMax - cbox.yMin;
 
         metrics->horiBearingX = cbox.xMin;
         metrics->horiBearingY = cbox.yMax;
+
+        if ( has_vertical_info )
+          metrics->vertBearingX = -metrics->width / 2;
+        else
+          ft_synthesize_vertical_metrics( metrics,
+                                          metrics->vertAdvance );
       }
     }
 

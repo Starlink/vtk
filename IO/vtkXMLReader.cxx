@@ -15,7 +15,6 @@
 #include "vtkXMLReader.h"
 
 #include "vtkCallbackCommand.h"
-#include "vtkDataArray.h"
 #include "vtkDataArraySelection.h"
 #include "vtkDataCompressor.h"
 #include "vtkDataSet.h"
@@ -30,11 +29,52 @@
 #include "vtkInformationVector.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
+#include <vtksys/ios/sstream>
 #include <sys/stat.h>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.38.4.1 $");
+vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.49.2.1 $");
+//-----------------------------------------------------------------------------
+static void ReadStringVersion(const char* version, int& major, int& minor)
+{
+  if (!version)
+    {
+    major = -1;
+    minor = -1;
+    return;
+    }
+  // Extract the major and minor version numbers.
+  size_t length = strlen(version);
+  const char* begin = version;
+  const char* end = version + length;
+  const char* s;
 
+  for(s=begin; (s != end) && (*s != '.'); ++s)
+    {
+    ;
+    }
+
+  if(s > begin)
+    {
+    vtksys_ios::stringstream str;
+    str.write(begin, s-begin);
+    str >> major;
+    if(!str)
+      {
+      major = 0;
+      }
+    }
+  if(++s < end)
+    {
+    vtksys_ios::stringstream str;
+    str.write(s, end-s);
+    str >> minor;
+    if(!str)
+      {
+      minor = 0;
+      }
+    }
+}
 //----------------------------------------------------------------------------
 vtkXMLReader::vtkXMLReader()
 {
@@ -77,6 +117,9 @@ vtkXMLReader::vtkXMLReader()
   this->TimeSteps = 0;
   this->CurrentTimeStep = 0;
   this->TimeStepWasReadOnce = 0;
+
+  this->FileMinorVersion = -1;
+  this->FileMajorVersion = -1;
 }
 
 //----------------------------------------------------------------------------
@@ -330,19 +373,23 @@ int vtkXMLReader::ReadXMLInformation()
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLReader::RequestInformation(vtkInformation *request,
-                                     vtkInformationVector **vtkNotUsed(inputVector),
-                                     vtkInformationVector *outputVector)
+int vtkXMLReader
+::RequestInformation(vtkInformation *request,
+                     vtkInformationVector **vtkNotUsed(inputVector),
+                     vtkInformationVector *outputVector)
 {
   if (this->ReadXMLInformation())
     {
     this->InformationError = 0;
     // Let the subclasses read the information they want.
-    int outputPort = request->Get( vtkDemandDrivenPipeline::FROM_OUTPUT_PORT() );
+    int outputPort = 
+      request->Get( vtkDemandDrivenPipeline::FROM_OUTPUT_PORT() );
     outputPort = outputPort >= 0 ? outputPort : 0;
-    this->SetupOutputInformation( outputVector->GetInformationObject(outputPort) );
+    this->SetupOutputInformation
+      (outputVector->GetInformationObject(outputPort) );
 
-    // this->NumberOfTimeSteps has been set during the this->ReadXMLInformation()
+    // this->NumberOfTimeSteps has been set during the
+    // this->ReadXMLInformation()
     int numTimesteps = this->GetNumberOfTimeSteps();
     this->TimeStepRange[0] = 0;
     this->TimeStepRange[1] = numTimesteps-1;
@@ -357,6 +404,11 @@ int vtkXMLReader::RequestInformation(vtkInformation *request,
       outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), 
                    timeSteps, 
                    numTimesteps);
+      double timeRange[2];
+      timeRange[0] = timeSteps[0];
+      timeRange[1] = timeSteps[numTimesteps-1];
+      outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), 
+                   timeRange, 2);
       }
     }
   else
@@ -365,6 +417,22 @@ int vtkXMLReader::RequestInformation(vtkInformation *request,
     }
 
   return !this->InformationError;
+}
+
+//----------------------------------------------------------------------------
+int vtkXMLReader
+::RequestUpdateExtentInformation
+(vtkInformation *request,
+ vtkInformationVector **vtkNotUsed(inputVector),
+ vtkInformationVector *outputVector)
+{
+  int outputPort = 
+    request->Get( vtkDemandDrivenPipeline::FROM_OUTPUT_PORT() );
+  outputPort = outputPort >= 0 ? outputPort : 0;
+  this->SetupUpdateExtentInformation
+    (outputVector->GetInformationObject(outputPort) );
+
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -387,29 +455,30 @@ int vtkXMLReader::RequestData(vtkInformation *request,
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
 
+  // Save the time value in the output data information.
+  double* steps =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    
   // Check if a particular time was requested.
-  if(outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_INDEX()))
+  if(steps &&
+     outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
     {
-    // Get the requested time step.
-    this->CurrentTimeStep =
-      outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_INDEX());
-
-    // Save the time value in the output data information.
+    // Get the requested time step. We only supprt requests of a single time
+    // step in this reader right now
+    double *requestedTimeSteps = 
+      outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+    
     int length =
       outInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
-    if(this->CurrentTimeStep >= 0 && this->CurrentTimeStep < length)
+    
+    // find the first time value larger than requested time value
+    // this logic could be improved
+    int cnt = 0;
+    while (cnt < length-1 && steps[cnt] < requestedTimeSteps[0])
       {
-      double* steps =
-        outInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
-      output->GetInformation()->Set(vtkDataObject::DATA_TIME(),
-                                    steps[this->CurrentTimeStep]);
+      cnt++;
       }
-    else
-      {
-      vtkErrorMacro("Time index " << this->CurrentTimeStep
-                    << " requested but there are "
-                    << length << " time steps.");
-      }
+    this->CurrentTimeStep = cnt;
 
     // Clamp the requested time step to be in bounds.
     if ( this->CurrentTimeStep < this->TimeStepRange[0] )
@@ -420,11 +489,10 @@ int vtkXMLReader::RequestData(vtkInformation *request,
       {
       this->CurrentTimeStep = this->TimeStepRange[1];
       }
-    }
 
-  // Set the time we will store in the output.
-  output->GetInformation()->Set(vtkDataObject::DATA_TIME_INDEX(),
-                                this->CurrentTimeStep);
+    output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(),
+                                  steps+this->CurrentTimeStep,1);
+    }
 
   // Re-open the input file.  If it fails, the error was already
   // reported by OpenVTKFile.
@@ -508,6 +576,8 @@ int vtkXMLReader::ReadVTKFile(vtkXMLDataElement* eVTKFile)
     return 0;
     }
 
+  ::ReadStringVersion(version, this->FileMajorVersion, this->FileMinorVersion);
+
   // Setup the compressor if there is one.
   const char* compressor = eVTKFile->GetAttribute("compressor");
   if(compressor)
@@ -547,7 +617,8 @@ int vtkXMLReader::ReadPrimaryElement(vtkXMLDataElement* ePrimary)
   // Let check the "TimeValues" here
   const int tsMax = 4096;
   double timevalues[tsMax];
-  int numTimeSteps = ePrimary->GetVectorAttribute("TimeValues", tsMax, timevalues);
+  int numTimeSteps = 
+    ePrimary->GetVectorAttribute("TimeValues", tsMax, timevalues);
   assert( numTimeSteps <= tsMax);
   this->SetNumberOfTimeSteps( numTimeSteps );
 
@@ -581,7 +652,7 @@ void vtkXMLReader::SetupOutputData()
 }
 
 //----------------------------------------------------------------------------
-vtkDataArray* vtkXMLReader::CreateDataArray(vtkXMLDataElement* da)
+vtkAbstractArray* vtkXMLReader::CreateArray(vtkXMLDataElement* da)
 {
   int dataType = 0;
   if(!da->GetWordTypeAttribute("type", dataType))
@@ -589,7 +660,7 @@ vtkDataArray* vtkXMLReader::CreateDataArray(vtkXMLDataElement* da)
     return 0;
     }  
   
-  vtkDataArray* array = vtkDataArray::CreateDataArray(dataType);
+  vtkAbstractArray* array = vtkAbstractArray::CreateArray(dataType);
   
   array->SetName(da->GetAttribute("Name"));
   
@@ -598,7 +669,7 @@ vtkDataArray* vtkXMLReader::CreateDataArray(vtkXMLDataElement* da)
     {
     array->SetNumberOfComponents(components);
     }
-  
+
   return array;
 }
 
@@ -645,39 +716,9 @@ int vtkXMLReader::CanReadFile(const char* name)
 //----------------------------------------------------------------------------
 int vtkXMLReader::CanReadFileVersionString(const char* version)
 {
-  // Extract the major and minor version numbers.
-  size_t length = strlen(version);
   int major = 0;
   int minor = 0;
-  const char* begin = version;
-  const char* end = version + length;
-  const char* s;
-  
-  for(s=begin; (s != end) && (*s != '.'); ++s);
-  
-  if(s > begin)
-    {
-    strstream str;
-    str.write(begin, s-begin);
-    str << ends;
-    str >> major;
-    if(!str)
-      {
-      major = 0;
-      }
-    }
-  if(++s < end)
-    {
-    strstream str;
-    str.write(s, end-s);
-    str << ends;
-    str >> minor;
-    if(!str)
-      {
-      minor = 0;
-      }
-    }
-  
+  ::ReadStringVersion(version, major, minor);
   return this->CanReadFileVersion(major, minor);
 }
 
@@ -848,10 +889,9 @@ void vtkXMLReader::SetDataArraySelections(vtkXMLDataElement* eDSA,
       }
     else
       {
-      ostrstream ostr_with_warning_C4701;
-      ostr_with_warning_C4701 << "Array " << i << ends;
-      sel->AddArray( ostr_with_warning_C4701.str() );
-      ostr_with_warning_C4701.rdbuf()->freeze(0);
+      vtksys_ios::ostringstream ostr_with_warning_C4701;
+      ostr_with_warning_C4701 << "Array " << i;
+      sel->AddArray( ostr_with_warning_C4701.str().c_str() );
       }
     }
 }
@@ -935,6 +975,13 @@ int vtkXMLReader::SetFieldDataInfo(vtkXMLDataElement *eDSA,
     else
       {
       info->Set(vtkDataObject::FIELD_NUMBER_OF_COMPONENTS(), 1);
+      }
+
+    double range[2];
+    if (eNested->GetScalarAttribute("RangeMin", range[0]) &&
+        eNested->GetScalarAttribute("RangeMax", range[1]))
+      {
+      info->Set(vtkDataObject::FIELD_RANGE(), range, 2);
       }
 
     info->Set(vtkDataObject::FIELD_ACTIVE_ATTRIBUTE(), activeFlag);
@@ -1124,6 +1171,14 @@ int vtkXMLReader::ProcessRequest(vtkInformation* request,
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_INFORMATION()))
     {
     return this->RequestInformation(request, inputVector, outputVector);
+    }
+
+  // return UE info
+  if(request->Has
+     (vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT_INFORMATION()))
+    {
+    return this->RequestUpdateExtentInformation(request, 
+                                                inputVector, outputVector);
     }
 
   return this->Superclass::ProcessRequest(request, inputVector, outputVector);

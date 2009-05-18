@@ -9,10 +9,31 @@ VTK_THIRD_PARTY_SUBDIR(PNG  vtkpng)
 VTK_THIRD_PARTY_SUBDIR(TIFF vtktiff)
 VTK_THIRD_PARTY_SUBDIR(EXPAT vtkexpat)
 VTK_THIRD_PARTY_SUBDIR(FREETYPE vtkfreetype)
+VTK_THIRD_PARTY_SUBDIR(LIBXML2 vtklibxml2)
 VTK_THIRD_PARTY_SUBDIR(DICOMParser DICOMParser)
+VTK_THIRD_PARTY_SUBDIR(MATERIALLIBRARY MaterialLibrary)
+
+# Force build options for verdict
+SET( VERDICT_USE_FLOAT OFF CACHE BOOL "VTK requires doubles" FORCE )
+SET( VERDICT_ENABLE_TESTING OFF CACHE BOOL "Verdict testing is currently broken." FORCE )
+SET( VERDICT_NO_LIBRARY_VERSION 1 )
+SET( VERDICT_LIBRARY_PROPERTIES VERSION "vtk${VTK_VERSION}" )
+MARK_AS_ADVANCED( VERDICT_USE_FLOAT  VERDICT_ENABLE_TESTING VERDICT_BUILD_DOC )
+set( VERDICT_MANGLE ON CACHE BOOL "VTK requires verdict to be mangled." FORCE )
+set( VERDICT_MANGLE_PREFIX "vtk" CACHE STRING "VTK requires the verdict prefix to be vtk" FORCE )
+SET( verdict_INSTALL_DOC_DIR ${VTK_INSTALL_DOC_DIR_CM24})
+SET( verdict_INSTALL_INCLUDE_DIR ${VTK_INSTALL_INCLUDE_DIR_CM24})
+SET( verdict_INSTALL_BIN_DIR ${VTK_INSTALL_BIN_DIR_CM24})
+SET( verdict_INSTALL_LIB_DIR ${VTK_INSTALL_LIB_DIR_CM24})
+SUBDIRS(verdict)
+
+SUBDIRS(vtknetcdf)
+IF(VTK_USE_METAIO)
+  SUBDIRS(vtkmetaio)
+ENDIF(VTK_USE_METAIO)
+SUBDIRS(vtksqlite)
 
 IF(VTK_HAS_EXODUS)
-  SUBDIRS(vtknetcdf)
   SUBDIRS(vtkexodus2)
 ENDIF(VTK_HAS_EXODUS)
 
@@ -21,13 +42,25 @@ IF(VTK_INCLUDE_NEED_TCL)
   SUBDIRS(TclTk)
 ENDIF(VTK_INCLUDE_NEED_TCL)
 
+SUBDIRS(EncodeString)
+
 IF(VTK_USE_RENDERING)
   SUBDIRS(ftgl ParseOGLExt)
 ENDIF(VTK_USE_RENDERING)
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-  INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h
-                vtk_expat vtk_jpeg vtk_png vtk_zlib vtk_tiff vtk_freetype)
+  INSTALL(FILES
+    metaIOConfig.h
+    vtk_expat.h
+    vtk_jpeg.h
+    vtk_png.h
+    vtk_zlib.h
+    vtk_tiff.h
+    vtk_freetype.h
+    vtk_libxml2.h
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
+    COMPONENT Development
+    )
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
 #-----------------------------------------------------------------------------
@@ -38,7 +71,7 @@ IF(NOT CMAKE_COMPILER_IS_GNUCXX)
       MESSAGE(STATUS "Checking whether SGI MIPSpro 7.4 stdarg work-around is needed")
       TRY_COMPILE(VTK_COMPILER_NO_SGI_STDARG_WORKAROUND
         ${VTK_BINARY_DIR}/CMakeTmp
-        ${VTK_SOURCE_DIR}/CMake/vtkTestSGIstdarg.cxx
+        ${VTK_CMAKE_DIR}/vtkTestSGIstdarg.cxx
         OUTPUT_VARIABLE OUTPUT)
       IF(VTK_COMPILER_NO_SGI_STDARG_WORKAROUND)
         MESSAGE(STATUS "Checking whether SGI MIPSpro 7.4 stdarg work-around is needed -- no")
@@ -66,7 +99,8 @@ IF(NOT VTK_COMPILER_NO_SGI_STDARG_WORKAROUND)
 
   # Install the work-around header.
   IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-    INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR}/internal FILES
-                  ${CMAKE_CURRENT_BINARY_DIR}/internal/stdio_core.h)
+    INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/internal/stdio_core.h
+      DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/internal
+      COMPONENT Development)
   ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 ENDIF(NOT VTK_COMPILER_NO_SGI_STDARG_WORKAROUND)

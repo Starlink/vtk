@@ -16,20 +16,210 @@
 
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPiecewiseFunction.h"
+#include <vtkstd/vector>
+#include <vtkstd/set>
+#include <vtkstd/algorithm>
+#include <vtkstd/iterator>
+#include <math.h>
 
-vtkCxxRevisionMacro(vtkColorTransferFunction, "$Revision: 1.56.6.1 $");
+vtkCxxRevisionMacro(vtkColorTransferFunction, "$Revision: 1.76.2.2 $");
 vtkStandardNewMacro(vtkColorTransferFunction);
+
+//=============================================================================
+class vtkCTFNode
+{
+public:
+  double X;
+  double R;
+  double G;
+  double B;
+  double Sharpness;
+  double Midpoint;
+};
+
+class vtkCTFCompareNodes
+{
+public:
+  bool operator () ( const vtkCTFNode *node1,
+                     const vtkCTFNode *node2 )
+    {
+      return node1->X < node2->X;
+    }
+};
+
+class vtkCTFFindNodeEqual
+{
+public:
+  double X;
+  bool operator () ( const vtkCTFNode *node )
+    {
+      return node->X == this->X;
+    }
+};
+
+class vtkCTFFindNodeInRange
+{
+public:
+  double X1;
+  double X2;
+  bool operator () (const vtkCTFNode *node )
+    {
+      return ( node->X >= this->X1 &&
+               node->X <= this->X2 );
+    }
+};
+
+class vtkCTFFindNodeOutOfRange
+{
+public:
+  double X1;
+  double X2;
+  bool operator () (const vtkCTFNode *node )
+    {
+      return ( node->X < this->X1 ||
+               node->X > this->X2 );
+    }
+};
+  
+class vtkColorTransferFunctionInternals
+{
+public:
+  vtkstd::vector<vtkCTFNode*> Nodes;
+  vtkCTFCompareNodes          CompareNodes;
+  vtkCTFFindNodeEqual         FindNodeEqual;
+  vtkCTFFindNodeInRange       FindNodeInRange;
+  vtkCTFFindNodeOutOfRange    FindNodeOutOfRange;
+};
+
+//=============================================================================
+// Convert to and from a special polar version of CIELAB (useful for creating
+// continuous diverging color maps).
+inline void vtkColorTransferFunctionLabToMsh(const double lab[3], double msh[3])
+{
+  const double &L = lab[0];
+  const double &a = lab[1];
+  const double &b = lab[2];
+  double &M = msh[0];
+  double &s = msh[1];
+  double &h = msh[2];
+
+  M = sqrt(L*L + a*a + b*b);
+  s = (M > 0.001) ? acos(L/M) : 0.0;
+  h = (s > 0.001) ? atan2(b,a) : 0.0;
+}
+
+inline void vtkColorTransferFunctionMshToLab(const double msh[3], double lab[3])
+{
+  const double &M = msh[0];
+  const double &s = msh[1];
+  const double &h = msh[2];
+  double &L = lab[0];
+  double &a = lab[1];
+  double &b = lab[2];
+
+  L = M*cos(s);
+  a = M*sin(s)*cos(h);
+  b = M*sin(s)*sin(h);
+}
+
+// Given two angular orientations, returns the smallest angle between the two.
+inline double vtkColorTransferFunctionAngleDiff(double a1, double a2)
+{
+  double adiff = a1 - a2;
+  if (adiff < 0.0) adiff = -adiff;
+  while (adiff >= 2*vtkMath::DoublePi()) adiff -= 2*vtkMath::DoublePi();
+  if (adiff > vtkMath::DoublePi()) adiff = 2*vtkMath::DoublePi() - adiff;
+  return adiff;
+}
+
+// For the case when interpolating from a saturated color to an unsaturated
+// color, find a hue for the unsaturated color that makes sense.
+inline double vtkColorTransferFunctionAdjustHue(const double msh[3],
+                                                double unsatM)
+{
+  if (msh[0] >= unsatM - 0.1)
+    {
+    // The best we can do is hold hue constant.
+    return msh[2];
+    }
+  else
+    {
+    // This equation is designed to make the perceptual change of the
+    // interpolation to be close to constant.
+    double hueSpin = (  msh[1]*sqrt(unsatM*unsatM - msh[0]*msh[0])
+                      / (msh[0]*sin(msh[1])) );
+    // Spin hue away from 0 except in purple hues.
+    if (msh[2] > -0.3*vtkMath::DoublePi())
+      {
+      return msh[2] + hueSpin;
+      }
+    else
+      {
+      return msh[2] - hueSpin;
+      }
+    }
+}
+
+// Interpolate a diverging color map.
+inline void vtkColorTransferFunctionInterpolateDiverging(double s,
+                                                         const double rgb1[3],
+                                                         const double rgb2[3],
+                                                         double result[3])
+{
+  double lab1[3], lab2[3];
+  vtkMath::RGBToLab(rgb1, lab1);
+  vtkMath::RGBToLab(rgb2, lab2);
+
+  double msh1[3], msh2[3];
+  vtkColorTransferFunctionLabToMsh(lab1, msh1);
+  vtkColorTransferFunctionLabToMsh(lab2, msh2);
+
+  // If the endpoints are distinct saturated colors, then place white in between
+  // them.
+  if (   (msh1[1] > 0.05) && (msh2[1] > 0.05)
+      && (vtkColorTransferFunctionAngleDiff(msh1[2], msh2[2]) > 0.33*vtkMath::DoublePi()) )
+    {
+    // Insert the white midpoint by setting one end to white and adjusting the
+    // scalar value.
+    if (s < 0.5)
+      {
+      msh2[0] = 95.0;  msh2[1] = 0.0;  msh2[2] = 0.0;
+      s = 2.0*s;
+      }
+    else
+      {
+      msh1[0] = 95.0;  msh1[1] = 0.0;  msh1[2] = 0.0;
+      s = 2.0*s - 1.0;
+      }
+    }
+
+  // If one color has no saturation, then its hue value is invalid.  In this
+  // case, we want to set it to something logical so that the interpolation of
+  // hue makes sense.
+  if ((msh1[1] < 0.05) && (msh2[1] > 0.05))
+    {
+    msh1[2] = vtkColorTransferFunctionAdjustHue(msh2, msh1[0]);
+    }
+  else if ((msh2[1] < 0.05) && (msh1[1] > 0.05))
+    {
+    msh2[2] = vtkColorTransferFunctionAdjustHue(msh1, msh2[0]);
+    }
+
+  double mshTmp[3];
+  mshTmp[0] = (1-s)*msh1[0] + s*msh2[0];
+  mshTmp[1] = (1-s)*msh1[1] + s*msh2[1];
+  mshTmp[2] = (1-s)*msh1[2] + s*msh2[2];
+
+  // Now convert back to RGB
+  double labTmp[3];
+  vtkColorTransferFunctionMshToLab(mshTmp, labTmp);
+  vtkMath::LabToRGB(labTmp, result);
+}
 
 //----------------------------------------------------------------------------
 // Construct a new vtkColorTransferFunction with default values
 vtkColorTransferFunction::vtkColorTransferFunction()
 {
-  // Remove these when old methods are removed
-  this->Red = vtkPiecewiseFunction::New();
-  this->Green = vtkPiecewiseFunction::New();
-  this->Blue = vtkPiecewiseFunction::New();
-  
   this->UnsignedCharRGBAValue[0] = 0;
   this->UnsignedCharRGBAValue[1] = 0;
   this->UnsignedCharRGBAValue[2] = 0;
@@ -41,28 +231,71 @@ vtkColorTransferFunction::vtkColorTransferFunction()
   this->Clamping = 1;
   this->ColorSpace = VTK_CTF_RGB;
   this->HSVWrap = 1; //By default HSV will be wrap
+
+  this->Scale = VTK_CTF_LINEAR;
   
   this->Function = NULL;
-  this->FunctionSize = 0;
-  this->NumberOfPoints = 0;
 
   this->Table = NULL;
   this->TableSize = 0;
+
+  this->AllowDuplicateScalars = 0;
+
+  this->Internal = new vtkColorTransferFunctionInternals;
 }
 
 //----------------------------------------------------------------------------
 // Destruct a vtkColorTransferFunction
 vtkColorTransferFunction::~vtkColorTransferFunction()
 {
-  this->Red->Delete();
-  this->Red = NULL;
-  this->Green->Delete();
-  this->Green = NULL;
-  this->Blue->Delete();
-  this->Blue = NULL;  
-  
-  delete [] this->Function;
   delete [] this->Table;
+  
+  if ( this->Function )
+    {
+    delete [] this->Function;
+    this->Function = NULL;
+    }
+
+  for(unsigned int i=0;i<this->Internal->Nodes.size();i++)
+    {
+    delete this->Internal->Nodes[i];
+    }
+  this->Internal->Nodes.clear(); 
+  delete this->Internal;
+}
+
+// Return the number of points which specify this function
+int vtkColorTransferFunction::GetSize()
+{
+  return static_cast<int>(this->Internal->Nodes.size());
+}
+
+// Since we no longer store the data in an array, we must
+// copy out of the vector into an array. No modified check - 
+// could be added if performance is a problem
+double *vtkColorTransferFunction::GetDataPointer()
+{
+  int size = static_cast<int>(this->Internal->Nodes.size());
+  
+  if ( this->Function )
+    {
+    delete [] this->Function;
+    this->Function = NULL;
+    }
+  
+  if ( size > 0 )
+    {
+    this->Function = new double[size*4];
+    for ( int i = 0; i < size; i++ )
+      {
+      this->Function[4*i  ] = this->Internal->Nodes[i]->X;
+      this->Function[4*i+1] = this->Internal->Nodes[i]->R;
+      this->Function[4*i+2] = this->Internal->Nodes[i]->G;
+      this->Function[4*i+3] = this->Internal->Nodes[i]->B;
+      }
+    }
+  
+  return this->Function;
 }
 
 //----------------------------------------------------------------------------
@@ -70,87 +303,73 @@ vtkColorTransferFunction::~vtkColorTransferFunction()
 int vtkColorTransferFunction::AddRGBPoint( double x, double r,
                                            double g, double b )
 {
-  double *fptr = this->Function;
-  int i;
-  
-  
-  for ( i = 0; i < this->NumberOfPoints; i++, fptr+=4 )
+  return this->AddRGBPoint( x, r, g, b, 0.5, 0.0 );
+}
+
+//----------------------------------------------------------------------------
+// Add a point defined in RGB
+int vtkColorTransferFunction::AddRGBPoint( double x, double r,
+                                           double g, double b,
+                                           double midpoint,
+                                           double sharpness )
+{
+  // Error check
+  if ( midpoint < 0.0 || midpoint > 1.0 )
     {
-    if ( x <= *fptr )
+    vtkErrorMacro("Midpoint outside range [0.0, 1.0]");
+    return -1;
+    }
+
+  if ( sharpness < 0.0 || sharpness > 1.0 )
+    {
+    vtkErrorMacro("Sharpness outside range [0.0, 1.0]");
+    return -1;
+    }
+  
+  // remove any node already at this X location
+  if (!this->AllowDuplicateScalars)
+    {
+    this->RemovePoint( x );
+    }
+  
+  // Create the new node
+  vtkCTFNode *node = new vtkCTFNode;
+  node->X         = x;
+  node->R         = r;
+  node->G         = g;
+  node->B         = b;
+  node->Midpoint  = midpoint;
+  node->Sharpness = sharpness;
+  
+  // Add it, then sort to get everyting in order
+  this->Internal->Nodes.push_back(node);
+  this->SortAndUpdateRange();
+  
+  // We need to find the index of the node we just added in order
+  // to return this value
+  unsigned int i;
+  for ( i = 0; i < this->Internal->Nodes.size(); i++ )
+    {
+    if ( this->Internal->Nodes[i]->X == x )
       {
       break;
       }
     }
   
-  // Do we have an exact match?
-  if ( i < this->NumberOfPoints && this->Function[4*i] == x )
+  int retVal;
+  
+  // If we didn't find it, something went horribly wrong so
+  // return -1  
+  if ( i < this->Internal->Nodes.size() )
     {
-    if (this->Function[4*i+1] != r ||
-        this->Function[4*i+2] != g ||
-        this->Function[4*i+3] != b)
-      {
-      this->Function[4*i+1] = r;
-      this->Function[4*i+2] = g;
-      this->Function[4*i+3] = b;    
-      this->Modified();
-      }
-    
-    return i;
-    }
-
-  // otherwise we have to add it before the current location
-  // We need more space
-  if ( this->NumberOfPoints == this->FunctionSize )
-    {
-    if ( this->FunctionSize )
-      {
-      this->FunctionSize *= 2;
-      }
-    else
-      {
-      this->FunctionSize = 100;
-      }
-
-    double *tmp = new double[this->FunctionSize*4];
-    if ( i > 0 )
-      {
-      memcpy( tmp, this->Function, i*sizeof(double)*4 );
-      }
-    if ( i < this->NumberOfPoints )
-      {
-      memcpy( tmp+((i+1)*4), this->Function+(i*4), 
-              (this->NumberOfPoints-i)*sizeof(double)*4 );
-      }
-    if ( this->Function )
-      {
-      delete [] this->Function;
-      }
-    this->Function = tmp;
+    retVal = i;
     }
   else
     {
-    for ( int j = this->NumberOfPoints - 1; j >= i; j-- )
-      {
-      this->Function[4*(j+1)  ] = this->Function[4*j  ];
-      this->Function[4*(j+1)+1] = this->Function[4*j+1];
-      this->Function[4*(j+1)+2] = this->Function[4*j+2];
-      this->Function[4*(j+1)+3] = this->Function[4*j+3];
-      }
+    retVal = -1;
     }
-
-  this->Function[i*4  ] = x;
-  this->Function[i*4+1] = r;
-  this->Function[i*4+2] = g;
-  this->Function[i*4+3] = b;
-    
-  this->NumberOfPoints++;
   
-  this->Range[0] = *this->Function;
-  this->Range[1] = *(this->Function + (this->NumberOfPoints-1)*4); 
-  
-  this->Modified();
-
-  return i;
+  return retVal;  
 }
 
 //----------------------------------------------------------------------------
@@ -165,69 +384,127 @@ int vtkColorTransferFunction::AddHSVPoint( double x, double h,
 }
 
 //----------------------------------------------------------------------------
+// Add a point defined in HSV
+int vtkColorTransferFunction::AddHSVPoint( double x, double h,
+                                           double s, double v,
+                                           double midpoint,
+                                           double sharpness )
+{ 
+  double r, b, g;
+  
+  vtkMath::HSVToRGB(h, s, v, &r, &g, &b);
+  return this->AddRGBPoint( x, r, g, b, midpoint, sharpness );
+}
+
+// Sort the vector in increasing order, then fill in
+// the Range
+void vtkColorTransferFunction::SortAndUpdateRange()
+{
+  vtkstd::sort( this->Internal->Nodes.begin(),
+                this->Internal->Nodes.end(),
+                this->Internal->CompareNodes );
+  
+  int size = static_cast<int>(this->Internal->Nodes.size());
+  if ( size )
+    {
+    this->Range[0] = this->Internal->Nodes[0]->X;
+    this->Range[1] = this->Internal->Nodes[size-1]->X;
+    }
+  else
+    {
+    this->Range[0] = 0;
+    this->Range[1] = 0;
+    }
+  
+  this->Modified();  
+}
+
+//----------------------------------------------------------------------------
 // Remove a point
 int vtkColorTransferFunction::RemovePoint( double x )
 {
-  double *fptr = this->Function;
-  int i;
-  
-
-  // find the point to remove
-  for ( i = 0; i < this->NumberOfPoints; i++, fptr+=4 )
+  // First find the node since we need to know its
+  // index as our return value
+  unsigned int i;
+  for ( i = 0; i < this->Internal->Nodes.size(); i++ )
     {
-    if ( x == *fptr )
+    if ( this->Internal->Nodes[i]->X == x )
       {
       break;
       }
     }
   
-  if ( i < this->NumberOfPoints )
+  int retVal;
+  
+  // If the node doesn't exist, we return -1
+  if ( i < this->Internal->Nodes.size() )
     {
-    this->NumberOfPoints--;
-    
-    for ( int j = i; j < this->NumberOfPoints; j++ )
-      {
-      this->Function[4*j  ] = this->Function[4*(j+1)  ];
-      this->Function[4*j+1] = this->Function[4*(j+1)+1];
-      this->Function[4*j+2] = this->Function[4*(j+1)+2];
-      this->Function[4*j+3] = this->Function[4*(j+1)+3];
-      }
-  
-    if ( this->NumberOfPoints )
-      {
-      this->Range[0] = *this->Function;
-      this->Range[1] = *(this->Function + (this->NumberOfPoints-1)*4); 
-      }
-    else
-      {
-      this->Range[0] = 0.0;
-      this->Range[1] = 0.0;    
-      }
-  
-    this->Modified();
-
-    return i;
+    retVal = i;
     }
-
-  return -1;
+  else
+    {
+    return -1;
+    }
+  
+  // Now use STL to find it, so that we can remove it
+  this->Internal->FindNodeEqual.X = x;
+  
+  vtkstd::vector<vtkCTFNode*>::iterator iter = 
+    vtkstd::find_if(this->Internal->Nodes.begin(),
+                    this->Internal->Nodes.end(),
+                    this->Internal->FindNodeEqual );
+  
+  // Actually delete it
+  if ( iter != this->Internal->Nodes.end() )
+    {
+    delete *iter;
+    this->Internal->Nodes.erase(iter);
+    this->Modified();
+    }
+  else
+     {
+     // This should never happen - we already returned if the node
+     // didn't exist...
+     return -1;
+     }
+   
+  
+  return retVal;
 }
 
+
+//----------------------------------------------------------------------------
+void vtkColorTransferFunction::MovePoint(double oldX, double newX)
+{
+  if (oldX == newX)
+    {
+    // Nothing to do.
+    return;
+    }
+
+  this->RemovePoint(newX);
+  for (unsigned int i = 0; i < this->Internal->Nodes.size(); i++ )
+    {
+    if ( this->Internal->Nodes[i]->X == oldX )
+      {
+      this->Internal->Nodes[i]->X = newX;
+      this->SortAndUpdateRange();
+      break;
+      }
+    }
+}
 
 //----------------------------------------------------------------------------
 // Remove all points
 void vtkColorTransferFunction::RemoveAllPoints()
 {
-  if (!this->NumberOfPoints)
+  for(unsigned int i=0;i<this->Internal->Nodes.size();i++)
     {
-    return;
+    delete this->Internal->Nodes[i];
     }
+  this->Internal->Nodes.clear(); 
 
-  this->NumberOfPoints = 0;
-  
-  this->Range[0] = 0;
-  this->Range[1] = 0;
-  
-  this->Modified();
+  this->SortAndUpdateRange();
 }
 
 //----------------------------------------------------------------------------
@@ -237,57 +514,34 @@ void vtkColorTransferFunction::AddRGBSegment( double x1, double r1,
                                               double x2, double r2, 
                                               double g2, double b2 )
 {
-  double x;
-  this->AddRGBPoint( x1, r1, g1, b1 );
-  this->AddRGBPoint( x2, r2, g2, b2 );
+  int done;  
+  
+  // First, find all points in this range and remove them
+  done = 0;
+  while ( !done )
+    {
+    done = 1;
+    
+    this->Internal->FindNodeInRange.X1 = x1;
+    this->Internal->FindNodeInRange.X2 = x2;
+  
+    vtkstd::vector<vtkCTFNode*>::iterator iter = 
+      vtkstd::find_if(this->Internal->Nodes.begin(),
+                      this->Internal->Nodes.end(),
+                      this->Internal->FindNodeInRange );
+  
+    if ( iter != this->Internal->Nodes.end() )
+      {
+      delete *iter;
+      this->Internal->Nodes.erase(iter);
+      this->Modified();
+      done = 0;
+      }
+    }
 
-  int i, j;
-  double *fptr = this->Function;
-  
-  // swap them if necessary
-  if ( x1 > x2 )
-    {
-    x = x1;
-    x1 = x2;
-    x2 = x;
-    }
-  
-  // find the first point
-  for ( i = 0; i < this->NumberOfPoints; i++, fptr+=4 )
-    {
-    if ( x1 == *fptr )
-      {
-      break;
-      }
-    }
-  
-  // find the next one
-  for ( j = i; j < this->NumberOfPoints; j++, fptr+=4 )
-    {
-    if ( x2 == *fptr )
-      {
-      break;
-      }
-    }
-  
-  int d = j-i-1;
-  
-  if ( j < this->NumberOfPoints && d )
-    {
-    this->NumberOfPoints -= d;
-    for ( int k = i+1; k < this->NumberOfPoints; k++ )
-      {
-      this->Function[4*k  ] = this->Function[4*(k+d)  ];
-      this->Function[4*k+1] = this->Function[4*(k+d)+1];
-      this->Function[4*k+2] = this->Function[4*(k+d)+2];
-      this->Function[4*k+3] = this->Function[4*(k+d)+3];
-      }    
-    }
-  
-  this->Range[0] = *this->Function;
-  this->Range[1] = *(this->Function + (this->NumberOfPoints-1)*4); 
-  
-  this->Modified();
+  // Now add the points
+  this->AddRGBPoint( x1, r1, g1, b1, 0.5, 0.0 );
+  this->AddRGBPoint( x2, r2, g2, b2, 0.5, 0.0 );
 }
 
 //----------------------------------------------------------------------------
@@ -311,9 +565,12 @@ unsigned char *vtkColorTransferFunction::MapValue( double x )
   double rgb[3];
   this->GetColor( x, rgb );
   
-  this->UnsignedCharRGBAValue[0] = (unsigned char) (255.0*rgb[0]);
-  this->UnsignedCharRGBAValue[1] = (unsigned char) (255.0*rgb[1]);
-  this->UnsignedCharRGBAValue[2] = (unsigned char) (255.0*rgb[2]);
+  this->UnsignedCharRGBAValue[0] =
+    static_cast<unsigned char>(255.0*rgb[0] + 0.5);
+  this->UnsignedCharRGBAValue[1] =
+    static_cast<unsigned char>(255.0*rgb[1] + 0.5);
+  this->UnsignedCharRGBAValue[2] =
+    static_cast<unsigned char>(255.0*rgb[2] + 0.5);
   this->UnsignedCharRGBAValue[3] = 255;
   return this->UnsignedCharRGBAValue;
 }
@@ -357,288 +614,419 @@ double vtkColorTransferFunction::GetBlueValue( double x )
 
 //----------------------------------------------------------------------------
 // Returns a table of RGB colors at regular intervals along the function
-void vtkColorTransferFunction::GetTable( double x1, double x2, 
+void vtkColorTransferFunction::GetTable( double xStart, double xEnd, 
                                          int size, double* table )
 {
-  double x, xinc=0;
-  double *tptr = table;
-  double *fptr = this->Function;
-  int   loc;
-  int   i;
-  double weight;
+  int i, j;
+  int idx = 0;
+  int numNodes = static_cast<int>(this->Internal->Nodes.size());
   
-  if ( this->NumberOfPoints == 0 )
+  // Need to keep track of the last value so that
+  // we can fill in table locations past this with
+  // this value if Clamping is On.
+  double lastR = 0.0;
+  double lastG = 0.0;
+  double lastB = 0.0;
+  if ( numNodes != 0 )
     {
-    vtkErrorMacro( 
-      "Attempting to lookup a value with no points in the function");
-    return;
+    lastR = this->Internal->Nodes[numNodes-1]->R;
+    lastG = this->Internal->Nodes[numNodes-1]->G;
+    lastB = this->Internal->Nodes[numNodes-1]->B;
     }
   
-  if ( size > 1 )
-    {
-    xinc = (x2 - x1) / (double)(size-1);
-    }
-  
-  loc  = 0;
-  
-  for ( i = 0, x = x1; i < size; i++, x += xinc )
-    {
-    while ( (loc < this->NumberOfPoints) && (x > *fptr) )
-      {
-      loc++;
-      fptr+=4;
-      }
-    
-    // Are we past the outside edge? if so, fill in according to Clamping
-    if ( loc == this->NumberOfPoints )
-      {
-      if ( this->Clamping )
-        {
-        *(tptr++) = *(fptr-3);
-        *(tptr++) = *(fptr-2);
-        *(tptr++) = *(fptr-1);        
-        }
-      else
-        {
-        *(tptr++) = 0.0;
-        *(tptr++) = 0.0;
-        *(tptr++) = 0.0;        
-        }      
-      }
-    else
-      {
-      // Do we have an exact match?
-      if ( x == *fptr )
-        {
-        *(tptr++) = *(fptr+1);
-        *(tptr++) = *(fptr+2);
-        *(tptr++) = *(fptr+3);
-        }
-      // Are we before the beginning?
-      else if ( loc == 0 )
-        {
-        if ( this->Clamping )
-          {
-          *(tptr++) = *(fptr+1);
-          *(tptr++) = *(fptr+2);
-          *(tptr++) = *(fptr+3);
-          }
-        else
-          {
-          *(tptr++) = 0.0;
-          *(tptr++) = 0.0;
-          *(tptr++) = 0.0;
-          }
-        }
-      // We are somewhere in the middle. Use the correct interpolation.
-      else
-        {
-        weight = (x - *(fptr-4)) / (*fptr - *(fptr-4));
-      
-        // RGB space
-        if ( this->ColorSpace == VTK_CTF_RGB )
-          {
-          *(tptr++) = (1.0-weight) * *(fptr-3) + weight * *(fptr+1);
-          *(tptr++) = (1.0-weight) * *(fptr-2) + weight * *(fptr+2);
-          *(tptr++) = (1.0-weight) * *(fptr-1) + weight * *(fptr+3);
-          }
-        // HSV space
-        else
-          {
-          double h1, h2, h3, s1, s2, s3, v1, v2, v3;
-          vtkMath::RGBToHSV(*(fptr-3), *(fptr-2), *(fptr-1), &h1, &s1, &v1);
-          vtkMath::RGBToHSV(*(fptr+1), *(fptr+2), *(fptr+3), &h2, &s2, &v2);
-          s3 = (1.0-weight)*s1 + weight*s2;
-          v3 = (1.0-weight)*v1 + weight*v2;
-          // Do we need to cross the 0/1 boundary?
-          if ( this->HSVWrap &&
-               (h1 - h2 > 0.5 || h2 - h1 > 0.5) )
-            {
-            //Yes, we are crossing the boundary
-            if ( h1 > h2 )
-              {
-              h1 -= 1.0;
-              }
-            else
-              {
-              h2 -= 1.0;
-              }
-            h3 = (1.0-weight)*h1 + weight*h2;
-            if ( h3 < 0.0 )
-              {
-              h3 += 1.0;
-              }
-            }
-          else // HSV No Wrap
-            {
-            // No we are not crossing the boundary
-            h3 = (1.0-weight)*h1 + weight*h2;
-            }
-          // Make sure they are between 0 and 1
-          h3 = (h3>1.0)?(1.0):((h3<0.0)?(0.0):(h3));
-          s3 = (s3>1.0)?(1.0):((s3<0.0)?(0.0):(s3));
-          v3 = (v3>1.0)?(1.0):((v3<0.0)?(0.0):(v3));
-          vtkMath::HSVToRGB(h3, s3, v3, tptr, tptr + 1, tptr + 2);
-          tptr += 3;
-          }
-        }
-      }
-    }
-}
+  double *tptr     = NULL;
+  double x         = 0.0;  
+  double x1        = 0.0;
+  double x2        = 0.0;
+  double rgb1[3]   = {0.0, 0.0, 0.0};
+  double rgb2[3]   = {0.0, 0.0, 0.0};  
+  double midpoint  = 0.0;
+  double sharpness = 0.0;
 
-//----------------------------------------------------------------------------
-void vtkColorTransferFunction::GetTable( double x1, double x2, 
-                                         int size, float* table )
-{
-  double x, xinc=0;
-  float *tptr = table;
-  double *fptr = this->Function;
-  int   loc;
-  int   i;
-  double weight;
-  
-  if ( this->NumberOfPoints == 0 )
+  // If the scale is logarithmic, make sure the range is valid.
+  bool usingLogScale = this->Scale == VTK_CTF_LOG10;
+  if(usingLogScale)
     {
-    vtkErrorMacro( 
-      "Attempting to lookup a value with no points in the function");
-    return;
+    // Note: This requires range[0] <= range[1].
+    usingLogScale = this->Range[0] > 0.0;
     }
-  
-  if ( size > 1 )
+
+  double logStart = 0.0;
+  double logEnd   = 0.0;
+  double logX     = 0.0;
+  if(usingLogScale)
     {
-    xinc = (x2 - x1) / (double)(size-1);
+    logStart = log10(xStart);
+    logEnd = log10(xEnd);
     }
-  
-  loc  = 0;
-  
-  for ( i = 0, x = x1; i < size; i++, x += xinc )
-    {
-    while ( (loc < this->NumberOfPoints) && (x > *fptr) )
-      {
-      loc++;
-      fptr+=4;
-      }
     
-    // Are we past the outside edge? if so, fill in according to Clamping
-    if ( loc == this->NumberOfPoints )
+  // For each table entry
+  for ( i = 0; i < size; i++ )
+    {
+    
+    // Find our location in the table
+    tptr = table + 3*i;
+    
+    // Find our X location. If we are taking only 1 sample, make
+    // it halfway between start and end (usually start and end will
+    // be the same in this case)
+    if ( size > 1 )
       {
-      if ( this->Clamping )
+      if(usingLogScale)
         {
-        *(tptr++) = static_cast<float>(*(fptr-3));
-        *(tptr++) = static_cast<float>(*(fptr-2));
-        *(tptr++) = static_cast<float>(*(fptr-1));        
+        logX = logStart +
+          (static_cast<double>(i)/static_cast<double>(size-1))
+          *(logEnd-logStart);
+        x = pow(static_cast<double>(10.0), logX);
         }
       else
         {
-        *(tptr++) = 0.0f;
-        *(tptr++) = 0.0f;
-        *(tptr++) = 0.0f;        
-        }      
+        x = xStart + (static_cast<double>(i)/static_cast<double>(size-1))
+          *(xEnd-xStart);
+        }
       }
     else
       {
-      // Do we have an exact match?
-      if ( x == *fptr )
+      if(usingLogScale)
         {
-        *(tptr++) = static_cast<float>(*(fptr+1));
-        *(tptr++) = static_cast<float>(*(fptr+2));
-        *(tptr++) = static_cast<float>(*(fptr+3));
+        logX = 0.5*(logStart+logEnd);
+        x = pow(static_cast<double>(10.0), logX);
         }
-      // Are we before the beginning?
-      else if ( loc == 0 )
-        {
-        if ( this->Clamping )
-          {
-          *(tptr++) = static_cast<float>(*(fptr+1));
-          *(tptr++) = static_cast<float>(*(fptr+2));
-          *(tptr++) = static_cast<float>(*(fptr+3));
-          }
-        else
-          {
-          *(tptr++) = 0.0f;
-          *(tptr++) = 0.0f;
-          *(tptr++) = 0.0f;
-          }
-        }
-      // We are somewhere in the middle. Use the correct interpolation.
       else
         {
-        weight = (x - *(fptr-4)) / (*fptr - *(fptr-4));
-      
-        // RGB space
-        if ( this->ColorSpace == VTK_CTF_RGB )
+        x = 0.5*(xStart+xEnd);
+        }
+      }
+    
+    // Do we need to move to the next node?
+    while ( idx < numNodes &&
+            x > this->Internal->Nodes[idx]->X )
+      {
+      idx++;
+      // If we are at a valid point index, fill in
+      // the value at this node, and the one before (the
+      // two that surround our current sample location)
+      // idx cannot be 0 since we just incremented it.
+      if ( idx < numNodes )
+        {
+        x1 = this->Internal->Nodes[idx-1]->X;
+        x2 = this->Internal->Nodes[idx  ]->X;
+        if(usingLogScale)
           {
-          *(tptr++) = 
-            static_cast<float>((1.0-weight) * *(fptr-3) + weight * *(fptr+1));
-          *(tptr++) = 
-            static_cast<float>((1.0-weight) * *(fptr-2) + weight * *(fptr+2));
-          *(tptr++) = 
-            static_cast<float>((1.0-weight) * *(fptr-1) + weight * *(fptr+3));
+          x1 = log10(x1);
+          x2 = log10(x2);
           }
-        // HSV space
+        
+        rgb1[0] = this->Internal->Nodes[idx-1]->R;
+        rgb2[0] = this->Internal->Nodes[idx  ]->R;
+
+        rgb1[1] = this->Internal->Nodes[idx-1]->G;
+        rgb2[1] = this->Internal->Nodes[idx  ]->G;
+        
+        rgb1[2] = this->Internal->Nodes[idx-1]->B;
+        rgb2[2] = this->Internal->Nodes[idx  ]->B;
+        
+        // We only need the previous midpoint and sharpness
+        // since these control this region
+        midpoint  = this->Internal->Nodes[idx-1]->Midpoint;
+        sharpness = this->Internal->Nodes[idx-1]->Sharpness;
+        
+        // Move midpoint away from extreme ends of range to avoid
+        // degenerate math
+        if ( midpoint < 0.00001 )
+          {
+          midpoint = 0.00001;
+          }
+        
+        if ( midpoint > 0.99999 )
+          {
+          midpoint = 0.99999;
+          }
+        }
+      }
+    
+    // Are we at the end? If so, just use the last value
+    if ( idx >= numNodes )
+      {
+      tptr[0] = (this->Clamping)?(lastR):(0.0);
+      tptr[1] = (this->Clamping)?(lastG):(0.0);
+      tptr[2] = (this->Clamping)?(lastB):(0.0);
+      }
+    // Are we before the first node? If so, duplicate this nodes values
+    else if ( idx == 0 )
+      {
+      tptr[0] = (this->Clamping)?(this->Internal->Nodes[0]->R):(0.0);
+      tptr[1] = (this->Clamping)?(this->Internal->Nodes[0]->G):(0.0);
+      tptr[2] = (this->Clamping)?(this->Internal->Nodes[0]->B):(0.0);
+      }
+    // Otherwise, we are between two nodes - interpolate
+    else
+      {
+      // Our first attempt at a normalized location [0,1] - 
+      // we will be modifying this based on midpoint and 
+      // sharpness to get the curve shape we want and to have
+      // it pass through (y1+y2)/2 at the midpoint.
+      double s = 0.0;
+      if(usingLogScale)
+        {
+        s = (logX - x1) / (x2 - x1);
+        }
+      else
+        {
+        s = (x - x1) / (x2 - x1);
+        }
+      
+      // Readjust based on the midpoint - linear adjustment
+      if ( s < midpoint )
+        {
+        s = 0.5 * s / midpoint;
+        }
+      else
+        {
+        s = 0.5 + 0.5*(s-midpoint)/(1.0-midpoint);
+        }
+      
+      // override for sharpness > 0.99 
+      // In this case we just want piecewise constant
+      if ( sharpness > 0.99 )
+        {
+        // Use the first value since we are below the midpoint
+        if ( s < 0.5 )
+          {
+          tptr[0] = rgb1[0];
+          tptr[1] = rgb1[1];
+          tptr[2] = rgb1[2];
+          continue;
+          }
+        // Use the second value at or above the midpoint
         else
           {
-          double h1, h2, h3, s1, s2, s3, v1, v2, v3;
-          vtkMath::RGBToHSV(*(fptr-3), *(fptr-2), *(fptr-1), &h1, &s1, &v1);
-          vtkMath::RGBToHSV(*(fptr+1), *(fptr+2), *(fptr+3), &h2, &s2, &v2);
-          s3 = (1.0-weight)*s1 + weight*s2;
-          v3 = (1.0-weight)*v1 + weight*v2;
-          // Do we need to cross the 0/1 boundary?
+          tptr[0] = rgb2[0];
+          tptr[1] = rgb2[1];
+          tptr[2] = rgb2[2];
+          continue;
+          }
+        }
+      
+      // Override for sharpness < 0.01
+      // In this case we want piecewise linear
+      if ( sharpness < 0.01 )
+        {
+        // Simple linear interpolation 
+        if ( this->ColorSpace == VTK_CTF_RGB )
+          {
+          tptr[0] = (1-s)*rgb1[0] + s*rgb2[0];
+          tptr[1] = (1-s)*rgb1[1] + s*rgb2[1];
+          tptr[2] = (1-s)*rgb1[2] + s*rgb2[2];
+          }
+        else if ( this->ColorSpace == VTK_CTF_HSV )
+          {
+          double hsv1[3], hsv2[3];
+          vtkMath::RGBToHSV(rgb1, hsv1);
+          vtkMath::RGBToHSV(rgb2, hsv2);
+          
           if ( this->HSVWrap &&
-               (h1 - h2 > 0.5 || h2 - h1 > 0.5) )
+               (hsv1[0] - hsv2[0] > 0.5 ||
+                hsv2[0] - hsv1[0] > 0.5) )
             {
-            //Yes, we are crossing the boundary
-            if ( h1 > h2 )
+            if ( hsv1[0] > hsv2[0] )
               {
-              h1 -= 1.0;
+              hsv1[0] -= 1.0;
               }
             else
               {
-              h2 -= 1.0;
+              hsv2[0] -= 1.0;
               }
-            h3 = (1.0-weight)*h1 + weight*h2;
-            if ( h3 < 0.0 )
-              {
-              h3 += 1.0;
-              }
+            }
+          
+          double hsvTmp[3];
+          hsvTmp[0] = (1-s)*hsv1[0] + s*hsv2[0];
+          if ( hsvTmp[0] < 0.0 )
+            {
+            hsvTmp[0] += 1.0;
+            }
+          hsvTmp[1] = (1-s)*hsv1[1] + s*hsv2[1];
+          hsvTmp[2] = (1-s)*hsv1[2] + s*hsv2[2];   
+          
+          // Now convert this back to RGB
+          vtkMath::HSVToRGB( hsvTmp, tptr );
+          }
+        else if (this->ColorSpace == VTK_CTF_LAB)
+          {
+          double lab1[3], lab2[3];
+          vtkMath::RGBToLab(rgb1, lab1);
+          vtkMath::RGBToLab(rgb2, lab2);
+
+          double labTmp[3];
+          labTmp[0] = (1-s)*lab1[0] + s*lab2[0];
+          labTmp[1] = (1-s)*lab1[1] + s*lab2[1];
+          labTmp[2] = (1-s)*lab1[2] + s*lab2[2];
+
+          // Now convert back to RGB
+          vtkMath::LabToRGB(labTmp, tptr);
+          }
+        else if (this->ColorSpace == VTK_CTF_DIVERGING)
+          {
+          vtkColorTransferFunctionInterpolateDiverging(s, rgb1, rgb2, tptr);
+          }
+        else
+          {
+          vtkErrorMacro("ColorSpace set to invalid value.");
+          }
+        continue;
+        }    
+      
+      // We have a sharpness between [0.01, 0.99] - we will
+      // used a modified hermite curve interpolation where we
+      // derive the slope based on the sharpness, and we compress
+      // the curve non-linearly based on the sharpness
+      
+      // First, we will adjust our position based on sharpness in 
+      // order to make the curve sharper (closer to piecewise constant)
+      if ( s < .5 )
+        {
+        s = 0.5 * pow(s*2,1.0 + 10*sharpness);
+        }
+      else if ( s > .5 )
+        {
+        s = 1.0 - 0.5 * pow((1.0-s)*2,1+10*sharpness);
+        }
+      
+      // Compute some coefficients we will need for the hermite curve
+      double ss = s*s;
+      double sss = ss*s;
+      
+      double h1 =  2*sss - 3*ss + 1;
+      double h2 = -2*sss + 3*ss;
+      double h3 =    sss - 2*ss + s;
+      double h4 =    sss -   ss;
+      
+      double slope;
+      double t;
+
+      if ( this->ColorSpace == VTK_CTF_RGB )
+        {
+        for ( j = 0; j < 3; j++ )
+          {
+          // Use one slope for both end points
+          slope = rgb2[j] - rgb1[j];
+          t = (1.0 - sharpness)*slope;
+          
+          // Compute the value
+          tptr[j] = h1*rgb1[j] + h2*rgb2[j] + h3*t + h4*t;
+          }
+        }
+      else if (this->ColorSpace == VTK_CTF_HSV)
+        {
+        double hsv1[3], hsv2[3];
+        vtkMath::RGBToHSV(rgb1, hsv1);
+        vtkMath::RGBToHSV(rgb2, hsv2);
+        
+        if ( this->HSVWrap &&
+             (hsv1[0] - hsv2[0] > 0.5 ||
+              hsv2[0] - hsv1[0] > 0.5) )
+          {
+          if ( hsv1[0] > hsv2[0] )
+            {
+            hsv1[0] -= 1.0;
             }
           else
             {
-            // No we are not crossing the boundary
-            h3 = (1.0-weight)*h1 + weight*h2;
+            hsv2[0] -= 1.0;
             }
-          // Make sure they are between 0 and 1
-          h3 = (h3>1.0)?(1.0):((h3<0.0)?(0.0):(h3));
-          s3 = (s3>1.0)?(1.0):((s3<0.0)?(0.0):(s3));
-          v3 = (v3>1.0)?(1.0):((v3<0.0)?(0.0):(v3));
-          vtkMath::HSVToRGB(static_cast<float>(h3), 
-                            static_cast<float>(s3), 
-                            static_cast<float>(v3), 
-                            tptr, tptr + 1, tptr + 2);
-          tptr += 3;
           }
+        
+        double hsvTmp[3];
+        
+        for ( j = 0; j < 3; j++ )
+          {
+          // Use one slope for both end points
+          slope = hsv2[j] - hsv1[j];
+          t = (1.0 - sharpness)*slope;
+          
+          // Compute the value
+          hsvTmp[j] = h1*hsv1[j] + h2*hsv2[j] + h3*t + h4*t;
+          if ( j == 0 && hsvTmp[j] < 0.0 )
+            {
+            hsvTmp[j] += 1.0;
+            }
+          }
+        // Now convert this back to RGB
+        vtkMath::HSVToRGB( hsvTmp, tptr );
+        }
+      else if (this->ColorSpace == VTK_CTF_LAB)
+        {
+        double lab1[3], lab2[3];
+        vtkMath::RGBToLab(rgb1, lab1);
+        vtkMath::RGBToLab(rgb2, lab2);
+
+        double labTmp[3];
+        for (j = 0; j < 3; j++)
+          {
+          // Use one slope for both end points
+          slope = lab2[j] - lab1[j];
+          t = (1.0 - sharpness)*slope;
+          
+          // Compute the value
+          labTmp[j] = h1*lab1[j] + h2*lab2[j] + h3*t + h4*t;
+          }
+        // Now convert this back to RGB
+        vtkMath::LabToRGB(labTmp, tptr);
+        }
+      else if (this->ColorSpace == VTK_CTF_DIVERGING)
+        {
+        // I have not implemented proper interpolation by a hermite curve for
+        // the diverging color map, but I cannot think of a good use case for
+        // that anyway.
+        vtkColorTransferFunctionInterpolateDiverging(s, rgb1, rgb2, tptr);
+        }
+      else
+        {
+        vtkErrorMacro("ColorSpace set to invalid value.");
+        }
+      
+      // Final error check to make sure we don't go outside [0,1]
+      for ( j = 0; j < 3; j++ )
+        {
+        tptr[j] = (tptr[j] < 0.0)?(0.0):(tptr[j]);
+        tptr[j] = (tptr[j] > 1.0)?(1.0):(tptr[j]);
         }
       }
     }
 }
 
 //----------------------------------------------------------------------------
-const unsigned char *vtkColorTransferFunction::GetTable( double x1, double x2, 
+void vtkColorTransferFunction::GetTable( double xStart, double xEnd, 
+                                         int size, float* table )
+{
+  double *tmpTable = new double [size*3];
+  
+  this->GetTable( xStart, xEnd, size, tmpTable );
+  
+  double *tmpPtr = tmpTable;
+  float *tPtr = table;
+  
+  for ( int i = 0; i < size*3; i++ )
+    {
+    *tPtr = static_cast<float>(*tmpPtr);
+    tPtr   ++;
+    tmpPtr ++;
+    }
+
+  delete[] tmpTable;
+}
+
+//----------------------------------------------------------------------------
+const unsigned char *vtkColorTransferFunction::GetTable( double xStart, double xEnd, 
                                                          int size)
 {
-  double x, xinc=0;
-  double *fptr = this->Function;
-  int   loc;
-  int   i;
-  double weight;
-  
   if (this->GetMTime() <= this->BuildTime &&
       this->TableSize == size)
     {
     return this->Table;
     }
 
-  if ( this->NumberOfPoints == 0 )
+  if ( this->Internal->Nodes.size() == 0 )
     {
     vtkErrorMacro( 
       "Attempting to lookup a value with no points in the function");
@@ -651,246 +1039,150 @@ const unsigned char *vtkColorTransferFunction::GetTable( double x1, double x2,
     this->Table = new unsigned char [size*3];
     this->TableSize = size;
     }
-  unsigned char *tptr = this->Table;
   
-  if ( size > 1 )
-    {
-    xinc = (x2 - x1) / (double)(size-1);
-    }
+  double *tmpTable = new double [size*3];
   
-  loc  = 0;
-  for ( i = 0, x = x1; i < size; i++, x += xinc )
+  this->GetTable( xStart, xEnd, size, tmpTable );
+  
+  double *tmpPtr = tmpTable;
+  unsigned char *tPtr = this->Table;
+  
+  for ( int i = 0; i < size*3; i++ )
     {
-    while ( (loc < this->NumberOfPoints) && (x > *fptr) )
-      {
-      loc++;
-      fptr+=4;
-      }
-    
-    // Are we past the outside edge? if so, fill in according to Clamping
-    if ( loc == this->NumberOfPoints )
-      {
-      if ( this->Clamping )
-        {
-        *(tptr++) = (unsigned char)(*(fptr-3)*255);
-        *(tptr++) = (unsigned char)(*(fptr-2)*255);
-        *(tptr++) = (unsigned char)(*(fptr-1)*255);        
-        }
-      else
-        {
-        *(tptr++) = 0;
-        *(tptr++) = 0;
-        *(tptr++) = 0;        
-        }      
-      }
-    else
-      {
-      // Do we have an exact match?
-      if ( x == *fptr )
-        {
-        *(tptr++) = (unsigned char)(*(fptr+1)*255);
-        *(tptr++) = (unsigned char)(*(fptr+2)*255);
-        *(tptr++) = (unsigned char)(*(fptr+3)*255);
-        }
-      // Are we before the beginning?
-      else if ( loc == 0 )
-        {
-        if ( this->Clamping )
-          {
-          *(tptr++) = (unsigned char)(*(fptr+1)*255);
-          *(tptr++) = (unsigned char)(*(fptr+2)*255);
-          *(tptr++) = (unsigned char)(*(fptr+3)*255);
-          }
-        else
-          {
-          *(tptr++) = 0;
-          *(tptr++) = 0;
-          *(tptr++) = 0;
-          }
-        }
-      // We are somewhere in the middle. Use the correct interpolation.
-      else
-        {
-        weight = (x - *(fptr-4)) / (*fptr - *(fptr-4));
-      
-        // RGB space
-        if ( this->ColorSpace == VTK_CTF_RGB )
-          {
-          *(tptr++) = (unsigned char)
-            (255*((1.0-weight) * *(fptr-3) + weight * *(fptr+1)));
-          *(tptr++) = (unsigned char)
-            (255*((1.0-weight) * *(fptr-2) + weight * *(fptr+2)));
-          *(tptr++) = (unsigned char)
-            (255*((1.0-weight) * *(fptr-1) + weight * *(fptr+3)));
-          }
-        // HSV space
-        else
-          {
-          double h1, h2, h3, s1, s2, s3, v1, v2, v3;
-          vtkMath::RGBToHSV(*(fptr-3), *(fptr-2), *(fptr-1), &h1, &s1, &v1);
-          vtkMath::RGBToHSV(*(fptr+1), *(fptr+2), *(fptr+3), &h2, &s2, &v2);
-          s3 = (1.0-weight)*s1 + weight*s2;
-          v3 = (1.0-weight)*v1 + weight*v2;
-          // Do we need to cross the 0/1 boundary?
-          if ( this->HSVWrap &&
-               (h1 - h2 > 0.5 || h2 - h1 > 0.5) )
-            {
-            //Yes, we are crossing the boundary
-            if ( h1 > h2 )
-              {
-              h1 -= 1.0;
-              }
-            else
-              {
-              h2 -= 1.0;
-              }
-            h3 = (1.0-weight)*h1 + weight*h2;
-            if ( h3 < 0.0 )
-              {
-              h3 += 1.0;
-              }
-            }
-          else // HSV No Wrap
-            {
-            // No we are not crossing the boundary
-            h3 = (1.0-weight)*h1 + weight*h2;
-            }
-          // Make sure they are between 0 and 1
-          h3 = (h3>1.0)?(1.0):((h3<0.0)?(0.0):(h3));
-          s3 = (s3>1.0)?(1.0):((s3<0.0)?(0.0):(s3));
-          v3 = (v3>1.0)?(1.0):((v3<0.0)?(0.0):(v3));
-          vtkMath::HSVToRGB(h3, s3, v3, &h1, &s1, &v1);
-          *(tptr++) = (unsigned char)(255*h1);
-          *(tptr++) = (unsigned char)(255*s1);
-          *(tptr++) = (unsigned char)(255*v1);
-          }
-        }
-      }
+    *tPtr = static_cast<unsigned char>(*tmpPtr*255.0 + 0.5);
+    tPtr   ++;
+    tmpPtr ++;
     }
+
+  delete[] tmpTable;
+
   this->BuildTime.Modified();
+
   return this->Table;
 }
 
 //----------------------------------------------------------------------------
-void vtkColorTransferFunction::BuildFunctionFromTable( double x1, double x2,
-                                                       int size, double *table)
+void vtkColorTransferFunction::BuildFunctionFromTable(double xStart,
+                                                      double xEnd,
+                                                      int size,
+                                                      double *table)
 {
-  // We are assuming the table is in ascending order
+  double inc = 0.0;
+  double *tptr = table;
 
-  double      *fptr;
-  double      *tptr = table;
-  double      x, xinc;
-  int        i;
-  
-  xinc = (x2 - x1) / (double)(size-1);
-  
   this->RemoveAllPoints();
-
-  // Is it big enough?
-  if ( this->FunctionSize < size )
+  
+  if( size > 1 )
     {
-    delete [] this->Function;
-    this->FunctionSize = size*2;
-    this->Function = new double [4*this->FunctionSize];
+    inc = (xEnd-xStart)/static_cast<double>(size-1);
     }
   
-  fptr = this->Function;
-  
-  for (i = 0, x = x1; i < size; i++, x += xinc )
+  int i;
+  for (i=0; i < size; i++)
     {
-    *(fptr++) = x;
-    *(fptr++) = *(tptr++);
-    *(fptr++) = *(tptr++);
-    *(fptr++) = *(tptr++);    
+    vtkCTFNode *node = new vtkCTFNode;
+    node->X   = xStart + inc*i;
+    node->R   = tptr[0];
+    node->G   = tptr[1];
+    node->B   = tptr[2];
+    node->Sharpness = 0.0;
+    node->Midpoint  = 0.5;
+  
+    this->Internal->Nodes.push_back(node);
+    tptr += 3;
     }
   
-  this->NumberOfPoints = size;
-  
-  this->Modified();
+  this->SortAndUpdateRange();
 }
-
 
 //----------------------------------------------------------------------------
-// Print method for vtkColorTransferFunction
-void vtkColorTransferFunction::PrintSelf(ostream& os, vtkIndent indent)
+// For a specified index value, get the node parameters
+int vtkColorTransferFunction::GetNodeValue( int index, double val[6] )
 {
-  this->Superclass::PrintSelf(os, indent);
-
-  os << indent << "Size: " << this->NumberOfPoints << endl;
-  if ( this->Clamping )
+  int size = static_cast<int>(this->Internal->Nodes.size());
+  
+  if ( index < 0 || index >= size )
     {
-    os << indent << "Clamping: On\n";
-    }
-  else
-    {
-    os << indent << "Clamping: Off\n";
-    }
-
-  if ( this->ColorSpace == VTK_CTF_RGB )
-    {
-    os << indent << "Color Space: RGB\n";
-    }
-  else if ( this->ColorSpace == VTK_CTF_HSV && this->HSVWrap )
-    {
-    os << indent << "Color Space: HSV\n";
-    }
-  else
-    {
-    os << indent << "Color Space: HSV (No Wrap)\n";
+    vtkErrorMacro("Index out of range!");
+    return -1;
     }
   
+  val[0] = this->Internal->Nodes[index]->X;
+  val[1] = this->Internal->Nodes[index]->R;
+  val[2] = this->Internal->Nodes[index]->G;
+  val[3] = this->Internal->Nodes[index]->B;
+  val[4] = this->Internal->Nodes[index]->Midpoint;
+  val[5] = this->Internal->Nodes[index]->Sharpness;
   
-  os << indent << "Range: " << this->Range[0] << " to " 
-     << this->Range[1] << endl;
-  
-  if ( this->NumberOfPoints < 100 )
-    {
-    for ( int i = 0; i < this->NumberOfPoints; i++ )
-      {
-      os << indent << "  Point " << i << ": " << this->Function[i*4] << " maps to " 
-         << this->Function[i*4+1] << " " 
-         << this->Function[i*4+2] << " " 
-         << this->Function[i*4+3] << endl;
-      }
-    }
-  
-  // These are old
-  //  os << indent << "Color Transfer Function Total Points: " << this->GetTotalSize() << "\n";
-  //  os << indent << "Red Transfer Function: ";
-  //  os << this->Red << "\n";
-  //  os << indent << "Green Transfer Function: ";
-  //  os << this->Green << "\n";
-  //  os << indent << "Blue Transfer Function: ";
-  //  os << this->Blue << "\n";
-
+  return 1;
 }
 
+//----------------------------------------------------------------------------
+// For a specified index value, get the node parameters
+int vtkColorTransferFunction::SetNodeValue( int index, double val[6] )
+{
+  int size = static_cast<int>(this->Internal->Nodes.size());
+
+  if ( index < 0 || index >= size )
+    {
+    vtkErrorMacro("Index out of range!");
+    return -1;
+    }
+  
+  this->Internal->Nodes[index]->X = val[0];
+  this->Internal->Nodes[index]->R = val[1];
+  this->Internal->Nodes[index]->G = val[2];
+  this->Internal->Nodes[index]->B = val[3];
+  this->Internal->Nodes[index]->Midpoint = val[4];
+  this->Internal->Nodes[index]->Sharpness = val[5];
+
+  this->Modified();
+
+  return 1;
+}
 
 //----------------------------------------------------------------------------
 void vtkColorTransferFunction::DeepCopy( vtkColorTransferFunction *f )
 {
-  delete [] this->Function;
-  delete [] this->Table;
-  this->TableSize = 0;
+  if (f != NULL)
+    {
+    this->Clamping     = f->Clamping;
+    this->ColorSpace   = f->ColorSpace;
+    this->HSVWrap      = f->HSVWrap;
+    this->Scale        = f->Scale;
 
-  this->Clamping       = f->Clamping;
-  this->ColorSpace     = f->ColorSpace;
-  this->FunctionSize   = f->FunctionSize;
-  this->NumberOfPoints = f->NumberOfPoints;
-  this->Range[0]       = f->Range[0];
-  this->Range[1]       = f->Range[1];
-  
-  if ( this->FunctionSize > 0 )
-    {
-    this->Function     = new double [4*this->FunctionSize];
-    memcpy(this->Function, f->Function, 4*sizeof(double)*this->FunctionSize);
+    int i;
+    this->RemoveAllPoints();
+    for ( i = 0; i < f->GetSize(); i++ )
+      {
+      double val[6];
+      f->GetNodeValue(i, val);
+      this->AddRGBPoint(val[0], val[1], val[2], val[3], val[4], val[5]);
+      }
+    this->Modified();
     }
-  else
+}
+
+//----------------------------------------------------------------------------
+void vtkColorTransferFunction::ShallowCopy( vtkColorTransferFunction *f )
+{
+  if (f != NULL)
     {
-    this->Function = NULL;
+    this->Clamping     = f->Clamping;
+    this->ColorSpace   = f->ColorSpace;
+    this->HSVWrap      = f->HSVWrap;
+    this->Scale        = f->Scale;
+
+    int i;
+    this->RemoveAllPoints();
+    for ( i = 0; i < f->GetSize(); i++ )
+      {
+      double val[6];
+      f->GetNodeValue(i, val);
+      this->AddRGBPoint(val[0], val[1], val[2], val[3], val[4], val[5]);
+      }
+    this->Modified();
     }
-  
-  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -910,7 +1202,7 @@ void vtkColorTransferFunctionMapData(vtkColorTransferFunction* self,
   double          rgb[3];
   unsigned char  *optr = output;
   T              *iptr = input;
-  unsigned char   alpha = (unsigned char)(self->GetAlpha()*255.0);
+  unsigned char   alpha = static_cast<unsigned char>(self->GetAlpha()*255.0);
   
   if(self->GetSize() == 0)
     {
@@ -920,18 +1212,19 @@ void vtkColorTransferFunctionMapData(vtkColorTransferFunction* self,
 
   while (--i >= 0) 
     {
-    x = (double) *iptr;
+    x = static_cast<double>(*iptr);
     self->GetColor(x, rgb);
     
     if (outFormat == VTK_RGB || outFormat == VTK_RGBA)
       {
-      *(optr++) = (unsigned char)(rgb[0]*255.0);
-      *(optr++) = (unsigned char)(rgb[1]*255.0);
-      *(optr++) = (unsigned char)(rgb[2]*255.0);
+      *(optr++) = static_cast<unsigned char>(rgb[0]*255.0 + 0.5);
+      *(optr++) = static_cast<unsigned char>(rgb[1]*255.0 + 0.5);
+      *(optr++) = static_cast<unsigned char>(rgb[2]*255.0 + 0.5);
       }
     else // LUMINANCE  use coeffs of (0.30  0.59  0.11)*255.0
       {
-      *(optr++) = (unsigned char)(rgb[0]*76.5 + rgb[1]*150.45 + rgb[2]*28.05); 
+      *(optr++) = static_cast<unsigned char>(rgb[0]*76.5 + rgb[1]*150.45 +
+                                             rgb[2]*28.05 + 0.5); 
       }
     
     if (outFormat == VTK_RGBA || outFormat == VTK_LUMINANCE_ALPHA)
@@ -1072,6 +1365,38 @@ void vtkColorTransferFunctionMapData(vtkColorTransferFunction* self,
 }
 
 //----------------------------------------------------------------------------
+// An expensive magnitude calculation (similar to
+// vtkLookupTable.cxx (vtkLookupTableMapMag).
+template <class T>
+void vtkColorTransferFunctionMagMapData(vtkColorTransferFunction* self,
+                                     T* input,
+                                     unsigned char* output,
+                                     int length, int inIncr,
+                                     int outFormat, int v)
+{
+  double tmp, sum;
+  double *mag;
+  int i, j;
+
+  mag = new double[length];
+  for (i = 0; i < length; ++i)
+    {
+    sum = 0;
+    for (j = 0; j < inIncr; ++j)
+      {
+      tmp = static_cast<double>(*input);  
+      sum += (tmp * tmp);
+      ++input;
+      }
+    mag[i] = sqrt(sum);
+    }
+
+  vtkColorTransferFunctionMapData(self, mag, output, length, 1, outFormat, v);
+
+  delete [] mag;
+}
+
+//----------------------------------------------------------------------------
 void vtkColorTransferFunction::MapScalarsThroughTable2(void *input, 
                                                        unsigned char *output,
                                                        int inputDataType, 
@@ -1079,6 +1404,23 @@ void vtkColorTransferFunction::MapScalarsThroughTable2(void *input,
                                                        int inputIncrement,
                                                        int outputFormat)
 {
+  if (this->UseMagnitude && inputIncrement > 1)
+    {
+    switch (inputDataType)
+      {
+      vtkTemplateMacro(
+        vtkColorTransferFunctionMagMapData(this, static_cast<VTK_TT*>(input),
+          output, numberOfValues, inputIncrement, outputFormat, 1);
+        return
+      );
+    case VTK_BIT:
+      vtkErrorMacro("Cannot compute magnitude of bit array.");
+      break;
+    default:
+      vtkErrorMacro(<< "MapImageThroughTable: Unknown input ScalarType");
+      }
+    }
+
   switch (inputDataType)
     {
     vtkTemplateMacro(
@@ -1146,28 +1488,95 @@ int vtkColorTransferFunction::AdjustRange(double range[2])
     }
 
   // Remove all points out-of-range
-
-  int func_size = this->GetSize();
-  double *func_ptr = this->GetDataPointer();
+  int done;  
   
-  int i;
-  for (i = func_size - 1; i >= 0; i--)
+  done = 0;
+  while ( !done )
     {
-    double x = func_ptr[i * 4];
-    if (x < range[0] || x > range[1])
+    done = 1;
+    
+    this->Internal->FindNodeOutOfRange.X1 = range[0];
+    this->Internal->FindNodeOutOfRange.X2 = range[1];
+  
+    vtkstd::vector<vtkCTFNode*>::iterator iter = 
+      vtkstd::find_if(this->Internal->Nodes.begin(),
+                      this->Internal->Nodes.end(),
+                      this->Internal->FindNodeOutOfRange );
+  
+    if ( iter != this->Internal->Nodes.end() )
       {
-      this->RemovePoint(x);
+      delete *iter;
+      this->Internal->Nodes.erase(iter);
+      this->Modified();
+      done = 0;
       }
     }
+
+  this->SortAndUpdateRange();
+
 
   return 1;
 }
 
 //----------------------------------------------------------------------------
-#ifndef VTK_LEGACY_REMOVE
-void vtkColorTransferFunction::SetColorSpaceToHSVNoWrap()
+// Print method for vtkColorTransferFunction
+void vtkColorTransferFunction::PrintSelf(ostream& os, vtkIndent indent)
 {
-  this->SetColorSpace(VTK_CTF_HSV);
-  this->SetHSVWrap(0);
-};
-#endif
+  this->Superclass::PrintSelf(os, indent);
+
+  os << indent << "Size: " << this->Internal->Nodes.size() << endl;
+  if ( this->Clamping )
+    {
+    os << indent << "Clamping: On\n";
+    }
+  else
+    {
+    os << indent << "Clamping: Off\n";
+    }
+
+  if ( this->ColorSpace == VTK_CTF_RGB )
+    {
+    os << indent << "Color Space: RGB\n";
+    }
+  else if ( this->ColorSpace == VTK_CTF_HSV && this->HSVWrap )
+    {
+    os << indent << "Color Space: HSV\n";
+    }
+  else if ( this->ColorSpace == VTK_CTF_HSV )
+    {
+    os << indent << "Color Space: HSV (No Wrap)\n";
+    }
+  else
+    {
+    os << indent << "Color Space: CIE-L*ab\n";
+    }
+  
+  if ( this->Scale == VTK_CTF_LOG10 )
+    {
+    os << indent << "Scale: Log10\n";
+    }
+  else
+    {
+    os << indent << "Scale: Linear\n";
+    }
+  
+  os << indent << "Range: " << this->Range[0] << " to " 
+     << this->Range[1] << endl;
+
+  os << indent << "AllowDuplicateScalars: " << this->AllowDuplicateScalars << endl;
+
+  unsigned int i;
+  for( i = 0; i < this->Internal->Nodes.size(); i++ )
+    {
+    os << indent << "  " << i 
+       << " X: " << this->Internal->Nodes[i]->X 
+       << " R: " << this->Internal->Nodes[i]->R 
+       << " G: " << this->Internal->Nodes[i]->G 
+       << " B: " << this->Internal->Nodes[i]->B 
+       << " Sharpness: " << this->Internal->Nodes[i]->Sharpness 
+       << " Midpoint: " << this->Internal->Nodes[i]->Midpoint << endl;
+    }
+}
+
+
+

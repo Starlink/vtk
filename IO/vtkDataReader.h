@@ -31,11 +31,12 @@
 #define VTK_ASCII 1
 #define VTK_BINARY 2
 
+class vtkAbstractArray;
 class vtkCharArray;
-class vtkDataArray;
 class vtkDataSet;
 class vtkDataSetAttributes;
 class vtkFieldData;
+class vtkGraph;
 class vtkPointSet;
 class vtkRectilinearGrid;
 
@@ -242,6 +243,22 @@ public:
   int ReadPoints(vtkPointSet *ps, int numPts);
 
   // Description:
+  // Read point coordinates. Return 0 if error.
+  int ReadPoints(vtkGraph *g, int numPts);
+
+  // Description:
+  // Read the vertex data of a vtk data file. The number of vertices (from the
+  // graph) must match the number of vertices defined in vertex attributes
+  // (unless no geometry was defined).
+  int ReadVertexData(vtkGraph *g, int numVertices);
+
+  // Description:
+  // Read the edge data of a vtk data file. The number of edges (from the
+  // graph) must match the number of edges defined in edge attributes
+  // (unless no geometry was defined).
+  int ReadEdgeData(vtkGraph *g, int numEdges);
+
+  // Description:
   // Read a bunch of "cells". Return 0 if error.
   int ReadCells(int size, int *data);
 
@@ -256,9 +273,10 @@ public:
 
   // Description:
   // Helper functions for reading data.
-  vtkDataArray *ReadArray(const char *dataType, int numTuples, int numComp);
+  vtkAbstractArray *ReadArray(const char *dataType, int numTuples, int numComp);
   vtkFieldData *ReadFieldData();
 
+//BTX  
   // Description:
   // Internal function to read in a value.  Returns zero if there was an
   // error.
@@ -270,8 +288,17 @@ public:
   int Read(unsigned int *);
   int Read(long *);
   int Read(unsigned long *);
+#if defined(VTK_TYPE_USE___INT64)
+  int Read(__int64 *result);
+  int Read(unsigned __int64 *result);
+#endif
+#if defined(VTK_TYPE_USE_LONG_LONG)
+  int Read(long long *result);
+  int Read(unsigned long long *result);
+#endif
   int Read(float *);
-  int Read(double *);
+  int Read(double *);  
+//ETX
 
   // Description:
   // Close the vtk file.
@@ -324,7 +351,7 @@ protected:
   int InputStringLength;
   int InputStringPos;
 
-  vtkSetStringMacro(ScalarLut);
+  void SetScalarLut(const char* lut);
   vtkGetStringMacro(ScalarLut);
 
   char *Header;
@@ -336,6 +363,8 @@ protected:
   int ReadCoScalarData(vtkDataSetAttributes *a, int num);
   int ReadLutData(vtkDataSetAttributes *a);
   int ReadTCoordsData(vtkDataSetAttributes *a, int num);
+  int ReadGlobalIds(vtkDataSetAttributes *a, int num);
+  int ReadPedigreeIds(vtkDataSetAttributes *a, int num);
 
   int ReadDataSetData(vtkDataSet *ds);
 
@@ -376,9 +405,10 @@ protected:
   vtkCharArray* InputArray;
 
   // Description:
-  // Decode the name of array. This method is the inverse of 
-  // vtkWriter::EncodeName.
-  void DecodeArrayName(char *resname, const char* name);
+  // Decode a string. This method is the inverse of 
+  // vtkWriter::EncodeString.  Returns the length of the
+  // result string.
+  int DecodeString(char *resname, const char* name);
 
   virtual int ProcessRequest(vtkInformation *, vtkInformationVector **,
                              vtkInformationVector *);

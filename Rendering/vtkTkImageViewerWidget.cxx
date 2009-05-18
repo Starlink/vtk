@@ -12,8 +12,6 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include <stdlib.h>
-
 #include "vtkTkImageViewerWidget.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkTkInternals.h"
@@ -32,22 +30,14 @@
  #endif
 #endif
 
+#include <stdlib.h>
+
 #define VTK_ALL_EVENTS_MASK \
     KeyPressMask|KeyReleaseMask|ButtonPressMask|ButtonReleaseMask|      \
     EnterWindowMask|LeaveWindowMask|PointerMotionMask|ExposureMask|     \
     VisibilityChangeMask|FocusChangeMask|PropertyChangeMask|ColormapChangeMask
 
 #define VTK_MAX(a,b)    (((a)>(b))?(a):(b))
-    
-#if ( _MSC_VER >= 1300 ) // Visual studio .NET
-#pragma warning ( disable : 4311 )
-#pragma warning ( disable : 4312 )
-#  define vtkGetWindowLong GetWindowLongPtr
-#  define vtkSetWindowLong SetWindowLongPtr
-#else // regular Visual studio 
-#  define vtkGetWindowLong GetWindowLong
-#  define vtkSetWindowLong SetWindowLong
-#endif // 
 
 // These are the options that can be set when the widget is created
 // or with the command configure.  The only new one is "-rw" which allows
@@ -91,7 +81,7 @@ int vtkTkImageViewerWidget_Configure(Tcl_Interp *interp,
                          self->TkWin, 
                          vtkTkImageViewerWidgetConfigSpecs,
                          argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                          const_cast<CONST84 char **>(argv), 
 #else
                          argv, 
@@ -123,7 +113,7 @@ extern "C"
   int vtkTkImageViewerWidget_Widget(ClientData clientData, 
                                     Tcl_Interp *interp,
                                     int argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                     CONST84
 #endif
                                     char *argv[]) 
@@ -178,7 +168,7 @@ extern "C"
         result = vtkTkImageViewerWidget_Configure(interp, 
                                                   self, 
                                                   argc-2, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                                   const_cast<char **>(argv+2), 
 #else
                                                   argv+2, 
@@ -224,12 +214,12 @@ extern "C"
   int vtkTkImageViewerWidget_Cmd(ClientData clientData, 
                                  Tcl_Interp *interp, 
                                  int argc, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                  CONST84
 #endif
                                  char **argv)
   {
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
     CONST84
 #endif
     char *name;
@@ -281,7 +271,7 @@ extern "C"
     if (vtkTkImageViewerWidget_Configure(interp, 
                                          self, 
                                          argc-2, 
-#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4 && TCL_RELEASE_LEVEL >= TCL_FINAL_RELEASE)
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)
                                          const_cast<char **>(argv+2), 
 #else
                                          argv+2, 
@@ -330,14 +320,12 @@ extern "C"
     
     if (self->ImageViewer)
       {
-      int netRefCount = self->ImageViewer->GetReferenceCount();
-      if (self->ImageViewer->GetRenderWindow()->GetInteractor() && 
-          self->ImageViewer->GetRenderWindow()->GetInteractor()->GetRenderWindow() == self->ImageViewer->GetRenderWindow() &&
-          self->ImageViewer->GetRenderWindow()->GetInteractor()->GetReferenceCount() == 1)
+      if (self->ImageViewer->GetRenderWindow()->GetInteractor() &&
+          self->ImageViewer->GetRenderWindow()->GetInteractor()->GetRenderWindow() == self->ImageViewer->GetRenderWindow())
         {
-        netRefCount = netRefCount - 1;
+        self->ImageViewer->GetRenderWindow()->GetInteractor()->SetRenderWindow(0);
         }
-      if (netRefCount > 1)
+      if (self->ImageViewer->GetRenderWindow()->GetReferenceCount() > 1)
         {
         vtkGenericWarningMacro("A TkImageViewerWidget is being destroyed before it associated vtkImageViewer is destroyed. This is very bad and usually due to the order in which objects are being destroyed. Always destroy the vtkImageViewer before destroying the user interface components.");
         return;
@@ -400,10 +388,10 @@ extern "C"
 #ifdef _WIN32
         if (self->ImageViewer->GetRenderWindow()->GetGenericWindowId())
           {
-          SetWindowLong((HWND)self->ImageViewer->GetRenderWindow()->GetGenericWindowId(),
-                        GWL_USERDATA,(LONG)((TkWindow *)self->TkWin)->window);
-          SetWindowLong((HWND)self->ImageViewer->GetRenderWindow()->GetGenericWindowId(),
-                        GWL_WNDPROC,(LONG)TkWinChildProc);
+          vtkSetWindowLong((HWND)self->ImageViewer->GetRenderWindow()->GetGenericWindowId(),
+                        vtkGWL_USERDATA,(vtkLONG)((TkWindow *)self->TkWin)->window);
+          vtkSetWindowLong((HWND)self->ImageViewer->GetRenderWindow()->GetGenericWindowId(),
+                        vtkGWL_WNDPROC,(vtkLONG)TkWinChildProc);
           }
 #endif
         Tcl_EventuallyFree( (ClientData) self, vtkTkImageViewerWidget_Destroy );
@@ -458,7 +446,7 @@ LRESULT APIENTRY vtkTkImageViewerWidgetProc(HWND hWnd, UINT message,
 {
   LRESULT rval;
   struct vtkTkImageViewerWidget *self = 
-    (struct vtkTkImageViewerWidget *)vtkGetWindowLong(hWnd,GWL_USERDATA);
+    (struct vtkTkImageViewerWidget *)vtkGetWindowLong(hWnd,vtkGWL_USERDATA);
   
   if (!self)
     {
@@ -466,10 +454,10 @@ LRESULT APIENTRY vtkTkImageViewerWidgetProc(HWND hWnd, UINT message,
     }
 
   // forward message to Tk handler
-  vtkSetWindowLong(hWnd,GWL_USERDATA,(LONG)((TkWindow *)self->TkWin)->window);
+  vtkSetWindowLong(hWnd,vtkGWL_USERDATA,(vtkLONG)((TkWindow *)self->TkWin)->window);
   if (((TkWindow *)self->TkWin)->parentPtr)
     {
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinChildProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinChildProc);
     rval = TkWinChildProc(hWnd,message,wParam,lParam);
     }
   else
@@ -479,10 +467,10 @@ LRESULT APIENTRY vtkTkImageViewerWidgetProc(HWND hWnd, UINT message,
 // well this will actually work in 8.0.
 //
 #if (TK_MAJOR_VERSION < 8)
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinTopLevelProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinTopLevelProc);
     rval = TkWinTopLevelProc(hWnd,message,wParam,lParam);
 #else
-    if (message == WM_WINDOWPOSCHANGED) 
+    if (message == WM_WINDOWPOSCHANGED)
       {
       XEvent event;
             WINDOWPOS *pos = (WINDOWPOS *) lParam;
@@ -526,7 +514,7 @@ LRESULT APIENTRY vtkTkImageViewerWidgetProc(HWND hWnd, UINT message,
             Tcl_ServiceAll();
             return 0;
       }
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)TkWinChildProc);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)TkWinChildProc);
     rval = TkWinChildProc(hWnd,message,wParam,lParam);
 #endif
     }
@@ -535,16 +523,16 @@ LRESULT APIENTRY vtkTkImageViewerWidgetProc(HWND hWnd, UINT message,
       {
       if (self->ImageViewer)
         {
-        vtkSetWindowLong(hWnd,GWL_USERDATA,
-                         (LONG)self->ImageViewer->GetRenderWindow());
-        vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)self->OldProc);
+        vtkSetWindowLong(hWnd,vtkGWL_USERDATA,
+                         (vtkLONG)self->ImageViewer->GetRenderWindow());
+        vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)self->OldProc);
         CallWindowProc(self->OldProc,hWnd,message,wParam,lParam);
         }
       }
 
     // now reset to the original config
-    vtkSetWindowLong(hWnd,GWL_USERDATA,(LONG)self);
-    vtkSetWindowLong(hWnd,GWL_WNDPROC,(LONG)vtkTkImageViewerWidgetProc);
+    vtkSetWindowLong(hWnd,vtkGWL_USERDATA,(vtkLONG)self);
+    vtkSetWindowLong(hWnd,vtkGWL_WNDPROC,(vtkLONG)vtkTkImageViewerWidgetProc);
     return rval;
 }
 
@@ -582,8 +570,8 @@ static int vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget 
                                "vtkImageViewer");
 #endif
     ckfree (self->IV);
-    self->IV = strdup(self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->IV = strdup(Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {
@@ -657,10 +645,10 @@ static int vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget 
   twdPtr->window.handle = (HWND)imgWindow->GetGenericWindowId();
 #endif
   
-  self->OldProc = (WNDPROC)vtkGetWindowLong(twdPtr->window.handle,GWL_WNDPROC);
-  vtkSetWindowLong(twdPtr->window.handle,GWL_USERDATA,(LONG)self);
-  vtkSetWindowLong(twdPtr->window.handle,GWL_WNDPROC,
-                   (LONG)vtkTkImageViewerWidgetProc);
+  self->OldProc = (WNDPROC)vtkGetWindowLong(twdPtr->window.handle,vtkGWL_WNDPROC);
+  vtkSetWindowLong(twdPtr->window.handle,vtkGWL_USERDATA,(vtkLONG)self);
+  vtkSetWindowLong(twdPtr->window.handle,vtkGWL_WNDPROC,
+                   (vtkLONG)vtkTkImageViewerWidgetProc);
 
   winPtr->window = (Window)twdPtr;
   
@@ -756,8 +744,8 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
                                "vtkImageViewer");
 #endif
     ckfree (self->IV);
-    self->IV = strdup(self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->IV = strdup(Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {
@@ -882,8 +870,8 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
     vtkTclGetObjectFromPointer(self->Interp, self->ImageViewer,
                                "vtkImageViewer");
 #endif
-    self->IV = strdup(self->Interp->result);
-    self->Interp->result[0] = '\0';
+    self->IV = strdup(Tcl_GetStringResult(self->Interp));
+    Tcl_ResetResult(self->Interp);
     }
   else
     {

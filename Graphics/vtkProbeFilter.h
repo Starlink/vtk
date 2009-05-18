@@ -20,6 +20,10 @@
 // filter. The point attributes are computed at the Input point positions
 // by interpolating into the source data. For example, we can compute data
 // values on a plane (plane specified as Input) from a volume (Source).
+// The cell data of the source data is copied to the output based on in
+// which source cell each input point is. If an array of the same name exists
+// both in source's point and cell data, only the one from the point data is
+// probed.
 //
 // This filter can be used to resample data, or convert one dataset form into
 // another. For example, an unstructured grid (vtkUnstructuredGrid) can be
@@ -34,6 +38,8 @@
 #include "vtkDataSetAlgorithm.h"
 
 class vtkIdTypeArray;
+class vtkCharArray;
+class vtkMaskPoints;
 
 class VTK_GRAPHICS_EXPORT vtkProbeFilter : public vtkDataSetAlgorithm
 {
@@ -70,23 +76,53 @@ public:
   // Get the list of point ids in the output that contain attribute data
   // interpolated from the source.
   vtkGetObjectMacro(ValidPoints, vtkIdTypeArray);
-  
+ 
+  // Description:
+  // Returns the name of the char array added to the output with values 1 for
+  // valid points and 0 for invalid points.
+  // Set to "vtkValidPointMask" by default.
+  vtkSetStringMacro(ValidPointMaskArrayName)
+  vtkGetStringMacro(ValidPointMaskArrayName)
+//BTX 
 protected:
   vtkProbeFilter();
   ~vtkProbeFilter();
 
   int SpatialMatch;
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  virtual int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  virtual int RequestUpdateExtent(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, 
+    vtkInformationVector *);
+  virtual int RequestInformation(vtkInformation *, vtkInformationVector **, 
+    vtkInformationVector *);
+  virtual int RequestUpdateExtent(vtkInformation *, vtkInformationVector **, 
+    vtkInformationVector *);
 
+  // Description:
+  // Equivalent to calling InitializeForProbing(); ProbeEmptyPoints().
   void Probe(vtkDataSet *input, vtkDataSet *source, vtkDataSet *output);
 
+  // Description:
+  // Initializes output and various arrays which keep track for probing status.
+  void InitializeForProbing(vtkDataSet *input, vtkDataSet *source, 
+    vtkDataSet *output);
+
+  // Description:
+  // Probe only those points that are marked as not-probed by the MaskPoints
+  // array.
+  void ProbeEmptyPoints(vtkDataSet *input, vtkDataSet *source, 
+    vtkDataSet *output);
+
+  char* ValidPointMaskArrayName;
   vtkIdTypeArray *ValidPoints;
+  vtkCharArray* MaskPoints;
+  int NumberOfValidPoints;
 private:
   vtkProbeFilter(const vtkProbeFilter&);  // Not implemented.
   void operator=(const vtkProbeFilter&);  // Not implemented.
+
+  class vtkVectorOfArrays;
+  vtkVectorOfArrays* CellArrays;
+//ETX
 };
 
 #endif

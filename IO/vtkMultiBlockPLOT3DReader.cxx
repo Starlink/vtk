@@ -19,7 +19,7 @@
 #include "vtkErrorCode.h"
 #include "vtkFieldData.h"
 #include "vtkFloatArray.h"
-#include "vtkHierarchicalDataSet.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
@@ -32,7 +32,7 @@
 #include "vtkSmartPointer.h"
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkMultiBlockPLOT3DReader, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkMultiBlockPLOT3DReader, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkMultiBlockPLOT3DReader);
 
 #define VTK_RHOINF 1.0
@@ -526,7 +526,7 @@ int vtkMultiBlockPLOT3DReader::GetNumberOfBlocksInternal(FILE* xyzFp, int verify
 int vtkMultiBlockPLOT3DReader::ReadGeometryHeader(FILE* fp)
 {
   int numGrid = this->GetNumberOfBlocksInternal(fp, 1);
-  int numBlocks = this->Internal->Blocks.size();
+  int numBlocks = static_cast<int>(this->Internal->Blocks.size());
   int i;
   vtkDebugMacro("Geometry number of grids: " << numGrid);
   if ( numGrid == 0 )
@@ -543,16 +543,12 @@ int vtkMultiBlockPLOT3DReader::ReadGeometryHeader(FILE* fp)
   this->SkipByteCount(fp);
   for(i=0; i<numGrid; i++)
     {
-    int ni, nj, nk;
+    int ni, nj, nk=1;
     this->ReadIntBlock(fp, 1, &ni);
     this->ReadIntBlock(fp, 1, &nj);
     if (!this->TwoDimensionalGeometry)
       {
       this->ReadIntBlock(fp, 1, &nk);
-      }
-    else
-      {
-      nk = 1;
       }
     vtkDebugMacro("Geometry, block " << i << " dimensions: "
                   << ni << " " << nj << " " << nk);
@@ -583,13 +579,45 @@ int vtkMultiBlockPLOT3DReader::ReadQHeader(FILE* fp)
     return VTK_ERROR;
     }
 
+  // The number of grids read from q file does not match
+  // internal structure, regenerate it.
+  if (numGrid != static_cast<int>(this->Internal->Blocks.size()))
+    {
+    FILE* xyzFp;
+    if ( this->CheckGeometryFile(xyzFp) != VTK_OK)
+      {
+      return VTK_ERROR;
+      }
+    
+    if ( this->ReadGeometryHeader(xyzFp) != VTK_OK )
+      {
+      vtkErrorMacro("Error reading geometry file.");
+      fclose(xyzFp);
+      return VTK_ERROR;
+      }
+    fclose(xyzFp);
+    }
+
+  // If the numbers of grids still do not match, the
+  // q file is wrong
+  if (numGrid != static_cast<int>(this->Internal->Blocks.size()))
+    {
+    vtkErrorMacro("The number of grids between the geometry "
+                  "and the q file do not match.");
+    return VTK_ERROR;
+    }
+
+
   this->SkipByteCount(fp);
   for(int i=0; i<numGrid; i++)
     {
-    int ni, nj, nk;
+    int ni, nj, nk=1;
     this->ReadIntBlock(fp, 1, &ni);
     this->ReadIntBlock(fp, 1, &nj);
-    this->ReadIntBlock(fp, 1, &nk);
+    if (!this->TwoDimensionalGeometry)
+      {
+      this->ReadIntBlock(fp, 1, &nk);
+      }
     vtkDebugMacro("Q, block " << i << " dimensions: "
                   << ni << " " << nj << " " << nk);
 
@@ -714,8 +742,7 @@ int vtkMultiBlockPLOT3DReader::RequestInformation(
 
   vtkInformation* info = outputVector->GetInformationObject(0);
   info->Set(
-    vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
-
+    vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), 1);
   return 1;
 }
 
@@ -725,25 +752,13 @@ int vtkMultiBlockPLOT3DReader::RequestData(
   vtkInformation* info = outputVector->GetInformationObject(0);
 
   vtkDataObject* doOutput = 
-    info->Get(vtkCompositeDataSet::COMPOSITE_DATA_SET());
-  vtkHierarchicalDataSet* mb = 
-    vtkHierarchicalDataSet::SafeDownCast(doOutput);
+    info->Get(vtkDataObject::DATA_OBJECT());
+  vtkMultiBlockDataSet* mb = 
+    vtkMultiBlockDataSet::SafeDownCast(doOutput);
   if (!mb)
     {
     return 0;
     }
-
-  if (!info->Has(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()) ||
-      !info->Has(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()))
-    {
-    vtkErrorMacro("Expected information not found. Cannot produce data.");
-    return 0;
-    }
-
-  int updatePiece =
-    info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-  int updateNumPieces =
-    info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
 
   this->SetErrorCode(vtkErrorCode::NoError);
 
@@ -752,7 +767,7 @@ int vtkMultiBlockPLOT3DReader::RequestData(
   int numberOfDims;
   vtkIdType index;
 
-  int numBlocks = this->Internal->Blocks.size();
+  int numBlocks = static_cast<int>(this->Internal->Blocks.size());
 
   // Don't read the geometry if we already have it!
   if ( (!this->PointCache) || (!this->PointCache[0]) )
@@ -1012,6 +1027,7 @@ int vtkMultiBlockPLOT3DReader::RequestData(
       nthOutput->GetPointData()->AddArray(se);
       se->Delete();
 
+      this->SkipByteCount(qFp);
       
       if ( this->FunctionList->GetNumberOfTuples() > 0 )
         {
@@ -1032,29 +1048,11 @@ int vtkMultiBlockPLOT3DReader::RequestData(
     fclose(qFp);
     }
 
-  mb->SetNumberOfLevels(1);
-  mb->SetNumberOfDataSets(0, numBlocks);
-
-  int numBlocksPerPiece = 1;
-  if (updateNumPieces < numBlocks)
-    {
-    numBlocksPerPiece = numBlocks / updateNumPieces;
-    }
-  int minBlock = numBlocksPerPiece*updatePiece;
-  int maxBlock = numBlocksPerPiece*(updatePiece+1);
-  if (updatePiece == updateNumPieces - 1)
-    {
-    maxBlock = numBlocks;
-    }
-  if (maxBlock > numBlocks)
-    {
-    maxBlock = numBlocks;
-    }
-
-  for(i=minBlock; i<maxBlock; i++)
+  mb->SetNumberOfBlocks(numBlocks);
+  for(i=0; i<numBlocks; i++)
     {
     vtkStructuredGrid* nthOutput = this->Internal->Blocks[i];
-    mb->SetDataSet(0, i, nthOutput);
+    mb->SetBlock(i, nthOutput);
     }
 
   this->Internal->Blocks.clear();
@@ -2073,9 +2071,7 @@ void vtkMultiBlockPLOT3DReader::RemoveAllFunctions()
 int vtkMultiBlockPLOT3DReader::FillOutputPortInformation(
   int vtkNotUsed(port), vtkInformation* info)
 {
-  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkStructuredGrid");
-  info->Set(vtkCompositeDataPipeline::COMPOSITE_DATA_TYPE_NAME(), 
-            "vtkHierarchicalDataSet");
+  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkMultiBlockDataSet");
   return 1;
 }
 

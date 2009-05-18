@@ -49,8 +49,14 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 #include "vtkWedge.h"
+#include "vtkTriQuadraticHexahedron.h"
+#include "vtkQuadraticLinearWedge.h"
+#include "vtkQuadraticLinearQuad.h"
+#include "vtkBiQuadraticQuad.h"
+#include "vtkBiQuadraticQuadraticWedge.h"
+#include "vtkBiQuadraticQuadraticHexahedron.h"
 
-vtkCxxRevisionMacro(vtkUnstructuredGrid, "$Revision: 1.8.6.2 $");
+vtkCxxRevisionMacro(vtkUnstructuredGrid, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkUnstructuredGrid);
 
 vtkUnstructuredGrid::vtkUnstructuredGrid ()
@@ -78,6 +84,13 @@ vtkUnstructuredGrid::vtkUnstructuredGrid ()
   this->QuadraticHexahedron = NULL;
   this->QuadraticWedge = NULL;
   this->QuadraticPyramid = NULL;
+  this->QuadraticLinearQuad = NULL;
+  this->BiQuadraticQuad = NULL;
+  this->TriQuadraticHexahedron = NULL;
+  this->QuadraticLinearWedge = NULL;
+  this->BiQuadraticQuadraticWedge = NULL;
+  this->BiQuadraticQuadraticHexahedron = NULL;
+  
   this->ConvexPointSet = NULL;
   this->EmptyCell = NULL;
 
@@ -232,6 +245,31 @@ vtkUnstructuredGrid::~vtkUnstructuredGrid()
     {
     this->QuadraticPyramid->Delete();
     }
+  if(this->QuadraticLinearQuad)
+    {
+    this->QuadraticLinearQuad->Delete ();
+    }
+  if(this->BiQuadraticQuad)
+    {
+    this->BiQuadraticQuad->Delete ();
+    }
+  if(this->TriQuadraticHexahedron)
+    {
+    this->TriQuadraticHexahedron->Delete ();
+    }
+  if(this->QuadraticLinearWedge)
+    {
+    this->QuadraticLinearWedge->Delete ();
+    }
+  if(this->BiQuadraticQuadraticWedge)
+    {
+    this->BiQuadraticQuadraticWedge->Delete ();
+    }
+  if(this->BiQuadraticQuadraticHexahedron)
+    {
+    this->BiQuadraticQuadraticHexahedron->Delete ();
+    }
+
   if(this->ConvexPointSet)
     {
     this->ConvexPointSet->Delete();
@@ -264,7 +302,7 @@ int vtkUnstructuredGrid::GetGhostLevel()
 // Copy the geometric and topological structure of an input unstructured grid.
 void vtkUnstructuredGrid::CopyStructure(vtkDataSet *ds)
 {
-  vtkUnstructuredGrid *ug=(vtkUnstructuredGrid *)ds;
+  vtkUnstructuredGrid *ug=static_cast<vtkUnstructuredGrid *>(ds);
   vtkPointSet::CopyStructure(ds);
 
   if (this->Connectivity != ug->Connectivity)
@@ -368,8 +406,8 @@ void vtkUnstructuredGrid::Initialize()
 int vtkUnstructuredGrid::GetCellType(vtkIdType cellId)
 {
 
-  vtkDebugMacro(<< "Returning cell type " << (int)this->Types->GetValue(cellId));
-  return (int)this->Types->GetValue(cellId);
+  vtkDebugMacro(<< "Returning cell type " << static_cast<int>(this->Types->GetValue(cellId)));
+  return static_cast<int>(this->Types->GetValue(cellId));
 }
 
 //----------------------------------------------------------------------------
@@ -380,7 +418,7 @@ vtkCell *vtkUnstructuredGrid::GetCell(vtkIdType cellId)
   vtkCell *cell = NULL;
   vtkIdType *pts, numPts;
 
-  switch ((int)this->Types->GetValue(cellId))
+  switch (static_cast<int>(this->Types->GetValue(cellId)))
     {
     case VTK_VERTEX:
       if(!this->Vertex)
@@ -566,6 +604,54 @@ vtkCell *vtkUnstructuredGrid::GetCell(vtkIdType cellId)
       cell = this->QuadraticPyramid;
       break;
 
+    case VTK_QUADRATIC_LINEAR_QUAD:
+      if(!this->QuadraticLinearQuad)
+        {
+        this->QuadraticLinearQuad = vtkQuadraticLinearQuad::New();
+        }
+      cell = this->QuadraticLinearQuad;
+      break;
+
+    case VTK_BIQUADRATIC_QUAD:
+      if(!this->BiQuadraticQuad)
+        {
+        this ->BiQuadraticQuad = vtkBiQuadraticQuad::New();
+        }
+      cell = this->BiQuadraticQuad;
+      break;
+
+    case VTK_TRIQUADRATIC_HEXAHEDRON:
+      if(!this->TriQuadraticHexahedron)
+        {
+        this->TriQuadraticHexahedron = vtkTriQuadraticHexahedron::New();
+        }
+      cell = this->TriQuadraticHexahedron;
+      break;
+
+    case VTK_QUADRATIC_LINEAR_WEDGE:
+      if(!this->QuadraticLinearWedge)
+        {
+        this->QuadraticLinearWedge = vtkQuadraticLinearWedge::New();
+        }
+      cell = this->QuadraticLinearWedge;
+      break;
+
+    case VTK_BIQUADRATIC_QUADRATIC_WEDGE:
+      if(!this->BiQuadraticQuadraticWedge)
+        {
+        this->BiQuadraticQuadraticWedge = vtkBiQuadraticQuadraticWedge::New();
+        }
+      cell = this->BiQuadraticQuadraticWedge;
+      break;
+
+    case VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON:
+      if(!this->BiQuadraticQuadraticHexahedron)
+        {
+        this->BiQuadraticQuadraticHexahedron = vtkBiQuadraticQuadraticHexahedron::New();
+        }
+      cell = this->BiQuadraticQuadraticHexahedron;
+      break;
+
     case VTK_CONVEX_POINT_SET:
       if(!this->ConvexPointSet)
         {
@@ -617,7 +703,7 @@ void vtkUnstructuredGrid::GetCell(vtkIdType cellId, vtkGenericCell *cell)
   double  x[3];
   vtkIdType *pts, numPts;
 
-  cell->SetCellType((int)Types->GetValue(cellId));
+  cell->SetCellType(static_cast<int>(Types->GetValue(cellId)));
 
   loc = this->Locations->GetValue(cellId);
   this->Connectivity->GetCell(loc,numPts,pts);
@@ -711,7 +797,7 @@ vtkIdType vtkUnstructuredGrid::InsertNextCell(int type, vtkIdList *ptIds)
   vtkDebugMacro(<< "insert location "
                 << this->Connectivity->GetInsertLocation(npts));
   this->Locations->InsertNextValue(this->Connectivity->GetInsertLocation(npts));
-  return this->Types->InsertNextValue((unsigned char) type);
+  return this->Types->InsertNextValue(static_cast<unsigned char>(type));
 
 }
 
@@ -726,8 +812,9 @@ vtkIdType vtkUnstructuredGrid::InsertNextCell(int type, vtkIdType npts,
   // insert type and storage information
   vtkDebugMacro(<< "insert location "
                 << this->Connectivity->GetInsertLocation(npts));
-  this->Locations->InsertNextValue(this->Connectivity->GetInsertLocation(npts));
-  return this->Types->InsertNextValue((unsigned char) type);
+  this->Locations->InsertNextValue(
+    this->Connectivity->GetInsertLocation(npts));
+  return this->Types->InsertNextValue(static_cast<unsigned char>(type));
 
 }
 
@@ -772,7 +859,7 @@ void vtkUnstructuredGrid::SetCells(int type, vtkCellArray *cells)
   // build types
   for (i=0, cells->InitTraversal(); cells->GetNextCell(npts,pts); i++)
     {
-    this->Types->InsertNextValue((unsigned char) type);
+    this->Types->InsertNextValue(static_cast<unsigned char>(type));
     this->Locations->InsertNextValue(cells->GetTraversalLocation(npts));
     }
 }
@@ -818,7 +905,7 @@ void vtkUnstructuredGrid::SetCells(int *types, vtkCellArray *cells)
   // build types
   for (i=0, cells->InitTraversal(); cells->GetNextCell(npts,pts); i++)
     {
-    this->Types->InsertNextValue((unsigned char) types[i]);
+    this->Types->InsertNextValue(static_cast<unsigned char>(types[i]));
     this->Locations->InsertNextValue(cells->GetTraversalLocation(npts));
     }
 }
@@ -1322,7 +1409,7 @@ void vtkUnstructuredGrid::GetIdsOfCellsOfType(int type, vtkIdTypeArray *array)
 {
   for (int cellId = 0; cellId < this->GetNumberOfCells(); cellId++)
     {
-    if ((int)Types->GetValue(cellId) == type)
+    if (static_cast<int>(Types->GetValue(cellId)) == type)
       {
       array->InsertNextValue(cellId);
       }
@@ -1367,7 +1454,7 @@ void vtkUnstructuredGrid::RemoveGhostCells(int level)
     newGrid->Delete();
     return;
     }
-  cellGhostLevels =((vtkUnsignedCharArray*)temp)->GetPointer(0);
+  cellGhostLevels =(static_cast<vtkUnsignedCharArray*>(temp))->GetPointer(0);
 
 
   // Now threshold based on the cell ghost level array.

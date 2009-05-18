@@ -599,7 +599,14 @@ void TestVoidReturnOuter()
 # pragma warning (disable:858) // type qualifier on return is meaningless
 #endif
 
+
+// aCC warns "type qualifier on return type is meaningless" - just omit the
+// function on aCC builds since there is no way to suppress the warning via
+// pragmas...
+#if !defined(__HP_aCC)
 void const TestVoidConstReturn() {}
+#endif
+
 
 #if defined(__INTEL_COMPILER)
 # pragma warning (pop)
@@ -622,6 +629,26 @@ static int TestDriverDebugReport(int type, char* message, int* retVal)
   exit(1);
 }
 #endif
+
+
+//----------------------------------------------------------------------------
+
+/* Test setlocale  */
+#include <locale.h>
+int TestSetLocale()
+{
+  char *oldLocale = strdup(setlocale(LC_NUMERIC,NULL));
+  setlocale(LC_NUMERIC,"English");
+  
+  // restore the local
+  if (oldLocale)
+    {
+    setlocale(LC_NUMERIC,oldLocale);
+    delete [] oldLocale;
+    return 1;
+    }
+  return 0;
+}
 
 //----------------------------------------------------------------------------
 
@@ -649,6 +676,8 @@ int main()
 #ifndef VTK_CXX_GCC_2 // avoid strange exception problem on debian gcc 2.95
   DO_TEST(TestException);
 #endif
+  DO_TEST(TestSetLocale);
+  
 #if defined(_MSC_VER) && defined(_DEBUG)
   // just call the code to shut up a linker warning
   int retVal = 0;

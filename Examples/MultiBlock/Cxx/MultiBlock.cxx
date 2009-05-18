@@ -13,7 +13,7 @@
 
 =========================================================================*/
 // This example demonstrates how multi-block datasets can be processed
-// using the new vtkHierarchicalDataSet class.
+// using the new vtkMultiBlockDataSet class.
 // 
 // The command line arguments are:
 // -D <path> => path to the data (VTKData); the data should be in <path>/Data/
@@ -22,8 +22,8 @@
 #include "vtkCellDataToPointData.h"
 #include "vtkContourFilter.h"
 #include "vtkDebugLeaks.h"
-#include "vtkHierarchicalDataSet.h"
-#include "vtkHierarchicalDataSetGeometryFilter.h"
+#include "vtkMultiBlockDataSet.h"
+#include "vtkCompositeDataGeometryFilter.h"
 #include "vtkOutlineCornerFilter.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
@@ -36,6 +36,7 @@
 #include "vtkStructuredGridOutlineFilter.h"
 #include "vtkTestUtilities.h"
 #include "vtkXMLStructuredGridReader.h"
+#include <vtksys/ios/sstream>
 
 int main(int argc, char* argv[])
 {
@@ -54,23 +55,21 @@ int main(int argc, char* argv[])
 
   // vtkMultiBlockDataSet respresents multi-block datasets. See
   // the class documentation for more information.
-  vtkHierarchicalDataSet* mb = vtkHierarchicalDataSet::New();
+  vtkMultiBlockDataSet* mb = vtkMultiBlockDataSet::New();
 
   for (i=0; i<3; i++)
     {
     // Here we load the three separate files (each containing
     // a structured grid dataset)
-    ostrstream fname;
+    vtksys_ios::ostringstream fname;
     fname << "Data/multicomb_" << i << ".vts" << ends;
-    char* fstr = fname.str();
     char* cfname = 
-      vtkTestUtilities::ExpandDataFileName(argc, argv, fstr);
+      vtkTestUtilities::ExpandDataFileName(argc, argv, fname.str().c_str());
     reader->SetFileName(cfname);
     // We have to update since we are working without a VTK pipeline.
     // This will read the file and the output of the reader will be
     // a valid structured grid data.
     reader->Update();
-    delete[] fstr;
     delete[] cfname;
 
     // We create a copy to avoid adding the same data three
@@ -80,14 +79,14 @@ int main(int argc, char* argv[])
     sg->ShallowCopy(reader->GetOutput());
 
     // Add the structured grid to the multi-block dataset
-    mb->SetDataSet(0, i, sg);
+    mb->SetBlock(i, sg);
     sg->Delete();
     }
   reader->Delete();
 
   // Multi-block can be processed with regular VTK filters in two ways:
   // 1. Pass through a multi-block aware consumer. Since a multi-block 
-  //    aware mapper is not yet available, vtkHierarchicalDataSetGeometryFilter
+  //    aware mapper is not yet available, vtkCompositeDataGeometryFilter
   //    can be used
   // 2. Assign the composite executive (vtkCompositeDataPipeline) to
   //    all "simple" (that work only on simple, non-composite datasets) filters  
@@ -100,8 +99,8 @@ int main(int argc, char* argv[])
   // This filter is multi-block aware and will request blocks from the
   // input. These blocks will be processed by simple processes as if they
   // are the whole dataset
-  vtkHierarchicalDataSetGeometryFilter* geom1 = 
-    vtkHierarchicalDataSetGeometryFilter::New();
+  vtkCompositeDataGeometryFilter* geom1 = 
+    vtkCompositeDataGeometryFilter::New();
   geom1->SetInputConnection(0, of->GetOutputPort(0));
 
   // Rendering objects
@@ -122,8 +121,8 @@ int main(int argc, char* argv[])
   contour->SetValue(0, 0.45);
 
   // geometry filter
-  vtkHierarchicalDataSetGeometryFilter* geom2 = 
-    vtkHierarchicalDataSetGeometryFilter::New();
+  vtkCompositeDataGeometryFilter* geom2 = 
+    vtkCompositeDataGeometryFilter::New();
   geom2->SetInputConnection(0, contour->GetOutputPort(0));
 
   // Rendering objects

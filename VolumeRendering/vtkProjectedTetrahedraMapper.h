@@ -41,9 +41,11 @@
 
 #include "vtkUnstructuredGridVolumeMapper.h"
 
-class vtkVisibilitySort;
-class vtkUnsignedCharArray;
 class vtkFloatArray;
+class vtkPoints;
+class vtkUnsignedCharArray;
+class vtkVisibilitySort;
+class vtkVolumeProperty;
 
 class VTK_VOLUMERENDERING_EXPORT vtkProjectedTetrahedraMapper : public vtkUnstructuredGridVolumeMapper
 {
@@ -56,83 +58,19 @@ public:
   virtual void SetVisibilitySort(vtkVisibilitySort *sort);
   vtkGetObjectMacro(VisibilitySort, vtkVisibilitySort);
 
-  // Description:
-  // Control how the filter works with scalar point data and cell attribute
-  // data.  By default (ScalarModeToDefault), the filter will use point data,
-  // and if no point data is available, then cell data is used. Alternatively
-  // you can explicitly set the filter to use point data
-  // (ScalarModeToUsePointData) or cell data (ScalarModeToUseCellData).
-  // You can also choose to get the scalars from an array in point field
-  // data (ScalarModeToUsePointFieldData) or cell field data
-  // (ScalarModeToUseCellFieldData).  If scalars are coming from a field
-  // data array, you must call SelectColorArray before you call
-  // GetColors.
-  vtkSetMacro(ScalarMode,int);
-  vtkGetMacro(ScalarMode,int);
-  void SetScalarModeToDefault() {
-    this->SetScalarMode(VTK_SCALAR_MODE_DEFAULT);};
-  void SetScalarModeToUsePointData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_POINT_DATA);};
-  void SetScalarModeToUseCellData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_DATA);};
-  void SetScalarModeToUsePointFieldData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_POINT_FIELD_DATA);};
-  void SetScalarModeToUseCellFieldData() {
-    this->SetScalarMode(VTK_SCALAR_MODE_USE_CELL_FIELD_DATA);};
-  
-  // Description:
-  // When ScalarMode is set to UsePointFileData or UseCellFieldData,
-  // you can specify which array to use for coloring using these methods.
-  // The transfer function in the vtkVolumeProperty (attached to the calling
-  // vtkVolume) will decide how to convert vectors to colors.
-  virtual void SelectScalarArray(int arrayNum); 
-  virtual void SelectScalarArray(const char* arrayName); 
-  
-  // Description:
-  // Get the array name or number and component to color by.
-  virtual char* GetArrayName() { return this->ArrayName; }
-  virtual int GetArrayId() { return this->ArrayId; }
-  virtual int GetArrayAccessMode() { return this->ArrayAccessMode; }
-
-  // Description:
-  // Return the method for obtaining scalar data.
-  const char *GetScalarModeAsString();
-
-  virtual void Render(vtkRenderer *renderer, vtkVolume *volume);
-
-  virtual void ReleaseGraphicsResources(vtkWindow *window);
-
-  static void MapScalarsToColors(vtkDataArray *colors, vtkVolume *volume,
+  static void MapScalarsToColors(vtkDataArray *colors,
+                                 vtkVolumeProperty *property,
                                  vtkDataArray *scalars);
+  static void TransformPoints(vtkPoints *inPoints,
+                              const float projection_mat[16],
+                              const float modelview_mat[16],
+                              vtkFloatArray *outPoints);
 
 protected:
   vtkProjectedTetrahedraMapper();
   ~vtkProjectedTetrahedraMapper();
 
-  vtkUnsignedCharArray *Colors;
-  int UsingCellColors;
-
-  vtkFloatArray *TransformedPoints;
-
-  float MaxCellSize;
-  vtkTimeStamp InputAnalyzedTime;
-  vtkTimeStamp OpacityTextureTime;
-  vtkTimeStamp ColorsMappedTime;
-
-  unsigned int OpacityTexture;
-
   vtkVisibilitySort *VisibilitySort;
-
-  int   ScalarMode;
-  char *ArrayName;
-  int   ArrayId;
-  int   ArrayAccessMode;
-
-  int GaveError;
-
-  vtkVolume *LastVolume;
-
-  virtual void ProjectTetrahedra(vtkRenderer *renderer, vtkVolume *volume);
 
   // Description:
   // The visibility sort will probably make a reference loop by holding a
@@ -144,4 +82,4 @@ private:
   void operator=(const vtkProjectedTetrahedraMapper &);  // Not Implemented.
 };
 
-#endif //__vtkProjectedTetrahedraMapper_h
+#endif

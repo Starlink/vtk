@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkVolumeTextureMapper.h"
 
+#include "vtkDataArray.h"
 #include "vtkEncodedGradientShader.h"
 #include "vtkFiniteDifferenceGradientEstimator.h"
 #include "vtkGarbageCollector.h"
@@ -23,7 +24,7 @@
 #include "vtkVolume.h"
 #include "vtkVolumeProperty.h"
 
-vtkCxxRevisionMacro(vtkVolumeTextureMapper, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkVolumeTextureMapper, "$Revision: 1.4 $");
 
 vtkVolumeTextureMapper::vtkVolumeTextureMapper()
 {
@@ -107,7 +108,7 @@ void vtkVolumeTextureMapper::InitializeRender( vtkRenderer *ren,
 
   vol->UpdateScalarOpacityforSampleSize( ren, this->SampleDistance );
 
-  size = (int) vol->GetArraySize();
+  size = static_cast<int>(vol->GetArraySize());
 
   int numComponents = this->GetInput()->
     GetPointData()->GetScalars()->GetNumberOfComponents();
@@ -162,11 +163,14 @@ void vtkVolumeTextureMapper::InitializeRender( vtkRenderer *ren,
       RGBArray = vol->GetRGBArray(c);    
       for ( i=0, j=(c*4), k=0; i < size; i++ )
         {
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (RGBArray[k++]*255.0));
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (RGBArray[k++]*255.0));
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (RGBArray[k++]*255.0));
-        this->RGBAArray[j++] = 
-          (unsigned char) (0.5 + AArray[i]*255.0*gradientOpacityConstant);
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (RGBArray[k++]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (RGBArray[k++]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (RGBArray[k++]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + AArray[i]*255.0*gradientOpacityConstant);
         
         j += 4*(numComponents-1);
         }
@@ -176,11 +180,14 @@ void vtkVolumeTextureMapper::InitializeRender( vtkRenderer *ren,
       GArray = vol->GetGrayArray(c);
       for ( i=0, j=(c*4); i < size; i++ )
         {
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (GArray[i]*255.0));
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (GArray[i]*255.0));
-        this->RGBAArray[j++] = (unsigned char) (0.5 + (GArray[i]*255.0));
-        this->RGBAArray[j++] = 
-          (unsigned char) (0.5 + AArray[i]*255.0*gradientOpacityConstant);
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (GArray[i]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (GArray[i]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + (GArray[i]*255.0));
+        this->RGBAArray[j++] = static_cast<unsigned char>(
+          0.5 + AArray[i]*255.0*gradientOpacityConstant);
         
         j += 4*(numComponents-1);
         }

@@ -59,8 +59,8 @@
 
 #include "vtkUnstructuredGridAlgorithm.h"
 
+class vtkCallbackCommand;
 class vtkImplicitFunction;
-
 class vtkPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkClipDataSet : public vtkUnstructuredGridAlgorithm
@@ -77,10 +77,19 @@ public:
   // Description:
   // Set the clipping value of the implicit function (if clipping with
   // implicit function) or scalar value (if clipping with
-  // scalars). The default value is 0.0. 
+  // scalars). The default value is 0.0. This value is ignored if
+  // UseValueAsOffset is true and a clip function is defined.
   vtkSetMacro(Value,double);
   vtkGetMacro(Value,double);
   
+  // Description:
+  // If UseValueAsOffset is true, Value is used as an offset parameter to
+  // the implicit function. Otherwise, Value is used only when clipping
+  // using a scalar array. Default is true.
+  vtkSetMacro(UseValueAsOffset, bool);
+  vtkGetMacro(UseValueAsOffset, bool);
+  vtkBooleanMacro(UseValueAsOffset, bool);
+
   // Description:
   // Set/Get the InsideOut flag. When off, a vertex is considered
   // inside the implicit function if its value is greater than the
@@ -158,8 +167,20 @@ protected:
   int GenerateClippedOutput;
   double MergeTolerance;
 
+  // Callback registered with the InternalProgressObserver.
+  static void InternalProgressCallbackFunction(vtkObject*, unsigned long,
+                                               void* clientdata, void*);
+  void InternalProgressCallback(vtkAlgorithm *algorithm);
+  // The observer to report progress from the internal readers.
+  vtkCallbackCommand* InternalProgressObserver;
+
   //helper functions
   void ClipVolume(vtkDataSet *input, vtkUnstructuredGrid *output);
+
+  int ClipPoints(vtkDataSet* input, vtkUnstructuredGrid* output,
+                 vtkInformationVector** inputVector);
+
+  bool UseValueAsOffset;
 
 private:
   vtkClipDataSet(const vtkClipDataSet&);  // Not implemented.

@@ -26,7 +26,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageOpenClose3D, "$Revision: 1.30.4.2 $");
+vtkCxxRevisionMacro(vtkImageOpenClose3D, "$Revision: 1.32 $");
 vtkStandardNewMacro(vtkImageOpenClose3D);
 
 //----------------------------------------------------------------------------

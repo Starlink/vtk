@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 
 vtkStandardNewMacro(vtkTesting);
-vtkCxxRevisionMacro(vtkTesting, "$Revision: 1.26 $");
+vtkCxxRevisionMacro(vtkTesting, "$Revision: 1.30 $");
 vtkCxxSetObjectMacro(vtkTesting, RenderWindow, vtkRenderWindow);
 
 
@@ -123,14 +123,14 @@ const char *vtkTesting::GetDataRoot()
 
 #ifdef VTK_DATA_ROOT 
   char *dr = vtkTestingGetArgOrEnvOrDefault(
-    "-D", this->Args.size(), argv, "VTK_DATA_ROOT", 
+    "-D", static_cast<int>(this->Args.size()), argv, "VTK_DATA_ROOT",
     VTK_DATA_ROOT);
 #else
   char *dr = vtkTestingGetArgOrEnvOrDefault(
-    "-D", this->Args.size(), argv, "VTK_DATA_ROOT", 
+    "-D", static_cast<int>(this->Args.size()), argv, "VTK_DATA_ROOT",
     "../../../../VTKData");
 #endif
-  
+
   this->SetDataRoot(dr);
   delete [] dr;
   
@@ -158,7 +158,7 @@ const char *vtkTesting::GetTempDirectory()
       }
     }
   char *td = vtkTestingGetArgOrEnvOrDefault(
-      "-T", this->Args.size(), argv, "VTK_TEMP_DIR", 
+      "-T", static_cast<int>(this->Args.size()), argv, "VTK_TEMP_DIR",
       "../../../Testing/Temporary");
   this->SetTempDirectory(td);
   delete [] td;
@@ -193,11 +193,11 @@ const char *vtkTesting::GetValidImageFileName()
     }
   
   char * baseline = vtkTestingGetArgOrEnvOrDefault(
-    "-B", this->Args.size(), argv, 
+    "-B", static_cast<int>(this->Args.size()), argv,
     "VTK_BASELINE_ROOT", this->GetDataRoot());
   vtkstd::string viname = baseline;
   delete [] baseline;
-  
+
   for (i = 0; i < (this->Args.size() - 1); ++i)
     {
     if ( this->Args[i] == "-V")
@@ -432,13 +432,27 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
                             wExt2[4], 
                             wExt2[5]);
 
+  int ext1[6], ext2[6];
   rt_id->SetInput(ic1->GetOutput()); 
+  ic1->Update();
+  ic1->GetOutput()->GetExtent(ext1);
   ic1->Delete();
   rt_id->SetImage(ic2->GetOutput()); 
+  ic2->Update();
+  ic2->GetOutput()->GetExtent(ext2);
   ic2->Delete();
-  rt_id->Update(); 
 
-  double minError = rt_id->GetThresholdedError();
+  double minError = VTK_DOUBLE_MAX;
+  
+  if ((ext2[1]-ext2[0]) == (ext1[1]-ext1[0]) && 
+      (ext2[3]-ext2[2]) == (ext1[3]-ext1[2]) &&
+      (ext2[5]-ext2[4]) == (ext1[5]-ext1[4]))
+    {
+    // Cannot compute difference unless image sizes are the same
+    rt_id->Update(); 
+    minError = rt_id->GetThresholdedError();
+    }
+
   this->ImageDifference = minError;
   int passed = 0;
   if (minError <= thresh) 
@@ -479,10 +493,34 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
       delete[] newFileName;
       break;
       }
+    
     rt_png->SetFileName(newFileName);
-    rt_png->Update();
-    rt_id->Update();
-    error = rt_id->GetThresholdedError();
+
+    // Need to reset the output whole extent cause we may have baselines 
+    // of differing sizes. (Yes, we have such cases !)
+    ic2->ResetOutputWholeExtent();
+    ic2->SetOutputWholeExtent(wExt2[0] + this->BorderOffset, 
+                              wExt2[1] - this->BorderOffset, 
+                              wExt2[2] + this->BorderOffset, 
+                              wExt2[3] - this->BorderOffset, 
+                              wExt2[4], 
+                              wExt2[5]);
+    ic2->UpdateWholeExtent();
+
+    rt_id->GetImage()->GetExtent(ext2);
+    if ((ext2[1]-ext2[0]) == (ext1[1]-ext1[0]) && 
+        (ext2[3]-ext2[2]) == (ext1[3]-ext1[2]) &&
+        (ext2[5]-ext2[4]) == (ext1[5]-ext1[4]))
+      {
+      // Cannot compute difference unless image sizes are the same
+      rt_id->Update(); 
+      error = rt_id->GetThresholdedError();
+      }
+    else
+      {
+      error = VTK_DOUBLE_MAX;
+      }
+        
     if (error <= thresh) 
       {
       // Make sure there was actually a difference image before
@@ -544,7 +582,7 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
     }
 
   rt_png->Update();
-  rt_id->Update();
+  rt_id->GetImage()->GetExtent(ext2);
 
   // If no image differences produced an image, do not write a
   // difference image.
@@ -553,6 +591,21 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
     os << "Image differencing failed to produce an image." << endl;
     return FAILED;
     }
+  if(!(
+      (ext2[1]-ext2[0]) == (ext1[1]-ext1[0]) && 
+      (ext2[3]-ext2[2]) == (ext1[3]-ext1[2]) &&
+      (ext2[5]-ext2[4]) == (ext1[5]-ext1[4])))
+    {
+    os << "Image differencing failed to produce an image because images are "
+      "different size:" << endl;
+    os << "Valid image: " << (ext2[1]-ext2[0]) << ", " << (ext2[3]-ext2[2])
+      << ", " << (ext2[5]-ext2[4]) << endl;
+    os << "Test image: " << (ext1[1]-ext1[0]) << ", " << (ext1[3]-ext1[2])
+      << ", " << (ext1[5]-ext1[4]) << endl;
+    return FAILED;
+    }
+  
+  rt_id->Update();
 
   // test the directory for writing
   char* diff_small = new char[strlen(tmpDir) + validName.size() + 30];
@@ -604,7 +657,6 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
     rt_jpegw_dashboard->Write();
     rt_jpegw_dashboard->Delete();
 
-
     os <<  "<DartMeasurementFile name=\"TestImage\" type=\"image/jpeg\">";
     os << valid_test_small;
     delete [] valid_test_small;
@@ -617,6 +669,16 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
     os <<  "</DartMeasurementFile>";
 
     delete [] valid;
+
+    char* vImage = new char[strlen(tmpDir) + validName.size() + 30];
+    sprintf(vImage, "%s/%s", tmpDir, validName.c_str());
+    vtkPNGWriter *rt_pngw = vtkPNGWriter::New();
+    rt_pngw->SetFileName(vImage);
+    rt_pngw->SetInput(image);
+    rt_pngw->Write();
+    rt_pngw->Delete();
+    delete [] vImage;
+
 
     rt_shrink->Delete();
     rt_gamma->Delete();

@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkImageMandelbrotSource.h"
 
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -21,7 +22,7 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkImageMandelbrotSource, "$Revision: 1.43 $");
+vtkCxxRevisionMacro(vtkImageMandelbrotSource, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkImageMandelbrotSource);
 
 //----------------------------------------------------------------------------
@@ -55,6 +56,8 @@ vtkImageMandelbrotSource::vtkImageMandelbrotSource()
   this->ProjectionAxes[0] = 0;
   this->ProjectionAxes[1] = 1;
   this->ProjectionAxes[2] = 2;
+
+  this->SubsampleRate = 1;
 
   this->SetNumberOfInputPorts(0);
 }
@@ -101,6 +104,7 @@ void vtkImageMandelbrotSource::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "ProjectionAxes: (" << this->ProjectionAxes[0] << ", "
      << this->ProjectionAxes[1] << this->ProjectionAxes[2] << ")\n";
 
+  os << indent << "SubsampleRate: " << this->SubsampleRate << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -196,7 +200,7 @@ void vtkImageMandelbrotSource::SetSizeCX(double cReal, double cImag,
     if (d > 0)
       {
       axis = this->ProjectionAxes[idx];
-      this->SampleCX[axis] = this->SizeCX[axis] / ((double) d);
+      this->SampleCX[axis] = this->SizeCX[axis] / static_cast<double>(d);
       }
     }
 }
@@ -215,7 +219,7 @@ double* vtkImageMandelbrotSource::GetSizeCX()
     if (d > 0)
       {
       axis = this->ProjectionAxes[idx];
-      this->SizeCX[axis] = this->SampleCX[axis] * ((double) d);
+      this->SizeCX[axis] = this->SampleCX[axis] * static_cast<double>(d);
       }
     }
 
@@ -245,16 +249,21 @@ int vtkImageMandelbrotSource::RequestInformation (
   int idx, axis;
   double origin[3];
   double spacing[3];
-  
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
-               this->WholeExtent,6);
+
+  int ext[6];
+  for (int i=0; i < 6; i++)
+    {
+    ext[i] = this->WholeExtent[i] / this->SubsampleRate;
+    }
+
+  outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), ext ,6);
   for (idx = 0; idx < 3; ++idx)
     {
     axis = this->ProjectionAxes[idx];
     if (axis >= 0 && axis < 4)
       {
       origin[idx] = this->OriginCX[axis];
-      spacing[idx] = this->SampleCX[axis];
+      spacing[idx] = this->SampleCX[axis] * this->SubsampleRate;
       }
     else
       {
@@ -363,7 +372,7 @@ int vtkImageMandelbrotSource::RequestData(
     p[idx0] = this->OriginCX[idx0];
     }
 
-  ptr = (float *)(data->GetScalarPointerForExtent(ext));
+  ptr = static_cast<float *>(data->GetScalarPointerForExtent(ext));
 
   vtkDebugMacro("Generating Extent: " << ext[0] << " -> " << ext[1] << ", "
                 << ext[2] << " -> " << ext[3]);
@@ -373,7 +382,8 @@ int vtkImageMandelbrotSource::RequestData(
   max0 = ext[1];
   data->GetContinuousIncrements(ext, inc0, inc1, inc2);
 
-  target = (unsigned long)((ext[5]-ext[4]+1)*(ext[3]-ext[2]+1)/50.0);
+  target = static_cast<unsigned long>(
+    (ext[5]-ext[4]+1)*(ext[3]-ext[2]+1)/50.0);
   target++;
 
   a0 = this->ProjectionAxes[0];
@@ -389,7 +399,8 @@ int vtkImageMandelbrotSource::RequestData(
     }
   for (idx2 = ext[4]; idx2 <= ext[5]; ++idx2)
     {
-    p[a2] = (double)(origin[a2]) + (double)(idx2)*(sample[a2]);
+    p[a2] = static_cast<double>(origin[a2]) +
+      static_cast<double>(idx2)*(sample[a2]*this->SubsampleRate);
     for (idx1 = ext[2]; !this->AbortExecute && idx1 <= ext[3]; ++idx1)
       {
       if (!(count%target))
@@ -397,12 +408,14 @@ int vtkImageMandelbrotSource::RequestData(
         this->UpdateProgress(count/(50.0*target));
         }
       count++;
-      p[a1] = (double)(origin[a1]) + (double)(idx1)*(sample[a1]);
+      p[a1] = static_cast<double>(origin[a1]) +
+        static_cast<double>(idx1)*(sample[a1]*this->SubsampleRate);
       for (idx0 = min0; idx0 <= max0; ++idx0)
         {
-        p[a0] = (double)(origin[a0]) + (double)(idx0)*(sample[a0]);
+        p[a0] = static_cast<double>(origin[a0]) +
+          static_cast<double>(idx0)*(sample[a0]*this->SubsampleRate);
 
-        *ptr = (float)(this->EvaluateSet(p));
+        *ptr = static_cast<float>(this->EvaluateSet(p));
 
         ++ptr;
         // inc0 is 0
@@ -446,10 +459,10 @@ double vtkImageMandelbrotSource::EvaluateSet(double p[4])
 
   if (count == this->MaximumNumberOfIterations)
     {
-    return (double)count;
+    return static_cast<double>(count);
     }
 
-  return (double)count + (4.0 - v0)/(v1 - v0);
+  return static_cast<double>(count) + (4.0 - v0)/(v1 - v0);
 }
 
 

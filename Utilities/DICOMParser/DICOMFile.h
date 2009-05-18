@@ -3,8 +3,8 @@
   Program:   DICOMParser
   Module:    $RCSfile: DICOMFile.h,v $
   Language:  C++
-  Date:      $Date: 2005/07/27 21:01:09 $
-  Version:   $Revision: 1.14 $
+  Date:      $Date: 2008-07-17 20:29:46 $
+  Version:   $Revision: 1.15.32.1 $
 
   Copyright (c) 2003 Matt Turek
   All rights reserved.
@@ -23,6 +23,10 @@
 #pragma warning ( disable : 4514 )
 #pragma warning ( push, 3 )
 #endif 
+
+#ifdef __BORLANDC__
+#pragma warn -8027 /* functions containing while are not expanded inline */
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -217,9 +221,9 @@ class DICOM_EXPORT DICOMFile
   static uint swap4(uint v)
     {
     return uint((v << 24) 
-      | (v << 8) & 0x00ff0000
-      | (v >> 8) & 0x0000ff00
-      | (v >> 24));
+                | ((v << 8) & 0x00ff0000)
+                | ((v >> 8) & 0x0000ff00)
+                | ((v >> 24)));
     }
 
  const char* GetPlatformEndian() {return this->PlatformEndian;}

@@ -24,8 +24,9 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkQuadraticQuad.h"
 #include "vtkQuadraticTriangle.h"
+#include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticPyramid, "$Revision: 1.7.8.2 $");
+vtkCxxRevisionMacro(vtkQuadraticPyramid, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkQuadraticPyramid);
 
 //----------------------------------------------------------------------------
@@ -98,6 +99,16 @@ static int PyramidEdges[8][3] = { {0,1,5}, {1,2,6}, {2,3,7},
                                   {2,4,11}, {3,4,12} };
 
 static double MidPoints[1][3] = { {0.5,0.5,0.0} };
+//----------------------------------------------------------------------------
+int *vtkQuadraticPyramid::GetEdgeArray(int edgeId)
+{
+  return PyramidEdges[edgeId];
+}
+//----------------------------------------------------------------------------
+int *vtkQuadraticPyramid::GetFaceArray(int faceId)
+{
+  return PyramidFaces[faceId];
+}
 
 //----------------------------------------------------------------------------
 vtkCell *vtkQuadraticPyramid::GetEdge(int edgeId)
@@ -267,7 +278,8 @@ int vtkQuadraticPyramid::EvaluatePosition(double* x,
           pc[i] = pcoords[i];
           }
         }
-      this->EvaluateLocation(subId, pc, closestPoint, (double *)w);
+      this->EvaluateLocation(subId, pc, closestPoint,
+                             static_cast<double *>(w));
       dist2 = vtkMath::Distance2BetweenPoints(closestPoint,x);
       }
     return 0;
@@ -314,15 +326,25 @@ void vtkQuadraticPyramid::Subdivide(vtkPointData *inPd, vtkCellData *inCd,
   //Copy point and cell attribute data, first make sure it's empty:
   this->PointData->Initialize();
   this->CellData->Initialize();
+  // Make sure to copy ALL arrays. These field data have to be 
+  // identical to the input field data. Otherwise, CopyData
+  // that occurs later may not work because the output field
+  // data was initialized (CopyAllocate) with the input field
+  // data.
+  this->PointData->CopyAllOn();
+  this->CellData->CopyAllOn();
   this->PointData->CopyAllocate(inPd,14);
-  this->CellData->CopyAllocate(inCd,5);
+  this->CellData->CopyAllocate(inCd,6);
   for (i=0; i<13; i++)
     {
     this->PointData->CopyData(inPd,this->PointIds->GetId(i),i);
     this->CellScalars->SetValue( i, cellScalars->GetTuple1(i));
     }
-  this->CellData->CopyData(inCd,cellId,0);
-  
+  for (i=0; i<6; i++)
+    {
+    this->CellData->CopyData(inCd,cellId,i);
+    }
+
   //Interpolate new values
   double p[3];
   for ( numMidPts=0; numMidPts < 1; numMidPts++ )
@@ -623,29 +645,39 @@ void vtkQuadraticPyramid::InterpolationFunctions(double pcoords[3],
   // VTK needs parametric coordinates to be between (0,1). Isoparametric
   // shape functions are formulated between (-1,1). Here we do a 
   // coordinate system conversion from (0,1) to (-1,1).
-  double r = 2*pcoords[0] - 1;
-  double s = 2*pcoords[1] - 1;
-  double t = 2*pcoords[2] - 1;
+  const double r = 2*pcoords[0] - 1;
+  const double s = 2*pcoords[1] - 1;
+  const double t = 2*pcoords[2] - 1;
+
+  const double rm = 1.0 - r;
+  const double rp = 1.0 + r;
+  const double sm = 1.0 - s;
+  const double sp = 1.0 + s;
+  const double tm = 1.0 - t;
+  const double tp = 1.0 + t;
+  const double r2 = 1.0 - r*r;
+  const double s2 = 1.0 - s*s;
+  const double t2 = 1.0 - t*t;
 
   // corners
-  weights[0] = -0.0625 * (1 - r) * ( 1 - s ) * (1 - t) * (4 + 3*r + 3*s + 2*r*s + 2*t + r*t + s*t + 2*r*s*t);
-  weights[1] = -0.0625 * (1 + r) * ( 1 - s ) * (1 - t) * (4 - 3*r + 3*s - 2*r*s + 2*t - r*t + s*t - 2*r*s*t);
-  weights[2] = -0.0625 * (1 + r) * ( 1 + s ) * (1 - t) * (4 - 3*r - 3*s + 2*r*s + 2*t - r*t - s*t + 2*r*s*t);
-  weights[3] = -0.0625 * (1 - r) * ( 1 + s ) * (1 - t) * (4 + 3*r - 3*s - 2*r*s + 2*t + r*t - s*t - 2*r*s*t);
-  weights[4] = 0.5 * t * ( 1 + t );
+  weights[0] = 0.125 * rm * sm * tm * (-r - s - t - 2.0);
+  weights[1] = 0.125 * rp * sm * tm * ( r - s - t - 2.0);
+  weights[2] = 0.125 * rp * sp * tm * ( r + s - t - 2.0);
+  weights[3] = 0.125 * rm * sp * tm * (-r + s - t - 2.0);
+  weights[4] = 0.5   * t  * tp;
 
   // midsides of rectangles
-  weights[5] =  0.125 * ( 1 - r*r ) * (1 - s ) * (1 - t )*(2 + s + s*t);
-  weights[7] =  0.125 * ( 1 - r*r ) * (1 + s ) * (1 - t )*(2 - s - s*t);
-  weights[6] =  0.125 * ( 1 + r ) * (1 - s*s ) * (1 - t )*(2 - r - r*t);
-  weights[8] =  0.125 * ( 1 - r ) * (1 - s*s ) * (1 - t )*(2 + r + r*t);
+  weights[5] = 0.25 * r2 * sm * tm;
+  weights[6] = 0.25 * s2 * rp * tm;
+  weights[7] = 0.25 * r2 * sp * tm;
+  weights[8] = 0.25 * s2 * rm * tm;
 
 
   // midsides of triangles
-  weights[9] = 0.25 * ( 1 - r ) * (1 - s ) * (1 - t*t );
-  weights[10] = 0.25 * ( 1 + r ) * (1 - s ) * (1 - t*t );
-  weights[11] = 0.25 * ( 1 + r ) * (1 + s ) * (1 - t*t );
-  weights[12] = 0.25 * ( 1 - r ) * (1 + s ) * (1 - t*t );
+  weights[9]  = 0.25 * ( 1 - r ) * (1 - s ) * t2;
+  weights[10] = 0.25 * ( 1 + r ) * (1 - s ) * t2;
+  weights[11] = 0.25 * ( 1 + r ) * (1 + s ) * t2;
+  weights[12] = 0.25 * ( 1 - r ) * (1 + s ) * t2;
 }
 
 //----------------------------------------------------------------------------
@@ -661,59 +693,68 @@ void vtkQuadraticPyramid::InterpolationDerivs(double pcoords[3],
   double s = 2*pcoords[1] - 1;
   double t = 2*pcoords[2] - 1;
 
+  double rm = 1.0 - r;
+  double rp = 1.0 + r;
+  double sm = 1.0 - s;
+  double sp = 1.0 + s;
+  double tm = 1.0 - t;
+  //double tp = 1.0 + t;
+  double r2 = 1.0 - r*r;
+  double t2 = 1.0 - t*t;
+
   //r-derivatives
   // corners
-  derivs[0] =  0.0625 * (1 - s) * ( 1 - t ) * (1 + 6*r + s + 4*r*s + t + 2*r*t - s*t + 4*r*s*t);
-  derivs[1] = -0.0625 * (1 - s) * ( 1 - t ) * (1 - 6*r + s - 4*r*s + t - 2*r*t - s*t - 4*r*s*t);
-  derivs[2] = -0.0625 * (1 + s) * ( 1 - t ) * (1 - 6*r - s + 4*r*s + t - 2*r*t + s*t + 4*r*s*t);
-  derivs[3] =  0.0625 * (1 + s) * ( 1 - t ) * (1 + 6*r - s - 4*r*s + t + 2*r*t + s*t - 4*r*s*t);
+  derivs[0] = -0.125*(sm*tm - 2.0*r*sm*tm - s*sm*tm - t*sm*tm - 2.0*sm*tm);
+  derivs[1] =  0.125*(sm*tm + 2.0*r*sm*tm - s*sm*tm - t*sm*tm - 2.0*sm*tm);
+  derivs[2] =  0.125*(sp*tm + 2.0*r*sp*tm + s*sp*tm - t*sp*tm - 2.0*sp*tm);
+  derivs[3] = -0.125*(sp*tm - 2.0*r*sp*tm + s*sp*tm - t*sp*tm - 2.0*sp*tm);
   derivs[4] = 0.0;
 
   // midsides of rectangles
-  derivs[5] =  -0.25 * r * (1 - s ) * (1 - t )*(2 + s + s*t);
-  derivs[6] =   0.125 *     (1 - s*s ) * (1 - t )*(1 - 2*r - t - 2*r*t);
-  derivs[7] =  -0.25 * r * (1 + s ) * (1 - t )*(2 - s - s*t);
-  derivs[8] =  -0.125 *     (1 - s*s ) * (1 - t )*(1 + 2*r - t + 2*r*t);
+  derivs[5] = -0.5*r*sm*tm;
+  derivs[6] =  0.25*(tm - s*s*tm);
+  derivs[7] = -0.5*r*sp*tm;
+  derivs[8] = -0.25*(tm - s*s*tm);
 
   // midsides of triangles
-  derivs[9] = -0.25 * (1 - s ) * (1 - t*t );
+  derivs[9]  = -0.25 * (1 - s ) * (1 - t*t );
   derivs[10] =  0.25 * (1 - s ) * (1 - t*t );
   derivs[11] =  0.25 * (1 + s ) * (1 - t*t );
   derivs[12] = -0.25 * (1 + s ) * (1 - t*t );
 
   //s-derivatives
   // corners
-  derivs[13] =  0.0625 * (1 - r) * (1 - t) * (1 + r + 6*s + 4*r*s + t - r*t + 2*s*t + 4*r*s*t);
-  derivs[14] =  0.0625 * (1 + r) * (1 - t) * (1 - r + 6*s - 4*r*s + t + r*t + 2*s*t - 4*r*s*t);
-  derivs[15] = -0.0625 * (1 + r) * (1 - t) * (1 - r - 6*s + 4*r*s + t + r*t - 2*s*t + 4*r*s*t);
-  derivs[16] = -0.0625 * (1 - r) * (1 - t) * (1 + r - 6*s - 4*r*s + t - r*t - 2*s*t - 4*r*s*t);
+  derivs[13] = -0.125*(rm*tm - 2.0*s*rm*tm - r*rm*tm - t*rm*tm - 2.0*rm*tm);
+  derivs[14] = -0.125*(rp*tm - 2.0*s*rp*tm + r*rp*tm - t*rp*tm - 2.0*rp*tm); 
+  derivs[15] =  0.125*(rp*tm + 2.0*s*rp*tm + r*rp*tm - t*rp*tm - 2.0*rp*tm); 
+  derivs[16] =  0.125*(rm*tm + 2.0*s*rm*tm - r*rm*tm - t*rm*tm - 2.0*rm*tm); 
   derivs[17] = 0.0;
  
   // midsides of rectangles
-  derivs[18] =  -0.125 * ( 1 - r*r ) * (1 - t ) * (1 + 2*s - t + 2*s*t);
-  derivs[19] =  -0.25 * ( 1 + r ) * s * (1 - t )*(2 - r - r*t);
-  derivs[20] =   0.125 * ( 1 - r*r ) * (1 - t ) * (1 - 2*s - t - 2*s*t);
-  derivs[21] =  -0.25 * ( 1 - r ) * s * (1 - t )*(2 + r + r*t);
+  derivs[18] = -0.25 * tm * r2;
+  derivs[19] = -0.5  * tm * s * rp;
+  derivs[20] =  0.25 * tm * r2;
+  derivs[21] = -0.5  * tm * s * rm;
 
   // midsides of triangles
-  derivs[22] = -0.25 * ( 1 - r ) * (1 - t*t );
-  derivs[23] = -0.25 * ( 1 + r ) * (1 - t*t );
-  derivs[24] =  0.25 * ( 1 + r ) * (1 - t*t );
-  derivs[25] =  0.25 * ( 1 - r ) * (1 - t*t );
+  derivs[22] = -0.25 * rm * t2;
+  derivs[23] = -0.25 * rp * t2;
+  derivs[24] =  0.25 * rp * t2;
+  derivs[25] =  0.25 * rm * t2;
 
   //t-derivatives
   // corners
-  derivs[26] =  0.125 * (1 - r) * ( 1 - s ) * (1 + r + s + 2*t + r*t + s*t + 2*r*s*t);
-  derivs[27] =  0.125 * (1 + r) * ( 1 - s ) * (1 - r + s + 2*t - r*t + s*t - 2*r*s*t);
-  derivs[28] =  0.125 * (1 + r) * ( 1 + s ) * (1 - r - s + 2*t - r*t - s*t + 2*r*s*t);
-  derivs[29] =  0.125 * (1 - r) * ( 1 + s ) * (1 + r - s + 2*t + r*t - s*t - 2*r*s*t);
+  derivs[26] = -0.125*(rm*sm - 2.0*t*rm*sm - r*rm*sm - s*rm*sm - 2.0*rm*sm); 
+  derivs[27] = -0.125*(rp*sm - 2.0*t*rp*sm + r*rp*sm - s*rp*sm - 2.0*rp*sm);  
+  derivs[28] = -0.125*(rp*sp - 2.0*t*rp*sp + r*rp*sp + s*rp*sp - 2.0*rp*sp);  
+  derivs[29] = -0.125*(rm*sp - 2.0*t*rm*sp - r*rm*sp + s*rm*sp - 2.0*rm*sp);  
   derivs[30] =  0.5 + t;
 
   // midsides of rectangles
-  derivs[31] =  -0.25 * ( 1 - r*r ) * (1 - s ) * (1 + s*t);
-  derivs[32] =  -0.25 * ( 1 + r ) * (1 - s*s ) * (1 - r*t);
-  derivs[33] =  -0.25 * ( 1 - r*r ) * (1 + s ) * (1 - s*t);
-  derivs[34] =  -0.25 * ( 1 - r ) * (1 - s*s ) * (1 + r*t);
+  derivs[31] = -0.25*(sm - r*r*sm);
+  derivs[32] = -0.25*(rp - s*s*rp);
+  derivs[33] = -0.25*(sp - r*r*sp);
+  derivs[34] = -0.25*(rm - s*s*rm);
 
   
   // midsides of triangles
@@ -722,6 +763,9 @@ void vtkQuadraticPyramid::InterpolationDerivs(double pcoords[3],
   derivs[37] = -0.5 * ( 1 + r ) * (1 + s ) * t;
   derivs[38] = -0.5 * ( 1 - r ) * (1 + s ) * t;
 
+  // we compute derivatives in in [-1; 1] but we need them in [ 0; 1]  
+  for(int i = 0; i < 39; i++)
+    derivs[i] *= 2;
 }
 
 static double vtkQPyramidCellPCoords[39] = {0.0,0.0,0.0, 1.0,0.0,0.0, 1.0,1.0,0.0, 

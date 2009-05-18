@@ -29,7 +29,7 @@
 #include "vtkTransform.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkGlyph3D, "$Revision: 1.123.4.1 $");
+vtkCxxRevisionMacro(vtkGlyph3D, "$Revision: 1.124 $");
 vtkStandardNewMacro(vtkGlyph3D);
 
 //----------------------------------------------------------------------------

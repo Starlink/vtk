@@ -12,6 +12,11 @@ Run flex like this:
 Modify lex.yy.c:
   - remove yyunput function
   - remove TABs
+  - change yy_n_chars declarations from "int yy_n_chars;" to
+    "size_t yy_n_chars;" in both the yy_buffer_state structure
+    and the global scope.
+  - change num_to_read declaration from "int num_to_read;" to
+    "size_t num_to_read;" in yy_get_next_buffer function.
 
 */
 
@@ -26,6 +31,7 @@ Modify lex.yy.c:
 #define YY_SKIP_YYWRAP
 
 #ifdef _WIN32
+#pragma warning ( disable : 4018 )
 #pragma warning ( disable : 4127 )
 #pragma warning ( disable : 4131 )
 #pragma warning ( disable : 4244 )
@@ -176,6 +182,7 @@ Modify lex.yy.c:
 "double" 	return(DOUBLE);
 "void" 	        return(VOID);
 "char" 	        return(CHAR);
+"bool" 	        return(BOOL);
 "virtual"       return(VIRTUAL);
 "const"         return(CONST);
 "operator"      return(OPERATOR);
@@ -205,11 +212,24 @@ Modify lex.yy.c:
 "vtkGetVector6Macro"   return(GetVector6Macro);
 "vtkSetVectorMacro"    return(SetVectorMacro);
 "vtkGetVectorMacro"    return(GetVectorMacro);
-"vtkViewportCoordinateMacro"     return(ViewportCoordinateMacro);
+"vtkViewportCoordinateMacro" return(ViewportCoordinateMacro);
 "vtkWorldCoordinateMacro" return(WorldCoordinateMacro);
+"vtkExportedTypeMacro" return(TypeMacro);
+"vtkExportedTypeRevisionMacro" return(TypeMacro);
 "vtkTypeMacro"         return(TypeMacro);
 "vtkTypeRevisionMacro" return(TypeMacro);
 "VTK_LEGACY"           return(VTK_LEGACY);
+"vtkTypeInt8"          return(TypeInt8);
+"vtkTypeUInt8"         return(TypeUInt8);
+"vtkTypeInt16"         return(TypeInt16);
+"vtkTypeUInt16"        return(TypeUInt16);
+"vtkTypeInt32"         return(TypeInt32);
+"vtkTypeUInt32"        return(TypeUInt32);
+"vtkTypeInt64"         return(TypeInt64);
+"vtkTypeUInt64"        return(TypeUInt64);
+"vtkTypeFloat32"       return(TypeFloat32);
+"vtkTypeFloat64"       return(TypeFloat64);
+
 
 [0-9]+		{ sscanf(yytext,"%d",&yylval.integer); return(NUM);}
 

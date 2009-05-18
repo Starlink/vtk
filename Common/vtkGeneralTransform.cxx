@@ -16,7 +16,7 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkGeneralTransform, "$Revision: 1.38 $");
+vtkCxxRevisionMacro(vtkGeneralTransform, "$Revision: 1.39.4.1 $");
 vtkStandardNewMacro(vtkGeneralTransform);
 
 //----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ void vtkGeneralTransform::InternalTransformDerivative(const double input[3],
 void vtkGeneralTransform::InternalDeepCopy(vtkAbstractTransform *gtrans)
 {
   vtkGeneralTransform *transform = 
-    (vtkGeneralTransform *)gtrans;
+    static_cast<vtkGeneralTransform *>(gtrans);
 
   // copy the input
   this->SetInput(transform->Input);
@@ -279,7 +279,7 @@ void vtkGeneralTransform::SetInput(vtkAbstractTransform *input)
 int vtkGeneralTransform::CircuitCheck(vtkAbstractTransform *transform)
 {
   if (this->vtkAbstractTransform::CircuitCheck(transform) ||
-      this->Input && this->Input->CircuitCheck(transform))
+      (this->Input && this->Input->CircuitCheck(transform)))
     {
     return 1;
     }

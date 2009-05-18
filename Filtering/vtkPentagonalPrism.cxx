@@ -29,7 +29,7 @@
 #include "vtkMath.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkPentagonalPrism, "$Revision: 1.6.6.1 $");
+vtkCxxRevisionMacro(vtkPentagonalPrism, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkPentagonalPrism);
 
 static const double VTK_DIVERGED = 1.e6;
@@ -94,14 +94,14 @@ int vtkPentagonalPrism::EvaluatePosition(double x[3], double closestPoint[3],
 
   //  enter iteration loop
   for (iteration=converged=0;
-       !converged && (iteration < VTK_PENTA_MAX_ITERATION); iteration++) 
+       !converged && (iteration < VTK_PENTA_MAX_ITERATION); iteration++)
     {
     //  calculate element interpolation functions and derivatives
     this->InterpolationFunctions(pcoords, weights);
     this->InterpolationDerivs(pcoords, derivs);
 
     //  calculate newton functions
-    for (i=0; i<3; i++) 
+    for (i=0; i<3; i++)
       {
       fcol[i] = rcol[i] = scol[i] = tcol[i] = 0.0;
       }
@@ -198,7 +198,8 @@ int vtkPentagonalPrism::EvaluatePosition(double x[3], double closestPoint[3],
           pc[i] = pcoords[i];
           }
         }
-      this->EvaluateLocation(subId, pc, closestPoint, (double *)w);
+      this->EvaluateLocation(subId, pc, closestPoint,
+                             static_cast<double *>(w));
       dist2 = vtkMath::Distance2BetweenPoints(closestPoint,x);
       }
     return 0;
@@ -357,15 +358,15 @@ void vtkPentagonalPrism::EvaluateLocation(int& vtkNotUsed(subId), double pcoords
       }
     }
 }
-static int edges[15][2] = { {0,1}, {1,2}, {2,3}, 
-                            {3,4}, {4,0}, {5,6}, 
-                            {6,7}, {7,8}, {8,9}, 
-                            {9,5}, {0,5}, {1,6}, 
+static int edges[15][2] = { {0,1}, {1,2}, {2,3},
+                            {3,4}, {4,0}, {5,6},
+                            {6,7}, {7,8}, {8,9},
+                            {9,5}, {0,5}, {1,6},
                             {2,7}, {3,8}, {4,9} };
 
-static int faces[7][5] = { {0,4,3,2,1}, {5,6,7,8,9}, 
-                           {0,1,6,5,-1}, {1,2,7,6,-1}, 
-                           {2,3,8,7,-1}, {3,4,9,8,-1}, 
+static int faces[7][5] = { {0,4,3,2,1}, {5,6,7,8,9},
+                           {0,1,6,5,-1}, {1,2,7,6,-1},
+                           {2,3,8,7,-1}, {3,4,9,8,-1},
                            {4,0,5,9,-1} };
 
 #define VTK_MAX(a,b)    (((a)>(b))?(a):(b))
@@ -374,7 +375,7 @@ static int faces[7][5] = { {0,4,3,2,1}, {5,6,7,8,9},
 //----------------------------------------------------------------------------
 // Returns the closest face to the point specified. Closeness is measured
 // parametrically.
-int vtkPentagonalPrism::CellBoundary(int subId, double pcoords[3], 
+int vtkPentagonalPrism::CellBoundary(int subId, double pcoords[3],
                                      vtkIdList *pts)
 {
   // load coordinates
@@ -408,7 +409,7 @@ int vtkPentagonalPrism::CellBoundary(int subId, double pcoords[3],
   u[1] = b[1] - a[1];
   v[0] = pcoords[0] - a[0];
   v[1] = pcoords[1] - a[1];
-  
+
   double dot = vtkMath::Dot2D(v, u);
   double uNorm = vtkMath::Norm2D( u );
   if (uNorm)
@@ -477,7 +478,7 @@ int vtkPentagonalPrism::CellBoundary(int subId, double pcoords[3],
 
   // determine whether point is inside of hexagon
   if ( pcoords[0] < 0.0 || pcoords[0] > 1.0 ||
-       pcoords[1] < 0.0 || pcoords[1] > 1.0 || 
+       pcoords[1] < 0.0 || pcoords[1] > 1.0 ||
        pcoords[2] < 0.0 || pcoords[2] > 1.0 )
     {
     return 0;
@@ -498,7 +499,7 @@ int *vtkPentagonalPrism::GetEdgeArray(int edgeId)
 vtkCell *vtkPentagonalPrism::GetEdge(int edgeId)
 {
   int *verts;
-  
+
   verts = edges[edgeId];
 
   // load point id's
@@ -559,7 +560,7 @@ vtkCell *vtkPentagonalPrism::GetFace(int faceId)
     }
 }
 //----------------------------------------------------------------------------
-// 
+//
 // Intersect prism faces against line. Each prism face is a quadrilateral.
 //
 int vtkPentagonalPrism::IntersectWithLine(double p1[3], double p2[3], double tol,
@@ -589,14 +590,14 @@ int vtkPentagonalPrism::IntersectWithLine(double p1[3], double p2[3], double tol
     this->Polygon->Points->SetPoint(3,pt4);
     this->Polygon->Points->SetPoint(4,pt5);
 
-    if ( this->Polygon->IntersectWithLine(p1, p2, tol, tTemp, xTemp, 
+    if ( this->Polygon->IntersectWithLine(p1, p2, tol, tTemp, xTemp,
                                           pc, subId) )
       {
       intersection = 1;
       if ( tTemp < t )
         {
         t = tTemp;
-        x[0] = xTemp[0]; x[1] = xTemp[1]; x[2] = xTemp[2]; 
+        x[0] = xTemp[0]; x[1] = xTemp[1]; x[2] = xTemp[2];
         switch (faceNum)
           {
           case 0:
@@ -630,7 +631,7 @@ int vtkPentagonalPrism::IntersectWithLine(double p1[3], double p2[3], double tol
       if ( tTemp < t )
         {
         t = tTemp;
-        x[0] = xTemp[0]; x[1] = xTemp[1]; x[2] = xTemp[2]; 
+        x[0] = xTemp[0]; x[1] = xTemp[1]; x[2] = xTemp[2];
         this->EvaluatePosition(x, xTemp, subId, pcoords, dist2, weights);
         }
       }
@@ -644,7 +645,7 @@ int vtkPentagonalPrism::Triangulate(int vtkNotUsed(index), vtkIdList *ptIds, vtk
 {
   ptIds->Reset();
   pts->Reset();
-    
+
   for ( int i=0; i < 4; i++ )
     {
     ptIds->InsertId(i,this->PointIds->GetId(i));
@@ -658,7 +659,7 @@ int vtkPentagonalPrism::Triangulate(int vtkNotUsed(index), vtkIdList *ptIds, vtk
 // Compute derivatives in x-y-z directions. Use chain rule in combination
 // with interpolation function derivatives.
 //
-void vtkPentagonalPrism::Derivatives(int vtkNotUsed(subId), double pcoords[3], 
+void vtkPentagonalPrism::Derivatives(int vtkNotUsed(subId), double pcoords[3],
                                      double *values, int dim, double *derivs)
 {
   double *jI[3], j0[3], j1[3], j2[3];
@@ -675,7 +676,7 @@ void vtkPentagonalPrism::Derivatives(int vtkNotUsed(subId), double pcoords[3],
     sum[0] = sum[1] = sum[2] = 0.0;
     for ( i=0; i < 10; i++) //loop over interp. function derivatives
       {
-      sum[0] += functionDerivs[i] * values[dim*i + k]; 
+      sum[0] += functionDerivs[i] * values[dim*i + k];
       sum[1] += functionDerivs[10 + i] * values[dim*i + k];
       sum[2] += functionDerivs[20 + i] * values[dim*i + k];
       }
@@ -778,7 +779,7 @@ double *vtkPentagonalPrism::GetParametricCoords()
 void vtkPentagonalPrism::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-  
+
   os << indent << "Line:\n";
   this->Line->PrintSelf(os,indent.GetNextIndent());
   os << indent << "Quad:\n";

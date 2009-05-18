@@ -2,19 +2,53 @@ SET(KIT Widgets)
 # add tests that do not require data
 SET(MyTests     
   BoxWidget.cxx
+  BoxWidget2.cxx
+#  TestAffineWidget.cxx
+#  TestAngleWidget.cxx
+#  TestBalloonWidget.cxx
+#  TestBorderWidget.cxx
+#  TestCameraWidget.cxx
+#  TestCaptionWidget.cxx
+#  TestCheckerboardWidget.cxx
+  TestContourWidget2.cxx
+#  TestDistanceWidget.cxx
+  TestHandleWidget.cxx
+#  TestHandleWidget2D.cxx
   TestImplicitPlaneWidget.cxx
+  TestImplicitPlaneWidget2.cxx
+#  TestLogoWidget.cxx
   TestOrientationMarkerWidget.cxx
+#  TestPlaybackWidget.cxx
+#  TestRectilinearWipeWidget.cxx
+#  TestSeedWidget.cxx
+#  TestSliderWidget.cxx
+#  TestTextWidget.cxx
+  TerrainPolylineEditor.cxx
+  TestDijkstraGraphGeodesicPath.cxx
+  TestParallelopipedWidget.cxx
   )
 IF (VTK_DATA_ROOT)
   # add tests that require data
   SET(MyTests ${MyTests}
     ImagePlaneWidget.cxx
-    TestSplineWidget.cxx
-    TestScalarBarWidget.cxx
+#    TestConstrainedHandleWidget.cxx
+    TestSurfaceConstrainedHandleWidget.cxx
+    TestPolygonalRepresentationHandleWidget.cxx
+    TestSphereHandleWidget.cxx
+#    TestFocalPlaneContour.cxx
+#    TestOrientedGlyphContour.cxx
+    TestImageTracerWidget.cxx
     TestLineWidget.cxx
+#    TestLineWidget2.cxx
+    TestLogoWidgetAlphaBlending.cxx
+    TestLogoWidgetDepthPeeling.cxx
+    TestOrthoPlanes.cxx
     TestPlaneWidget.cxx
     TestPointWidget.cxx
-    TestImageTracerWidget.cxx
+    TestScalarBarWidget.cxx
+#    TestSeedWidget2.cxx
+    TestSplineWidget.cxx
+    TestTensorProbeWidget.cxx
     )
 ENDIF (VTK_DATA_ROOT)
 
@@ -22,15 +56,23 @@ ENDIF (VTK_DATA_ROOT)
 IF(NOT VTK_USE_DISPLAY)
   REMOVE(MyTests     
     BoxWidget.cxx
-    TestImplicitPlaneWidget.cxx
-    TestOrientationMarkerWidget.cxx
+    BoxWidget2.cxx
     ImagePlaneWidget.cxx
-    TestSplineWidget.cxx
-    TestScalarBarWidget.cxx
+    TestContourWidget2.cxx
+    TestImageTracerWidget.cxx
+    TestImplicitPlaneWidget.cxx
     TestLineWidget.cxx
+    TestLogoWidgetAlphaBlending.cxx
+    TestLogoWidgetDepthPeeling.cxx
+    TestOrientationMarkerWidget.cxx
+    TestOrthoPlanes.cxx
+    TestParallelopipedWidget.cxx
     TestPlaneWidget.cxx
     TestPointWidget.cxx
-    TestImageTracerWidget.cxx
+    TestScalarBarWidget.cxx
+    TestSplineWidget.cxx
+    TestHandleWidget.cxx
+    TerrainPolylineEditor.cxx
     )
 ENDIF(NOT VTK_USE_DISPLAY)
 
@@ -40,7 +82,12 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkWidgets)
 SET (TestsToRun ${Tests})
-REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+REMOVE( TestsToRun 
+   ${KIT}CxxTests.cxx 
+   TestHandleWidget.cxx
+   TerrainPolylineEditor.cxx
+   TestDijkstraGraphGeodesicPath.cxx
+   )
 
 #
 # Add all the executables 
@@ -54,3 +101,26 @@ FOREACH (test ${TestsToRun})
     ADD_TEST(${TName} ${CXX_TEST_PATH}/${KIT}CxxTests ${TName})
   ENDIF (VTK_DATA_ROOT)
 ENDFOREACH (test) 
+
+# Add any tests with special arguments here.. 
+IF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
+  ADD_TEST( TerrainPolylineEditor ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TerrainPolylineEditor 
+         -ProjectionMode 2
+         -HeightOffset 100
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TerrainPolylineEditor.png)
+  ADD_TEST( TestHandleWidget ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestHandleWidget
+         -ConstrainHandlesToPlane
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestHandleWidget.png)
+  ADD_TEST( TestDijkstraGraphGeodesicPath ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestDijkstraGraphGeodesicPath
+         -DistanceOffset 20.0
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestDijkstraGraphGeodesicPath.png)
+ENDIF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)

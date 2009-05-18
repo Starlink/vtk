@@ -17,8 +17,8 @@
 #include "vtkObjectFactory.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkStructuredVisibilityConstraint, 
-                    "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkStructuredVisibilityConstraint,
+                    "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkStructuredVisibilityConstraint);
 
 vtkCxxSetObjectMacro(vtkStructuredVisibilityConstraint,
@@ -51,8 +51,11 @@ void vtkStructuredVisibilityConstraint::DeepCopy(
   vtkStructuredVisibilityConstraint* src)
 {
   memcpy(this->Dimensions, src->Dimensions, 3*sizeof(int));
-  this->NumberOfIds = 
-    this->Dimensions[0]*this->Dimensions[1]*this->Dimensions[2];
+  // use vtkIdType to avoid 32-bit overflow
+  this->NumberOfIds =
+    static_cast<vtkIdType>(this->Dimensions[0])*
+    static_cast<vtkIdType>(this->Dimensions[1])*
+    static_cast<vtkIdType>(this->Dimensions[2]);
   if(src->VisibilityById)
     {
     if (!this->VisibilityById)
@@ -69,14 +72,16 @@ void vtkStructuredVisibilityConstraint::ShallowCopy(
   vtkStructuredVisibilityConstraint* src)
 {
   memcpy(this->Dimensions, src->Dimensions, 3*sizeof(int));
-  this->NumberOfIds = 
-    this->Dimensions[0]*this->Dimensions[1]*this->Dimensions[2];
+  this->NumberOfIds =
+    static_cast<vtkIdType>(this->Dimensions[0])*
+    static_cast<vtkIdType>(this->Dimensions[1])*
+    static_cast<vtkIdType>(this->Dimensions[2]);
   this->SetVisibilityById(src->VisibilityById);
   this->Initialized = src->Initialized;
 }
 
 //----------------------------------------------------------------------------
-void vtkStructuredVisibilityConstraint::PrintSelf(ostream& os, 
+void vtkStructuredVisibilityConstraint::PrintSelf(ostream& os,
                                                   vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -90,7 +95,7 @@ void vtkStructuredVisibilityConstraint::PrintSelf(ostream& os,
     {
     os << "(none)" << endl;
     }
-  os << indent << "Dimensions: " 
+  os << indent << "Dimensions: "
      << this->Dimensions[0] << " "
      << this->Dimensions[1] << " "
      << this->Dimensions[2]

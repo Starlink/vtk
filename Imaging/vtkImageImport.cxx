@@ -15,6 +15,7 @@
 #include "vtkImageImport.h"
 
 #include "vtkByteSwap.h"
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkImageImportExecutive.h"
 #include "vtkInformation.h"
@@ -26,7 +27,7 @@
 #include <ctype.h>
 #include <vtkstd/exception>
 
-vtkCxxRevisionMacro(vtkImageImport, "$Revision: 1.48 $");
+vtkCxxRevisionMacro(vtkImageImport, "$Revision: 1.51 $");
 vtkStandardNewMacro(vtkImageImport);
 
 
@@ -90,7 +91,7 @@ vtkImageImport::~vtkImageImport()
 { 
   if ((this->ImportVoidPointer) && (!this->SaveUserArray))
     {
-    delete [] (char *)this->ImportVoidPointer;
+    delete [] static_cast<char *>(this->ImportVoidPointer);
     }
 }
 
@@ -267,7 +268,7 @@ void vtkImageImport::SetImportVoidPointer(void *ptr, int save)
     if ((this->ImportVoidPointer) && (!this->SaveUserArray))
       {
       vtkDebugMacro (<< "Deleting the array...");
-      delete [] (char *)this->ImportVoidPointer;
+      delete [] static_cast<char *>(this->ImportVoidPointer);
       }
     else 
       {
@@ -404,6 +405,10 @@ void vtkImageImport::InvokeExecuteInformationCallbacks()
     else if (strcmp(scalarType, "unsigned char")==0)
       {
       this->SetDataScalarType(VTK_UNSIGNED_CHAR);
+      }    
+    else if (strcmp(scalarType, "signed char")==0)
+      {
+      this->SetDataScalarType(VTK_SIGNED_CHAR);
       }    
     }
 }

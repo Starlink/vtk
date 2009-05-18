@@ -33,38 +33,17 @@
 #include "vtkOpenGLExtensionManager.h"
 #include "vtkgl.h"
 
-extern const char* vtkVolumeTextureMapper3D_OneComponentShadeFP;
-extern const char* vtkVolumeTextureMapper3D_OneComponentNoShadeFP;
-extern const char* vtkVolumeTextureMapper3D_TwoDependentNoShadeFP;
-extern const char* vtkVolumeTextureMapper3D_TwoDependentShadeFP;
-extern const char* vtkVolumeTextureMapper3D_FourDependentNoShadeFP;
-extern const char* vtkVolumeTextureMapper3D_FourDependentShadeFP;
-
-#define PrintError(S)                                                           \
-  {                                                                             \
-  GLenum errorCode;                                                             \
-  if ( (errorCode = glGetError()) != GL_NO_ERROR )                              \
-    {                                                                           \
-    cout << S << endl;                                                          \
-    cout << "ERROR" << endl;                                                    \
-    switch (errorCode)                                                          \
-      {                                                                         \
-      case GL_INVALID_ENUM: cout << "invalid enum" << endl; break;              \
-      case GL_INVALID_VALUE: cout << "invalid value" << endl; break;            \
-      case GL_INVALID_OPERATION: cout << "invalid operation" << endl; break;    \
-      case GL_STACK_OVERFLOW: cout << "stack overflow" << endl; break;          \
-      case GL_STACK_UNDERFLOW: cout << "stack underflow" << endl; break;        \
-      case GL_OUT_OF_MEMORY: cout << "out of memory" << endl; break;            \
-      default: cout << "unknown error" << endl;                                 \
-      }                                                                         \
-    }}
+#include "vtkVolumeTextureMapper3D_OneComponentShadeFP.h"
+#include "vtkVolumeTextureMapper3D_OneComponentNoShadeFP.h"
+#include "vtkVolumeTextureMapper3D_TwoDependentNoShadeFP.h"
+#include "vtkVolumeTextureMapper3D_TwoDependentShadeFP.h"
+#include "vtkVolumeTextureMapper3D_FourDependentNoShadeFP.h"
+#include "vtkVolumeTextureMapper3D_FourDependentShadeFP.h"
 
 //#ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLVolumeTextureMapper3D, "$Revision: 1.7.2.2 $");
+vtkCxxRevisionMacro(vtkOpenGLVolumeTextureMapper3D, "$Revision: 1.16.2.1 $");
 vtkStandardNewMacro(vtkOpenGLVolumeTextureMapper3D);
 //#endif
-
-
 
 vtkOpenGLVolumeTextureMapper3D::vtkOpenGLVolumeTextureMapper3D()
 {
@@ -73,6 +52,7 @@ vtkOpenGLVolumeTextureMapper3D::vtkOpenGLVolumeTextureMapper3D()
   this->Volume2Index                 =  0;
   this->Volume3Index                 =  0;
   this->ColorLookupIndex             =  0;
+  this->AlphaLookupIndex             =  0;
   this->RenderWindow                 = NULL;
 }
 
@@ -179,6 +159,7 @@ void vtkOpenGLVolumeTextureMapper3D::Render(vtkRenderer *ren, vtkVolume *vol)
   // Turn lighting off - the polygon textures already have illumination
   glDisable( GL_LIGHTING );
 
+  vtkGraphicErrorMacro(ren->GetRenderWindow(),"Before actual render method");
   switch ( this->RenderMethod )
     {
     case vtkVolumeTextureMapper3D::NVIDIA_METHOD:
@@ -1272,7 +1253,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderOneIndependentNoShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_OneComponentNoShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_OneComponentNoShadeFP)),
           vtkVolumeTextureMapper3D_OneComponentNoShadeFP );
 
   this->SetupOneIndependentTextures( ren, vol );
@@ -1302,7 +1283,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderOneIndependentShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_OneComponentShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_OneComponentShadeFP)),
           vtkVolumeTextureMapper3D_OneComponentShadeFP );
            
   this->SetupOneIndependentTextures( ren, vol );
@@ -1332,7 +1313,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderTwoDependentNoShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_TwoDependentNoShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_TwoDependentNoShadeFP)),
           vtkVolumeTextureMapper3D_TwoDependentNoShadeFP );
 
   this->SetupTwoDependentTextures(ren, vol);
@@ -1362,7 +1343,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderTwoDependentShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_TwoDependentShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_TwoDependentShadeFP)),
           vtkVolumeTextureMapper3D_TwoDependentShadeFP );
 
   this->SetupTwoDependentTextures(ren, vol);
@@ -1392,7 +1373,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderFourDependentNoShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_FourDependentNoShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_FourDependentNoShadeFP)),
           vtkVolumeTextureMapper3D_FourDependentNoShadeFP );
 
   this->SetupFourDependentTextures(ren, vol);
@@ -1421,7 +1402,7 @@ void vtkOpenGLVolumeTextureMapper3D::RenderFourDependentShadeFP(
 
   vtkgl::ProgramStringARB( vtkgl::FRAGMENT_PROGRAM_ARB,
           vtkgl::PROGRAM_FORMAT_ASCII_ARB, 
-          strlen(vtkVolumeTextureMapper3D_FourDependentShadeFP),
+          static_cast<GLsizei>(strlen(vtkVolumeTextureMapper3D_FourDependentShadeFP)),
           vtkVolumeTextureMapper3D_FourDependentShadeFP );
 
   this->SetupFourDependentTextures(ren, vol);
@@ -1846,19 +1827,20 @@ void vtkOpenGLVolumeTextureMapper3D::Initialize()
     {    
     canDoFP = 1;
     }
-  else if ( supports_texture3D          &&
-            supports_multitexture       &&
-            supports_GL_NV_texture_shader2     &&
-            supports_GL_NV_register_combiners2 &&
-            supports_GL_NV_register_combiners  &&
-            vtkgl::TexImage3D               &&
-            vtkgl::ActiveTexture            &&
-            vtkgl::MultiTexCoord3fv         &&
-            vtkgl::CombinerParameteriNV        &&
-            vtkgl::CombinerStageParameterfvNV  &&
-            vtkgl::CombinerInputNV             &&
-            vtkgl::CombinerOutputNV            &&
-            vtkgl::FinalCombinerInputNV )
+  
+  if ( supports_texture3D          &&
+       supports_multitexture       &&
+       supports_GL_NV_texture_shader2     &&
+       supports_GL_NV_register_combiners2 &&
+       supports_GL_NV_register_combiners  &&
+       vtkgl::TexImage3D               &&
+       vtkgl::ActiveTexture            &&
+       vtkgl::MultiTexCoord3fv         &&
+       vtkgl::CombinerParameteriNV        &&
+       vtkgl::CombinerStageParameterfvNV  &&
+       vtkgl::CombinerInputNV             &&
+       vtkgl::CombinerOutputNV            &&
+       vtkgl::FinalCombinerInputNV )
     {
     canDoNV = 1;
     }

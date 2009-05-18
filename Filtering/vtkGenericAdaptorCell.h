@@ -83,6 +83,8 @@ class vtkPolygon;
 class vtkUnsignedCharArray;
 class vtkQuad;
 class vtkHexahedron;
+class vtkWedge;
+class vtkPyramid;
 
 class VTK_FILTERING_EXPORT vtkGenericAdaptorCell : public vtkObject
 {
@@ -122,7 +124,7 @@ public:
   int IsGeometryLinear();
   
   // Description:
-  // Return the Interpolation order of attribute `a' on the cell
+  // Return the interpolation order of attribute `a' on the cell
   // (may differ by cell).  
   // \pre a_exists: a!=0 
   // \post positive_result: result>=0
@@ -146,7 +148,7 @@ public:
   virtual int IsPrimary()=0;
 
   // Description:
-  // Return the number of points that compose the cell.
+  // Return the number of corner points that compose the cell.
   // \post positive_result: result>=0
   virtual int GetNumberOfPoints()=0;
 
@@ -185,7 +187,7 @@ public:
   virtual vtkGenericCellIterator *NewCellIterator()=0;
  
   // Description:
-  // Return the `boundaries' the cells of dimension `dim' (or all dimensions
+  // Return the `boundaries' cells of dimension `dim' (or all dimensions
   // less than GetDimension() if -1) that are part of the boundary of the cell.
   // \pre valid_dim_range: (dim==-1) || ((dim>=0)&&(dim<GetDimension()))
   // \pre boundaries_exist: boundaries!=0
@@ -227,7 +229,7 @@ public:
                                   vtkGenericCellIterator* &boundary)=0;
 
   // Description:
-  // Is `x' inside the current cell? It also evaluate parametric coordinates
+  // Is `x' inside the current cell? It also evaluates parametric coordinates
   // `pcoords', sub-cell id `subId' (0 means primary cell), distance squared
   // to the sub-cell in `dist2' and closest corner point `closestPoint'.
   // `dist2' and `closestPoint' are not evaluated if `closestPoint'==0.
@@ -286,8 +288,8 @@ public:
   // `attributes->GetAttributesToInterpolate()'.  The `locator', `verts',
   // `lines', `polys', `outPd' and `outCd' are cumulative data arrays over
   // cell iterations: they store the result of each call to Contour():
-  // - `locator' is points list that merges points as they are inserted (i.e.,
-  // prevents duplicates).
+  // - `locator' is a points list that merges points as they are inserted
+  //  (i.e., prevents duplicates).
   // - `verts' is an array of generated vertices
   // - `lines' is an array of generated lines
   // - `polys' is an array of generated polygons
@@ -344,8 +346,8 @@ public:
   // attributes `attributes->GetAttributesToInterpolate()'.  `locator',
   // `connectivity', `outPd' and `outCd' are cumulative data arrays over cell
   // iterations: they store the result of each call to Clip():
-  // - `locator' is points list that merges points as they are inserted (i.e.,
-  // prevents duplicates).
+  // - `locator' is a points list that merges points as they are inserted
+  // (i.e., prevents duplicates).
   // - `connectivity' is an array of generated cells
   // - `outPd' is an array of interpolated point data along the edge (if
   // not-NULL)
@@ -433,8 +435,8 @@ public:
   virtual double GetLength2();
 
   // Description:
-  // Get the center of the current cell (in parametric coordinates)and place
-  // in the `pcoords'.  If the current cell is a composite, the return value
+  // Get the center of the current cell (in parametric coordinates) and place
+  // it in `pcoords'.  If the current cell is a composite, the return value
   // is the sub-cell id that the center is in.  \post valid_result:
   // (result>=0) && (IsPrimary() implies result==0)
   virtual int GetParametricCenter(double pcoords[3])=0;
@@ -448,12 +450,11 @@ public:
   virtual double GetParametricDistance(double pcoords[3])=0;
 
   // Description:
-  // Return a contiguous array of parametric coordinates of the points defining
-  // the current cell. In other words, (px,py,pz, px,py,pz, etc..) The
+  // Return a contiguous array of parametric coordinates of the corrner points
+  // defining the current cell. In other words, (px,py,pz, px,py,pz, etc..) The
   // coordinates are ordered consistent with the definition of the point
   // ordering for the cell. Note that 3D parametric coordinates are returned
-  // no matter what the topological dimension of the cell. It includes the DOF
-  // nodes.
+  // no matter what the topological dimension of the cell.
   // \post valid_result_exists: ((IsPrimary()) && (result!=0)) ||
   //                             ((!IsPrimary()) && (result==0))
   //                     result!=0 implies sizeof(result)==GetNumberOfPoints()
@@ -462,13 +463,13 @@ public:
   // Description:
   // Tessellate the cell if it is not linear or if at least one attribute of
   // `attributes' is not linear. The output are linear cells of the same
-  // dimension than than cell. If the cell is linear and all attributes are
+  // dimension than the cell. If the cell is linear and all attributes are
   // linear, the output is just a copy of the current cell.
   // `points', `cellArray', `pd' and `cd' are cumulative output data arrays
   // over cell iterations: they store the result of each call to Tessellate().
   // `internalPd' is initialized by the calling filter and stores the
   // result of the tessellation.
-  // If it is not null, `types' is fill with the types of the linear cells.
+  // If it is not null, `types' is filled with the types of the linear cells.
   // `types' is null when it is called from vtkGenericGeometryFilter and not
   // null when it is called from vtkGenericDatasetTessellator.
   // \pre attributes_exist: attributes!=0
@@ -491,7 +492,7 @@ public:
   // (the hash table in particular)
   
   // Description:
-  // Is the face `faceId' of the current cell on a exterior boundary of the
+  // Is the face `faceId' of the current cell on the exterior boundary of the
   // dataset?
   // \pre 3d: GetDimension()==3
   virtual int IsFaceOnBoundary(vtkIdType faceId) = 0;
@@ -502,7 +503,8 @@ public:
   virtual int IsOnBoundary() = 0;
 
   // Description:
-  // Put into `id' the list of ids the point of the cell.
+  // Put into `id' the list of the dataset points that define the corner points
+  // of the cell.
   // \pre id_exists: id!=0
   // \pre valid_size: sizeof(id)==GetNumberOfPoints();
   virtual void GetPointIds(vtkIdType *id) = 0;
@@ -529,6 +531,7 @@ public:
   
   // Description:
   // Return the ids of the vertices defining face `faceId'.
+  // Ids are related to the cell, not to the dataset.
   // \pre is_3d: this->GetDimension()==3
   // \pre valid_faceId_range: faceId>=0 && faceId<this->GetNumberOfBoundaries(2)
   // \post result_exists: result!=0
@@ -544,6 +547,7 @@ public:
   
   // Description:
   // Return the ids of the vertices defining edge `edgeId'.
+  // Ids are related to the cell, not to the dataset.
   // \pre valid_dimension: this->GetDimension()>=2
   // \pre valid_edgeId_range: edgeId>=0 && edgeId<this->GetNumberOfBoundaries(1)
   // \post result_exists: result!=0
@@ -563,14 +567,16 @@ protected:
   // \pre positive_size: size>0
   void AllocateTuples(int size);
   
-  //Internal tetra used for the contouring/clipping algoirthm
+  //Internal tetra used for the contouring/clipping algorithm
   vtkTetra       *Tetra;
   vtkTriangle    *Triangle;
   vtkLine        *Line;
   vtkVertex      *Vertex; //is it used ?
   vtkQuad *Quad;
   vtkHexahedron *Hexa;
-
+  vtkWedge *Wedge;
+  vtkPyramid *Pyramid;
+  
   // Internal locator when tessellating on a cell basis, this is different
   // from the main locator used in contour/clip filter, this locator is used for
   // points for

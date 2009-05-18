@@ -26,7 +26,7 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
 
-vtkCxxRevisionMacro(vtkImageViewer2, "$Revision: 1.32.2.1 $");
+vtkCxxRevisionMacro(vtkImageViewer2, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkImageViewer2);
 
 //----------------------------------------------------------------------------
@@ -390,12 +390,12 @@ void vtkImageViewer2::UpdateDisplayExtent()
         {
         double bounds[6];
         this->ImageActor->GetBounds(bounds);
-        double spos = (double)bounds[this->SliceOrientation * 2];
-        double cpos = (double)cam->GetPosition()[this->SliceOrientation];
+        double spos = bounds[this->SliceOrientation * 2];
+        double cpos = cam->GetPosition()[this->SliceOrientation];
         double range = fabs(spos - cpos);
         double *spacing = input->GetSpacing();
         double avg_spacing = 
-          ((double)spacing[0] + (double)spacing[1] + (double)spacing[2]) / 3.0;
+          (spacing[0] + spacing[1] + spacing[2]) / 3.0;
         cam->SetClippingRange(
           range - avg_spacing * 3.0, range + avg_spacing * 3.0);
         }
@@ -688,7 +688,7 @@ void vtkImageViewer2::Render()
 }
 
 //----------------------------------------------------------------------------
-char* vtkImageViewer2::GetWindowName() 
+const char* vtkImageViewer2::GetWindowName() 
 {
   return this->RenderWindow->GetWindowName();
 }
@@ -722,7 +722,7 @@ void vtkImageViewer2::SetInputConnection(vtkAlgorithmOutput* input)
 {
   this->WindowLevel->SetInputConnection(input);
   this->UpdateDisplayExtent();
-};
+}
 
 //----------------------------------------------------------------------------
 #ifndef VTK_LEGACY_REMOVE

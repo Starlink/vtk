@@ -16,7 +16,7 @@
 #include "vtkCommand.h"
 #include "vtkDebugLeaks.h"
 
-// this list should only contain the initial, contiguous
+// This list should only contain the initial, contiguous
 // set of events and should not include UserEvent
 static const char *vtkCommandEventStrings[] = {
   "NoEvent", 
@@ -74,13 +74,25 @@ static const char *vtkCommandEventStrings[] = {
   "StartAnimationCueEvent",
   "AnimationCueTickEvent",
   "EndAnimationCueEvent",
+  "VolumeMapperRenderEndEvent",
   "VolumeMapperRenderProgressEvent",
+  "VolumeMapperRenderStartEvent",
   "VolumeMapperComputeGradientsEndEvent",
   "VolumeMapperComputeGradientsProgressEvent",
   "VolumeMapperComputeGradientsStartEvent",
   "WidgetModifiedEvent",
   "WidgetValueChangedEvent",
   "WidgetActivateEvent",
+  "ConnectionCreatedEvent",
+  "ConnectionClosedEvent",
+  "DomainModifiedEvent",
+  "PropertyModifiedEvent",
+  "UpdateEvent",
+  "RegisterEvent",
+  "UnRegisterEvent",
+  "UpdateInformationEvent",
+  "SelectionChangedEvent",
+  "UpdatePropertyEvent",
   NULL
 };
 
@@ -107,6 +119,7 @@ void vtkCommand::UnRegister()
     }
 }
 
+//----------------------------------------------------------------
 const char *vtkCommand::GetStringFromEventId(unsigned long event)
 {
   static unsigned long numevents = 0;
@@ -134,6 +147,7 @@ const char *vtkCommand::GetStringFromEventId(unsigned long event)
     }
 }
   
+//----------------------------------------------------------------
 unsigned long vtkCommand::GetEventIdFromString(const char *event)
 {  
   unsigned long i;

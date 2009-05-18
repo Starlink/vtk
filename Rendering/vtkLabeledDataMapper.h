@@ -45,9 +45,11 @@
 
 #include "vtkMapper2D.h"
 
+class vtkDataObject;
 class vtkDataSet;
 class vtkTextMapper;
 class vtkTextProperty;
+class vtkTransform;
 
 #define VTK_LABEL_IDS        0
 #define VTK_LABEL_SCALARS    1
@@ -69,12 +71,16 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
-  // Set/Get the format with which to print the labels. The format needs
-  // to change depending on what you're trying to print. For example, if
-  // you're printing a vector, 3 values are printed, whereas when printing an
-  // id only one value is printed. See also the ivar LabeledComponent which
-  // can be used to specify the component to print if you want to only print
-  // one of several.
+  // Set/Get the format with which to print the labels.  This should
+  // be a printf-style format string.
+  //
+  // By default, the mapper will try to print each component of the
+  // tuple using a sane format: %d for integers, %f for floats, %g for
+  // doubles, %ld for longs, et cetera.  If you need a different
+  // format, set it here.  You can do things like limit the number of
+  // significant digits, add prefixes/suffixes, basically anything
+  // that printf can do.  If you only want to print one component of a
+  // vector, see the ivar LabeledComponent.
   vtkSetStringMacro(LabelFormat);
   vtkGetStringMacro(LabelFormat);
 
@@ -89,13 +95,25 @@ public:
 
   // Description:
   // Set/Get the field data array to label. This instance variable is
-  // only applicable if field data is labeled.
-  vtkSetClampMacro(FieldDataArray,int,0,VTK_LARGE_INTEGER);
+  // only applicable if field data is labeled.  This will clear
+  // FieldDataName when set.
+  void SetFieldDataArray(int arrayIndex);
   vtkGetMacro(FieldDataArray,int);
 
   // Description:
+  // Set/Get the name of the field data array to label.  This instance
+  // variable is only applicable if field data is labeled.  This will
+  // override FieldDataArray when set.
+  void SetFieldDataName(const char *arrayName);
+  vtkGetStringMacro(FieldDataName);
+
+  // Description:
   // Set the input dataset to the mapper. This mapper handles any type of data.
-  virtual void SetInput(vtkDataSet*);
+  virtual void SetInput(vtkDataObject*);
+
+  // Description:
+  // Use GetInputDataObject() to get the input data object for composite
+  // datasets.
   vtkDataSet *GetInput();
 
   // Description:
@@ -126,6 +144,11 @@ public:
   // Description:
   // Release any graphics resources that are being consumed by this actor.
   virtual void ReleaseGraphicsResources(vtkWindow *);
+  
+  // Description:
+  // The transform to apply to the labels before mapping to 2D.
+  vtkGetObjectMacro(Transform, vtkTransform);
+  void SetTransform(vtkTransform* t);
 
 protected:
   vtkLabeledDataMapper();
@@ -138,16 +161,21 @@ protected:
   int   LabelMode;
   int   LabeledComponent;
   int   FieldDataArray;
+  char  *FieldDataName;
 
   vtkTimeStamp BuildTime;
 
-private:
   int NumberOfLabels;
   int NumberOfLabelsAllocated;
   vtkTextMapper **TextMappers;
+  double* LabelPositions;
+  vtkTransform *Transform;
 
   virtual int FillInputPortInformation(int, vtkInformation*);
 
+  void AllocateLables(int numLables);
+  void BuildLabels();
+  void BuildLabelsInternal(vtkDataSet*);
 private:
   vtkLabeledDataMapper(const vtkLabeledDataMapper&);  // Not implemented.
   void operator=(const vtkLabeledDataMapper&);  // Not implemented.

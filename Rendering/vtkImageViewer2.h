@@ -74,7 +74,7 @@ public:
 
   // Description:
   // Get the name of rendering window.
-  virtual char *GetWindowName();
+  virtual const char *GetWindowName();
 
   // Description:
   // Render the resulting image.
@@ -110,6 +110,19 @@ public:
   // this can be in X, Y or Z).
   vtkGetMacro(Slice, int);
   virtual void SetSlice(int s);
+
+  // Description:
+  // Update the display extent manually so that the proper slice for the
+  // given orientation is displayed. It will also try to set a
+  // reasonable camera clipping range.
+  // This method is called automatically when the Input is changed, but
+  // most of the time the input of this class is likely to remain the same,
+  // i.e. connected to the output of a filter, or an image reader. When the
+  // input of this filter or reader itself is changed, an error message might
+  // be displayed since the current display extent is probably outside
+  // the new whole extent. Calling this method will ensure that the display
+  // extent is reset properly.
+  virtual void UpdateDisplayExtent();
   
   // Description:
   // Return the minimum and maximum slice values (depending on the orientation
@@ -141,7 +154,7 @@ public:
   virtual void SetPosition(int a[2]) { this->SetPosition(a[0],a[1]); }
   
   // Description:
-  // Set/Get the size of the window in screen coordinates.
+  // Set/Get the size of the window in screen coordinates in pixels.
   virtual int* GetSize();
   virtual void SetSize(int a, int b);
   virtual void SetSize(int a[2]) { this->SetSize(a[0],a[1]); }
@@ -207,7 +220,6 @@ protected:
   int Slice;
 
   virtual void UpdateOrientation();
-  virtual void UpdateDisplayExtent();
 
 private:
   vtkImageViewer2(const vtkImageViewer2&);  // Not implemented.

@@ -33,7 +33,7 @@
 #include "vtkTriangleStrip.h"
 #include "vtkVertex.h"
 
-vtkCxxRevisionMacro(vtkPolyData, "$Revision: 1.5.12.1 $");
+vtkCxxRevisionMacro(vtkPolyData, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkPolyData);
 
 //----------------------------------------------------------------------------
@@ -173,7 +173,7 @@ int vtkPolyData::GetGhostLevel()
 // Copy the geometric and topological structure of an input poly data object.
 void vtkPolyData::CopyStructure(vtkDataSet *ds)
 {
-  vtkPolyData *pd=(vtkPolyData *)ds;
+  vtkPolyData *pd=static_cast<vtkPolyData *>(ds);
   vtkPointSet::CopyStructure(ds);
 
   if (this->Verts != pd->Verts)
@@ -1216,28 +1216,32 @@ void vtkPolyData::Allocate(vtkPolyData *inPolyData, vtkIdType numCells,
   if ( numVerts > 0 )
     {
     cells = vtkCellArray::New();
-    cells->Allocate((int)((double)numVerts/total*numCells),extSize);
+    cells->Allocate(
+      static_cast<int>(static_cast<double>(numVerts)/total*numCells),extSize);
     this->SetVerts(cells);
     cells->Delete();
     }
   if ( numLines > 0 )
     {
     cells = vtkCellArray::New();
-    cells->Allocate((int)((double)numLines/total*numCells),extSize);
+    cells->Allocate(
+      static_cast<int>(static_cast<double>(numLines)/total*numCells),extSize);
     this->SetLines(cells);
     cells->Delete();
     }
   if ( numPolys > 0 )
     {
     cells = vtkCellArray::New();
-    cells->Allocate((int)((double)numPolys/total*numCells),extSize);
+    cells->Allocate(
+      static_cast<int>(static_cast<double>(numPolys)/total*numCells),extSize);
     this->SetPolys(cells);
     cells->Delete();
     }
   if ( numStrips > 0 )
     {
     cells = vtkCellArray::New();
-    cells->Allocate((int)((double)numStrips/total*numCells),extSize);
+    cells->Allocate(
+      static_cast<int>(static_cast<double>(numStrips)/total*numCells),extSize);
     this->SetStrips(cells);
     cells->Delete();
     }
@@ -1936,7 +1940,8 @@ void vtkPolyData::RemoveGhostCells(int level)
     vtkErrorMacro("Poorly formed ghost level array.");
     return;
     }
-  unsigned char* cellGhostLevels =((vtkUnsignedCharArray*)temp)->GetPointer(0);
+  unsigned char* cellGhostLevels =
+    static_cast<vtkUnsignedCharArray*>(temp)->GetPointer(0);
 
   // We may be able to get away wil just creating a CellData object.
   newCellData = vtkCellData::New();
@@ -2032,7 +2037,45 @@ void vtkPolyData::RemoveGhostCells(int level)
 
   this->Squeeze();
 }
+//----------------------------------------------------------------------------
+void  vtkPolyData::RemoveDeletedCells()
+{
+  if (!this->Cells )
+    {
+      return;
+    }
 
+  vtkCellData *newCellData;
+  newCellData = vtkCellData::New();
+  newCellData->CopyAllocate(this->CellData, this->GetNumberOfCells());
+  vtkCellArray *newPolys;
+  vtkIdType inCellId=0, outCellId=0;
+  vtkIdType npts=0;
+  vtkIdType *pts=0;
+
+  if (this->Polys)
+    {
+    newPolys = vtkCellArray::New();
+    newPolys->Allocate(this->Polys->GetSize());
+    vtkIdType c = 0;
+    for (this->Polys->InitTraversal(); this->Polys->GetNextCell(npts, pts); c++)
+      {
+        if (this->Cells->GetCellType(c)!=VTK_EMPTY_CELL)
+        { // Keep the cell.
+        newPolys->InsertNextCell(npts, pts);
+        newCellData->CopyData(this->CellData, inCellId, outCellId);
+        ++outCellId;
+        } // Keep this cell.
+      ++inCellId;
+      } // for all cells
+   this->SetPolys(newPolys);
+   newPolys->Delete();
+   newPolys = NULL;
+   }
+  // Save the results.
+  this->CellData->ShallowCopy(newCellData);
+  newCellData->Delete();
+}
 //----------------------------------------------------------------------------
 vtkPolyData* vtkPolyData::GetData(vtkInformation* info)
 {

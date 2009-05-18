@@ -46,10 +46,14 @@ public:
   
   // Description:
   // Support the standard render methods.
-  int RenderOverlay(vtkViewport *viewport);
-  int RenderOpaqueGeometry(vtkViewport *viewport);
-  int RenderTranslucentGeometry(vtkViewport *viewport);
+  virtual int RenderOverlay(vtkViewport *viewport);
+  virtual int RenderOpaqueGeometry(vtkViewport *viewport);
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport *viewport);
 
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // Set/Get the vtkMapper2D which defines the data to be drawn.
   virtual void SetMapper(vtkMapper2D *mapper);
@@ -97,7 +101,7 @@ public:
 
   // Description:
   // Return this objects MTime.
-  unsigned long GetMTime();
+  virtual unsigned long GetMTime();
 
   // Description:
   // For some exporters and other other operations we must be
@@ -107,7 +111,7 @@ public:
 
   // Description:
   // Shallow copy of this vtkActor2D. Overloads the virtual vtkProp method.
-  void ShallowCopy(vtkProp *prop);
+  virtual void ShallowCopy(vtkProp *prop);
 
   // Description:
   // Release any graphics resources that are being consumed by this actor.
@@ -138,6 +142,7 @@ protected:
   vtkProperty2D *Property;
   vtkCoordinate *PositionCoordinate;
   vtkCoordinate *Position2Coordinate;
+
 private:
   vtkActor2D(const vtkActor2D&);  // Not implemented.
   void operator=(const vtkActor2D&);  // Not implemented.

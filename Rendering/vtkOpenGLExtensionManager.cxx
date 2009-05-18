@@ -57,7 +57,7 @@ extern "C" vtkglX::__GLXextFuncPtr glXGetProcAddressARB(const GLubyte *);
 // GLU is currently not linked in VTK.  We do not support it here.
 #define GLU_SUPPORTED   0
 
-vtkCxxRevisionMacro(vtkOpenGLExtensionManager, "$Revision: 1.12.4.2 $");
+vtkCxxRevisionMacro(vtkOpenGLExtensionManager, "$Revision: 1.31.2.1 $");
 vtkStandardNewMacro(vtkOpenGLExtensionManager);
 
 namespace vtkgl
@@ -164,6 +164,35 @@ int vtkOpenGLExtensionManager::ExtensionSupported(const char *name)
       }
     p += n;
     }
+  
+  // Workaround for a bug on Mac PowerPC G5 with nVidia GeForce FX 5200
+  // Mac OS 10.3.9 and driver 1.5 NVIDIA-1.3.42. It reports it supports
+  // OpenGL>=1.4 but querying for glPointParameteri and glPointParameteriv
+  // return null pointers. So it does not actually supports fully OpenGL 1.4.
+  // It will make this method return false with "GL_VERSION_1_4" and true
+  // with "GL_VERSION_1_5".
+  if (result && strcmp(name, "GL_VERSION_1_4") == 0)
+    {
+    result=this->GetProcAddress("glPointParameteri")!=0 &&
+      this->GetProcAddress("glPointParameteriv")!=0;
+    }
+  
+  // Workaround for a bug on renderer string="Quadro4 900 XGL/AGP/SSE2"
+  // version string="1.5.8 NVIDIA 96.43.01" or "1.5.6 NVIDIA 87.56"
+  // The driver reports it supports 1.5 but the 1.4 core promoted extension
+  // GL_EXT_blend_func_separate is implemented in software (poor performance).
+  // All the NV2x chipsets are probably affected. NV2x chipsets are used
+  // in GeForce4 and Quadro4.
+  // It will make this method return false with "GL_VERSION_1_4" and true
+  // with "GL_VERSION_1_5".
+  const char *gl_renderer=
+    reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+  if (result && strcmp(name, "GL_VERSION_1_4") == 0)
+    {
+    result=strstr(gl_renderer,"Quadro4")==0 &&
+      strstr(gl_renderer,"GeForce4")==0;
+    }
+  
   return result;
 }
 
@@ -229,7 +258,13 @@ vtkOpenGLExtensionManager::GetProcAddress(const char *fname)
 
 
 #ifdef VTK_USE_GLX_GET_PROC_ADDRESS
-  return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
+  // In a perfect world, it should be 
+  // return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
+  // but glx.h of Solaris 10 has line 209 wrong: it is
+  // extern void (*glXGetProcAddress(const GLubyte *procname))();
+  // when it should be:
+  // extern void (*glXGetProcAddress(const GLubyte *procname))(void);
+  return reinterpret_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
 #endif //VTK_USE_GLX_GET_PROC_ADDRESS
 #ifdef VTK_USE_GLX_GET_PROC_ADDRESS_ARB
   return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddressARB(reinterpret_cast<const GLubyte *>(fname)));
@@ -600,14 +635,20 @@ int vtkOpenGLExtensionManager::SafeLoadExtension(const char *name)
 GLboolean IsProgramFromARBToPromoted(GLuint program)
 {
   GLint param;
-  vtkgl::GetObjectParameterivARB(program, vtkgl::OBJECT_TYPE_ARB, &param);
+  // in this case, vtkgl::GetProgramiv has been initialized with the pointer to
+  // "GetObjectParameterivARB" by LoadCorePromotedExtension()
+  // but vtkgl::GetObjectParameterivARB hasn't been initialized.
+  vtkgl::GetProgramiv(program, vtkgl::OBJECT_TYPE_ARB, &param);
   return param==static_cast<GLint>(vtkgl::PROGRAM_OBJECT_ARB);
 }
 
 GLboolean IsShaderFromARBToPromoted(GLuint shader)
 {
   GLint param;
-  vtkgl::GetObjectParameterivARB(shader, vtkgl::OBJECT_TYPE_ARB, &param);
+  // in this case, vtkgl::GetShaderiv has been initialized with the pointer to
+  // "GetObjectParameterivARB" by LoadCorePromotedExtension()
+  // but vtkgl::GetObjectParameterivARB hasn't been initialized.
+  vtkgl::GetShaderiv(shader, vtkgl::OBJECT_TYPE_ARB, &param);
   return param==static_cast<GLint>(vtkgl::SHADER_OBJECT_ARB);
 }
 

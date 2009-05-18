@@ -20,19 +20,21 @@
 // vtkGenericAttribute, vtkBridgeDataSet
 
 #include "vtkBridgeAttribute.h"
-#include "vtkObjectFactory.h"
-#include "vtkDataSetAttributes.h"
-#include "vtkBridgeCellIterator.h"
+
 #include "vtkBridgeCell.h"
+#include "vtkBridgeCellIterator.h"
+#include "vtkCellData.h"
+#include "vtkDataArray.h"
+#include "vtkDataSetAttributes.h"
 #include "vtkGenericCell.h"
 #include "vtkGenericPointIterator.h"
+#include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkCellData.h"
 #include "vtkSetGet.h"
 
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkBridgeAttribute, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkBridgeAttribute, "$Revision: 1.6.50.1 $");
 vtkStandardNewMacro(vtkBridgeAttribute);
 
 void vtkBridgeAttribute::PrintSelf(ostream& os, vtkIndent indent)
@@ -76,7 +78,7 @@ int vtkBridgeAttribute::GetCentering()
     {
     result=vtkCellCentered;
     }
-  assert("post: valid_result" && (result==vtkPointCentered) || (result==vtkCellCentered) || (result==vtkBoundaryCentered));
+  assert("post: valid_result" && ((result==vtkPointCentered) || (result==vtkCellCentered) || (result==vtkBoundaryCentered)));
   return result;
 }
 

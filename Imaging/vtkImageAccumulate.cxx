@@ -23,16 +23,14 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageAccumulate, "$Revision: 1.64 $");
+vtkCxxRevisionMacro(vtkImageAccumulate, "$Revision: 1.73 $");
 vtkStandardNewMacro(vtkImageAccumulate);
 
 //----------------------------------------------------------------------------
 // Constructor sets default values
 vtkImageAccumulate::vtkImageAccumulate()
 {
-  int idx;
-  
-  for (idx = 0; idx < 3; ++idx)
+  for (int idx = 0; idx < 3; ++idx)
     {
     this->ComponentSpacing[idx] = 1.0;
     this->ComponentOrigin[idx] = 0.0;
@@ -40,14 +38,16 @@ vtkImageAccumulate::vtkImageAccumulate()
     this->ComponentExtent[idx*2+1] = 0;
     }
   this->ComponentExtent[1] = 255;
-  
+
   this->ReverseStencil = 0;
 
   this->Min[0] = this->Min[1] = this->Min[2] = 0.0;
   this->Max[0] = this->Max[1] = this->Max[2] = 0.0;
   this->Mean[0] = this->Mean[1] = this->Mean[2] = 0.0;
-  this->StandardDeviation[0] = this->StandardDeviation[1] = this->StandardDeviation[2] = 0.0;  
+  this->StandardDeviation[0] = this->StandardDeviation[1] =
+    this->StandardDeviation[2] = 0.0;
   this->VoxelCount = 0;
+  this->IgnoreZero = 0;
 
   // we have the image input and the optional stencil input
   this->SetNumberOfInputPorts(2);
@@ -63,13 +63,13 @@ vtkImageAccumulate::~vtkImageAccumulate()
 void vtkImageAccumulate::SetComponentExtent(int extent[6])
 {
   int idx, modified = 0;
-  
+
   for (idx = 0; idx < 6; ++idx)
     {
     if (this->ComponentExtent[idx] != extent[idx])
       {
       this->ComponentExtent[idx] = extent[idx];
-      this->Modified();
+      modified = 1;
       }
     }
   if (modified)
@@ -80,12 +80,12 @@ void vtkImageAccumulate::SetComponentExtent(int extent[6])
 
 
 //----------------------------------------------------------------------------
-void vtkImageAccumulate::SetComponentExtent(int minX, int maxX, 
+void vtkImageAccumulate::SetComponentExtent(int minX, int maxX,
                                             int minY, int maxY,
                                             int minZ, int maxZ)
 {
   int extent[6];
-  
+
   extent[0] = minX;  extent[1] = maxX;
   extent[2] = minY;  extent[3] = maxY;
   extent[4] = minZ;  extent[5] = maxZ;
@@ -96,9 +96,7 @@ void vtkImageAccumulate::SetComponentExtent(int minX, int maxX,
 //----------------------------------------------------------------------------
 void vtkImageAccumulate::GetComponentExtent(int extent[6])
 {
-  int idx;
-  
-  for (idx = 0; idx < 6; ++idx)
+  for (int idx = 0; idx < 6; ++idx)
     {
     extent[idx] = this->ComponentExtent[idx];
     }
@@ -108,7 +106,7 @@ void vtkImageAccumulate::GetComponentExtent(int extent[6])
 //----------------------------------------------------------------------------
 void vtkImageAccumulate::SetStencil(vtkImageStencilData *stencil)
 {
-  this->SetInput(1, stencil); 
+  this->SetInput(1, stencil);
 }
 
 
@@ -130,16 +128,16 @@ template <class T>
 void vtkImageAccumulateExecute(vtkImageAccumulate *self,
                                vtkImageData *inData, T *inPtr,
                                vtkImageData *outData, int *outPtr,
-                               double Min[3], double Max[3],
-                               double Mean[3],
-                               double StandardDeviation[3],
-                               long int *VoxelCount,
+                               double min[3], double max[3],
+                               double mean[3],
+                               double standardDeviation[3],
+                               long int *voxelCount,
                                int* updateExtent)
 {
   int idX, idY, idZ, idxC;
   int iter, pmin0, pmax0, min0, max0, min1, max1, min2, max2;
   vtkIdType inInc0, inInc1, inInc2;
-  T *tempPtr;
+  T *subPtr;
   int *outPtrC;
   int numC, outIdx, *outExtent;
   vtkIdType *outIncs;
@@ -151,20 +149,20 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
   // variables used to compute statistics (filter handles max 3 components)
   double sum[3];
   sum[0] = sum[1] = sum[2] = 0.0;
-  Min[0] = Min[1] = Min[2] = VTK_DOUBLE_MAX;
-  Max[0] = Max[1] = Max[2] = VTK_DOUBLE_MIN;
+  min[0] = min[1] = min[2] = VTK_DOUBLE_MAX;
+  max[0] = max[1] = max[2] = VTK_DOUBLE_MIN;
   sumSqr[0] = sumSqr[1] = sumSqr[2] = 0.0;
-  StandardDeviation[0] = StandardDeviation[1] = StandardDeviation[2] = 0.0;
-  *VoxelCount = 0;
-  
+  standardDeviation[0] = standardDeviation[1] = standardDeviation[2] = 0.0;
+  *voxelCount = 0;
+
   vtkImageStencilData *stencil = self->GetStencil();
 
   // Zero count in every bin
   outData->GetExtent(min0, max0, min1, max1, min2, max2);
-  memset((void *)outPtr, 0, 
+  memset(static_cast<void *>(outPtr), 0,
          (max0-min0+1)*(max1-min1+1)*(max2-min2+1)*sizeof(int));
-    
-  // Get information to march through data 
+
+  // Get information to march through data
   numC = inData->GetNumberOfScalarComponents();
   min0 = updateExtent[0];
   max0 = updateExtent[1];
@@ -177,12 +175,13 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
   outIncs = outData->GetIncrements();
   origin = outData->GetOrigin();
   spacing = outData->GetSpacing();
+  int ignoreZero = self->GetIgnoreZero();
 
-  target = (unsigned long)((max2 - min2 + 1)*(max1 - min1 +1)/50.0);
+  target = static_cast<unsigned long>((max2 - min2 + 1)*(max1 - min1 +1)/50.0);
   target++;
 
   int reverse = self->GetReverseStencil();
-  
+
   // Loop through input pixels
   for (idZ = min2; idZ <= max2; idZ++)
     {
@@ -200,12 +199,12 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
 
       pmin0 = min0;
       pmax0 = max0;
-      while ((stencil != 0 && 
+      while ((stencil != 0 &&
               stencil->GetNextExtent(pmin0,pmax0,min0,max0,idY,idZ,iter)) ||
              (stencil == 0 && iter++ == 0))
         {
         // set up pointer for sub extent
-        tempPtr = inPtr + (inInc2*(idZ - min2) +
+        subPtr = inPtr + (inInc2*(idZ - min2) +
                            inInc1*(idY - min1) +
                            numC*(pmin0 - min0));
 
@@ -216,21 +215,23 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
           outPtrC = outPtr;
           for (idxC = 0; idxC < numC; ++idxC)
             {
-            // Gather statistics
-            sum[idxC]+= *tempPtr;
-            sumSqr[idxC]+= (*tempPtr * *tempPtr);
-            if (*tempPtr > Max[idxC])
+            if( !ignoreZero || double(*subPtr) != 0. )
               {
-              Max[idxC] = *tempPtr;
+              // Gather statistics
+              sum[idxC] += *subPtr;
+              sumSqr[idxC] += (*subPtr * *subPtr);
+              if (*subPtr > max[idxC])
+                {
+                max[idxC] = *subPtr;
+                }
+              if (*subPtr < min[idxC])
+                {
+                min[idxC] = *subPtr;
+                }
+              (*voxelCount)++;
               }
-            else if (*tempPtr < Min[idxC])
-              {
-              Min[idxC] = *tempPtr;
-              }
-            (*VoxelCount)++;
             // compute the index
-            outIdx = (int) floor((((double)*tempPtr++ - origin[idxC]) 
-                                  / spacing[idxC]));
+            outIdx = static_cast<int>((static_cast<double>(*subPtr++) - origin[idxC]) / spacing[idxC]);
             if (outIdx < outExtent[idxC*2] || outIdx > outExtent[idxC*2+1])
               {
               // Out of bin range
@@ -247,29 +248,38 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
         }
       }
     }
-  
-  if (*VoxelCount) // avoid the div0
-    {
-    Mean[0] = sum[0] / (double)*VoxelCount;    
-    Mean[1] = sum[1] / (double)*VoxelCount;    
-    Mean[2] = sum[2] / (double)*VoxelCount;    
 
-    variance = sumSqr[0] / (double)(*VoxelCount-1) - ((double) *VoxelCount * Mean[0] * Mean[0] / (double) (*VoxelCount - 1));
-    StandardDeviation[0] = sqrt(variance);
-    variance = sumSqr[1] / (double)(*VoxelCount-1) - ((double) *VoxelCount * Mean[1] * Mean[1] / (double) (*VoxelCount - 1));
-    StandardDeviation[1] = sqrt(variance);
-    variance = sumSqr[2] / (double)(*VoxelCount-1) - ((double) *VoxelCount * Mean[2] * Mean[2] / (double) (*VoxelCount - 1));
-    StandardDeviation[2] = sqrt(variance);
+  if (*voxelCount) // avoid the div0
+    {
+    mean[0] = sum[0] / static_cast<double>(*voxelCount);
+    mean[1] = sum[1] / static_cast<double>(*voxelCount);
+    mean[2] = sum[2] / static_cast<double>(*voxelCount);
+
+    if (*voxelCount - 1) // avoid the div0
+      {
+      variance = sumSqr[0] / static_cast<double>(*voxelCount-1) -
+        (static_cast<double>(*voxelCount) * mean[0] * mean[0] / static_cast<double>(*voxelCount - 1));
+      standardDeviation[0] = sqrt(variance);
+      variance = sumSqr[1] / static_cast<double>(*voxelCount-1) -
+        (static_cast<double>(*voxelCount) * mean[1] * mean[1] / static_cast<double>(*voxelCount - 1));
+      standardDeviation[1] = sqrt(variance);
+      variance = sumSqr[2] / static_cast<double>(*voxelCount-1) -
+        (static_cast<double>(*voxelCount) * mean[2] * mean[2] / static_cast<double>(*voxelCount - 1));
+      standardDeviation[2] = sqrt(variance);
+      }
+    else
+      {
+      standardDeviation[0] = standardDeviation[1] = standardDeviation[2] = 0.0;
+      }
     }
   else
     {
-    Mean[0] = Mean[1] = Mean[2] = 0.0;
-    StandardDeviation[0] = StandardDeviation[1] = StandardDeviation[2] = 0.0;
+    mean[0] = mean[1] = mean[2] = 0.0;
+    standardDeviation[0] = standardDeviation[1] = standardDeviation[2] = 0.0;
     }
-  
+
 }
 
-        
 
 //----------------------------------------------------------------------------
 // This method is passed a input and output Data, and executes the filter
@@ -283,36 +293,36 @@ int vtkImageAccumulate::RequestData(
 {
   void *inPtr;
   void *outPtr;
-  
+
   // get the input
   vtkInformation* in1Info = inputVector[0]->GetInformationObject(0);
   vtkImageData *inData = vtkImageData::SafeDownCast(
     in1Info->Get(vtkDataObject::DATA_OBJECT()));
   int *uExt = in1Info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT());
-  
+
   // get the output
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
   vtkImageData *outData = vtkImageData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
+
   vtkDebugMacro(<<"Executing image accumulate");
-  
+
   // We need to allocate our own scalars since we are overriding
   // the superclasses "Execute()" method.
   outData->SetExtent(outData->GetWholeExtent());
   outData->AllocateScalars();
-  
+
   vtkDataArray *inArray = this->GetInputArrayToProcess(0,inputVector);
   inPtr = inData->GetArrayPointerForExtent(inArray, uExt);
   outPtr = outData->GetScalarPointer();
-  
+
   // Components turned into x, y and z
   if (inData->GetNumberOfScalarComponents() > 3)
     {
-    vtkErrorMacro("This filter can handle upto 3 components");
+    vtkErrorMacro("This filter can handle up to 3 components");
     return 1;
     }
-  
+
   // this filter expects that output is type int.
   if (outData->GetScalarType() != VTK_INT)
     {
@@ -320,15 +330,17 @@ int vtkImageAccumulate::RequestData(
                   << " must be int\n");
     return 1;
     }
-  
+
   switch (inData->GetScalarType())
     {
-    vtkTemplateMacro(vtkImageAccumulateExecute( this, 
-                                                inData, (VTK_TT *)(inPtr), 
-                                                outData, (int *)(outPtr),
+    vtkTemplateMacro(vtkImageAccumulateExecute( this,
+                                                inData,
+                                                static_cast<VTK_TT *>(inPtr),
+                                                outData,
+                                                static_cast<int *>(outPtr),
                                                 this->Min, this->Max,
                                                 this->Mean,
-                                                this->StandardDeviation, 
+                                                this->StandardDeviation,
                                                 &this->VoxelCount,
                                                 uExt ));
     default:
@@ -359,10 +371,17 @@ int vtkImageAccumulate::RequestInformation (
   // need to set the spacing and origin of the stencil to match the output
   if (inInfo2)
     {
-    inInfo2->Set(vtkDataObject::SPACING(),
-                 inInfo->Get(vtkDataObject::SPACING()),3);
-    inInfo2->Set(vtkDataObject::ORIGIN(),
-                 inInfo->Get(vtkDataObject::ORIGIN()),3);
+    vtkImageStencilData *stencil = 
+      vtkImageStencilData::SafeDownCast(
+        inInfo2->Get(vtkDataObject::DATA_OBJECT()));
+    // need to call the set methods on the actual data object, not
+    // on the pipeline, since the pipeline cannot back-propagate
+    // this information
+    if (stencil)
+      {
+      stencil->SetSpacing(inInfo->Get(vtkDataObject::SPACING()));
+      stencil->SetOrigin(inInfo->Get(vtkDataObject::ORIGIN()));
+      }
     }
 
   vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_INT, 1);
@@ -398,6 +417,7 @@ int vtkImageAccumulate::RequestUpdateExtent (
   return 1;
 }
 
+//----------------------------------------------------------------------------
 int vtkImageAccumulate::FillInputPortInformation(
   int port, vtkInformation* info)
 {
@@ -414,6 +434,7 @@ int vtkImageAccumulate::FillInputPortInformation(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkImageAccumulate::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -438,6 +459,7 @@ void vtkImageAccumulate::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Stencil: " << this->GetStencil() << "\n";
   os << indent << "ReverseStencil: " << (this->ReverseStencil ?
                                          "On\n" : "Off\n");
+  os << indent << "IgnoreZero: " << (this->IgnoreZero ? "On" : "Off") << "\n";
 
   os << indent << "ComponentOrigin: ( "
      << this->ComponentOrigin[0] << ", "

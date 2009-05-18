@@ -13,14 +13,14 @@
 
 =========================================================================*/
 #include "vtkQuadraticEdge.h"
-#include "vtkPolyData.h"
-#include "vtkPointLocator.h"
+
+#include "vtkObjectFactory.h"
 #include "vtkMath.h"
 #include "vtkLine.h"
 #include "vtkDoubleArray.h"
-#include "vtkObjectFactory.h"
+#include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticEdge, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkQuadraticEdge, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkQuadraticEdge);
 
 //----------------------------------------------------------------------------

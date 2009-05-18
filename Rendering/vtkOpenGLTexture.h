@@ -21,6 +21,9 @@
 #define __vtkOpenGLTexture_h
 
 #include "vtkTexture.h"
+//BTX
+#include "vtkWeakPointer.h" // needed for vtkWeakPointer.
+//ETX
 
 class vtkWindow;
 class vtkOpenGLRenderer;
@@ -44,6 +47,12 @@ public:
   // render windows is NOT currently supported. 
   void ReleaseGraphicsResources(vtkWindow *);
 
+  
+  // Description:
+  // Get the openGL texture name to which this texture is bound.
+  // This is available only if GL version >= 1.1
+  vtkGetMacro(Index, long);
+//BTX
 protected:
   vtkOpenGLTexture();
   ~vtkOpenGLTexture();
@@ -53,10 +62,11 @@ protected:
 
   vtkTimeStamp   LoadTime;
   long          Index;
-  vtkRenderWindow *RenderWindow;   // RenderWindow used for previous render
+  vtkWeakPointer<vtkRenderWindow> RenderWindow;   // RenderWindow used for previous render
 private:
   vtkOpenGLTexture(const vtkOpenGLTexture&);  // Not implemented.
   void operator=(const vtkOpenGLTexture&);  // Not implemented.
+//ETX
 };
 
 #endif

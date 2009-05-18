@@ -9,6 +9,33 @@ IF(VTK_HAS_EXODUS)
   SET(KIT_LIBS ${KIT_LIBS} vtkexoIIc)
 ENDIF(VTK_HAS_EXODUS)
 
+OPTION(VTK_X3D_USE_JAVA "Build X3D exporter with Java support. This allows binary X3Db exporting" OFF)
+MARK_AS_ADVANCED(VTK_X3D_USE_JAVA)
+INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}")
+IF(VTK_X3D_USE_JAVA)
+  FIND_PACKAGE(JNI)
+  SET(__my_dirs)
+  FOREACH(dir ${JAVA_AWT_LIBRARY_DIRECTORIES})
+    SET(__my_dirs
+      ${__my_dirs}
+      "${dir}"
+      "${dir}/server"
+      )
+  ENDFOREACH(dir)
+  FIND_LIBRARY(JAVA_JVM_LIBRARY
+    NAMES jvm JavaVM
+    PATHS ${__my_dirs})
+
+  INCLUDE_DIRECTORIES(${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
+  SET(KIT_LIBS ${KIT_LIBS} ${JAVA_JVM_LIBRARY})
+  CONFIGURE_FILE("${VTK_SOURCE_DIR}/Wrapping/Java/FastInfoset.jar"
+    "${EXECUTABLE_OUTPUT_PATH}/FastInfoset.jar"
+    COPYONLY IMMEDIATE)
+ENDIF(VTK_X3D_USE_JAVA)
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/vtkX3DExporterConfiguration.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/vtkX3DExporterConfiguration.h"
+  @ONLY IMMEDIATE)
+
 IF (WIN32)
   IF (VTK_VFW_SUPPORTS_CAPTURE)
     IF(BORLAND)
@@ -29,9 +56,12 @@ SET ( Kit_SRCS
 vtk3DSImporter.cxx
 vtkArcPlotter.cxx
 vtkAnnotatedCubeActor.cxx
+vtkAxisActor.cxx
 vtkAxesActor.cxx
+vtkBarChartActor.cxx
 vtkCaptionActor2D.cxx
 vtkCornerAnnotation.cxx
+vtkCubeAxesActor.cxx
 vtkCubeAxesActor2D.cxx
 vtkDepthSortPolyData.cxx
 vtkEarthSource.cxx
@@ -43,7 +73,10 @@ vtkImplicitModeller.cxx
 vtkIterativeClosestPointTransform.cxx
 vtkLandmarkTransform.cxx
 vtkLegendBoxActor.cxx
+vtkLegendScaleActor.cxx
+vtkLSDynaReader.cxx
 vtkPCAAnalysisFilter.cxx
+vtkPieChartActor.cxx
 vtkPolyDataToImageStencil.cxx
 vtkProcrustesAlignmentFilter.cxx
 vtkProjectedTerrainPath.cxx
@@ -51,6 +84,11 @@ vtkRIBExporter.cxx
 vtkRIBLight.cxx
 vtkRIBProperty.cxx
 vtkRenderLargeImage.cxx
+vtkSpiderPlotActor.cxx
+vtkTemporalDataSetCache.cxx
+vtkTemporalInterpolator.cxx
+vtkTemporalShiftScale.cxx
+vtkTemporalSnapToTimeStep.cxx
 vtkThinPlateSplineTransform.cxx
 vtkTransformToGrid.cxx
 vtkVRMLImporter.cxx
@@ -58,15 +96,28 @@ vtkVectorText.cxx
 vtkVideoSource.cxx
 vtkWeightedTransformFilter.cxx
 vtkXYPlotActor.cxx
+vtkX3DExporter.cxx
 )
+IF(VTK_X3D_USE_JAVA)
+  SET(Kit_SRCS ${Kit_SRCS}
+    vtkX3DExporterJavaHelper.cxx)
+ENDIF(VTK_X3D_USE_JAVA)
 IF(VTK_HAS_EXODUS)
   SET(Kit_SRCS ${Kit_SRCS}
-    vtkPExodusReader.cxx
+    vtkExodusIICache.cxx
+    vtkExodusIIReader.cxx
     vtkExodusReader.cxx
     vtkDSPFilterDefinition.cxx
     vtkExodusModel.cxx
     vtkDSPFilterGroup.cxx
     )
+  IF(VTK_USE_PARALLEL)
+    SET(Kit_SRCS ${Kit_SRCS}
+      vtkPExodusIIReader.cxx
+      vtkPExodusReader.cxx
+      )
+    SET(KIT_LIBS ${KIT_LIBS} vtkParallel)
+  ENDIF(VTK_USE_PARALLEL)
 ENDIF(VTK_HAS_EXODUS)
 
 IF (WIN32)
@@ -95,9 +146,13 @@ SET(KIT_JAVA_DEPS)
 
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
-INCLUDE(${VTK_SOURCE_DIR}/CMake/KitCommonBlock.cmake)
+INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
 #-----------------------------------------------------------------------------
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-  INSTALL_FILES(${VTK_INSTALL_INCLUDE_DIR} .h vtk3DS)
+  INSTALL(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtk3DS.h
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
+    COMPONENT Development
+    )
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)

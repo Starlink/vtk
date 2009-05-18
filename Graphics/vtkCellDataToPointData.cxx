@@ -22,7 +22,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkCellDataToPointData, "$Revision: 1.31 $");
+vtkCxxRevisionMacro(vtkCellDataToPointData, "$Revision: 1.37 $");
 vtkStandardNewMacro(vtkCellDataToPointData);
 
 //----------------------------------------------------------------------------
@@ -75,11 +75,13 @@ int vtkCellDataToPointData::RequestData(
   // Pass the point data first. The fields and attributes
   // which also exist in the cell data of the input will
   // be over-written during CopyAllocate
+  output->GetPointData()->CopyGlobalIdsOff();
   output->GetPointData()->PassData(input->GetPointData());
+  output->GetPointData()->CopyFieldOff("vtkGhostLevels");
 
   // notice that inPD and outPD are vtkCellData and vtkPointData; respectively.
   // It's weird, but it works.
-  outPD->CopyAllocate(inPD,numPts);
+  outPD->InterpolateAllocate(inPD,numPts);
 
   int abort=0;
   vtkIdType progressInterval=numPts/20 + 1;
@@ -87,7 +89,7 @@ int vtkCellDataToPointData::RequestData(
     {
     if ( !(ptId % progressInterval) )
       {
-      this->UpdateProgress((double)ptId/numPts);
+      this->UpdateProgress(static_cast<double>(ptId)/numPts);
       abort = GetAbortExecute();
       }
 
@@ -108,10 +110,12 @@ int vtkCellDataToPointData::RequestData(
       }
     }
 
-  if ( this->PassCellData )
+  if ( !this->PassCellData )
     {
-    output->GetCellData()->PassData(input->GetCellData());
+    output->GetCellData()->CopyAllOff();
+    output->GetCellData()->CopyFieldOn("vtkGhostLevels");
     }
+  output->GetCellData()->PassData(input->GetCellData());
 
   cellIds->Delete();
   delete [] weights;

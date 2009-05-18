@@ -35,9 +35,11 @@
 #include "vtkVoxel.h"
 #include "vtkWedge.h"
 
-vtkCxxRevisionMacro(vtkGeometryFilter, "$Revision: 1.101 $");
+vtkCxxRevisionMacro(vtkGeometryFilter, "$Revision: 1.106.42.1 $");
 vtkStandardNewMacro(vtkGeometryFilter);
+vtkCxxSetObjectMacro(vtkGeometryFilter, Locator, vtkPointLocator)
 
+//----------------------------------------------------------------------------
 // Construct with all types of clipping turned off.
 vtkGeometryFilter::vtkGeometryFilter()
 {
@@ -62,15 +64,13 @@ vtkGeometryFilter::vtkGeometryFilter()
   this->Locator = NULL;
 }
 
+//----------------------------------------------------------------------------
 vtkGeometryFilter::~vtkGeometryFilter()
 {
-  if ( this->Locator )
-    {
-    this->Locator->UnRegister(this);
-    this->Locator = NULL;
-    }
+  this->SetLocator(NULL);
 }
 
+//----------------------------------------------------------------------------
 // Specify a (xmin,xmax, ymin,ymax, zmin,zmax) bounding box to clip data.
 void vtkGeometryFilter::SetExtent(double xMin, double xMax, double yMin,
                                      double yMax, double zMin, double zMax)
@@ -87,6 +87,7 @@ void vtkGeometryFilter::SetExtent(double xMin, double xMax, double yMin,
   this->SetExtent(extent);
 }
 
+//----------------------------------------------------------------------------
 // Specify a (xmin,xmax, ymin,ymax, zmin,zmax) bounding box to clip data.
 void vtkGeometryFilter::SetExtent(double extent[6])
 {
@@ -109,6 +110,7 @@ void vtkGeometryFilter::SetExtent(double extent[6])
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkGeometryFilter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -206,8 +208,8 @@ int vtkGeometryFilter::RequestData(
     {
     for(cellId=0; cellId < numCells; cellId++)
       {
-      if ( this->CellClipping && cellId < this->CellMinimum ||
-      cellId > this->CellMaximum )
+        if ( this->CellClipping && (cellId < this->CellMinimum ||
+                                    cellId > this->CellMaximum) )
         {
         cellVis[cellId] = 0;
         }
@@ -244,7 +246,9 @@ int vtkGeometryFilter::RequestData(
   newPts = vtkPoints::New();
   newPts->Allocate(numPts,numPts/2);
   output->Allocate(4*numCells,numCells/2);
+  outputPD->CopyGlobalIdsOn();
   outputPD->CopyAllocate(pd,numPts,numPts/2);
+  outputPD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(cd,numCells,numCells/2);
 
   if ( this->Merging )
@@ -370,41 +374,27 @@ int vtkGeometryFilter::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkGeometryFilter::SetLocator(vtkPointLocator *locator)
-{
-  if ( this->Locator == locator ) 
-    {
-    return;
-    }
-  if ( this->Locator )
-    {
-    this->Locator->UnRegister(this);
-    this->Locator = NULL;
-    }    
-  if ( locator )
-    {
-    locator->Register(this);
-    }
-  this->Locator = locator;
-  this->Modified();
-}
-
 void vtkGeometryFilter::CreateDefaultLocator()
 {
   if ( this->Locator == NULL )
     {
     this->Locator = vtkMergePoints::New();
+    this->Locator->Register(this);
+    this->Locator->Delete();
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkGeometryFilter::FillInputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkGeometryFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -435,6 +425,7 @@ void vtkGeometryFilter::PrintSelf(ostream& os, vtkIndent indent)
     }
 }
 
+//----------------------------------------------------------------------------
 unsigned long int vtkGeometryFilter::GetMTime()
 {
   unsigned long mTime=this->Superclass::GetMTime();
@@ -448,6 +439,7 @@ unsigned long int vtkGeometryFilter::GetMTime()
   return mTime;
 }
 
+//----------------------------------------------------------------------------
 void vtkGeometryFilter::PolyDataExecute(vtkDataSet *dataSetInput,
                                         vtkPolyData *output,
                                         vtkInformation *outInfo)
@@ -538,8 +530,8 @@ void vtkGeometryFilter::PolyDataExecute(vtkDataSet *dataSetInput,
     visible = 1;
     if ( !allVisible )
       {
-      if ( this->CellClipping && cellId < this->CellMinimum ||
-      cellId > this->CellMaximum )
+        if ( this->CellClipping && (cellId < this->CellMinimum ||
+                                    cellId > this->CellMaximum) )
         {
         visible = 0;
         }
@@ -581,13 +573,14 @@ void vtkGeometryFilter::PolyDataExecute(vtkDataSet *dataSetInput,
                 << output->GetNumberOfCells() << " cells.");
 }
 
+//----------------------------------------------------------------------------
 void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
                                                 vtkPolyData *output,
                                                 vtkInformation *outInfo)
 {
   vtkUnstructuredGrid *input= (vtkUnstructuredGrid *)dataSetInput;
-  vtkCellArray *Connectivity = input->GetCells();
-  if (Connectivity == NULL)
+  vtkCellArray *connectivity = input->GetCells();
+  if (connectivity == NULL)
     {
     return;
     }
@@ -602,24 +595,24 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
   vtkCellData *cd = input->GetCellData();
   vtkPointData *outputPD = output->GetPointData();
   vtkCellData *outputCD = output->GetCellData();
-  vtkCellArray *Verts, *Lines, *Polys, *Strips;
+  vtkCellArray *verts, *lines, *polys, *strips;
   vtkIdList *cellIds, *faceIds;
   char *cellVis;
   vtkIdType newCellId;
   int faceId, *faceVerts, numFacePts;
   double x[3];
-  int PixelConvert[4];
+  int pixelConvert[4];
   // ghost cell stuff
   unsigned char  updateLevel = (unsigned char)
     (outInfo->Get(
       vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS()));
   unsigned char  *cellGhostLevels = 0;
-  
-  PixelConvert[0] = 0;
-  PixelConvert[1] = 1;
-  PixelConvert[2] = 3;
-  PixelConvert[3] = 2;
-  
+
+  pixelConvert[0] = 0;
+  pixelConvert[1] = 1;
+  pixelConvert[2] = 3;
+  pixelConvert[3] = 2;
+
   vtkDebugMacro(<<"Executing geometry filter for unstructured grid input");
 
   vtkDataArray* temp = 0;
@@ -636,9 +629,9 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
     {
     cellGhostLevels = ((vtkUnsignedCharArray*)temp)->GetPointer(0);
     }
-  
+
   // Check input
-  if ( Connectivity == NULL )
+  if ( connectivity == NULL )
     {
     vtkDebugMacro(<<"Nothing to extract");
     return;
@@ -663,38 +656,39 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
   output->SetPoints(input->GetPoints());
   outputPD->PassData(pd);
 
+  outputCD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(cd,numCells,numCells/2);
 
-  Verts = vtkCellArray::New();
-  Verts->Allocate(numCells/4+1,numCells);
-  Lines = vtkCellArray::New();
-  Lines->Allocate(numCells/4+1,numCells);
-  Polys = vtkCellArray::New();
-  Polys->Allocate(numCells/4+1,numCells);
-  Strips = vtkCellArray::New();
-  Strips->Allocate(numCells/4+1,numCells);
-  
+  verts = vtkCellArray::New();
+  verts->Allocate(numCells/4+1,numCells);
+  lines = vtkCellArray::New();
+  lines->Allocate(numCells/4+1,numCells);
+  polys = vtkCellArray::New();
+  polys->Allocate(numCells/4+1,numCells);
+  strips = vtkCellArray::New();
+  strips->Allocate(numCells/4+1,numCells);
+
   // Loop over the cells determining what's visible
   if (!allVisible)
     {
-    for (cellId=0, Connectivity->InitTraversal(); 
-         Connectivity->GetNextCell(npts,pts); 
+    for (cellId=0, connectivity->InitTraversal();
+         connectivity->GetNextCell(npts,pts);
          cellId++)
       {
       cellVis[cellId] = 1;
-      if ( this->CellClipping && cellId < this->CellMinimum ||
-           cellId > this->CellMaximum )
+      if ( this->CellClipping && (cellId < this->CellMinimum ||
+                                  cellId > this->CellMaximum) )
         {
         cellVis[cellId] = 0;
         }
       else
         {
-        for (i=0; i < npts; i++) 
+        for (i=0; i < npts; i++)
           {
           p->GetPoint(pts[i], x);
           if ( (this->PointClipping && (pts[i] < this->PointMinimum ||
                                         pts[i] > this->PointMaximum) ) ||
-               (this->ExtentClipping && 
+               (this->ExtentClipping &&
                 (x[0] < this->Extent[0] || x[0] > this->Extent[1] ||
                  x[1] < this->Extent[2] || x[1] > this->Extent[3] ||
                  x[2] < this->Extent[4] || x[2] > this->Extent[5] )) )
@@ -706,12 +700,12 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         }//if point clipping needs checking
       }//for all cells
     }//if not all visible
-  
+
   // Loop over all cells now that visibility is known
   // (Have to compute visibility first for 3D cell boundarys)
   int progressInterval = numCells/20 + 1;
-  for (cellId=0, Connectivity->InitTraversal(); 
-       Connectivity->GetNextCell(npts,pts); 
+  for (cellId=0, connectivity->InitTraversal();
+       connectivity->GetNextCell(npts,pts);
        cellId++)
     {
     //Progress and abort method support
@@ -726,7 +720,7 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
       { // Do not create surfaces in outer ghost cells.
       continue;
       }
-    
+
     if (allVisible || cellVis[cellId])  //now if visible extract geometry
       {
       //special code for nonlinear cells - rarely occurs, so right now it
@@ -738,33 +732,33 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
 
         case VTK_VERTEX:
         case VTK_POLY_VERTEX:
-          newCellId = Verts->InsertNextCell(npts,pts);
+          newCellId = verts->InsertNextCell(npts,pts);
           outputCD->CopyData(cd,cellId,newCellId);
           break;
 
-        case VTK_LINE: 
+        case VTK_LINE:
         case VTK_POLY_LINE:
-          newCellId = Lines->InsertNextCell(npts,pts);
+          newCellId = lines->InsertNextCell(npts,pts);
           outputCD->CopyData(cd,cellId,newCellId);
           break;
 
         case VTK_TRIANGLE:
         case VTK_QUAD:
         case VTK_POLYGON:
-          newCellId = Polys->InsertNextCell(npts,pts);
+          newCellId = polys->InsertNextCell(npts,pts);
           outputCD->CopyData(cd,cellId,newCellId);
           break;
 
         case VTK_TRIANGLE_STRIP:
-          newCellId = Strips->InsertNextCell(npts,pts);
+          newCellId = strips->InsertNextCell(npts,pts);
           outputCD->CopyData(cd,cellId,newCellId);
           break;
 
         case VTK_PIXEL:
-          newCellId = Polys->InsertNextCell(npts);
+          newCellId = polys->InsertNextCell(npts);
           for ( i=0; i < npts; i++)
             {
-            Polys->InsertCellPoint(pts[PixelConvert[i]]);
+            polys->InsertCellPoint(pts[pixelConvert[i]]);
             }
           outputCD->CopyData(cd,cellId,newCellId);
           break;
@@ -779,13 +773,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             faceIds->InsertNextId(pts[faceVerts[2]]);
             numFacePts = 3;
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -803,13 +797,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             faceIds->InsertNextId(pts[faceVerts[3]]);
             numFacePts = 4;
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[PixelConvert[i]]]);
+                polys->InsertCellPoint(pts[faceVerts[pixelConvert[i]]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -827,13 +821,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             faceIds->InsertNextId(pts[faceVerts[3]]);
             numFacePts = 4;
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -855,13 +849,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
               numFacePts = 4;
               }
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -883,13 +877,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
               numFacePts = 4;
               }
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -912,13 +906,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
               numFacePts = 5;
               }
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -942,13 +936,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
               numFacePts = 6;
               }
             input->GetCellNeighbors(cellId, faceIds, cellIds);
-            if ( cellIds->GetNumberOfIds() <= 0 || 
+            if ( cellIds->GetNumberOfIds() <= 0 ||
                  (!allVisible && !cellVis[cellIds->GetId(0)]) )
               {
-              newCellId = Polys->InsertNextCell(numFacePts);
+              newCellId = polys->InsertNextCell(numFacePts);
               for ( i=0; i < numFacePts; i++)
                 {
-                Polys->InsertCellPoint(pts[faceVerts[i]]);
+                polys->InsertCellPoint(pts[faceVerts[i]]);
                 }
               outputCD->CopyData(cd,cellId,newCellId);
               }
@@ -963,10 +957,16 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         case VTK_QUADRATIC_HEXAHEDRON:
         case VTK_QUADRATIC_WEDGE:
         case VTK_QUADRATIC_PYRAMID:
+        case VTK_QUADRATIC_LINEAR_QUAD:
+        case VTK_BIQUADRATIC_QUAD:
+        case VTK_TRIQUADRATIC_HEXAHEDRON:
+        case VTK_QUADRATIC_LINEAR_WEDGE:
+        case VTK_BIQUADRATIC_QUADRATIC_WEDGE:
+        case VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON:
           {
           vtkGenericCell *cell = vtkGenericCell::New();
           input->GetCell(cellId,cell);
-          vtkIdList *ipts = vtkIdList::New();  
+          vtkIdList *ipts = vtkIdList::New();
           vtkPoints *coords = vtkPoints::New();
           vtkIdList *icellIds = vtkIdList::New();
           vtkIdType inewCellId;
@@ -976,9 +976,9 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             cell->Triangulate(0,ipts,coords);
             for (i=0; i < ipts->GetNumberOfIds(); i+=2)
               {
-              inewCellId = Lines->InsertNextCell(2);
-              Lines->InsertCellPoint(ipts->GetId(i));
-              Lines->InsertCellPoint(ipts->GetId(i+1));
+              inewCellId = lines->InsertNextCell(2);
+              lines->InsertCellPoint(ipts->GetId(i));
+              lines->InsertCellPoint(ipts->GetId(i+1));
               outputCD->CopyData(cd,cellId,inewCellId);
               }
             }
@@ -987,13 +987,13 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
             cell->Triangulate(0,ipts,coords);
             for (i=0; i < ipts->GetNumberOfIds(); i+=3)
               {
-              inewCellId = Polys->InsertNextCell(3);
-              Polys->InsertCellPoint(ipts->GetId(i));
-              Polys->InsertCellPoint(ipts->GetId(i+1));
-              Polys->InsertCellPoint(ipts->GetId(i+2));
+              inewCellId = polys->InsertNextCell(3);
+              polys->InsertCellPoint(ipts->GetId(i));
+              polys->InsertCellPoint(ipts->GetId(i+1));
+              polys->InsertCellPoint(ipts->GetId(i+2));
               outputCD->CopyData(cd,cellId,inewCellId);
               }
-            } 
+            }
           else //3D nonlinear cell
             {
             vtkCell *face;
@@ -1006,10 +1006,10 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
                 face->Triangulate(0,ipts,coords);
                 for (i=0; i < ipts->GetNumberOfIds(); i+=3)
                   {
-                  inewCellId = Polys->InsertNextCell(3);
-                  Polys->InsertCellPoint(ipts->GetId(i));
-                  Polys->InsertCellPoint(ipts->GetId(i+1));
-                  Polys->InsertCellPoint(ipts->GetId(i+2));
+                  inewCellId = polys->InsertNextCell(3);
+                  polys->InsertCellPoint(ipts->GetId(i));
+                  polys->InsertCellPoint(ipts->GetId(i+1));
+                  polys->InsertCellPoint(ipts->GetId(i+2));
                   outputCD->CopyData(cd,cellId,inewCellId);
                   }
                 }
@@ -1021,21 +1021,20 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
           cell->Delete();
           }
           break; //done with quadratic cells
-          
         } //switch
       } //if visible
     } //for all cells
-  
+
   // Update ourselves and release memory
   //
-  output->SetVerts(Verts);
-  Verts->Delete();
-  output->SetLines(Lines);
-  Lines->Delete();
-  output->SetPolys(Polys);
-  Polys->Delete();
-  output->SetStrips(Strips);
-  Strips->Delete();
+  output->SetVerts(verts);
+  verts->Delete();
+  output->SetLines(lines);
+  lines->Delete();
+  output->SetPolys(polys);
+  polys->Delete();
+  output->SetStrips(strips);
+  strips->Delete();
   
   output->Squeeze();
 
@@ -1050,6 +1049,7 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkGeometryFilter::StructuredGridExecute(vtkDataSet *dataSetInput,
                                               vtkPolyData *output,
                                               vtkInformation *outInfo)
@@ -1120,8 +1120,8 @@ void vtkGeometryFilter::StructuredGridExecute(vtkDataSet *dataSetInput,
     for(cellId=0; cellId < numCells; cellId++)
       {
       cellVis[cellId] = 1;
-      if ( this->CellClipping && cellId < this->CellMinimum ||
-      cellId > this->CellMaximum )
+      if ( this->CellClipping && (cellId < this->CellMinimum ||
+                                  cellId > this->CellMaximum) )
         {
         cellVis[cellId] = 0;
         }
@@ -1153,6 +1153,7 @@ void vtkGeometryFilter::StructuredGridExecute(vtkDataSet *dataSetInput,
   //
   output->SetPoints(input->GetPoints());
   outputPD->PassData(pd);
+  outputCD->CopyGlobalIdsOn();
   outputCD->CopyAllocate(cd,numCells,numCells/2);
 
   cells = vtkCellArray::New();
@@ -1244,6 +1245,7 @@ void vtkGeometryFilter::StructuredGridExecute(vtkDataSet *dataSetInput,
     }
 }
 
+//----------------------------------------------------------------------------
 int vtkGeometryFilter::RequestUpdateExtent(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,

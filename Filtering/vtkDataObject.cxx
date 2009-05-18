@@ -26,6 +26,8 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInformationDataObjectKey.h"
 #include "vtkInformationDoubleKey.h"
 #include "vtkInformationDoubleVectorKey.h"
+#include "vtkInformationExecutivePortKey.h"
+#include "vtkInformationExecutivePortVectorKey.h"
 #include "vtkInformationIntegerKey.h"
 #include "vtkInformationIntegerPointerKey.h"
 #include "vtkInformationIntegerVectorKey.h"
@@ -34,7 +36,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInformationVector.h"
 #include "vtkDataSetAttributes.h"
 
-vtkCxxRevisionMacro(vtkDataObject, "$Revision: 1.26.4.2 $");
+vtkCxxRevisionMacro(vtkDataObject, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkDataObject);
 
 vtkCxxSetObjectMacro(vtkDataObject,Information,vtkInformation);
@@ -46,10 +48,11 @@ vtkInformationKeyMacro(vtkDataObject, DATA_EXTENT_TYPE, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_PIECE_NUMBER, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_NUMBER_OF_PIECES, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_NUMBER_OF_GHOST_LEVELS, Integer);
-vtkInformationKeyMacro(vtkDataObject, DATA_TIME_INDEX, Integer);
-vtkInformationKeyMacro(vtkDataObject, DATA_TIME, Double);
+vtkInformationKeyMacro(vtkDataObject, DATA_TIME_STEPS, DoubleVector);
 vtkInformationKeyMacro(vtkDataObject, POINT_DATA_VECTOR, InformationVector);
 vtkInformationKeyMacro(vtkDataObject, CELL_DATA_VECTOR, InformationVector);
+vtkInformationKeyMacro(vtkDataObject, VERTEX_DATA_VECTOR, InformationVector);
+vtkInformationKeyMacro(vtkDataObject, EDGE_DATA_VECTOR, InformationVector);
 vtkInformationKeyMacro(vtkDataObject, FIELD_ARRAY_TYPE, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_ASSOCIATION, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_ATTRIBUTE_TYPE, Integer);
@@ -57,10 +60,12 @@ vtkInformationKeyMacro(vtkDataObject, FIELD_ACTIVE_ATTRIBUTE, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NAME, String);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_COMPONENTS, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_TUPLES, Integer);
+vtkInformationKeyRestrictedMacro(vtkDataObject, FIELD_RANGE, DoubleVector, 2);
 vtkInformationKeyMacro(vtkDataObject, FIELD_OPERATION, Integer);
 vtkInformationKeyRestrictedMacro(vtkDataObject, DATA_EXTENT, IntegerPointer, 6);
 vtkInformationKeyRestrictedMacro(vtkDataObject, ORIGIN, DoubleVector, 3);
 vtkInformationKeyRestrictedMacro(vtkDataObject, SPACING, DoubleVector, 3);
+vtkInformationKeyMacro(vtkDataObject, DATA_GEOMETRY_UNMODIFIED, Integer);
 
 class vtkDataObjectToSourceFriendship
 {
@@ -100,7 +105,9 @@ const char vtkDataObject
   "vtkDataObject::FIELD_ASSOCIATION_POINTS",
   "vtkDataObject::FIELD_ASSOCIATION_CELLS",
   "vtkDataObject::FIELD_ASSOCIATION_NONE",
-  "vtkDataObject::FIELD_ASSOCIATION_POINTS_THEN_CELLS"
+  "vtkDataObject::FIELD_ASSOCIATION_POINTS_THEN_CELLS",
+  "vtkDataObject::FIELD_ASSOCIATION_VERTICES",
+  "vtkDataObject::FIELD_ASSOCIATION_EDGES"
 };
 
 //----------------------------------------------------------------------------
@@ -280,8 +287,8 @@ void vtkDataObject::SetPipelineInformation(vtkInformation* newInfo)
 
       // If the new producer is a vtkSource then setup the backward
       // compatibility link.
-      vtkExecutive* newExec = newInfo->GetExecutive(vtkExecutive::PRODUCER());
-      int newPort = newInfo->GetPort(vtkExecutive::PRODUCER());
+      vtkExecutive* newExec = vtkExecutive::PRODUCER()->GetExecutive(newInfo);
+      int newPort = vtkExecutive::PRODUCER()->GetPort(newInfo);
       if(newExec)
         {
         vtkSource* newSource = vtkSource::SafeDownCast(newExec->GetAlgorithm());
@@ -300,8 +307,8 @@ void vtkDataObject::SetPipelineInformation(vtkInformation* newInfo)
       {
       // If the old producer was a vtkSource then remove the backward
       // compatibility link.
-      vtkExecutive* oldExec = oldInfo->GetExecutive(vtkExecutive::PRODUCER());
-      int oldPort = oldInfo->GetPort(vtkExecutive::PRODUCER());
+      vtkExecutive* oldExec = vtkExecutive::PRODUCER()->GetExecutive(oldInfo);
+      int oldPort = vtkExecutive::PRODUCER()->GetPort(oldInfo);
       if(oldExec)
         {
         vtkSource* oldSource = vtkSource::SafeDownCast(oldExec->GetAlgorithm());
@@ -354,7 +361,20 @@ unsigned long int vtkDataObject::GetMTime()
 //----------------------------------------------------------------------------
 void vtkDataObject::Initialize()
 {
-  this->FieldData->Initialize();
+  if (this->FieldData)
+    {
+    this->FieldData->Initialize();
+    }
+
+  if (this->Information)
+    {
+    // Make sure the information is cleared.
+    this->Information->Remove(DATA_PIECE_NUMBER());
+    this->Information->Remove(DATA_NUMBER_OF_PIECES());
+    this->Information->Remove(DATA_NUMBER_OF_GHOST_LEVELS());
+    this->Information->Remove(DATA_TIME_STEPS());
+    }
+
   this->Modified();
 }
 
@@ -370,14 +390,15 @@ void vtkDataObject::SetGlobalReleaseDataFlag(int val)
 
 //----------------------------------------------------------------------------
 void vtkDataObject::CopyInformationToPipeline(vtkInformation *request, 
-                                              vtkInformation *input)
+                                              vtkInformation *input,
+                                              vtkInformation *output,
+                                              int vtkNotUsed(forceCopy))
 {
   // Set default pipeline information during a request for information.
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_INFORMATION()))
     {
     // Copy point and cell data from the input if available.  Otherwise use our
     // current settings.
-    vtkInformation* output = this->PipelineInformation;
 
     if (input)
       {
@@ -391,15 +412,20 @@ void vtkDataObject::CopyInformationToPipeline(vtkInformation *request,
         {
         output->CopyEntry(input, CELL_DATA_VECTOR(), 1);
         }
-      // copy the actual time
-      if (input->Has(DATA_TIME()))
+      // copy vertex data.
+      if (input->Has(VERTEX_DATA_VECTOR()))
         {
-        output->CopyEntry(input, DATA_TIME());
+        output->CopyEntry(input, VERTEX_DATA_VECTOR(), 1);
         }
-      // copy the time index
-      if (input->Has(DATA_TIME_INDEX()))
+      // copy edge data.
+      if (input && input->Has(EDGE_DATA_VECTOR()))
         {
-        output->CopyEntry(input, DATA_TIME_INDEX());
+        output->CopyEntry(input, EDGE_DATA_VECTOR(), 1);
+        }
+      // copy the actual time
+      if (input->Has(DATA_TIME_STEPS()))
+        {
+        output->CopyEntry(input, DATA_TIME_STEPS());
         }
       }
     }
@@ -426,6 +452,14 @@ vtkInformation *vtkDataObject::GetActiveFieldInformation(vtkInformation *info,
   else if (fieldAssociation == FIELD_ASSOCIATION_CELLS)
     {
     fieldDataInfoVector = info->Get(CELL_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_VERTICES)
+    {
+    fieldDataInfoVector = info->Get(VERTEX_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_EDGES)
+    {
+    fieldDataInfoVector = info->Get(EDGE_DATA_VECTOR());
     }
   else
     {
@@ -467,6 +501,14 @@ vtkInformation *vtkDataObject::GetNamedFieldInformation(vtkInformation *info,
     {
     fieldDataInfoVector = info->Get(CELL_DATA_VECTOR());
     }
+  else if (fieldAssociation == FIELD_ASSOCIATION_VERTICES)
+    {
+    fieldDataInfoVector = info->Get(VERTEX_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_EDGES)
+    {
+    fieldDataInfoVector = info->Get(EDGE_DATA_VECTOR());
+    }
   else
     {
     vtkGenericWarningMacro("Unrecognized field association!");
@@ -506,6 +548,14 @@ void vtkDataObject::RemoveNamedFieldInformation(vtkInformation *info,
   else if (fieldAssociation == FIELD_ASSOCIATION_CELLS)
     {
     fieldDataInfoVector = info->Get(CELL_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_VERTICES)
+    {
+    fieldDataInfoVector = info->Get(VERTEX_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_EDGES)
+    {
+    fieldDataInfoVector = info->Get(EDGE_DATA_VECTOR());
     }
   else
     {
@@ -549,6 +599,14 @@ vtkInformation *vtkDataObject::SetActiveAttribute(vtkInformation *info,
     {
     fieldDataInfoVector = info->Get(CELL_DATA_VECTOR());
     }
+  else if (fieldAssociation == FIELD_ASSOCIATION_VERTICES)
+    {
+    fieldDataInfoVector = info->Get(VERTEX_DATA_VECTOR());
+    }
+  else if (fieldAssociation == FIELD_ASSOCIATION_EDGES)
+    {
+    fieldDataInfoVector = info->Get(EDGE_DATA_VECTOR());
+    }
   else
     {
     vtkGenericWarningMacro("Unrecognized field association!");
@@ -561,9 +619,17 @@ vtkInformation *vtkDataObject::SetActiveAttribute(vtkInformation *info,
       {
       info->Set(POINT_DATA_VECTOR(), fieldDataInfoVector);
       }
-    else // (fieldAssociation == FIELD_ASSOCIATION_CELLS)
+    else if (fieldAssociation == FIELD_ASSOCIATION_CELLS)
       {
       info->Set(CELL_DATA_VECTOR(), fieldDataInfoVector);
+      }
+    else if (fieldAssociation == FIELD_ASSOCIATION_VERTICES)
+      {
+      info->Set(VERTEX_DATA_VECTOR(), fieldDataInfoVector);
+      }
+    else // if (fieldAssociation == FIELD_ASSOCIATION_EDGES)
+      {
+      info->Set(EDGE_DATA_VECTOR(), fieldDataInfoVector);
       }
     fieldDataInfoVector->Delete();
     }
@@ -675,12 +741,25 @@ void vtkDataObject::DataHasBeenGenerated()
   this->DataReleased = 0;
   this->UpdateTime.Modified();
 
-  // This is here so that the data can be easlily marked as up to date.
-  // It is used specifically when the filter vtkQuadricClustering
-  // is executed manually with the append methods.
-  this->Information->Set(DATA_PIECE_NUMBER(), this->GetUpdatePiece());
-  this->Information->Set(DATA_NUMBER_OF_PIECES(), this->GetUpdateNumberOfPieces());
-  this->Information->Set(DATA_NUMBER_OF_GHOST_LEVELS(), this->GetUpdateGhostLevel());
+  // Assume that the algorithm produced the required data unless the
+  // algorithm sets otherwise.
+  // NOTE: This is a temporary fix. We should check if the algorithm
+  // produced what was requested and produce an error if it didn't.
+  // However, when such a check is added, all algorithms that do this:
+  // internalAlg->Update();
+  // myOutput->ShallowCopy(internalAlg->GetOutput());
+  // will break when running in parallel because ShallowCopy() will 
+  // copy that piece related keys which will be 0 of 1.
+  if (true || !this->Information->Has(DATA_PIECE_NUMBER()) ||
+      this->Information->Get(DATA_PIECE_NUMBER()) == - 1)
+    {
+    this->Information->Set(DATA_PIECE_NUMBER(), 
+                           this->GetUpdatePiece());
+    this->Information->Set(DATA_NUMBER_OF_PIECES(), 
+                           this->GetUpdateNumberOfPieces());
+    this->Information->Set(DATA_NUMBER_OF_GHOST_LEVELS(), 
+                           this->GetUpdateGhostLevel());
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -758,7 +837,7 @@ vtkExecutive* vtkDataObject::GetExecutive()
 {
   if(this->PipelineInformation)
     {
-    return this->PipelineInformation->GetExecutive(vtkExecutive::PRODUCER());
+    return vtkExecutive::PRODUCER()->GetExecutive(this->PipelineInformation);
     }
   return 0;
 }
@@ -768,7 +847,7 @@ int vtkDataObject::GetPortNumber()
 {
   if(this->PipelineInformation)
     {
-    return this->PipelineInformation->GetPort(vtkExecutive::PRODUCER());
+    return vtkExecutive::PRODUCER()->GetPort(this->PipelineInformation);
     }
   return 0;
 }
@@ -898,6 +977,10 @@ void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
     {
     this->Information->Set(DATA_NUMBER_OF_GHOST_LEVELS(),
                            src->Information->Get(DATA_NUMBER_OF_GHOST_LEVELS()));
+    }
+  if(src->Information->Has(DATA_TIME_STEPS()))
+    {
+    this->Information->CopyEntry(src->Information, DATA_TIME_STEPS(), 1);
     }
   vtkInformation* thatPInfo = src->GetPipelineInformation();
   vtkInformation* thisPInfo = this->GetPipelineInformation();

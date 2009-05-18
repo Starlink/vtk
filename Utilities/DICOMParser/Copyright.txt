@@ -3,7 +3,7 @@
   Program:   DICOMParser
   Module:    $RCSfile: Copyright.txt,v $
   Language:  C++
-  Date:      $Date: 2003/10/22 14:30:34 $
+  Date:      $Date: 2003-10-22 14:30:34 $
   Version:   $Revision: 1.2 $
 
 

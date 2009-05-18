@@ -15,36 +15,23 @@
 #include "vtkSocketController.h"
 
 #include "vtkObjectFactory.h"
+#include "vtkProcessGroup.h"
 #include "vtkSocketCommunicator.h"
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 # define VTK_WINDOWS_FULL
 # include "vtkWindows.h"
-#else
- #include <sys/types.h>
- #include <sys/socket.h>
- #include <netinet/in.h>
- #include <arpa/inet.h>
- #include <netdb.h>
- #include <unistd.h>
-#endif
-
-#ifdef _WIN32
-#define WSA_VERSION MAKEWORD(1,1)
-#define vtkCloseSocketMacro(sock) (closesocket(sock))
-#else
-#define vtkCloseSocketMacro(sock) (close(sock))
+# define WSA_VERSION MAKEWORD(1,1)
 #endif
 
 int vtkSocketController::Initialized = 0;
 
-vtkCxxRevisionMacro(vtkSocketController, "$Revision: 1.9 $");
+vtkCxxRevisionMacro(vtkSocketController, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkSocketController);
 
 //----------------------------------------------------------------------------
 vtkSocketController::vtkSocketController()
 {
-  this->NumberOfProcesses = 2;
   this->Communicator = vtkSocketCommunicator::New();
   this->RMICommunicator = this->Communicator;
 }
@@ -56,6 +43,7 @@ vtkSocketController::~vtkSocketController()
   this->Communicator = this->RMICommunicator = 0;
 }
 
+//----------------------------------------------------------------------------
 void vtkSocketController::Initialize(int* , char***)
 {
   if (vtkSocketController::Initialized)
@@ -75,12 +63,7 @@ void vtkSocketController::Initialize(int* , char***)
 
 }
 
-void vtkSocketController::SetNumberOfProcesses(int vtkNotUsed(num))
-{
-  vtkErrorMacro("Can not change the number of processes.");
-  return;
-}
-
+//----------------------------------------------------------------------------
 void vtkSocketController::SetCommunicator(vtkSocketCommunicator* comm)
 {
   if (comm == this->Communicator)
@@ -106,26 +89,58 @@ void vtkSocketController::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 
+//----------------------------------------------------------------------------
 int vtkSocketController::WaitForConnection(int port)
 { 
   return vtkSocketCommunicator::SafeDownCast(this->Communicator)->
     WaitForConnection(port); 
 }
 
+//----------------------------------------------------------------------------
 void vtkSocketController::CloseConnection()
 { 
   vtkSocketCommunicator::SafeDownCast(this->Communicator)->
     CloseConnection(); 
 }
 
+//----------------------------------------------------------------------------
 int vtkSocketController::ConnectTo( char* hostName, int port )
 { 
   return vtkSocketCommunicator::SafeDownCast(this->Communicator)->
     ConnectTo(hostName, port); 
 }
 
+//----------------------------------------------------------------------------
 int vtkSocketController::GetSwapBytesInReceivedData()
 {
   return vtkSocketCommunicator::SafeDownCast(this->Communicator)->
     GetSwapBytesInReceivedData();
+}
+
+//-----------------------------------------------------------------------------
+vtkMultiProcessController *vtkSocketController::CreateCompliantController()
+{
+  vtkProcessGroup *group = vtkProcessGroup::New();
+  group->Initialize(this->Communicator);
+  group->RemoveAllProcessIds();
+
+  // This hack creates sub controllers with differing orders of the processes
+  // that will map the ids to be unique on each process.
+  if (vtkSocketCommunicator::SafeDownCast(this->Communicator)->GetIsServer())
+    {
+    group->AddProcessId(1);
+    group->AddProcessId(0);
+    }
+  else
+    {
+    group->AddProcessId(0);
+    group->AddProcessId(1);
+    }
+
+  vtkMultiProcessController *compliantController
+    = this->CreateSubController(group);
+
+  group->Delete();
+
+  return compliantController;
 }

@@ -37,13 +37,15 @@
 // Field data is not necessarily "rectangular" in shape. In these cases, some
 // of the data may not be plotted.
 //
-// The early implementation lacks many features that could be added in the 
-// future.
-// This includes the ability to "brush" data (choose regions along an axis and
-// highlight any points/lines passing through the region); efficiency is really
-// bad; more control over the properties of the plot (separate properties for
-// each axes,title,etc.; and using the labels found in the field to label each
-// of the axes.
+// Field data can contain non-numeric arrays (i.e. arrays not subclasses of
+// vtkDataArray). Such arrays are skipped.
+//
+// The early implementation lacks many features that could be added in the
+// future. This includes the ability to "brush" data (choose regions along an
+// axis and highlight any points/lines passing through the region);
+// efficiency is really bad; more control over the properties of the plot
+// (separate properties for each axes,title,etc.; and using the labels found
+// in the field to label each of the axes.
 //
 // .SECTION See Also
 // vtkAxisActor3D can be used to create axes in world coordinate space.
@@ -120,8 +122,12 @@ public:
   // Draw the parallel coordinates plot.
   int RenderOpaqueGeometry(vtkViewport*);
   int RenderOverlay(vtkViewport*);
-  int RenderTranslucentGeometry(vtkViewport *) {return 0;}
+  virtual int RenderTranslucentPolygonalGeometry(vtkViewport *) {return 0;}
 
+  // Description:
+  // Does this prop have some translucent polygonal geometry?
+  virtual int HasTranslucentPolygonalGeometry();
+  
   // Description:
   // Set the input to the parallel coordinates actor.
   virtual void SetInput(vtkDataObject*);

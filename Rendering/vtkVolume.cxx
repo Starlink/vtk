@@ -14,8 +14,10 @@
 =========================================================================*/
 #include "vtkVolume.h"
 
+#include "vtkAbstractVolumeMapper.h"
 #include "vtkCamera.h"
 #include "vtkColorTransferFunction.h"
+#include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkLinearTransform.h"
 #include "vtkMatrix4x4.h"
@@ -26,11 +28,10 @@
 #include "vtkTransform.h"
 #include "vtkVolumeCollection.h"
 #include "vtkVolumeProperty.h"
-#include "vtkAbstractVolumeMapper.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolume, "$Revision: 1.83 $");
+vtkCxxRevisionMacro(vtkVolume, "$Revision: 1.87 $");
 vtkStandardNewMacro(vtkVolume);
 
 // Creates a Volume with the following defaults: origin(0,0,0) 
@@ -353,7 +354,7 @@ double vtkVolume::GetMaxZBound( )
 
 // If the volume mapper is of type VTK_FRAMEBUFFER_VOLUME_MAPPER, then
 // this is its opportunity to render
-int vtkVolume::RenderTranslucentGeometry( vtkViewport *vp )
+int vtkVolume::RenderVolumetricGeometry( vtkViewport *vp )
 {
   this->Update();
 
@@ -364,7 +365,7 @@ int vtkVolume::RenderTranslucentGeometry( vtkViewport *vp )
     }
 
   // If we don't have any input return silently
-  if ( !this->Mapper->GetDataSetInput() )
+  if ( !this->Mapper->GetDataObjectInput() )
     {
     return 0;
     }
@@ -381,12 +382,11 @@ int vtkVolume::RenderTranslucentGeometry( vtkViewport *vp )
     return 0;
     }
 
-  this->Mapper->Render( (vtkRenderer *)vp, this );
+  this->Mapper->Render( static_cast<vtkRenderer *>(vp), this );
   this->EstimatedRenderTime += this->Mapper->GetTimeToDraw();
 
   return 1;
 }
-
 
 void vtkVolume::ReleaseGraphicsResources(vtkWindow *win)
 {
@@ -673,7 +673,8 @@ void vtkVolume::UpdateTransferFunctions( vtkRenderer *vtkNotUsed(ren) )
       float low   = -bias;
       float high  = 255 / scale - bias;
       
-      gotf->GetTable( low, high, (int)(0x100), this->GradientOpacityArray[c] );
+      gotf->GetTable(low, high, static_cast<int>(0x100),
+                     this->GradientOpacityArray[c] );
       
       if ( !strcmp(gotf->GetType(), "Constant") )
         {
@@ -772,8 +773,8 @@ void vtkVolume::UpdateScalarOpacityforSampleSize( vtkRenderer *vtkNotUsed(ren),
         if (originalAlpha > 0.0001)
           {
           correctedAlpha = 
-            1.0-pow((double)(1.0-originalAlpha),
-                    double(this->CorrectedStepSize));
+            1.0-pow(static_cast<double>(1.0-originalAlpha),
+                    static_cast<double>(this->CorrectedStepSize));
           }
         else
           {

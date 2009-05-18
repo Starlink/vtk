@@ -24,7 +24,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkGaussianSplatter, "$Revision: 1.59 $");
+vtkCxxRevisionMacro(vtkGaussianSplatter, "$Revision: 1.64 $");
 vtkStandardNewMacro(vtkGaussianSplatter);
 
 // Construct object with dimensions=(50,50,50); automatic computation of 
@@ -59,6 +59,7 @@ vtkGaussianSplatter::vtkGaussianSplatter()
   this->NullValue = 0.0;
 }
 
+//----------------------------------------------------------------------------
 int vtkGaussianSplatter::RequestInformation (
   vtkInformation * vtkNotUsed(request),
   vtkInformationVector ** vtkNotUsed( inputVector ),
@@ -102,6 +103,7 @@ int vtkGaussianSplatter::RequestInformation (
   return 1;
 }
 
+//----------------------------------------------------------------------------
 int vtkGaussianSplatter::RequestData(
   vtkInformation* vtkNotUsed( request ),
   vtkInformationVector** inputVector,
@@ -125,6 +127,7 @@ int vtkGaussianSplatter::RequestData(
   double loc[3], dist2, cx[3];
   vtkDoubleArray *newScalars = 
     vtkDoubleArray::SafeDownCast(output->GetPointData()->GetScalars());
+  newScalars->SetName("SplatterValues");
   
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkDataSet *input = vtkDataSet::SafeDownCast(
@@ -137,7 +140,7 @@ int vtkGaussianSplatter::RequestData(
   //
   if ( (numPts=input->GetNumberOfPoints()) < 1 )
     {
-    vtkErrorMacro(<<"No points to splat!");
+    vtkDebugMacro(<<"No points to splat!");
     return 1;
     }
 
@@ -196,7 +199,7 @@ int vtkGaussianSplatter::RequestData(
     if ( ! (ptId % progressInterval) )
       {
       vtkDebugMacro(<<"Inserting point #" << ptId);
-      this->UpdateProgress ((double)ptId/numPts);
+      this->UpdateProgress (static_cast<double>(ptId)/numPts);
       abortExecute = this->GetAbortExecute();
       }
 
@@ -219,8 +222,8 @@ int vtkGaussianSplatter::RequestData(
     // Determine splat footprint
     for (i=0; i<3; i++)
       {
-      min[i] = (int) floor((double)loc[i]-this->SplatDistance[i]);
-      max[i] = (int) ceil((double)loc[i]+this->SplatDistance[i]);
+      min[i] = static_cast<int>(floor(static_cast<double>(loc[i])-this->SplatDistance[i]));
+      max[i] = static_cast<int>(ceil(static_cast<double>(loc[i])+this->SplatDistance[i]));
       if ( min[i] < 0 )
         {
         min[i] = 0;
@@ -269,6 +272,7 @@ int vtkGaussianSplatter::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 // Compute the size of the sample bounding box automatically from the
 // input data.
 void vtkGaussianSplatter::ComputeModelBounds(vtkDataSet *input, 
@@ -315,7 +319,7 @@ void vtkGaussianSplatter::ComputeModelBounds(vtkDataSet *input,
   outInfo->Set(vtkDataObject::ORIGIN(),
                this->ModelBounds[0],this->ModelBounds[2],
                this->ModelBounds[4]);
-  memcpy(this->Origin,outInfo->Get(vtkDataObject::ORIGIN()), sizeof(double)*6);
+  memcpy(this->Origin,outInfo->Get(vtkDataObject::ORIGIN()), sizeof(double)*3);
   output->SetOrigin(this->Origin);
   
   for (i=0; i<3; i++)
@@ -349,6 +353,7 @@ void vtkGaussianSplatter::SetSampleDimensions(int i, int j, int k)
   this->SetSampleDimensions(dim);
 }
 
+//----------------------------------------------------------------------------
 void vtkGaussianSplatter::SetSampleDimensions(int dim[3])
 {
   int dataDim, i;
@@ -389,6 +394,7 @@ void vtkGaussianSplatter::SetSampleDimensions(int dim[3])
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkGaussianSplatter::Cap(vtkDoubleArray *s)
 {
   int i,j,k;
@@ -450,6 +456,7 @@ void vtkGaussianSplatter::Cap(vtkDoubleArray *s)
     }
 }
 
+//----------------------------------------------------------------------------
 //
 //  Gaussian sampling
 //
@@ -459,6 +466,7 @@ double vtkGaussianSplatter::Gaussian (double cx[3])
           (cx[2]-P[2])*(cx[2]-P[2]) );
 }
     
+//----------------------------------------------------------------------------
 //
 //  Ellipsoidal Gaussian sampling
 //
@@ -482,7 +490,7 @@ double vtkGaussianSplatter::EccentricGaussian (double cx[3])
       }
     else
       {
-      mag = sqrt((double)mag);
+      mag = sqrt(mag);
       }
     }
 
@@ -494,11 +502,13 @@ double vtkGaussianSplatter::EccentricGaussian (double cx[3])
   return (rxy2/this->Eccentricity2 + z2);
 }
     
+//----------------------------------------------------------------------------
 void vtkGaussianSplatter::SetScalar(int idx, double dist2, 
                                     vtkDoubleArray *newScalars)
 {
-  double v = (this->*SampleFactor)(this->S) * exp((double)
-            (this->ExponentFactor*(dist2)/(this->Radius2)));
+  double v = (this->*SampleFactor)(this->S) * exp(
+    static_cast<double>
+    (this->ExponentFactor*(dist2)/(this->Radius2)));
 
   if ( ! this->Visited[idx] )
     {
@@ -524,6 +534,7 @@ void vtkGaussianSplatter::SetScalar(int idx, double dist2,
     }//not first visit
 }
 
+//----------------------------------------------------------------------------
 const char *vtkGaussianSplatter::GetAccumulationModeAsString()
 {
   if ( this->AccumulationMode == VTK_ACCUMULATION_MODE_MIN )
@@ -540,6 +551,7 @@ const char *vtkGaussianSplatter::GetAccumulationModeAsString()
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkGaussianSplatter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -577,6 +589,7 @@ void vtkGaussianSplatter::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Null Value: " << this->NullValue << "\n";
 }
 
+//----------------------------------------------------------------------------
 int vtkGaussianSplatter::FillInputPortInformation(
   int vtkNotUsed(port), vtkInformation* info)
 {

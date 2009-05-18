@@ -14,20 +14,20 @@
 =========================================================================*/
 #include "vtkPolyDataConnectivityFilter.h"
 
-#include "vtkCell.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkCell.h"
 #include "vtkFloatArray.h"
 #include "vtkIdList.h"
 #include "vtkIdTypeArray.h"
-#include "vtkMath.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPolyDataConnectivityFilter, "$Revision: 1.40 $");
+vtkCxxRevisionMacro(vtkPolyDataConnectivityFilter, "$Revision: 1.41.2.1 $");
 vtkStandardNewMacro(vtkPolyDataConnectivityFilter);
 
 // Construct with default extraction mode to extract largest regions.
@@ -85,7 +85,7 @@ int vtkPolyDataConnectivityFilter::RequestData(
   vtkIdType *cells, *pts, npts, id, n;
   unsigned short ncells;
   vtkIdType maxCellsInRegion;
-  int largestRegionId = 0;
+  vtkIdType largestRegionId = 0;
   vtkPointData *pd=input->GetPointData(), *outputPD=output->GetPointData();
   vtkCellData *cd=input->GetCellData(), *outputCD=output->GetCellData();
   
@@ -135,7 +135,7 @@ int vtkPolyDataConnectivityFilter::RequestData(
   // Initialize.  Keep track of points and cells visited.
   //
   this->RegionSizes->Reset();
-  this->Visited = new int[numCells];
+  this->Visited = new vtkIdType[numCells];
   for ( i=0; i < numCells; i++ )
     {
     this->Visited[i] = -1;
@@ -146,7 +146,8 @@ int vtkPolyDataConnectivityFilter::RequestData(
     this->PointMap[i] = -1;
     }
 
-  this->NewScalars = vtkFloatArray::New();
+  this->NewScalars = vtkIdTypeArray::New();
+  this->NewScalars->SetName("RegionId");
   this->NewScalars->SetNumberOfTuples(numPts);
   newPts = vtkPoints::New();
   newPts->Allocate(numPts);
@@ -265,11 +266,6 @@ int vtkPolyDataConnectivityFilter::RequestData(
   // everything that has been visited.
   //
   //Pass through point data that has been visited
-  pd = input->GetPointData();
-  if ( this->ColorRegions )
-    {
-    outputPD->CopyScalarsOff();
-    }
   outputPD->CopyAllocate(pd);
   outputCD->CopyAllocate(cd);
 
@@ -444,8 +440,8 @@ void vtkPolyDataConnectivityFilter::TraverseAndMark ()
           if ( this->PointMap[ptId=pts[j]] < 0 )
             {
             this->PointMap[ptId] = this->PointNumber++;
-            this->NewScalars->SetComponent(this->PointMap[ptId], 0,
-                                           this->RegionNumber);
+            vtkIdTypeArray::SafeDownCast(this->NewScalars)->SetValue(
+              this->PointMap[ptId], this->RegionNumber);
             }
 
           this->Mesh->GetPointCells(ptId,ncells,cells);

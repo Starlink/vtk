@@ -37,7 +37,7 @@
 #include "vtkUnsignedShortArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkMarchingCubes, "$Revision: 1.1.6.1 $");
+vtkCxxRevisionMacro(vtkMarchingCubes, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkMarchingCubes);
 
 // Description:

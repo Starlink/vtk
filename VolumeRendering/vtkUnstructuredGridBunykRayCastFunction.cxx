@@ -33,7 +33,7 @@
 #include "vtkVolumeProperty.h"
 #include "vtkUnstructuredGridVolumeRayCastIterator.h"
 
-vtkCxxRevisionMacro(vtkUnstructuredGridBunykRayCastFunction, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkUnstructuredGridBunykRayCastFunction, "$Revision: 1.4.14.1 $");
 vtkStandardNewMacro(vtkUnstructuredGridBunykRayCastFunction);
 
 #define VTK_BUNYKRCF_NUMLISTS 100000
@@ -96,7 +96,7 @@ private:
   void operator=(const vtkUnstructuredGridBunykRayCastIterator&);  // Not implemented
 };
 
-vtkCxxRevisionMacro(vtkUnstructuredGridBunykRayCastIterator, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkUnstructuredGridBunykRayCastIterator, "$Revision: 1.4.14.1 $");
 vtkStandardNewMacro(vtkUnstructuredGridBunykRayCastIterator);
 
 vtkUnstructuredGridBunykRayCastIterator::vtkUnstructuredGridBunykRayCastIterator()
@@ -131,7 +131,10 @@ void vtkUnstructuredGridBunykRayCastIterator::Initialize(int x, int y)
                         (double *)NULL,
                         (float *)NULL,
                         (float *)NULL,
-                        this->MaxNumberOfIntersections) > 0);
+                        this->MaxNumberOfIntersections) > 0)
+    {
+    ;
+    }
 }
 
 vtkIdType vtkUnstructuredGridBunykRayCastIterator::GetNextIntersections(
@@ -554,8 +557,9 @@ void  vtkUnstructuredGridBunykRayCastFunction::UpdateTriangleList()
     
   int numCells = input->GetNumberOfCells();
   
-  // Provide a warning if we find anything other than tetra
-  int warningNeeded = 0;
+  // Provide a warnings for anomalous conditions.
+  int nonTetraWarningNeeded = 0;
+  int faceUsed3TimesWarning = 0;
     
   // Create a set of links from each tetra to the four triangles
   // This is redundant information, but saves time during rendering
@@ -567,7 +571,7 @@ void  vtkUnstructuredGridBunykRayCastFunction::UpdateTriangleList()
     // We only handle tetra
     if ( input->GetCellType(i) != VTK_TETRA )
       {
-      warningNeeded = 1;
+      nonTetraWarningNeeded = 1;
       continue;
       }
       
@@ -631,7 +635,7 @@ void  vtkUnstructuredGridBunykRayCastFunction::UpdateTriangleList()
         {
         if ( triPtr->ReferredByTetra[1] != -1 )
           {
-          vtkErrorMacro("Degenerate topology - cell face used more than twice");
+          faceUsed3TimesWarning = 1;
           }
         triPtr->ReferredByTetra[1] = i;
         this->TetraTriangles[i*4+jj] = triPtr;
@@ -652,9 +656,13 @@ void  vtkUnstructuredGridBunykRayCastFunction::UpdateTriangleList()
       }
     }
     
-  if ( warningNeeded )
+  if ( nonTetraWarningNeeded )
     {
     vtkWarningMacro("Input contains more than tetrahedra - only tetrahedra are supported");
+    }
+  if ( faceUsed3TimesWarning )
+    {
+    vtkWarningMacro("Degenerate topology - cell face used more than twice");
     }
   
   // Put the list together
@@ -923,7 +931,7 @@ vtkIdType TemplateCastRay(
 
   vtkIdType numIntersections = 0;
 
-  double nearZ = VTK_FLOAT_MIN;
+  double nearZ = VTK_DOUBLE_MIN;
   double nearPoint[4];
   double viewCoords[4];
   viewCoords[0] = ((float)x / (float)(imageViewportSize[0]-1)) * 2.0 - 1.0;
@@ -991,7 +999,7 @@ vtkIdType TemplateCastRay(
         }
       }
 
-    double farZ = VTK_FLOAT_MAX;
+    double farZ = VTK_DOUBLE_MAX;
     int minIdx = -1;
 
     // Determine which face the ray exits the cell from.
@@ -1014,14 +1022,12 @@ vtkIdType TemplateCastRay(
         }
       }
 
-    if (farZ > farClipZ)
-      {
-      // Exit happened after point of interest.  Bail out now (in case
-      // we wish to restart).
-      return numIntersections;
-      }
-
-    if (minIdx == -1)
+    // Now, the code above should ensure that farZ > nearZ, but I have
+    // seen the case where we reach here with farZ == nearZ.  This is very
+    // bad as we need ensure we always move forward so that we do not get
+    // into loops.  I think there is something with GCC 3.2.3 that makes
+    // the optimizer be too ambitous and turn the > into >=.
+    if ((minIdx == -1) || (farZ <= nearZ))
       {
       // The ray never exited the cell?  Perhaps numerical inaccuracies
       // got us here.  Just bail out as if we exited the mesh.
@@ -1030,6 +1036,13 @@ vtkIdType TemplateCastRay(
       }
     else
       {
+      if (farZ > farClipZ)
+        {
+        // Exit happened after point of interest.  Bail out now (in case
+        // we wish to restart).
+        return numIntersections;
+        }
+
       if (intersectedCells)
         {
         intersectedCells[numIntersections] = currentTetra;

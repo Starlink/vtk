@@ -11,6 +11,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         reconstructSurface
         resampledTexture
         ResliceColorWrap
+        ResliceInformationInput
         ResliceInterpolationModes
         ResliceInterpolationOblique
         ResliceMirrorOblique
@@ -31,6 +32,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         TestAllMaskBits
         TestAllMathematics
         TestAllShrinks
+        TestBlendStencil
         TestButterworthLowPass
         TestButterworthHighPass
         TestCache
@@ -52,6 +54,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         TestHybridMedian2D
         TestIdealLowPass
         TestImageCanvas
+        TestImageWeightedSum
         TestInPlaceFilter
         TestIslandRemoval2D
         TestMapToRGBABlockStreaming

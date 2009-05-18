@@ -14,13 +14,14 @@
 =========================================================================*/
 #include "vtkImageAppend.h"
 
+#include "vtkAlgorithmOutput.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageAppend, "$Revision: 1.30.4.1 $");
+vtkCxxRevisionMacro(vtkImageAppend, "$Revision: 1.35 $");
 vtkStandardNewMacro(vtkImageAppend);
 
 //----------------------------------------------------------------------------
@@ -38,6 +39,30 @@ vtkImageAppend::~vtkImageAppend()
     {
     delete [] this->Shifts;
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkImageAppend::ReplaceNthInputConnection(int idx,
+                                               vtkAlgorithmOutput *input)
+{
+  if (idx < 0 || idx >= this->GetNumberOfInputConnections(0))
+    {
+    vtkErrorMacro("Attempt to replace connection idx " << idx
+                  << " of input port " << 0 << ", which has only "
+                  << this->GetNumberOfInputConnections(0)
+                  << " connections.");
+    return;
+    }
+
+  if (!input || !input->GetProducer())
+    {
+    vtkErrorMacro("Attempt to replace connection index " << idx
+                  << " for input port " << 0 << " with " <<
+                  (!input ? "a null input." : "an input with no producer."));
+    return;
+    }
+
+  this->SetNthInputConnection(0, idx, input);
 }
 
 //----------------------------------------------------------------------------
@@ -87,7 +112,7 @@ int vtkImageAppend::RequestInformation (
     delete [] this->Shifts;
     }
   this->Shifts = new int [this->GetNumberOfInputConnections(0)];
-  
+
   // Find the outMin/max of the appended axis for this input.
   inInfo = inputVector[0]->GetInformationObject(0);
   inExt = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
@@ -96,10 +121,10 @@ int vtkImageAppend::RequestInformation (
     {
     inInfo = inputVector[0]->GetInformationObject(idx);
     inExt = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
-    
+
     if (this->PreserveExtents)
       {
-      // Compute union for preseving extents.
+      // Compute union for preserving extents.
       if (inExt[0] < unionExt[0])
         {
         unionExt[0] = inExt[0];
@@ -134,7 +159,7 @@ int vtkImageAppend::RequestInformation (
       tmp += size;
       }
     }
-  
+
   if (this->PreserveExtents)
     {
     outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),unionExt,6);
@@ -152,6 +177,7 @@ int vtkImageAppend::RequestInformation (
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkImageAppend::InternalComputeInputUpdateExtent(
   int *inExt, int *outExt, int *inWextent, int whichInput)
 {
@@ -167,27 +193,27 @@ void vtkImageAppend::InternalComputeInputUpdateExtent(
     }
   min = inWextent[this->AppendAxis*2] + shift;
   max = inWextent[this->AppendAxis*2 + 1] + shift;
-  
+
   // now clip the outExtent against the outExtent for this input (intersect)
   tmp = outExt[this->AppendAxis*2];
-  if (min < tmp) 
+  if (min < tmp)
     {
     min = tmp;
     }
   tmp = outExt[this->AppendAxis*2 + 1];
-  if (max > tmp) 
+  if (max > tmp)
     {
     max = tmp;
     }
-  
+
   // now if min > max, we do not need the input at all.  I assume
   // the pipeline will interpret this extent this way.
-  
+
   // convert back into input coordinates.
   inExt[this->AppendAxis*2] = min - shift;
   inExt[this->AppendAxis*2 + 1] = max - shift;
-  
-  // for robustness (in the execute method), 
+
+  // for robustness (in the execute method),
   // do not ask for more than the whole extent of the other axes.
   for (idx = 0; idx < 3; ++idx)
     {
@@ -211,26 +237,26 @@ int vtkImageAppend::RequestUpdateExtent(
   // get the info objects
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  
+
   // default input extent will be that of output extent
   int inExt[6];
   outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),inExt);
-  int *outExt = 
+  int *outExt =
     outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT());
 
   int whichInput;
-  for (whichInput = 0; whichInput < this->GetNumberOfInputConnections(0); 
+  for (whichInput = 0; whichInput < this->GetNumberOfInputConnections(0);
        whichInput++)
     {
     int *inWextent;
-    
+
     // Find the outMin/max of the appended axis for this input.
     inInfo = inputVector[0]->GetInformationObject(whichInput);
     inWextent = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
 
-    this->InternalComputeInputUpdateExtent(inExt, outExt, 
+    this->InternalComputeInputUpdateExtent(inExt, outExt,
                                            inWextent, whichInput);
-    
+
     inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),inExt,6);
     }
 
@@ -240,7 +266,7 @@ int vtkImageAppend::RequestUpdateExtent(
 //----------------------------------------------------------------------------
 // This templated function executes the filter for any type of data.
 template <class T>
-void vtkImageAppendExecute(vtkImageAppend *self, int id, 
+void vtkImageAppendExecute(vtkImageAppend *self, int id,
                            int inExt[6], vtkImageData *inData, T *inPtr,
                            int outExt[6], vtkImageData *outData, T *outPtr)
 {
@@ -252,24 +278,24 @@ void vtkImageAppendExecute(vtkImageAppend *self, int id,
   unsigned long count = 0;
   unsigned long target;
 
-  // Get increments to march through data 
+  // Get increments to march through data
   inData->GetContinuousIncrements(inExt, inIncX, inIncY, inIncZ);
   outData->GetContinuousIncrements(outExt, outIncX, outIncY, outIncZ);
 
   // find the region to loop over
   rowLength = (inExt[1] - inExt[0]+1)*inData->GetNumberOfScalarComponents();
-  maxY = inExt[3] - inExt[2]; 
+  maxY = inExt[3] - inExt[2];
   maxZ = inExt[5] - inExt[4];
-  target = (unsigned long)((maxZ+1)*(maxY+1)/50.0);
+  target = static_cast<unsigned long>((maxZ+1)*(maxY+1)/50.0);
   target++;
-  
+
 
   // Loop through input pixels
   for (idxZ = 0; idxZ <= maxZ; idxZ++)
     {
     for (idxY = 0; !self->AbortExecute && idxY <= maxY; idxY++)
       {
-      if (!id) 
+      if (!id)
         {
         if (!(count%target))
           {
@@ -301,12 +327,13 @@ void vtkImageAppend::InitOutput(int outExt[6], vtkImageData *outData)
   int rowLength;
   int typeSize;
   unsigned char *outPtrZ, *outPtrY;
-  
 
-  typeSize = outData->GetScalarSize();  
-  outPtrZ = (unsigned char *)(outData->GetScalarPointerForExtent(outExt));
 
-  // Get increments to march through data 
+  typeSize = outData->GetScalarSize();
+  outPtrZ = static_cast<unsigned char *>(
+    outData->GetScalarPointerForExtent(outExt));
+
+  // Get increments to march through data
   outData->GetIncrements(outIncX, outIncY, outIncZ);
   outIncX *= typeSize;
   outIncY *= typeSize;
@@ -315,7 +342,7 @@ void vtkImageAppend::InitOutput(int outExt[6], vtkImageData *outData)
   // Find the region to loop over
   rowLength = (outExt[1] - outExt[0]+1)*outData->GetNumberOfScalarComponents();
   rowLength *= typeSize;
-  maxY = outExt[3] - outExt[2]; 
+  maxY = outExt[3] - outExt[2];
   maxZ = outExt[5] - outExt[4];
 
   // Loop through input pixels
@@ -335,11 +362,11 @@ void vtkImageAppend::InitOutput(int outExt[6], vtkImageData *outData)
 // algorithm to fill the output from the inputs.
 // It just executes a switch statement to call the correct function for
 // the regions data types.
-void vtkImageAppend::ThreadedRequestData (  
-  vtkInformation * vtkNotUsed( request ), 
-  vtkInformationVector** inputVector, 
+void vtkImageAppend::ThreadedRequestData (
+  vtkInformation * vtkNotUsed( request ),
+  vtkInformationVector** inputVector,
   vtkInformationVector * vtkNotUsed( outputVector ),
-  vtkImageData ***inData, 
+  vtkImageData ***inData,
   vtkImageData **outData,
   int outExt[6], int id)
 {
@@ -347,7 +374,7 @@ void vtkImageAppend::ThreadedRequestData (
   int inExt[6], cOutExt[6];
   void *inPtr;
   void *outPtr;
-  
+
   this->InitOutput(outExt, outData[0]);
 
   for (idx1 = 0; idx1 < this->GetNumberOfInputConnections(0); ++idx1)
@@ -356,46 +383,48 @@ void vtkImageAppend::ThreadedRequestData (
       {
       // Get the input extent and output extent
       // the real out extent for this input may be clipped.
-      vtkInformation *inInfo = 
+      vtkInformation *inInfo =
         inputVector[0]->GetInformationObject(idx1);
-      int *inWextent = 
+      int *inWextent =
         inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
       this->InternalComputeInputUpdateExtent(inExt, outExt, inWextent, idx1);
       memcpy(cOutExt, inExt, 6*sizeof(int));
-      cOutExt[this->AppendAxis*2] = 
+      cOutExt[this->AppendAxis*2] =
         inExt[this->AppendAxis*2] + this->Shifts[idx1];
-      cOutExt[this->AppendAxis*2 + 1] = 
+      cOutExt[this->AppendAxis*2 + 1] =
         inExt[this->AppendAxis*2 + 1] + this->Shifts[idx1];
-      
+
       // do a quick check to see if the input is used at all.
       if (inExt[this->AppendAxis*2] <= inExt[this->AppendAxis*2 + 1])
         {
         inPtr = inData[0][idx1]->GetScalarPointerForExtent(inExt);
         outPtr = outData[0]->GetScalarPointerForExtent(cOutExt);
-        
+
         if (inData[0][idx1]->GetNumberOfScalarComponents() !=
             outData[0]->GetNumberOfScalarComponents())
           {
           vtkErrorMacro("Components of the inputs do not match");
           return;
           }
-        
+
         // this filter expects that input is the same type as output.
         if (inData[0][idx1]->GetScalarType() != outData[0]->GetScalarType())
           {
-          vtkErrorMacro(<< "Execute: input" << idx1 << " ScalarType (" 
-                        << inData[0][idx1]->GetScalarType() 
-                        << "), must match output ScalarType (" 
+          vtkErrorMacro(<< "Execute: input" << idx1 << " ScalarType ("
+                        << inData[0][idx1]->GetScalarType()
+                        << "), must match output ScalarType ("
                         << outData[0]->GetScalarType() << ")");
           return;
           }
-        
+
         switch (inData[0][idx1]->GetScalarType())
           {
           vtkTemplateMacro(
-            vtkImageAppendExecute(this, id, 
-                                  inExt, inData[0][idx1], (VTK_TT *)(inPtr),
-                                  cOutExt, outData[0], (VTK_TT *)(outPtr)));
+            vtkImageAppendExecute(this, id,
+                                  inExt, inData[0][idx1],
+                                  static_cast<VTK_TT *>(inPtr),
+                                  cOutExt, outData[0],
+                                  static_cast<VTK_TT *>(outPtr)));
           default:
             vtkErrorMacro(<< "Execute: Unknown ScalarType");
           return;
@@ -417,6 +446,7 @@ int vtkImageAppend::FillInputPortInformation(int i, vtkInformation* info)
 void vtkImageAppend::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+
   os << indent << "AppendAxis: " << this->AppendAxis << endl;
   os << indent << "PreserveExtents: " << this->PreserveExtents << endl;
 }

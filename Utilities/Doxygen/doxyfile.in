@@ -16,12 +16,11 @@ GENERATE_HTMLHELP    = YES
 GENERATE_LATEX       = NO
 GENERATE_MAN         = NO
 GENERATE_RTF         = NO
-GENERATE_TAGFILE     = "@VTK_BINARY_DIR@/Utilities/Doxygen/vtk4.tag"
+GENERATE_TAGFILE     = "@VTK_BINARY_DIR@/Utilities/Doxygen/vtk@VTK_MAJOR_VERSION@.@VTK_MINOR_VERSION@.tag"
 
 PDF_HYPERLINKS       = YES
 
-HAVE_DOT             = YES
-#HAVE_DOT            = NO
+HAVE_DOT             = @HAVE_DOT_YESNO@
 DOT_PATH             = "@DOT_PATH@"
 CLASS_GRAPH          = YES
 COLLABORATION_GRAPH  = YES
@@ -45,12 +44,16 @@ INPUT                = \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GenericFiltering/Testing/Cxx" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Graphics" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport/MFC" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport/Qt" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Hybrid" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Imaging" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Infovis" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/IO" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Parallel" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Widgets" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Rendering" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Views" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/VolumeRendering" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/doc_VTK_version.dox" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/doc_VTK_class2examples.dox" \
@@ -86,7 +89,7 @@ EXCLUDE              = \
     "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Common/Testing/vtkTestDriver.h" \
     "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Common/Testing/vtkTestingColors.h"
 
-# TAGFILES           = "@VTK_BINARY_DIR@/Utilities/Doxygen/vtk4-nightly.tag"=http://www.vtk.org/doc/nightly/html
+# TAGFILES           = "@VTK_BINARY_DIR@/Utilities/Doxygen/vtk@VTK_MAJOR_VERSION@-nightly.tag"=http://www.vtk.org/doc/nightly/html
 
 EXTRACT_ALL          = YES
 EXTRACT_PRIVATE      = NO

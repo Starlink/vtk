@@ -10,22 +10,42 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     PointLocator.cxx
     FrustumClip.cxx
     RGrid.cxx
-    TestSortDataArray.cxx
+    TestAppendSelection.cxx
+    TestAssignAttribute.cxx
+    TestClipHyperOctree.cxx
+    TestConvertSelection.cxx
+    TestDelaunay2D.cxx
+    TestExtraction.cxx
+    TestExtractSelection.cxx
+    TestHyperOctreeContourFilter.cxx
+    TestHyperOctreeCutter.cxx
+    TestHyperOctreeDual.cxx
+#    TestHyperOctreeSurfaceFilter.cxx
+    TestHyperOctreeToUniformGrid.cxx
+    TestPolyDataPointSampler.cxx
+    TestSelectEnclosedPoints.cxx
+    TestTessellator.cxx
+    TestUncertaintyTubeFilter.cxx
     )
   IF (VTK_DATA_ROOT)
     # add tests that require data
     SET(MyTests ${MyTests}
       BoxClipPolyData.cxx
       BoxClipTetrahedra.cxx
+      BoxClipTriangulateAndInterpolate.cxx
       MeshQuality.cxx
+      TestActor2DTextures.cxx
       TestHierarchicalBoxPipeline.cxx
+      TestIconGlyphFilterGravity.cxx
       TestMultiBlock.cxx
+      TestUnstructuredGridGeometryFilter.cxx
+      UnstructuredGridGradients.cxx
+      UnstructuredGridCellGradients.cxx
       )
   ENDIF (VTK_DATA_ROOT)
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                          EXTRA_INCLUDE vtkTestDriver.h)
-  ADD_EXECUTABLE(${KIT}CxxTests ${Tests} 
-    vtkTestHierarchicalDataReader.cxx)
+  ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
   SET (TestsToRun ${Tests})
   REMOVE (TestsToRun ${KIT}CxxTests.cxx)

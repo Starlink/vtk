@@ -31,10 +31,13 @@ public:
   vtkTypeRevisionMacro(vtkSpherePuzzleArrows,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
   static vtkSpherePuzzleArrows *New();
 
   // Description:
+  // Permutation is an array of puzzle piece ids.
+  // Arrows will be generated for any id that does not contain itself.
+  // Permutation[3] = 3 will produce no arrow.
+  // Permutation[3] = 10 will draw an arrow from location 3 to 10.
   vtkSetVectorMacro(Permutation,int,32);
   vtkGetVectorMacro(Permutation,int,32);
   void SetPermutationComponent(int comp, int val);

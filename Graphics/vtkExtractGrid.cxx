@@ -22,7 +22,7 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkExtractGrid, "$Revision: 1.44 $");
+vtkCxxRevisionMacro(vtkExtractGrid, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkExtractGrid);
 
 // Construct object to extract all of the input data.
@@ -50,6 +50,12 @@ int vtkExtractGrid::RequestUpdateExtent(
   int rate[3];
 
   inWholeExt = inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
+  // Temporary fix for multi-block datasets. If the WHOLE_EXTENT is not
+  // defined, exit gracefully instead of crashing.
+  if (!inWholeExt)
+    {
+    return 1;
+    }
   outWholeExt = outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT());
   updateExt = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT());
 
@@ -192,7 +198,7 @@ int vtkExtractGrid::RequestInformation(
       outDims[i] = 1;
       }
     // We might as well make this work for negative extents.
-    mins[i] = (int)(floor((float)voi[2*i] / (float)rate[i]));
+    mins[i] = static_cast<int>(floor(voi[2*i]/static_cast<double>(rate[i])));
     }
 
   // Adjust the output dimensions if the boundaries are to be
@@ -293,9 +299,9 @@ int vtkExtractGrid::RequestData(
   // We need to duplicate the computation done in 
   // ExecuteInformtation for the output whole extent.
   // Use shift as temporary variable (output mins).
-  shift[0] = (int)(floor( (float)(voi[0])/(float)(rate[0]) ));
-  shift[1] = (int)(floor( (float)(voi[2])/(float)(rate[1]) ));
-  shift[2] = (int)(floor( (float)(voi[4])/(float)(rate[2]) ));
+  shift[0] = static_cast<int>(floor(voi[0]/static_cast<double>(rate[0])));
+  shift[1] = static_cast<int>(floor(voi[2]/static_cast<double>(rate[1])));
+  shift[2] = static_cast<int>(floor(voi[4]/static_cast<double>(rate[2])));
   // Take the different between the output and input mins (in input coordinates).
   shift[0] = voi[0] - (shift[0]*rate[0]);
   shift[1] = voi[2] - (shift[1]*rate[1]);
@@ -369,13 +375,31 @@ int vtkExtractGrid::RequestData(
     {
     uExt[5] = uExt[5] + 1;
     }
+  // Fix the boundary case
+  if (uExt[5] > inExt[5] && uExt[4] > inExt[4])
+    {
+    uExt[4]--;
+    uExt[5]--;
+    }
   if (uExt[2] == uExt[3])
     {
     uExt[3] = uExt[3] + 1;
     }
+  // Fix the boundary case
+  if (uExt[3] > inExt[3] && uExt[2] > inExt[2])
+    {
+    uExt[2]--;
+    uExt[3]--;
+    }
   if (uExt[0] == uExt[1])
     {
     uExt[1] = uExt[1] + 1;
+    }
+  // Fix the boundary case
+  if (uExt[1] > inExt[1] && uExt[0] > inExt[0])
+    {
+    uExt[0]--;
+    uExt[1]--;
     }
   // No need to consider IncludeBoundary for cell data.
   for ( k=uExt[4]; k < uExt[5]; ++k )

@@ -67,8 +67,10 @@
 
 #include "vtkInitialValueProblemSolver.h" // Needed for constants
 
+class vtkCompositeDataSet;
 class vtkDataArray;
 class vtkDoubleArray;
+class vtkExecutive;
 class vtkGenericCell;
 class vtkIdList;
 class vtkIntArray;
@@ -160,6 +162,7 @@ public:
   // TIME_UNIT        = 0
   // LENGTH_UNIT      = 1
   // CELL_LENGTH_UNIT = 2
+  // The defaults are LENGTH_UNIT, 1.0.
   void SetMaximumPropagation(int unit, double max);
   void SetMaximumPropagation(double max);
   void SetMaximumPropagationUnit(int unit);
@@ -284,16 +287,17 @@ public:
   vtkGetMacro(RotationScale, double);
 
   // Description:
-  // Add a dataset to the list inputs
-  void AddInput(vtkDataSet *in);
-
-  // Description:
+  // The object used to interpolate the velocity field during
+  // integration is of the same class as this prototype.
   void SetInterpolatorPrototype(vtkInterpolatedVelocityField* ivf);
 
 protected:
 
   vtkStreamTracer();
   ~vtkStreamTracer();
+
+  // Create a default executive.
+  virtual vtkExecutive* CreateDefaultExecutive();
 
   // hide the superclass' AddInput() from the user and the compiler
   void AddInput(vtkDataObject *) 
@@ -312,14 +316,15 @@ protected:
                  double lastPoint[3],
                  vtkInterpolatedVelocityField* func,
                  int maxCellSize,
-                 const char *vecFieldName);
+                 const char *vecFieldName,
+                 double& propagation,
+                 vtkIdType& numSteps);
   void SimpleIntegrate(double seed[3], 
                        double lastPoint[3], 
                        double delt,
                        vtkInterpolatedVelocityField* func);
   int CheckInputs(vtkInterpolatedVelocityField*& func,
-                  int* maxCellSize,
-                  vtkInformationVector **inputVector);
+                  int* maxCellSize);
   void GenerateNormals(vtkPolyData* output, double* firstNormal, const char *vecName);
 
   int GenerateNormalsInIntegrate;
@@ -359,6 +364,8 @@ protected:
                         int direction, double cellLength, double speed);
 //ETX
 
+  int SetupOutput(vtkInformation* inInfo, 
+                  vtkInformation* outInfo);
   void InitializeSeeds(vtkDataArray*& seeds,
                        vtkIdList*& seedIds,
                        vtkIntArray*& integrationDirections,
@@ -376,6 +383,8 @@ protected:
   double RotationScale;
 
   vtkInterpolatedVelocityField* InterpolatorPrototype;
+
+  vtkCompositeDataSet* InputData;
 
 private:
   vtkStreamTracer(const vtkStreamTracer&);  // Not implemented.

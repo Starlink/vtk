@@ -48,14 +48,14 @@ public:
   virtual vtkCell *GetCell(vtkIdType cellId);
   virtual void GetCell(vtkIdType cellId, vtkGenericCell *cell);
   virtual vtkIdType FindCell(
-    double x[3], vtkCell *cell, vtkIdType cellId, double tol2, 
+    double x[3], vtkCell *cell, vtkIdType cellId, double tol2,
     int& subId, double pcoords[3], double *weights);
   virtual vtkIdType FindCell(
     double x[3], vtkCell *cell, vtkGenericCell *gencell,
-    vtkIdType cellId, double tol2, int& subId, 
+    vtkIdType cellId, double tol2, int& subId,
     double pcoords[3], double *weights);
   virtual vtkCell *FindAndGetCell(
-    double x[3], vtkCell *cell, vtkIdType cellId, 
+    double x[3], vtkCell *cell, vtkIdType cellId,
     double tol2, int& subId, double pcoords[3],
     double *weights);
   virtual int GetCellType(vtkIdType cellId);
@@ -66,13 +66,12 @@ public:
     {vtkStructuredData::GetPointCells(ptId,cellIds,this->GetDimensions());}
   virtual void Initialize();
   virtual int GetMaxCellSize() {return 8;}; //voxel is the largest
-  virtual void GetScalarRange(double range[2]);
 
   // Description:
   // Shallow and Deep copy.
-  virtual void ShallowCopy(vtkDataObject *src);  
+  virtual void ShallowCopy(vtkDataObject *src);
   virtual void DeepCopy(vtkDataObject *src);
-  
+
   // Description:
   // Methods for supporting blanking of cells. Blanking turns on or off
   // points in the structured grid, and hence the cells connected to them.
@@ -88,24 +87,24 @@ public:
   // grid are set.
   virtual void BlankCell(vtkIdType ptId);
   virtual void UnBlankCell(vtkIdType ptId);
-  
-  // Description:
-  // Get the array that defines the blanking (visibility) of each point.
-  virtual vtkUnsignedCharArray *GetPointVisibilityArray(); 
 
   // Description:
-  // Set an array that defines the (blanking) visibility of the points 
-  // in the grid. Make sure that length of the visibility array matches 
+  // Get the array that defines the blanking (visibility) of each point.
+  virtual vtkUnsignedCharArray *GetPointVisibilityArray();
+
+  // Description:
+  // Set an array that defines the (blanking) visibility of the points
+  // in the grid. Make sure that length of the visibility array matches
   // the number of points in the grid.
   virtual void SetPointVisibilityArray(vtkUnsignedCharArray *pointVisibility);
 
   // Description:
   // Get the array that defines the blanking (visibility) of each cell.
-  virtual vtkUnsignedCharArray *GetCellVisibilityArray(); 
-  
+  virtual vtkUnsignedCharArray *GetCellVisibilityArray();
+
   // Description:
-  // Set an array that defines the (blanking) visibility of the cells 
-  // in the grid. Make sure that length of the visibility array matches 
+  // Set an array that defines the (blanking) visibility of the cells
+  // in the grid. Make sure that length of the visibility array matches
   // the number of points in the grid.
   virtual void SetCellVisibilityArray(vtkUnsignedCharArray *pointVisibility);
 
@@ -114,9 +113,9 @@ public:
   // These methods should be called only after the dimensions of the
   // grid are set.
   virtual unsigned char IsPointVisible(vtkIdType ptId);
-  
+
   // Description:
-  // Return non-zero value if specified point is visible.
+  // Return non-zero value if specified cell is visible.
   // These methods should be called only after the dimensions of the
   // grid are set.
   virtual unsigned char IsCellVisible(vtkIdType cellId);
@@ -143,7 +142,11 @@ public:
 protected:
   vtkUniformGrid();
   ~vtkUniformGrid();
-
+  
+  // Description:
+  // Override this method because of blanking.
+  virtual void ComputeScalarRange();
+  
   vtkStructuredVisibilityConstraint* PointVisibility;
 
   void SetPointVisibility(vtkStructuredVisibilityConstraint *pointVisibility);

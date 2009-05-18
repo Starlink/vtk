@@ -46,6 +46,8 @@
 class vtkRenderWindowInteractor;
 class vtkRenderer;
 class vtkCallbackCommand;
+class vtkObserverMediator;
+
 
 class VTK_RENDERING_EXPORT vtkInteractorObserver : public vtkObject
 {
@@ -129,15 +131,31 @@ public:
   vtkGetObjectMacro(CurrentRenderer,vtkRenderer);
   virtual void SetCurrentRenderer(vtkRenderer*);
 
+  // Description:
   // Sets up the keypress-i event. 
   virtual void OnChar();
   
+  // Description: 
   // Convenience methods for outside classes. Make sure that the
   // parameter "ren" is not-null.
   static void ComputeDisplayToWorld(vtkRenderer *ren, double x, double y, 
                                     double z, double worldPt[4]);
   static void ComputeWorldToDisplay(vtkRenderer *ren, double x, double y, 
                                     double z, double displayPt[3]);
+
+  // Description:
+  // These methods enable an interactor observer to exclusively grab all
+  // events invoked by its associated vtkRenderWindowInteractor. (This method
+  // is typically used by widgets to grab events once an event sequence
+  // begins.) The GrabFocus() signature takes up to two vtkCommands
+  // corresponding to mouse events and keypress events. (These two commands
+  // are separated so that the widget can listen for its activation keypress,
+  // as well as listening for DeleteEvents, without actually having to process
+  // mouse events.)
+  //BTX
+  void GrabFocus(vtkCommand *mouseEvents, vtkCommand *keypressEvents=NULL);
+  void ReleaseFocus();
+  //ETX
 
 protected:
   vtkInteractorObserver();
@@ -187,6 +205,10 @@ protected:
 
   unsigned long CharObserverTag;
   unsigned long DeleteObserverTag;
+
+  // The mediator used to request resources from the interactor.
+  vtkObserverMediator *ObserverMediator;
+  int RequestCursorShape(int requestedShape);
 
 private:
   vtkInteractorObserver(const vtkInteractorObserver&);  // Not implemented.

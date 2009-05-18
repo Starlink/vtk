@@ -22,7 +22,7 @@
 #include "vtkPointData.h"
 #include "vtkTimerLog.h"
 
-vtkCxxRevisionMacro(vtkAbstractMapper, "$Revision: 1.4.4.1 $");
+vtkCxxRevisionMacro(vtkAbstractMapper, "$Revision: 1.6 $");
 
 vtkCxxSetObjectMacro(vtkAbstractMapper,ClippingPlanes,vtkPlaneCollection);
 
@@ -190,7 +190,7 @@ vtkDataArray *vtkAbstractMapper::GetScalars(vtkDataSet *input,
       {
       scalars = fd->GetArray(arrayName);
       }
-    cellFlag = 1;
+    cellFlag = 2;
     }
   
   return scalars;

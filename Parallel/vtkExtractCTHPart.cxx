@@ -14,42 +14,43 @@
 =========================================================================*/
 #include "vtkExtractCTHPart.h"
 
-#include "vtkToolkits.h"
 #include "vtkAppendPolyData.h"
+#include "vtkBoundingBox.h"
+#include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkCharArray.h"
 #include "vtkClipPolyData.h"
+#include "vtkCompositeDataIterator.h"
+#include "vtkCompositeDataPipeline.h"
+#include "vtkCompositeDataSet.h"
 #include "vtkContourFilter.h"
 #include "vtkCutter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
+#include "vtkExecutive.h"
+#include "vtkGarbageCollector.h"
+#include "vtkImageData.h"
+#include "vtkInformationDoubleVectorKey.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMultiBlockDataSet.h"
+#include "vtkMultiProcessController.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkRectilinearGrid.h"
-#include "vtkCharArray.h"
+#include "vtkSmartPointer.h"
 #include "vtkTimerLog.h"
-
-#include "vtkExecutive.h"
-#include "vtkCompositeDataPipeline.h"
-#include "vtkHierarchicalDataSet.h"
+#include "vtkToolkits.h"
 #include "vtkUniformGrid.h"
-#include "vtkGarbageCollector.h"
-#include "vtkImageData.h"
-
-#include "vtkCellArray.h"
-
-#include "vtkInformationDoubleVectorKey.h"
-#include "vtkMultiProcessController.h"
 
 #include <math.h>
 #include <vtkstd/string>
 #include <vtkstd/vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkExtractCTHPart, "$Revision: 1.8 $");
+vtkCxxRevisionMacro(vtkExtractCTHPart, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkExtractCTHPart);
 vtkCxxSetObjectMacro(vtkExtractCTHPart,ClipPlane,vtkPlane);
 vtkCxxSetObjectMacro(vtkExtractCTHPart,Controller,vtkMultiProcessController);
@@ -57,6 +58,8 @@ vtkCxxSetObjectMacro(vtkExtractCTHPart,Controller,vtkMultiProcessController);
 vtkInformationKeyMacro(vtkExtractCTHPart,BOUNDS, DoubleVector);
 
 const double CTH_AMR_SURFACE_VALUE=0.499;
+const double CTH_AMR_SURFACE_VALUE_FLOAT=1;
+const double CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR=255;
 
 //-----------------------------------------------------------------------------
 //=============================================================================
@@ -64,7 +67,7 @@ class vtkExtractCTHPartInternal
 {
 public:
   vtkstd::vector<vtkstd::string> VolumeArrayNames;
-
+  int DataType;
 };
 //=============================================================================
 //-----------------------------------------------------------------------------
@@ -73,8 +76,10 @@ public:
 vtkExtractCTHPart::vtkExtractCTHPart()
 {
   this->Internals = new vtkExtractCTHPartInternal;
+  this->Internals->DataType=0;
+
+  this->Bounds = new vtkBoundingBox;
   this->ClipPlane = 0;
-  this->SetNumberOfOutputPorts(0);
   
   this->PointVolumeFraction=0;
   
@@ -95,6 +100,9 @@ vtkExtractCTHPart::vtkExtractCTHPart()
   this->RClip1=0;
   this->RCut=0;
   this->RClip2=0;
+  this->VolumeFractionType = -1;
+  this->VolumeFractionSurfaceValueInternal = CTH_AMR_SURFACE_VALUE;
+  this->VolumeFractionSurfaceValue = CTH_AMR_SURFACE_VALUE;
   
   this->Controller = 0;
   this->SetController(vtkMultiProcessController::GetGlobalController());
@@ -105,6 +113,7 @@ vtkExtractCTHPart::~vtkExtractCTHPart()
 {
   this->SetClipPlane(NULL);
   delete this->Internals;
+  delete this->Bounds;
   this->Internals = 0;
   this->DeleteInternalPipeline();
   this->SetController(0);
@@ -130,8 +139,48 @@ unsigned long vtkExtractCTHPart::GetMTime()
 //-----------------------------------------------------------------------------
 void vtkExtractCTHPart::RemoveAllVolumeArrayNames()
 {
-  this->SetNumberOfOutputPorts(0);
-  
+  this->Internals->VolumeArrayNames.erase(
+    this->Internals->VolumeArrayNames.begin(),
+    this->Internals->VolumeArrayNames.end());
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::RemoveDoubleVolumeArrayNames()
+{
+  if (this->Internals->DataType != VTK_DOUBLE)
+    {
+    return;
+    }
+
+  this->Internals->VolumeArrayNames.erase(
+    this->Internals->VolumeArrayNames.begin(),
+    this->Internals->VolumeArrayNames.end());
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::RemoveFloatVolumeArrayNames()
+{
+  if (this->Internals->DataType != VTK_FLOAT)
+    {
+    return;
+    }
+
+  this->Internals->VolumeArrayNames.erase(
+    this->Internals->VolumeArrayNames.begin(),
+    this->Internals->VolumeArrayNames.end());
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::RemoveUnsignedCharVolumeArrayNames()
+{
+  if (this->Internals->DataType != VTK_UNSIGNED_CHAR)
+    {
+    return;
+    }
+
   this->Internals->VolumeArrayNames.erase(
     this->Internals->VolumeArrayNames.begin(),
     this->Internals->VolumeArrayNames.end());
@@ -146,19 +195,70 @@ void vtkExtractCTHPart::AddVolumeArrayName(char* arrayName)
     return;
     }
   
-  vtkPolyData *d=vtkPolyData::New();
+  this->Internals->DataType = 0;
   this->Internals->VolumeArrayNames.push_back(arrayName);
-  int num = this->GetNumberOfOutputPorts();
-  this->SetNumberOfOutputPorts(num+1);
-  this->SetOutputData(num, d);
-  d->FastDelete();
   this->Modified();
 }
 
 //-----------------------------------------------------------------------------
+void vtkExtractCTHPart::AddDoubleVolumeArrayName(char* arrayName)
+{
+  if(arrayName==0)
+    {
+    return;
+    }
+  
+  if (this->Internals->DataType != VTK_DOUBLE)
+    {
+    this->RemoveAllVolumeArrayNames();
+    this->Internals->DataType = VTK_DOUBLE;
+    }
+
+  this->Internals->VolumeArrayNames.push_back(arrayName);
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::AddFloatVolumeArrayName(char* arrayName)
+{
+  if(arrayName==0)
+    {
+    return;
+    }
+  
+  if (this->Internals->DataType != VTK_FLOAT)
+    {
+    this->RemoveAllVolumeArrayNames();
+    this->Internals->DataType = VTK_FLOAT;
+    }
+
+  this->Internals->VolumeArrayNames.push_back(arrayName);  
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::AddUnsignedCharVolumeArrayName(char* arrayName)
+{
+  if(arrayName==0)
+    {
+    return;
+    }
+  
+  if (this->Internals->DataType != VTK_UNSIGNED_CHAR)
+    {
+    this->RemoveAllVolumeArrayNames();
+    this->Internals->DataType = VTK_UNSIGNED_CHAR;
+    }
+
+  this->Internals->VolumeArrayNames.push_back(arrayName);
+  this->Modified();
+}
+
+
+//-----------------------------------------------------------------------------
 int vtkExtractCTHPart::GetNumberOfVolumeArrayNames()
 {
-  return this->Internals->VolumeArrayNames.size();
+  return static_cast<int>(this->Internals->VolumeArrayNames.size());
 }
 
 //-----------------------------------------------------------------------------
@@ -181,17 +281,9 @@ int vtkExtractCTHPart::FillInputPortInformation(int port,
     {
     return 0;
     }
-  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
-  info->Set(vtkCompositeDataPipeline::INPUT_REQUIRED_COMPOSITE_DATA_TYPE(), 
-            "vtkCompositeDataSet");
+  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataObject");
   
   return 1;
-}
-
-//----------------------------------------------------------------------------
-void vtkExtractCTHPart::SetOutputData(int idx, vtkPolyData* d)
-{
-  this->GetExecutive()->SetOutputData(idx, d);
 }
 
 //----------------------------------------------------------------------------
@@ -203,15 +295,14 @@ int vtkExtractCTHPart::RequestInformation(
   vtkInformation* outInfo;
   
   int num=this->GetNumberOfOutputPorts();
-  int port=0;
-  while(port<num)
+  int port;
+  for(port = 0; port<num; port++)
     {
     outInfo=outputVector->GetInformationObject(port);
     // RequestData() synchronizes (communicates among processes), so we need
     // all procs to call RequestData().
     outInfo->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(),
                  -1);
-    ++port;
     }
   return 1;
 }
@@ -222,59 +313,81 @@ int vtkExtractCTHPart::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
+  this->VolumeFractionType = -1;
   // get the info objects
-  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *inInfo  = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+  int processNumber = 
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  int numProcessors =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+  if(this->Controller==0)
+    {
+    processNumber=0;
+    numProcessors=1;
+    }
 
   // get the input and output
-  vtkHierarchicalDataSet *input=vtkHierarchicalDataSet::SafeDownCast(
-    inInfo->Get(vtkCompositeDataSet::COMPOSITE_DATA_SET()));
+  vtkCompositeDataSet* input = vtkCompositeDataSet::GetData(inInfo);
+
+  vtkMultiBlockDataSet* mbOutput= vtkMultiBlockDataSet::GetData(outInfo);
+  unsigned int numBlocks = static_cast<unsigned int>(
+    this->Internals->VolumeArrayNames.size());
+  mbOutput->SetNumberOfBlocks(numBlocks);
+  for (unsigned int i=0; i<numBlocks; i++)
+    {
+    vtkMultiBlockDataSet* block = vtkMultiBlockDataSet::New();
+    block->SetNumberOfBlocks(numProcessors);
+    vtkPolyData* pd = vtkPolyData::New();
+    block->SetBlock(processNumber, pd);
+    mbOutput->SetBlock(i, block);
+    pd->Delete();
+    block->Delete();
+    }
   
   vtkRectilinearGrid *rg=0;
   
   if(input!=0)
     {
-    if(input->GetNumberOfLevels()==0)
+    vtkCompositeDataIterator* iter = input->NewIterator();
+    iter->InitTraversal();
+    int empty_input =  iter->IsDoneWithTraversal();
+    iter->Delete();
+    if(empty_input)
       {
       // empty input, do nothing.
       return 1;
       }
     if(inInfo->Has(vtkExtractCTHPart::BOUNDS()))
       {
-      inInfo->Get(vtkExtractCTHPart::BOUNDS(),this->Bounds);
+      double b[6];
+      inInfo->Get(vtkExtractCTHPart::BOUNDS(), b);
+      this->Bounds->SetBounds(b);
       }
     else
       {
       // compute the bounds
-      if(this->GetNumberOfOutputPorts()>0) // 
-        {
-        vtkInformation *info=outputVector->GetInformationObject(0);
-        int processNumber = info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-        int numProcessors =info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-        if(this->Controller==0)
-          {
-          processNumber=0;
-          numProcessors=1;
-          }
-        this->ComputeBounds(input,processNumber,numProcessors);
-        }
-      else
-        {
-        return 1; // no output port, means no part to extract, that's OK.
-        }
+      this->ComputeBounds(input,processNumber,numProcessors);
       }
     }
   else
     {
-    rg=vtkRectilinearGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    rg=vtkRectilinearGrid::SafeDownCast(
+      inInfo->Get(vtkDataObject::DATA_OBJECT()));
     if(rg==0)
       {
-      vtkErrorMacro(<<"No input.");
+      vtkErrorMacro(<<"No valid input.");
       return 0;
       }
-    rg->GetBounds(this->Bounds);
+    double b[6];
+    rg->GetBounds(b);
+    this->Bounds->SetBounds(b);
     }
   
   // Here, either input or rg is not null.
+  //
+  this->EvaluateVolumeFractionType(rg, input);
   
   int idx, num;
   const char* arrayName;
@@ -295,18 +408,24 @@ int vtkExtractCTHPart::RequestData(
   vtkGarbageCollector::DeferredCollectionPush();
   this->CreateInternalPipeline();
   
+  float progress, nextProgress;
   if(input!=0)
     {
     for (idx = 0; idx < num; ++idx)
       {
+      vtkMultiBlockDataSet* block = vtkMultiBlockDataSet::SafeDownCast(
+        mbOutput->GetBlock(idx));
       arrayName = this->GetVolumeArrayName(idx);
-      output = this->GetOutput(idx);
+      output = vtkPolyData::SafeDownCast(block->GetBlock(processNumber));
       if(output==0)
         {
         vtkErrorMacro(<<"No output.");
         return 0;
         }
-      this->ExecutePart(arrayName,input,appendSurface[idx],tmps[idx]);
+      progress = (1.0/num)*idx;
+      nextProgress = progress + 1.0/num;
+      this->ExecutePart(arrayName,input,appendSurface[idx],tmps[idx],
+                          progress,nextProgress);
       }
     }
   else // rg!=0
@@ -314,19 +433,45 @@ int vtkExtractCTHPart::RequestData(
     for (idx = 0; idx < num; ++idx)
       {
       arrayName = this->GetVolumeArrayName(idx);
-      output = this->GetOutput(idx);
+      vtkMultiBlockDataSet* block = vtkMultiBlockDataSet::SafeDownCast(
+        mbOutput->GetBlock(idx));
+      output = vtkPolyData::SafeDownCast(block->GetBlock(processNumber));
       if(output==0)
         {
         vtkErrorMacro(<<"No output.");
         return 0;
         }
-      this->ExecutePartOnRectilinearGrid(arrayName,rg,appendSurface[idx],
-                                         tmps[idx]);
+      progress = (1.0/num)*idx;
+      nextProgress = progress + 1.0/num;
+      // Does the grid have the requested cell data?
+      if (rg->GetCellData()->GetArray(arrayName))
+        {
+        this->ExecutePartOnRectilinearGrid(arrayName,rg,appendSurface[idx],
+                                           tmps[idx], progress, nextProgress);
+        }
+      else 
+        {
+        vtkWarningMacro("RectilinearGrid does not contain CellData named "
+                        << arrayName);
+        vtkPolyData *tmp=vtkPolyData::New();
+        tmps[idx]->AddInput(tmp);
+        tmp->Delete();
+        }
       }
     }
-  
+
+  //vtkDataArray* cellVolumeFraction;
+  //cellVolumeFraction = input->GetCellData()->GetArray(arrayName);
+  //if (cellVolumeFraction == NULL)
+  //  {
+  //  vtkErrorMacro("Could not find cell array " << arrayName);
+  //  return;
+  //  }
+  //double* range = cellVolumeFraction->GetRange();
+  //cout << "@@@@ Range: " << range[0] << " " range[1] << " midpoint: " << ((range[0] + range[1]) * .5) << endl;
+
   vtkClipPolyData* clip = vtkClipPolyData::New();
-  clip->SetValue(CTH_AMR_SURFACE_VALUE);
+  clip->SetValue(this->VolumeFractionSurfaceValueInternal);
   vtkClipPolyData *clip2=clip;
   if (this->ClipPlane)
     {
@@ -340,29 +485,39 @@ int vtkExtractCTHPart::RequestData(
   for (idx = 0; idx < num; ++idx)
     {
     arrayName=this->GetVolumeArrayName(idx);
-    
-    // we have to update the output before get its point data.
-    appendSurface[idx]->Update();
-    clip->SetInput(appendSurface[idx]->GetOutput());
+    vtkMultiBlockDataSet* pieces = vtkMultiBlockDataSet::SafeDownCast(
+      mbOutput->GetBlock(idx));
+    int inputConns = appendSurface[idx]->GetNumberOfInputConnections(0);
+
+
+    if (inputConns > 0)
+      {
+      // we have to update the output before get its point data.
+      appendSurface[idx]->Update();
 #ifndef NDEBUG
-    int checkIndex=appendSurface[idx]->GetOutput()->GetPointData()->SetActiveScalars(arrayName);
-    assert("check: SetActiveScalar succeeded" && checkIndex>=0);
+      int checkIndex=appendSurface[idx]->GetOutput()->GetPointData()->SetActiveScalars(arrayName);
+      assert("check: SetActiveScalar succeeded" && checkIndex>=0);
 #else
-    appendSurface[idx]->GetOutput()->GetPointData()->SetActiveScalars(arrayName);
+      appendSurface[idx]->GetOutput()->GetPointData()->SetActiveScalars(arrayName);
 #endif
-    clip2->Update();
+      clip->SetInput(appendSurface[idx]->GetOutput());
+      clip2->Update();
+      }
+
 #if 1
     tmps[idx]->AddInput(clip2->GetOutput());
 #else
     tmps[idx]->AddInput(appendSurface[idx]->GetOutput());
 #endif
     
-    output = this->GetOutput(idx);
-    vtkTimerLog::MarkStartEvent("BlockAppend");
-    tmps[idx]->Update();
-    vtkTimerLog::MarkEndEvent("BlockAppend");     
-    
-    
+    output = vtkPolyData::SafeDownCast(pieces->GetBlock(processNumber));
+    if (inputConns > 0)
+      {
+      vtkTimerLog::MarkStartEvent("BlockAppend");
+      tmps[idx]->Update();
+      vtkTimerLog::MarkEndEvent("BlockAppend");     
+      }
+        
     vtkPolyData* tmpOut = tmps[idx]->GetOutput();
     output->CopyStructure(tmpOut);
     output->GetPointData()->PassData(tmpOut->GetPointData());
@@ -407,16 +562,8 @@ int vtkExtractCTHPart::RequestData(
   return 1;
 }
 
-// Magic number that encode the message ids for parallel communication
-enum
-{
-  VTK_MSG_EXTRACT_CTH_PART_HAS_BOUNDS=288402,
-  VTK_MSG_EXTRACT_CTH_PART_LOCAL_BOUNDS,
-  VTK_MSG_EXTRACT_CTH_PART_GLOBAL_BOUNDS
-};
-
 //-----------------------------------------------------------------------------
-void vtkExtractCTHPart::ComputeBounds(vtkHierarchicalDataSet *input,
+void vtkExtractCTHPart::ComputeBounds(vtkCompositeDataSet *input,
                                       int processNumber,
                                       int numProcessors)
 {
@@ -424,266 +571,230 @@ void vtkExtractCTHPart::ComputeBounds(vtkHierarchicalDataSet *input,
   assert("pre: positive_numProcessors" && numProcessors>0);
   assert("pre: valid_processNumber" && processNumber>=0 &&
          processNumber<numProcessors);
-  
-  int firstBlock=1;
-  double realBounds[6];
-  
-  int numberOfLevels=input->GetNumberOfLevels();
-  int level=0;
-  while(level<numberOfLevels)
+ 
+  vtkCompositeDataIterator* iter = input->NewIterator();
+  for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
     {
-    int numberOfDataSets=input->GetNumberOfDataSets(level);    
-    int dataset=0;
-    while(dataset<numberOfDataSets)
+    vtkDataSet *ds = vtkDataSet::SafeDownCast(iter->GetCurrentDataObject());
+    if (!ds)// can be null if on another processor
       {
-      vtkDataObject *dataObj=input->GetDataSet(level,dataset);
-      if(dataObj!=0)// can be null if on another processor
-        {
-        vtkDataSet *ds=vtkDataSet::SafeDownCast(dataObj);
-        ds->GetBounds(realBounds);
-        
-        if(firstBlock)
-          {
-          int c=0;
-          while(c<6)
-            {
-            this->Bounds[c]=realBounds[c];
-            ++c;
-            }
-          firstBlock=0;
-          }
-        else
-          {
-          int c=0;
-          while(c<3)
-            {
-            if(realBounds[2*c]<this->Bounds[2*c])
-              {
-              this->Bounds[2*c]=realBounds[2*c];
-              }
-            if(realBounds[2*c+1]>this->Bounds[2*c+1])
-              {
-              this->Bounds[2*c+1]=realBounds[2*c+1];
-              }
-            ++c;
-            }
-          }
-        }
-      ++dataset;
+      continue;
       }
-    ++level;
+    double realBounds[6];
+    ds->GetBounds(realBounds);
+    this->Bounds->AddBounds(realBounds);
     }
+  iter->Delete();
+
   // Here we have the bounds according to our local datasets.
-  
-  int parent;
-  int left=GetLeftChildProcessor(processNumber);
-  int right=left+1;
-  if(processNumber>0) // not root (nothing to do if root)
-    {
-    parent=this->GetParentProcessor(processNumber);
-    }
-  else
-    {
-    parent=0; // just to remove warnings, never used
-    }
-  
-  double otherBounds[6];
-  int leftHasBounds=0; // init is not useful, just for compiler warnings
-  int rightHasBounds=0; // init is not useful, just for compiler warnings
-  
-  if(left<numProcessors)
-    {
-    // TODO WARNING if the child is empty the bounds are not initialized!
-    // Grab the bounds from left child
-    this->Controller->Receive(&leftHasBounds, 1, left,
-                              VTK_MSG_EXTRACT_CTH_PART_HAS_BOUNDS);
-    
-    if(leftHasBounds)
-      {
-      this->Controller->Receive(otherBounds, 6, left,
-                                VTK_MSG_EXTRACT_CTH_PART_LOCAL_BOUNDS);
-      
-      if(firstBlock) // impossible the current processor is not a leaf
-        {
-        int cc=0;
-        while(cc<6)
-          {
-          this->Bounds[cc]=otherBounds[cc];
-          ++cc;
-          }
-        firstBlock=0;
-        }
-      else
-        {
-        int cc=0;
-        while(cc<3)
-          {
-          if(otherBounds[2*cc]<this->Bounds[2*cc])
-            {
-            this->Bounds[2*cc]=otherBounds[2*cc];
-            }
-          if(otherBounds[2*cc+1]>this->Bounds[2*cc+1])
-            {
-            this->Bounds[2*cc+1]=otherBounds[2*cc+1];
-            }
-          ++cc;
-          }
-        }
-      }
-    
-    if(right<numProcessors)
-      {
-      // Grab the bounds from right child
-      this->Controller->Receive(&rightHasBounds, 1, right,
-                                VTK_MSG_EXTRACT_CTH_PART_HAS_BOUNDS);
-      if(rightHasBounds)
-        {
-        this->Controller->Receive(otherBounds, 6, right,
-                                  VTK_MSG_EXTRACT_CTH_PART_LOCAL_BOUNDS);
-        if(firstBlock)// impossible the current processor is not a leaf
-          {
-          int cc=0;
-          while(cc<6)
-            {
-            this->Bounds[cc]=otherBounds[cc];
-            ++cc;
-            }
-          firstBlock=0;
-          }
-        else
-          {
-          int cc=0;
-          while(cc<3)
-            {
-            if(otherBounds[2*cc]<this->Bounds[2*cc])
-              {
-              this->Bounds[2*cc]=otherBounds[2*cc];
-              }
-            if(otherBounds[2*cc+1]>this->Bounds[2*cc+1])
-              {
-              this->Bounds[2*cc+1]=otherBounds[2*cc+1];
-              }
-            ++cc;
-            }
-          }
-        }
-      }
-    }
-  
-  // Send local to parent, Receive global from the parent.
-  if(processNumber>0) // not root (nothing to do if root)
-    {
-    int hasBounds=!firstBlock;
-    this->Controller->Send(&hasBounds, 1, parent,
-                           VTK_MSG_EXTRACT_CTH_PART_HAS_BOUNDS);
-    if(hasBounds)
-      {
-      this->Controller->Send(this->Bounds, 6, parent,
-                             VTK_MSG_EXTRACT_CTH_PART_LOCAL_BOUNDS);
-      
-      this->Controller->Receive(this->Bounds, 6, parent,
-                                VTK_MSG_EXTRACT_CTH_PART_GLOBAL_BOUNDS);
-      }
-    }
-  
-  if(firstBlock) // empty, no bounds, nothing to do
+  // If we are not running in parallel then the local
+  // bounds are the global bounds
+  if (!this->Controller)
     {
     return;
     }
-  
-  // Send it to children.
-  if(left<numProcessors)
+  vtkCommunicator *comm = this->Controller->GetCommunicator();
+  if (!comm)
     {
-    if(leftHasBounds)
+    return;
+    }
+
+  if (!comm->ComputeGlobalBounds(processNumber, numProcessors,
+                                 this->Bounds))
+    {
+    vtkErrorMacro("Problem occurred getting the global bounds");
+    }
+  // At this point, the global bounds is set in each processor.
+}
+
+//-----------------------------------------------------------------------------
+void vtkExtractCTHPart::EvaluateVolumeFractionType(vtkRectilinearGrid* rg, 
+  vtkCompositeDataSet* input)
+{
+  int num = this->GetNumberOfVolumeArrayNames();
+  int cc;
+  for ( cc = 0; cc < num; ++ cc )
+    {
+    const char* arrayName = this->GetVolumeArrayName(cc);
+    if ( input )
       {
-      this->Controller->Send(this->Bounds, 6, left,
-                             VTK_MSG_EXTRACT_CTH_PART_GLOBAL_BOUNDS);
-      }
-    if(right<numProcessors)
-      {
-      if(rightHasBounds)
+      vtkCompositeDataIterator* iter = input->NewIterator();
+      for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
         {
-        this->Controller->Send(this->Bounds, 6, right,
-                               VTK_MSG_EXTRACT_CTH_PART_GLOBAL_BOUNDS);
+        vtkDataSet* dataSet = vtkDataSet::SafeDownCast(iter->GetCurrentDataObject());
+        if( dataSet== NULL)// cannot really be null since iter skips empty datasets.
+          {
+          continue;
+          }
+
+        vtkDataArray* cellVolumeFraction;
+        // Only convert single volume fraction array to point data.
+        // Other attributes will have to be viewed as cell data.
+        cellVolumeFraction = dataSet->GetCellData()->GetArray(arrayName);
+        if (cellVolumeFraction == NULL)
+          {
+          vtkErrorMacro("Could not find cell array " << arrayName);
+          return;
+          }
+        if (cellVolumeFraction->GetDataType() != VTK_DOUBLE &&
+          cellVolumeFraction->GetDataType() != VTK_FLOAT &&
+          cellVolumeFraction->GetDataType() != VTK_UNSIGNED_CHAR )
+          {
+          vtkErrorMacro("Expecting volume fraction to be of type float, "
+            "double, or unsigned char.");
+          return;
+          }
+        if ( this->VolumeFractionType >= 0 && 
+          this->VolumeFractionType != cellVolumeFraction->GetDataType() )
+          {
+          vtkErrorMacro("Volume fraction arrays are different type. They "
+            "should all be float, double, or unsigned char");
+          return;
+          }
+        if ( this->VolumeFractionType < 0 )
+          {
+          this->VolumeFractionType = cellVolumeFraction->GetDataType();
+          switch ( this->VolumeFractionType )
+            {
+          case VTK_UNSIGNED_CHAR:
+            this->VolumeFractionSurfaceValueInternal
+              = CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR * 
+              this->VolumeFractionSurfaceValue;
+            break;
+          default:
+            this->VolumeFractionSurfaceValueInternal
+              = CTH_AMR_SURFACE_VALUE_FLOAT * 
+              this->VolumeFractionSurfaceValue;
+            }
+          }
+        }
+      iter->Delete();
+      }
+    else
+      {
+      vtkDataArray* cellVolumeFraction;
+      // Only convert single volume fraction array to point data.
+      // Other attributes will have to be viewed as cell data.
+      cellVolumeFraction = rg->GetCellData()->GetArray(arrayName);
+      if (cellVolumeFraction == NULL)
+        {
+        vtkErrorMacro("Could not find cell array " << arrayName);
+        return;
+        }
+      if (cellVolumeFraction->GetDataType() != VTK_DOUBLE &&
+        cellVolumeFraction->GetDataType() != VTK_FLOAT &&
+        cellVolumeFraction->GetDataType() != VTK_UNSIGNED_CHAR )
+        {
+        vtkErrorMacro("Expecting volume fraction to be of type float, double, or unsigned char.");
+        return;
+        }
+      if ( this->VolumeFractionType >= 0 && this->VolumeFractionType != cellVolumeFraction->GetDataType() )
+        {
+        vtkErrorMacro("Volume fraction arrays are different type. They should all be float, double, or unsigned char");
+        return;
+        }
+      if ( this->VolumeFractionType < 0 )
+        {
+        this->VolumeFractionType = cellVolumeFraction->GetDataType();
+        switch ( this->VolumeFractionType )
+          {
+        case VTK_UNSIGNED_CHAR:
+          this->VolumeFractionSurfaceValueInternal
+            = CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR * this->VolumeFractionSurfaceValue;
+          break;
+        default:
+          this->VolumeFractionSurfaceValueInternal
+            = CTH_AMR_SURFACE_VALUE_FLOAT * this->VolumeFractionSurfaceValue;
+          }
         }
       }
     }
-  
-  // At this point, the global bounds is set in each processor.
- 
-  cout<<processNumber<<" bounds="<<this->Bounds[0]<<"; "<<this->Bounds[1]<<"; "<<this->Bounds[2]<<"; "<<this->Bounds[3]<<"; "<<this->Bounds[4]<<"; "<<this->Bounds[5]<<endl;
-
-}
-// The processors are views as a heap tree. The root is the processor of
-// id 0.
-//-----------------------------------------------------------------------------
-int vtkExtractCTHPart::GetParentProcessor(int proc)
-{
-  int result;
-  if(proc%2==1)
-    {
-    result=proc>>1; // /2
-    }
-  else
-    {
-    result=(proc-1)>>1; // /2
-    }
-  return result;
-}
-
-int vtkExtractCTHPart::GetLeftChildProcessor(int proc)
-{
-  return (proc<<1)+1; // *2+1
 }
 
 //-----------------------------------------------------------------------------
 // the input is a hierarchy of vtkUniformGrid or one level of
 // vtkRectilinearGrid. The output is a hierarchy of vtkPolyData.
 void vtkExtractCTHPart::ExecutePart(const char *arrayName,
-                                    vtkHierarchicalDataSet *input,
+                                    vtkCompositeDataSet *input,
                                     vtkAppendPolyData *appendSurface,
-                                    vtkAppendPolyData *append)
+                                    vtkAppendPolyData *append,
+                                    float minProgress,
+                                    float maxProgress)
 {
-  int numberOfLevels=input->GetNumberOfLevels();
-  int level=0;
-  while(level<numberOfLevels)
+
+  // Determine total number of leaf nodes which helps is firing progress events.
+  int totalNumberOfDatasets = 0;
+  vtkSmartPointer<vtkCompositeDataIterator> iter;
+  iter.TakeReference(input->NewIterator());
+  for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
     {
-    int numberOfDataSets=input->GetNumberOfDataSets(level);
-    
-    int dataset=0;
-    while(dataset<numberOfDataSets)
+    totalNumberOfDatasets++;
+    }
+
+  float delProg = (maxProgress-minProgress)/totalNumberOfDatasets;
+  int counter = 0;
+  for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem(), counter++)
+    {
+    float progress = minProgress + delProg*counter;
+    if (counter % 30 == 0)
       {
-      vtkDataObject *dataObj=input->GetDataSet(level,dataset);
-      if(dataObj!=0)// can be null if on another processor
+      this->UpdateProgress(progress);
+      }
+    vtkDataObject *dataObj = iter->GetCurrentDataObject();
+    if(dataObj!=0)// can be null if on another processor
+      {
+      vtkRectilinearGrid *rg=vtkRectilinearGrid::SafeDownCast(dataObj);
+      if(rg!=0)
         {
-        vtkRectilinearGrid *rg=vtkRectilinearGrid::SafeDownCast(dataObj);
-        if(rg!=0)
+        // Does the input have the requested cell data?
+        if (rg->GetCellData()->GetArray(arrayName))
           {
           this->ExecutePartOnRectilinearGrid(arrayName,rg,appendSurface,
-                                             append);
+            append, progress, progress + delProg);
+          }
+        else 
+          {
+          vtkWarningMacro("Rectilinear Grid does not contain CellData named "
+            << arrayName << " aborting extraction");
+          vtkPolyData *tmp=vtkPolyData::New();
+          append->AddInput(tmp);
+          tmp->Delete();
+          return;
+          }
+        }
+      else
+        {
+#ifdef EXTRACT_USE_IMAGE_DATA
+        vtkImageData *ug=vtkImageData::SafeDownCast(dataObj);
+#else
+        vtkUniformGrid *ug=vtkUniformGrid::SafeDownCast(dataObj);
+#endif
+        if(ug!=0)
+          {
+          // Does the input have the requested cell data?
+          if (ug->GetCellData()->GetArray(arrayName))
+            {
+            this->ExecutePartOnUniformGrid(arrayName,ug,appendSurface,
+              append, progress, progress+delProg);
+            }
+          else 
+            {
+            vtkWarningMacro("Uniform Grid does not contain CellData named "
+              << arrayName << " aborting extraction");
+            vtkPolyData *tmp=vtkPolyData::New();
+            append->AddInput(tmp);
+            tmp->Delete();
+            return;
+            }
           }
         else
           {
-#ifdef EXTRACT_USE_IMAGE_DATA
-          vtkImageData *ug=vtkImageData::SafeDownCast(dataObj);
-#else
-          vtkUniformGrid *ug=vtkUniformGrid::SafeDownCast(dataObj);
-#endif
-          if(ug!=0)
-            {
-            this->ExecutePartOnUniformGrid(arrayName,ug,appendSurface,
-                                           append);
-            }
-          else
-            {
-            vtkErrorMacro(<<" cannot handle a block of this type.");
-            }
+          vtkErrorMacro(<<" cannot handle a block of this type.");
           }
         }
-      ++dataset;
       }
-    ++level;
     }
+
 }
 
 //-----------------------------------------------------------------------------
@@ -695,11 +806,24 @@ void vtkExtractCTHPart::ExecutePartOnUniformGrid(
   vtkUniformGrid *input,
 #endif
   vtkAppendPolyData *appendSurface,
-  vtkAppendPolyData *append)
+  vtkAppendPolyData *append,
+  float minProgress,
+  float maxProgress)
 {
   vtkPolyData* tmp;
   vtkDataArray* cellVolumeFraction;
   int* dims;
+  float delProgress = maxProgress - minProgress;
+  int reportProgress = 0;
+  if (delProgress > 0.1)
+    {
+    reportProgress = 1;
+    }
+
+  if (reportProgress)
+    {
+    this->UpdateProgress(minProgress);
+    }
 
   vtkTimerLog::MarkStartEvent("Execute Part");
 
@@ -716,17 +840,34 @@ void vtkExtractCTHPart::ExecutePartOnUniformGrid(
     return;
     }
   if (cellVolumeFraction->GetDataType() != VTK_DOUBLE &&
-      cellVolumeFraction->GetDataType() != VTK_FLOAT)
+      cellVolumeFraction->GetDataType() != VTK_FLOAT &&
+      cellVolumeFraction->GetDataType() != VTK_UNSIGNED_CHAR )
     {
-    vtkErrorMacro("Expecting volume fraction to be of type float or double.");
+    vtkErrorMacro("Expecting volume fraction to be of type float, double, or unsigned char.");
     return;
+    }
+  if ( this->VolumeFractionType >= 0 && this->VolumeFractionType != cellVolumeFraction->GetDataType() )
+    {
+    vtkErrorMacro("Volume fraction arrays are different type. They should all be float, double, or unsigned char");
+    return;
+    }
+  if ( this->VolumeFractionType < 0 )
+    {
+    this->VolumeFractionType = cellVolumeFraction->GetDataType();
+    switch ( this->VolumeFractionType )
+      {
+    case VTK_UNSIGNED_CHAR:
+      this->VolumeFractionSurfaceValueInternal
+        = CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR * this->VolumeFractionSurfaceValue;
+      break;
+    default:
+      this->VolumeFractionSurfaceValueInternal
+        = CTH_AMR_SURFACE_VALUE_FLOAT * this->VolumeFractionSurfaceValue;
+      }
     }
   
   this->Data->CopyStructure(input);
 
-  // Do not pass cell volume fraction data.
-  this->Data->GetCellData()->CopyFieldOff(arrayName);
-  
   vtkDataArray* scalars = input->GetCellData()->GetScalars();
   if (scalars && strcmp(arrayName, scalars->GetName()) == 0)
     { // I do not know why the reader sets attributes, but ....
@@ -737,10 +878,17 @@ void vtkExtractCTHPart::ExecutePartOnUniformGrid(
   dims = input->GetDimensions();
   this->PointVolumeFraction->SetNumberOfTuples(dims[0]*dims[1]*dims[2]);
   this->ExecuteCellDataToPointData(cellVolumeFraction, 
-                                   this->PointVolumeFraction, dims);
+                                   this->PointVolumeFraction, dims,
+                                   minProgress, minProgress+delProgress/3, reportProgress);
+
   
 
   this->Data->GetPointData()->SetScalars(this->PointVolumeFraction);
+
+  if (reportProgress)
+    {
+    this->UpdateProgress(minProgress+2*delProgress/3);
+    }
   
   int isNotEmpty=this->ExtractUniformGridSurface(this->Data,this->SurfacePolyData);
   if(isNotEmpty)
@@ -755,18 +903,22 @@ void vtkExtractCTHPart::ExecutePartOnUniformGrid(
   // Be sure to to that only after the surface filter. 
   double range[2];
   cellVolumeFraction->GetRange(range);
-  if (range[1] < CTH_AMR_SURFACE_VALUE)
+  if (range[1] < this->VolumeFractionSurfaceValueInternal)
     {
     vtkTimerLog::MarkEndEvent("Execute Part");
     return;
     }
-  if (this->ClipPlane == 0 && range[0] > CTH_AMR_SURFACE_VALUE)
+  if (this->ClipPlane == 0 && range[0] > this->VolumeFractionSurfaceValueInternal)
     {
     vtkTimerLog::MarkEndEvent("Execute Part");
     return;
     }
 
   this->PolyData->Update();
+  if (reportProgress)
+    {
+    this->UpdateProgress(minProgress+delProgress);
+    }
   
   tmp=vtkPolyData::New();
   tmp->ShallowCopy(this->PolyData);
@@ -793,7 +945,7 @@ void vtkExtractCTHPart::CreateInternalPipeline()
 
   this->Contour=vtkContourFilter::New();
   this->Contour->SetInput(this->Data);
-  this->Contour->SetValue(0, CTH_AMR_SURFACE_VALUE);
+  this->Contour->SetValue(0, this->VolumeFractionSurfaceValueInternal);
   
  
   if(this->ClipPlane)
@@ -813,7 +965,7 @@ void vtkExtractCTHPart::CreateInternalPipeline()
     this->Cut->SetInput(this->Data);
     this->Clip2 = vtkClipPolyData::New();
     this->Clip2->SetInput(this->Cut->GetOutput());
-    this->Clip2->SetValue(CTH_AMR_SURFACE_VALUE);
+    this->Clip2->SetValue(this->VolumeFractionSurfaceValueInternal);
     this->Append2->AddInput(this->Clip2->GetOutput());
     this->PolyData = this->Append2->GetOutput();
     }
@@ -828,7 +980,7 @@ void vtkExtractCTHPart::CreateInternalPipeline()
   
   this->RContour=vtkContourFilter::New();
   this->RContour->SetInput(this->RData);
-  this->RContour->SetValue(0,CTH_AMR_SURFACE_VALUE);
+  this->RContour->SetValue(0,this->VolumeFractionSurfaceValueInternal);
   
   if(this->ClipPlane)
     {
@@ -847,7 +999,7 @@ void vtkExtractCTHPart::CreateInternalPipeline()
     this->RCut->SetValue(0, 0.0);
     this->RClip2 = vtkClipPolyData::New();
     this->RClip2->SetInput(this->RCut->GetOutput());
-    this->RClip2->SetValue(CTH_AMR_SURFACE_VALUE);
+    this->RClip2->SetValue(this->VolumeFractionSurfaceValueInternal);
     this->RAppend2->AddInput(this->RClip2->GetOutput());
     this->RPolyData = this->RAppend2->GetOutput();
     }
@@ -947,13 +1099,22 @@ void vtkExtractCTHPart::ExecutePartOnRectilinearGrid(
   const char *arrayName,
   vtkRectilinearGrid *input,
   vtkAppendPolyData *appendSurface,
-  vtkAppendPolyData *append)
+  vtkAppendPolyData *append,
+  float minProgress,
+  float maxProgress)
 {
   assert("pre: valid_input" && input->CheckAttributes()==0);
   
   vtkPolyData* tmp;
   vtkDataArray* cellVolumeFraction;
   int* dims;
+
+  float delProgress = maxProgress - minProgress;
+  int reportProgress = 0;
+  if (delProgress > 0.1)
+    {
+    reportProgress = 1;
+    }
 
   vtkTimerLog::MarkStartEvent("Execute Part");
 
@@ -970,17 +1131,34 @@ void vtkExtractCTHPart::ExecutePartOnRectilinearGrid(
     return;
     }
   if (cellVolumeFraction->GetDataType() != VTK_DOUBLE &&
-      cellVolumeFraction->GetDataType() != VTK_FLOAT)
+      cellVolumeFraction->GetDataType() != VTK_FLOAT &&
+      cellVolumeFraction->GetDataType() != VTK_UNSIGNED_CHAR )
     {
-    vtkErrorMacro("Expecting volume fraction to be of type float or double.");
+    vtkErrorMacro("Expecting volume fraction to be of type float, double, or unsigned char.");
     return;
     }
-  
+  if ( this->VolumeFractionType >= 0 && this->VolumeFractionType != cellVolumeFraction->GetDataType() )
+    {
+    vtkErrorMacro("Volume fraction arrays are different type. They should all be float, double, or unsigned char");
+    return;
+    }
+  if ( this->VolumeFractionType < 0 )
+    {
+    this->VolumeFractionType = cellVolumeFraction->GetDataType();
+    switch ( this->VolumeFractionType )
+      {
+    case VTK_UNSIGNED_CHAR:
+      this->VolumeFractionSurfaceValueInternal
+        = CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR * this->VolumeFractionSurfaceValue;
+      break;
+    default:
+      this->VolumeFractionSurfaceValueInternal
+        = CTH_AMR_SURFACE_VALUE_FLOAT * this->VolumeFractionSurfaceValue;
+      }
+    }
+ 
   this->RData->CopyStructure(input);
 
-  // Do not pass cell volume fraction data.
-  this->RData->GetCellData()->CopyFieldOff(arrayName);
-  
   vtkDataArray* scalars = input->GetCellData()->GetScalars();
   if (scalars && strcmp(arrayName, scalars->GetName()) == 0)
     { // I do not know why the reader sets attributes, but ....
@@ -991,7 +1169,8 @@ void vtkExtractCTHPart::ExecutePartOnRectilinearGrid(
   dims = input->GetDimensions();
   this->PointVolumeFraction->SetNumberOfTuples(dims[0]*dims[1]*dims[2]);
   this->ExecuteCellDataToPointData(cellVolumeFraction, 
-                                   this->PointVolumeFraction, dims);
+                                   this->PointVolumeFraction, dims,
+                                   minProgress, minProgress+delProgress/3, reportProgress);
   
 
   this->RData->GetPointData()->SetScalars(this->PointVolumeFraction);
@@ -1007,23 +1186,34 @@ void vtkExtractCTHPart::ExecutePartOnRectilinearGrid(
     appendSurface->AddInput(tmp);
     tmp->Delete();
     }
+
+  if (reportProgress)
+    {
+    this->UpdateProgress(minProgress+2*delProgress/3);
+    }
   
   // All outside never has any polydata.
   // Be sure to to that only after the surface filter. 
   double range[2];
   cellVolumeFraction->GetRange(range);
-  if (range[1] < CTH_AMR_SURFACE_VALUE)
+  if (range[1] < this->VolumeFractionSurfaceValueInternal)
     {
     vtkTimerLog::MarkEndEvent("Execute Part");
     return;
     }
-  if (this->ClipPlane == 0 && range[0] > CTH_AMR_SURFACE_VALUE)
+  if (this->ClipPlane == 0 && range[0] > this->VolumeFractionSurfaceValueInternal)
     {
     vtkTimerLog::MarkEndEvent("Execute Part");
     return;
     }
   
   this->RPolyData->Update();
+
+  if (reportProgress)
+    {
+    this->UpdateProgress(minProgress+delProgress);
+    }
+
   tmp=vtkPolyData::New();
   tmp->ShallowCopy(this->RPolyData);
   append->AddInput(tmp);
@@ -1103,23 +1293,25 @@ int vtkExtractCTHPart::ExtractRectilinearGridSurface(
 #endif
   // here, bounds are real block bounds without ghostcells.
   
+  const double *minP = this->Bounds->GetMinPoint();
+  const double *maxP = this->Bounds->GetMaxPoint();
 #if 0
   const double epsilon=0.001;
-  int doFaceMinX=fabs(bounds[0]-this->Bounds[0])<epsilon;
-  int doFaceMaxX=fabs(bounds[1]-this->Bounds[1])<epsilon;
-  int doFaceMinY=fabs(bounds[2]-this->Bounds[2])<epsilon;
-  int doFaceMaxY=fabs(bounds[3]-this->Bounds[3])<epsilon;
-  int doFaceMinZ=fabs(bounds[4]-this->Bounds[4])<epsilon;
-  int doFaceMaxZ=fabs(bounds[5]-this->Bounds[5])<epsilon;
+  int doFaceMinX=fabs(bounds[0]- minP[0])<epsilon;
+  int doFaceMaxX=fabs(bounds[1]- maxP[0])<epsilon;
+  int doFaceMinY=fabs(bounds[2]- minP[1])<epsilon;
+  int doFaceMaxY=fabs(bounds[3]- maxP[1])<epsilon;
+  int doFaceMinZ=fabs(bounds[4]- minP[2])<epsilon;
+  int doFaceMaxZ=fabs(bounds[5]- maxP[2])<epsilon;
 #endif
   
 #if 1
-  int doFaceMinX=bounds[0]<=this->Bounds[0];
-  int doFaceMaxX=bounds[1]>=this->Bounds[1];
-  int doFaceMinY=bounds[2]<=this->Bounds[2];
-  int doFaceMaxY=bounds[3]>=this->Bounds[3];
-  int doFaceMinZ=bounds[4]<=this->Bounds[4];
-  int doFaceMaxZ=bounds[5]>=this->Bounds[5];
+  int doFaceMinX=bounds[0]<= minP[0];
+  int doFaceMaxX=bounds[1]>= maxP[0];
+  int doFaceMinY=bounds[2]<= minP[1];
+  int doFaceMaxY=bounds[3]>= maxP[1];
+  int doFaceMinZ=bounds[4]<= minP[2];
+  int doFaceMaxZ=bounds[5]>= maxP[2];
 #endif
 #if 0
   int doFaceMinX=1;
@@ -1278,12 +1470,11 @@ int vtkExtractCTHPart::ExtractUniformGridSurface(
   // bounds without taking ghost cells into account
   double bounds[6];
   
-  int i=0;
-  while(i<3)
+  int i, j;
+  for (i = 0, j = 0; i < 3; i++, j+=2)
     {
-    bounds[2*i]=origin[i];
-    bounds[2*i+1]=bounds[2*i]+spacing[i]*(dims[i]-1);
-    ++i;
+    bounds[j]=origin[i];
+    bounds[j+1]=bounds[j]+spacing[i]*(dims[i]-1);
     }
   
 #if 0
@@ -1327,24 +1518,27 @@ int vtkExtractCTHPart::ExtractUniformGridSurface(
 #endif
   // here, bounds are real block bounds without ghostcells.
   
+  const double *minP = this->Bounds->GetMinPoint();
+  const double *maxP = this->Bounds->GetMaxPoint();
 #if 0
   const double epsilon=0.001;
-  int doFaceMinX=fabs(bounds[0]-this->Bounds[0])<epsilon;
-  int doFaceMaxX=fabs(bounds[1]-this->Bounds[1])<epsilon;
-  int doFaceMinY=fabs(bounds[2]-this->Bounds[2])<epsilon;
-  int doFaceMaxY=fabs(bounds[3]-this->Bounds[3])<epsilon;
-  int doFaceMinZ=fabs(bounds[4]-this->Bounds[4])<epsilon;
-  int doFaceMaxZ=fabs(bounds[5]-this->Bounds[5])<epsilon;
+  int doFaceMinX=fabs(bounds[0]- minP[0])<epsilon;
+  int doFaceMaxX=fabs(bounds[1]- maxP[0])<epsilon;
+  int doFaceMinY=fabs(bounds[2]- minP[1])<epsilon;
+  int doFaceMaxY=fabs(bounds[3]- maxP[1])<epsilon;
+  int doFaceMinZ=fabs(bounds[4]- minP[2])<epsilon;
+  int doFaceMaxZ=fabs(bounds[5]- maxP[2])<epsilon;
 #endif
   
 #if 1
-  int doFaceMinX=bounds[0]<=this->Bounds[0];
-  int doFaceMaxX=bounds[1]>=this->Bounds[1];
-  int doFaceMinY=bounds[2]<=this->Bounds[2];
-  int doFaceMaxY=bounds[3]>=this->Bounds[3];
-  int doFaceMinZ=bounds[4]<=this->Bounds[4];
-  int doFaceMaxZ=bounds[5]>=this->Bounds[5];
+  int doFaceMinX=bounds[0]<= minP[0];
+  int doFaceMaxX=bounds[1]>= maxP[0];
+  int doFaceMinY=bounds[2]<= minP[1];
+  int doFaceMaxY=bounds[3]>= maxP[1];
+  int doFaceMinZ=bounds[4]<= minP[2];
+  int doFaceMaxZ=bounds[5]>= maxP[2];
 #endif
+
 #if 0
   int doFaceMinX=1;
   int doFaceMaxX=1;
@@ -1693,7 +1887,10 @@ void vtkExtractCTHPart::ExecuteFaceQuads(vtkDataSet *input,
 void vtkExtractCTHPart::ExecuteCellDataToPointData(
   vtkDataArray *cellVolumeFraction, 
   vtkDoubleArray *pointVolumeFraction,
-  int *dims)
+  int *dims,
+  float minProgress,
+  float maxProgress,
+  int reportProgress)
 {
   int count;
   int i, j, k;
@@ -1734,6 +1931,9 @@ void vtkExtractCTHPart::ExecuteCellDataToPointData(
   double *endPtr=pPoint+dims[0]*dims[1]*dims[2];
 #endif
   
+  float delProgress = (maxProgress - minProgress) / (kEnd*jEnd*iEnd) / 2;
+  vtkIdType counter = 0;
+
   int index=0;
   // Loop thorugh the cells.
   for (k = 0; k < kEnd; ++k)
@@ -1742,6 +1942,11 @@ void vtkExtractCTHPart::ExecuteCellDataToPointData(
       {
       for (i = 0; i < iEnd; ++i)
         {
+        if (counter % 1000 == 0 && reportProgress)
+          {
+          this->UpdateProgress(minProgress + delProgress*(i+j*iEnd+k*iEnd*jEnd));
+          }
+        counter++;
         // Add cell value to all points of cell.
         double value=cellVolumeFraction->GetTuple1(index);
         
@@ -1790,6 +1995,7 @@ void vtkExtractCTHPart::ExecuteCellDataToPointData(
   jEnd = dims[1]-1;
   kEnd = dims[2]-1;
   
+  counter = 0;
   for (k = 0; k <= kEnd; ++k)
     {
     // Just a fancy fast way to compute the number of cell neighbors of a
@@ -1818,6 +2024,11 @@ void vtkExtractCTHPart::ExecuteCellDataToPointData(
         }
       for (i = 0; i <= iEnd; ++i)
         {
+        if (counter % 1000 == 0 && reportProgress)
+          {
+          this->UpdateProgress(minProgress + delProgress/2 + delProgress*(i+j*iEnd+k*iEnd*jEnd));
+          }
+        counter++;
         // Just a fancy fast way to compute the number of cell neighbors of a
         // point.
         if (i == 1)
@@ -1852,6 +2063,8 @@ void vtkExtractCTHPart::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << i2 << it->c_str() << endl;
     }
+  os << indent << "VolumeFractionSurfaceValue: "
+    << this->VolumeFractionSurfaceValue << endl;
   if (this->ClipPlane)
     {
     os << indent << "ClipPlane:\n";

@@ -31,7 +31,6 @@ public:
   vtkTypeRevisionMacro(vtkPCellDataToPointData,vtkCellDataToPointData);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
   static vtkPCellDataToPointData *New();
 
   // Description:
@@ -49,9 +48,9 @@ protected:
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector);
-  virtual int ComputeInputUpdateExtent(vtkInformation* request,
-                                       vtkInformationVector** inputVector,
-                                       vtkInformationVector* outputVector);
+  virtual int RequestUpdateExtent(vtkInformation*,
+                                  vtkInformationVector**,
+                                  vtkInformationVector*);
 
   int PieceInvariant;
 private:

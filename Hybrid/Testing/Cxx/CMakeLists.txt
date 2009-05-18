@@ -1,16 +1,27 @@
 SET(KIT Hybrid)
 # add tests that do not require data
-SET(MyTests     
+SET(MyTests   
+  TestImageStencilData.cxx
+  X3DTest.cxx  
   )
 IF (VTK_DATA_ROOT)
   # add tests that require data
   SET(MyTests ${MyTests}
+    TestBarChartActor.cxx
+    TestLegendScaleActor.cxx
+    TestPieChartActor.cxx
+    TestSpiderPlotActor.cxx
     )
 ENDIF (VTK_DATA_ROOT)
 
 # remove some tests if there is no display
 IF(NOT VTK_USE_DISPLAY)
-  REMOVE(MyTests     
+  REMOVE(MyTests
+    TestBarChartActor.cxx
+    TestLegendScaleActor.cxx
+    TestPieChartActor.cxx
+    TestSpiderPlotActor.cxx
+    X3DTest.cxx     
     )
 ENDIF(NOT VTK_USE_DISPLAY)
 
@@ -20,7 +31,7 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkHybrid)
 SET (TestsToRun ${Tests})
-REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+REMOVE (TestsToRun ${KIT}CxxTests.cxx TestImageStencilData.cxx)
 
 #
 # Add all the executables 
@@ -34,3 +45,19 @@ FOREACH (test ${TestsToRun})
     ADD_TEST(${TName} ${CXX_TEST_PATH}/${KIT}CxxTests ${TName})
   ENDIF (VTK_DATA_ROOT)
 ENDFOREACH (test) 
+
+IF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
+  ADD_TEST(TestAddStencilData ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestImageStencilData 1
+        -T ${VTK_BINARY_DIR}/Testing/Temporary
+        -D ${VTK_DATA_ROOT}
+        -V Baseline/${KIT}/TestAddStencilData.png)
+  ADD_TEST(TestSubtractStencilData ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestImageStencilData 2
+        -D ${VTK_DATA_ROOT}
+        -V Baseline/${KIT}/TestSubtractStencilData.png)
+  ADD_TEST(TestClipStencilData ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestImageStencilData 3 
+        -D ${VTK_DATA_ROOT}
+        -V Baseline/${KIT}/TestClipStencilData.png)
+ENDIF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)

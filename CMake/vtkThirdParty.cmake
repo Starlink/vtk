@@ -6,14 +6,14 @@ MACRO(VTK_THIRD_PARTY_OPTION upper lower)
     IF(EXISTS ${CMAKE_ROOT}/Modules/Find${upper}.cmake)
       INCLUDE(${CMAKE_ROOT}/Modules/Find${upper}.cmake)
     ELSE(EXISTS ${CMAKE_ROOT}/Modules/Find${upper}.cmake)
-      INCLUDE(${VTK_SOURCE_DIR}/CMake/Find${upper}.cmake)
+      INCLUDE(${VTK_CMAKE_DIR}/Find${upper}.cmake)
     ENDIF(EXISTS ${CMAKE_ROOT}/Modules/Find${upper}.cmake)
     MARK_AS_ADVANCED(${upper}_INCLUDE_DIR ${upper}_LIBRARY)
     IF(${upper}_FOUND)
       SET(VTK_${upper}_LIBRARIES ${${upper}_LIBRARIES})
       IF("${upper}" MATCHES "^PNG$")
         SET(PNG_INCLUDE_DIR ${PNG_PNG_INCLUDE_DIR})
-	MARK_AS_ADVANCED(PNG_PNG_INCLUDE_DIR)
+        MARK_AS_ADVANCED(PNG_PNG_INCLUDE_DIR)
       ENDIF("${upper}" MATCHES "^PNG$")
     ELSE(${upper}_FOUND)
       MESSAGE(SEND_ERROR "VTK_USE_SYSTEM_${upper} is ON, but ${upper}_LIBRARY is NOTFOUND.")
@@ -51,3 +51,28 @@ MACRO(VTK_THIRD_PARTY_SUBDIR upper lower)
     SUBDIRS(${lower})
   ENDIF(NOT VTK_USE_SYSTEM_${upper})
 ENDMACRO(VTK_THIRD_PARTY_SUBDIR)
+
+#-----------------------------------------------------------------------------
+MACRO(VTK_THIRD_PARTY_WARNING_SUPPRESS upper lang)
+  IF(NOT ${upper}_WARNINGS_ALLOW)
+    # MSVC uses /w to suppress warnings.  It also complains if another
+    # warning level is given, so remove it.
+    IF(MSVC)
+      SET(${upper}_WARNINGS_BLOCKED 1)
+      STRING(REGEX REPLACE "(^| )([/-])W[0-9]( |$)" " "
+        CMAKE_${lang}_FLAGS "${CMAKE_${lang}_FLAGS}")
+      SET(CMAKE_${lang}_FLAGS "${CMAKE_${lang}_FLAGS} /w")
+    ENDIF(MSVC)
+
+    # Borland uses -w- to suppress warnings.
+    IF(BORLAND)
+      SET(${upper}_WARNINGS_BLOCKED 1)
+      SET(CMAKE_${lang}_FLAGS "${CMAKE_${lang}_FLAGS} -w-")
+    ENDIF(BORLAND)
+
+    # Most compilers use -w to suppress warnings.
+    IF(NOT ${upper}_WARNINGS_BLOCKED)
+      SET(CMAKE_${lang}_FLAGS "${CMAKE_${lang}_FLAGS} -w")
+    ENDIF(NOT ${upper}_WARNINGS_BLOCKED)
+  ENDIF(NOT ${upper}_WARNINGS_ALLOW)
+ENDMACRO(VTK_THIRD_PARTY_WARNING_SUPPRESS)
