@@ -3,8 +3,8 @@
   Program:   Visualization Toolkit
   Module:    $RCSfile: vtkStringArray.h,v $
   Language:  C++
-  Date:      $Date: 2008-03-14 21:47:04 $
-  Version:   $Revision: 1.8 $
+  Date:      $Date: 2009-03-12 16:21:41 $
+  Version:   $Revision: 1.10 $
 
   Copyright 2004 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
@@ -169,7 +169,7 @@ public:
   // SetValue() method for fast insertion.
   void SetNumberOfValues(vtkIdType number);
 
-  int GetNumberOfValues() { return this->MaxId + 1; }
+  vtkIdType GetNumberOfValues() { return this->MaxId + 1; }
 
   int GetNumberOfElementComponents() { return 0; }
   int GetElementComponentSize() { return static_cast<int>(sizeof(vtkStdString::value_type)); }
@@ -178,6 +178,10 @@ public:
   // Insert data at a specified position in the array.
 //BTX
   void InsertValue(vtkIdType id, vtkStdString f);
+
+  // Description:
+  // Insert a value into the array from a variant.
+  void InsertVariantValue(vtkIdType idx, vtkVariant value);
 //ETX
   void InsertValue(vtkIdType id, const char *val);
 
@@ -245,7 +249,7 @@ public:
   // Returns the size of the data in DataTypeSize units. Thus, the number of bytes
   // for the data can be computed by GetDataSize() * GetDataTypeSize().
   // The size computation includes the string termination character for each string.
-  virtual unsigned long GetDataSize();
+  virtual vtkIdType GetDataSize();
   
   //BTX
   // Description:
@@ -266,6 +270,12 @@ public:
   // the fast lookup will know to rebuild itself.  Otherwise, the lookup
   // functions will give incorrect results.
   virtual void DataChanged();
+
+  // Description:
+  // Tell the array explicitly that a single data element has
+  // changed. Like DataChanged(), then is only necessary when you
+  // modify the array contents without using the array's API. 
+  virtual void DataElementChanged(vtkIdType id);
   
   // Description:
   // Delete the associated fast lookup data structure on this array,

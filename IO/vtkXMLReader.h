@@ -31,6 +31,7 @@ class vtkDataSetAttributes;
 class vtkXMLDataElement;
 class vtkXMLDataParser;
 class vtkInformationVector;
+class vtkInformation;
 
 class VTK_IO_EXPORT vtkXMLReader : public vtkAlgorithm
 {
@@ -134,7 +135,11 @@ protected:
   // Create a vtkAbstractArray from its cooresponding XML representation.
   // Does not allocate.
   vtkAbstractArray* CreateArray(vtkXMLDataElement* da);
-  
+
+  // Create a vtkInformationKey from its coresponding XML representation.
+  // Stores it in the instance of vtkInformationProvided. Does not allocate.
+  int CreateInformationKey(vtkXMLDataElement *eInfoKey, vtkInformation *info);
+
   // Internal utility methods.
   virtual int OpenVTKFile();
   virtual void CloseVTKFile();
@@ -207,11 +212,6 @@ protected:
   // Whether there was an error reading the file in RequestData.
   int DataError;
   
-  // The index of the output on which ExecuteData is currently
-  // running.
-  int CurrentOutput;
-  
-  // The current range over which progress is moving.  This allows for
   // incrementally fine-tuned progress updates.
   virtual void GetProgressRange(float* range);
   virtual void SetProgressRange(float* range, int curStep, int numSteps);
@@ -266,6 +266,9 @@ protected:
   // Helper function usefull to know if a timestep is found in an array of timestep
   static int IsTimeStepInArray(int timestep, int* timesteps, int length);
 
+  vtkDataObject* GetCurrentOutput();
+  vtkInformation* GetCurrentOutputInformation();
+  
 private:
   // The stream used to read the input if it is in a file.
   ifstream* FileStream;  
@@ -273,6 +276,10 @@ private:
 
   int FileMajorVersion;
   int FileMinorVersion;
+  
+  vtkDataObject* CurrentOutput;
+  vtkInformation* CurrentOutputInformation;
+  
 private:
   vtkXMLReader(const vtkXMLReader&);  // Not implemented.
   void operator=(const vtkXMLReader&);  // Not implemented.

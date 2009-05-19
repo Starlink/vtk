@@ -26,7 +26,7 @@
 #include "vtkRenderer.h"
 
 
-vtkCxxRevisionMacro(vtkSphereWidget2, "$Revision: 1.2.2.2 $");
+vtkCxxRevisionMacro(vtkSphereWidget2, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkSphereWidget2);
 
 //----------------------------------------------------------------------------

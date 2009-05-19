@@ -20,7 +20,7 @@
 #include "vtkMath.h"
 #include "vtkPolyDataCollection.h"
 
-vtkCxxRevisionMacro(vtkPolyDataContourLineInterpolator, "$Revision: 1.1.14.1 $");
+vtkCxxRevisionMacro(vtkPolyDataContourLineInterpolator, "$Revision: 1.2 $");
 
 //----------------------------------------------------------------------
 vtkPolyDataContourLineInterpolator::vtkPolyDataContourLineInterpolator()

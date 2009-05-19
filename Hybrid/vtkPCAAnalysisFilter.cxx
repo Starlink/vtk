@@ -22,7 +22,7 @@
 #include "vtkMath.h"
 #include "vtkFloatArray.h"
 
-vtkCxxRevisionMacro(vtkPCAAnalysisFilter, "$Revision: 1.13.66.1 $");
+vtkCxxRevisionMacro(vtkPCAAnalysisFilter, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkPCAAnalysisFilter);
 
 //------------------------------------------------------------------------

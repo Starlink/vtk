@@ -41,7 +41,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkClustering2DLayoutStrategy, "$Revision: 1.14 $");
+vtkCxxRevisionMacro(vtkClustering2DLayoutStrategy, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkClustering2DLayoutStrategy);
 
 // This is just a convenient macro for smart pointers
@@ -81,6 +81,7 @@ vtkClustering2DLayoutStrategy::vtkClustering2DLayoutStrategy()
   this->SetEdgeWeightField("weight");
   this->RestDistance = 0;
   this->EdgeArray = NULL;
+  this->CuttingThreshold=0;
 }
 
 // ----------------------------------------------------------------------
@@ -268,7 +269,13 @@ void vtkClustering2DLayoutStrategy::Initialize()
     if (weightArray != NULL)
       {
       weight = weightArray->GetTuple1(e.Id);
-      this->EdgeArray[e.Id].weight = weight / maxWeight;
+      float normalized_weight = weight / maxWeight;
+      
+      // Now increase the effect of high weight edges
+      // Note: This is full of magic goodness
+      normalized_weight = pow(normalized_weight, 4);
+      
+      this->EdgeArray[e.Id].weight = normalized_weight;
       }
     else
       {
@@ -507,6 +514,9 @@ void vtkClustering2DLayoutStrategy::Layout()
     // I'm done
     this->LayoutComplete = 1;
     }
+
+  // Mark points as modified
+  this->Graph->GetPoints()->Modified();
 }
 
 void vtkClustering2DLayoutStrategy::ResolveCoincidentVertices()

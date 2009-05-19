@@ -3,17 +3,26 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   SET(KIT Infovis)
   # add tests that do not require data
   SET(MyTests  
+    TestArcEdges
     TestAssignCoordinates
+    TestContingencyStatistics
+    TestCorrelativeStatistics
+    TestCosmicTreeLayoutStrategy
     TestDataObjectToTable
+    TestDescriptiveStatistics
     TestExtractSelectedGraph
     TestGraph
+    TestGraphAttributes
     TestGraphAlgorithms   
     TestGraphHierarchicalBundle
     TestGraphLayoutStrategy
     TestGroupLeafVertices
     TestInteractorStyleTreeMapHover
     TestKdTreeBoxSelection
+    TestMultiCorrelativeStatistics
+    TestOrderStatistics
     TestPassThrough
+    TestPCAStatistics
     TestPruneTreeFilter
     TestRandomGraphSource
     TestStringToCategory
@@ -32,10 +41,14 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestFixedWidthTextReader
       TestRISReader
       TestStringToNumeric
-      TestTableToGraph
       TestTreeMapViewer
       TestTulipReader
       )
+    IF (VTK_USE_VIEWS)
+      SET(MyTests ${MyTests}
+        TestTableToGraph
+      )
+    ENDIF (VTK_USE_VIEWS)
   ENDIF (VTK_DATA_ROOT)
   IF (VTK_USE_BOOST)
     # add boost tests
@@ -44,12 +57,50 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestBoostAlgorithms
       )
 
+    IF (VTK_USE_PARALLEL_BGL)
+      # The variant-serialization test is kept separate, because it
+      # needs to link against the serialization library.
+      ADD_EXECUTABLE(TestVariantSerialization TestVariantSerialization.cxx)
+      TARGET_LINK_LIBRARIES(TestVariantSerialization vtkInfovis ${Boost_SERIALIZATION_LIBRARY})
+      ADD_TEST(TestVariantSerialization ${CXX_TEST_PATH}/TestVariantSerialization)
+    ENDIF (VTK_USE_PARALLEL_BGL)
+
     IF(VTK_DATA_ROOT)
       SET(MyTests ${MyTests}
         TestBoostSplitTableField
         )
     ENDIF(VTK_DATA_ROOT)
+
+    IF (VTK_USE_PARALLEL_BGL)
+      # Add tests using the Parallel BGL
+      ADD_EXECUTABLE(TestPBGLAlgorithms TestPBGLAlgorithms.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLAlgorithms vtkInfovis ${Boost_LIBRARIES})
+
+      ADD_TEST(TestPBGLAlgorithms
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS} 
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLAlgorithms
+        ${VTK_MPI_POSTFLAGS})
+    ENDIF (VTK_USE_PARALLEL_BGL)   
   ENDIF (VTK_USE_BOOST)
+
+  IF(VTK_USE_PARALLEL AND VTK_USE_MPI)
+    # Add parallel tests only if PARALLEL and MPI are turned ON
+    # These tests are kept separate, because they must be run with mpirun or mpiexec
+    ADD_EXECUTABLE(TestParallelRandomStatisticsMPI TestParallelRandomStatisticsMPI.cxx)
+    TARGET_LINK_LIBRARIES(TestParallelRandomStatisticsMPI vtkInfovis vtkParallel)
+
+    IF (VTK_MPIRUN_EXE)
+      ADD_TEST(TestParallelRandomStatisticsMPI
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS}
+        ${CXX_TEST_PATH}/TestParallelRandomStatisticsMPI
+        ${VTK_MPI_POSTFLAGS}
+        )
+    ENDIF (VTK_MPIRUN_EXE)
+
+  ENDIF (VTK_USE_PARALLEL AND VTK_USE_MPI)
+
   SET(VTK_HAS_UINT64_ARRAY 0)
   IF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
     SET(VTK_HAS_UINT64_ARRAY 1)
@@ -92,3 +143,50 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     ENDIF (VTK_DATA_ROOT)
   ENDFOREACH (test) 
 ENDIF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
+IF(VTK_USE_N_WAY_ARRAYS)
+
+  CREATE_TEST_SOURCELIST(ArrayTests ArrayCxxTests.cxx
+    ArrayAPIDenseCoordinates.cxx
+    ArrayCosineSimilarity.cxx
+    ArrayDiagonalMatrixSource.cxx
+    ArrayExtractFactoredArray.cxx
+    ArrayMatricizeArray.cxx
+    ArrayMatrixColumnNorm.cxx
+    ArrayNormalizeMatrixVectors.cxx
+    ArrayTableToSparseArray.cxx
+    ArrayToTable.cxx
+    ArrayTransposeMatrix.cxx
+    )
+
+  ADD_EXECUTABLE(InfovisArrayCxxTests ${ArrayTests})
+  TARGET_LINK_LIBRARIES(InfovisArrayCxxTests vtkInfovis)
+
+  SET(ArrayTestsToRun ${ArrayTests})
+  REMOVE(ArrayTestsToRun ArrayCxxTests.cxx)
+
+  FOREACH(test ${ArrayTestsToRun})
+    GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
+    ADD_TEST(Array-${TName} ${CXX_TEST_PATH}/InfovisArrayCxxTests ${TName})
+  ENDFOREACH(test)
+
+  IF(VTK_USE_BOOST)
+
+    CREATE_TEST_SOURCELIST(BoostArrayTests BoostArrayCxxTests.cxx
+      BoostArrayLogWeighting.cxx
+      BoostArrayRandomSparseArraySource.cxx
+      )
+
+    ADD_EXECUTABLE(InfovisBoostArrayCxxTests ${BoostArrayTests})
+    TARGET_LINK_LIBRARIES(InfovisBoostArrayCxxTests vtkInfovis)
+
+    SET(BoostArrayTestsToRun ${BoostArrayTests})
+    REMOVE(BoostArrayTestsToRun BoostArrayCxxTests.cxx)
+
+    FOREACH(test ${BoostArrayTestsToRun})
+      GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
+      ADD_TEST(Boost-Array-${TName} ${CXX_TEST_PATH}/InfovisBoostArrayCxxTests ${TName})
+    ENDFOREACH(test)
+
+  ENDIF(VTK_USE_BOOST)
+ENDIF(VTK_USE_N_WAY_ARRAYS)
+

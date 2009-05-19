@@ -1,3 +1,18 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: TestDijkstraGraphGeodesicPath.cxx,v $
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+
 #include "vtkDEMReader.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
@@ -194,6 +209,7 @@ int TestDijkstraGraphGeodesicPath(int argc, char*argv[])
     if (strcmp("-DistanceOffset", argv[i]) == 0)
       {
       distanceOffset = atof(argv[i+1]);
+      distanceOffsetSpecified = true;
       }
     }
 

@@ -16,7 +16,7 @@
 
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkInformationIdTypeKey, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkInformationIdTypeKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationIdTypeKey::vtkInformationIdTypeKey(const char* name, const char* location):
@@ -51,12 +51,15 @@ void vtkInformationIdTypeKey::Set(vtkInformation* info, vtkIdType value)
      static_cast<vtkInformationIdTypeValue *>
      (this->GetAsObjectBase(info)))
     {
-    // Replace the existing value.
-    oldv->Value = value;
-    // Since this sets a value without call SetAsObjectBase(),
-    // the info has to be modified here (instead of 
-    // vtkInformation::SetAsObjectBase()
-    info->Modified();
+    if (oldv->Value != value)
+      {
+      // Replace the existing value.
+      oldv->Value = value;
+      // Since this sets a value without call SetAsObjectBase(),
+      // the info has to be modified here (instead of 
+      // vtkInformation::SetAsObjectBase()
+      info->Modified(this);
+      }
    }
   else
     {
@@ -76,12 +79,6 @@ vtkIdType vtkInformationIdTypeKey::Get(vtkInformation* info)
     static_cast<vtkInformationIdTypeValue *>
     (this->GetAsObjectBase(info));
   return v?v->Value:0;
-}
-
-//----------------------------------------------------------------------------
-int vtkInformationIdTypeKey::Has(vtkInformation* info)
-{
-  return this->GetAsObjectBase(info)?1:0;
 }
 
 //----------------------------------------------------------------------------

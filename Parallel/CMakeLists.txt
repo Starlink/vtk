@@ -16,6 +16,7 @@ ENDIF(VTK_HAS_EXODUS)
 
 SET ( Kit_SRCS
 vtkBranchExtentTranslator.cxx
+vtkCachingInterpolatedVelocityField.cxx
 vtkCollectGraph.cxx
 vtkCollectPolyData.cxx
 vtkCollectTable.cxx
@@ -36,6 +37,7 @@ vtkExtractUnstructuredGridPiece.cxx
 vtkExtractUserDefinedPiece.cxx
 vtkMemoryLimitImageDataStreamer.cxx
 vtkMultiProcessController.cxx
+vtkMultiProcessStream.cxx
 vtkParallelFactory.cxx
 vtkPassThroughFilter.cxx
 vtkPCellDataToPointData.cxx
@@ -55,10 +57,11 @@ vtkPPolyDataNormals.cxx
 vtkPProbeFilter.cxx
 vtkProcessGroup.cxx
 vtkProcessIdScalars.cxx
+vtkPReflectionFilter.cxx
 vtkPSphereSource.cxx
 vtkPStreamTracer.cxx
+vtkPTableToStructuredGrid.cxx
 vtkRectilinearGridOutlineFilter.cxx
-vtkRTAnalyticSource.cxx
 vtkSocketCommunicator.cxx
 vtkSocketController.cxx
 vtkSubCommunicator.cxx
@@ -88,14 +91,20 @@ ENDIF(VTK_USE_RENDERING)
 IF(VTK_HAS_EXODUS)
   SET(Kit_SRCS ${Kit_SRCS}
     vtkExodusIIWriter.cxx
-    )
+  )
 ENDIF(VTK_HAS_EXODUS)
 
 SET_SOURCE_FILES_PROPERTIES(
 vtkCommunicator 
 vtkMultiProcessController
+vtkMultiProcessStream
 vtkPStreamTracer
 ABSTRACT
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+vtkMultiProcessStream
+WRAP_EXCLUDE
 )
 
 IF(VTK_USE_RENDERING)
@@ -106,7 +115,7 @@ IF(VTK_USE_RENDERING)
 ENDIF(VTK_USE_RENDERING)
 
 IF (VTK_USE_MPI)
-  INCLUDE (${CMAKE_ROOT}/Modules/FindMPI.cmake)
+  INCLUDE (FindMPI)
   SET ( Kit_SRCS
     ${Kit_SRCS}
     vtkMPICommunicator.cxx
@@ -132,15 +141,38 @@ IF (NOT VTK_LEGACY_REMOVE)
   ENDIF (CMAKE_COMPILER_IS_GNUCXX)
 ENDIF (NOT VTK_LEGACY_REMOVE)
 
+IF (VTK_USE_PARALLEL_BGL)
+  SET(KIT_LIBS ${KIT_LIBS} boost_graph_mpi ${Boost_LIBRARIES})
+  SET ( Kit_SRCS
+    ${Kit_SRCS}
+    vtkPBGLBreadthFirstSearch.cxx
+    vtkPBGLCollapseGraph.cxx
+    vtkPBGLCollapseParallelEdges.cxx
+    vtkPBGLCollectGraph.cxx
+    vtkPBGLConnectedComponents.cxx
+    vtkPBGLDistributedGraphHelper.cxx
+    vtkPBGLGraphSQLReader.cxx
+    vtkPBGLMinimumSpanningTree.cxx
+    vtkPBGLRMATGraphSource.cxx
+    vtkPBGLRandomGraphSource.cxx
+    vtkPBGLShortestPaths.cxx
+    vtkPBGLVertexColoring.cxx
+    )
+ENDIF (VTK_USE_PARALLEL_BGL)
+
 IF (VTK_USE_MPI) 
-  IF (MPI_LIBRARY) 
-    SET(KIT_LIBS ${KIT_LIBS} "${MPI_LIBRARY}")   
-  ELSE (MPI_LIBRARY)   
-    MESSAGE("Could not find the required MPI libraries")
-  ENDIF (MPI_LIBRARY)   
-  IF (MPI_EXTRA_LIBRARY)   
-    SET(KIT_LIBS ${KIT_LIBS} "${MPI_EXTRA_LIBRARY}")   
-  ENDIF (MPI_EXTRA_LIBRARY) 
+  IF (MPI_LIBRARIES)
+    SET(KIT_LIBS ${KIT_LIBS} "${MPI_LIBRARIES}")
+  ELSE (MPI_LIBRARIES)
+    IF (MPI_LIBRARY) 
+      SET(KIT_LIBS ${KIT_LIBS} "${MPI_LIBRARY}")   
+    ELSE (MPI_LIBRARY)   
+      MESSAGE("Could not find the required MPI libraries")
+    ENDIF (MPI_LIBRARY)   
+    IF (MPI_EXTRA_LIBRARY)   
+      SET(KIT_LIBS ${KIT_LIBS} "${MPI_EXTRA_LIBRARY}")   
+    ENDIF (MPI_EXTRA_LIBRARY) 
+  ENDIF (MPI_LIBRARIES)
 ENDIF (VTK_USE_MPI)
 
 SET(Kit_EXTRA_SRCS)
@@ -167,3 +199,12 @@ IF (VTK_USE_MPI)
   ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 ENDIF (VTK_USE_MPI)
 
+IF (VTK_USE_PARALLEL_BGL)
+  IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+    INSTALL(FILES
+      ${CMAKE_CURRENT_SOURCE_DIR}/vtkPBGLGraphAdapter.h
+      DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
+      COMPONENT Development
+      )
+  ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+ENDIF (VTK_USE_PARALLEL_BGL)

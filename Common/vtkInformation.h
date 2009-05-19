@@ -27,6 +27,15 @@
 
 #include "vtkObject.h"
 
+// If being "compiled" by gccxml, pretend VTK_COMMON_EXPORT is nothing
+// for this header file. The per-method usage of VTK_COMMON_EXPORT in
+// this header file leads to gccxml errors without this workaround.
+//
+#ifdef __GCCXML__
+#undef VTK_COMMON_EXPORT
+#define VTK_COMMON_EXPORT
+#endif
+
 class vtkDataObject;
 class vtkExecutive;
 class vtkInformationDataObjectKey;
@@ -59,8 +68,24 @@ public:
   VTK_COMMON_EXPORT void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Modified signature with no arguments that calls Modified
+  // on vtkObject superclass.
+  VTK_COMMON_EXPORT void Modified();
+
+  // Description:
+  // Modified signature that takes an information key as an argument.
+  // Sets the new MTime and invokes a modified event with the
+  // information key as call data.
+  VTK_COMMON_EXPORT void Modified(vtkInformationKey* key);
+
+  // Description:
   // Clear all information entries.
   VTK_COMMON_EXPORT void Clear();
+
+  // Description:
+  // Return the number of keys in this information object (as would be returned
+  // by iterating over the keys).
+  VTK_COMMON_EXPORT int GetNumberOfKeys();
 
   // Description:
   // Copy all information entries from the given vtkInformation
@@ -93,6 +118,14 @@ public:
   // other keys will be copied.  If deep==1, a deep copy of the
   // information structure is performed.
   VTK_COMMON_EXPORT void CopyEntries(vtkInformation* from, vtkInformationKeyVectorKey* key, int deep=0);
+
+  // Description:
+  // Check whether the given key appears in this information object.
+  VTK_COMMON_EXPORT int Has(vtkInformationKey* key);
+
+  // Description:
+  // Remove the given key and its data from this information object.
+  VTK_COMMON_EXPORT void Remove(vtkInformationKey* key);
 
   // Description:
   // Get/Set a request-valued entry.

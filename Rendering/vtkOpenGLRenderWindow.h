@@ -1,15 +1,15 @@
 /*=========================================================================
 
-Program:   Visualization Toolkit
-Module:    $RCSfile: vtkOpenGLRenderWindow.h,v $
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: vtkOpenGLRenderWindow.h,v $
 
-Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-All rights reserved.
-See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-This software is distributed WITHOUT ANY WARRANTY; without even
-the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  See the above copyright notice for more information.
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 // .NAME vtkOpenGLRenderWindow - OpenGL rendering window
@@ -27,6 +27,9 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkOpenGL.h" // Needed for GLuint.
 
 class vtkIdList;
+class vtkOpenGLExtensionManager;
+class vtkOpenGLHardwareSupport;
+class vtkTextureUnitManager;
 
 class VTK_RENDERING_EXPORT vtkOpenGLRenderWindow : public vtkRenderWindow
 {
@@ -90,6 +93,10 @@ public:
   // Description:
   // Make this window the current OpenGL context.
   void MakeCurrent() = 0;
+  
+  // Description:
+  // Tells if this window is the current OpenGL context for the calling thread.
+  virtual bool IsCurrent()=0;
   
   // Description:
   // Register a texture name with this render window.
@@ -173,10 +180,28 @@ public:
   // Description:
   // Get the time when the OpenGL context was created.
   vtkGetMacro(ContextCreationTime, vtkTimeStamp);
+
+  // Description:
+  // Returns the extension manager. A new one will be created if one hasn't
+  // already been set up.
+  vtkOpenGLExtensionManager* GetExtensionManager();
+
+  // Description:
+  // Returns an Hardware Support object. A new one will be created if one
+  // hasn't already been set up.
+  vtkOpenGLHardwareSupport* GetHardwareSupport();
+ 
+  //BTX
+  // Description:
+  // Returns its texture unit manager object. A new one will be created if one
+  // hasn't already been set up.
+  vtkTextureUnitManager *GetTextureUnitManager();
+  //ETX
+  
 protected:
   vtkOpenGLRenderWindow();
   ~vtkOpenGLRenderWindow();
-  
+
   vtkIdList *TextureResourceIds;
 
   int GetPixelData(int x,int y,int x2,int y2,int front, unsigned char* data);
@@ -219,6 +244,10 @@ protected:
   // Destroy a not-off-screen window.
   virtual void DestroyWindow()=0;
   
+  // Description:
+  // Set the texture unit manager.
+  void SetTextureUnitManager(vtkTextureUnitManager *textureUnitManager);
+  
   unsigned int BackLeftBuffer;
   unsigned int BackRightBuffer;
   unsigned int FrontLeftBuffer;
@@ -230,9 +259,18 @@ protected:
   unsigned int LastGraphicError;
  
   vtkTimeStamp ContextCreationTime;
+  
+  vtkTextureUnitManager *TextureUnitManager;
+  
 private:
   vtkOpenGLRenderWindow(const vtkOpenGLRenderWindow&);  // Not implemented.
   void operator=(const vtkOpenGLRenderWindow&);  // Not implemented.
+
+  void SetExtensionManager(vtkOpenGLExtensionManager*);
+  void SetHardwareSupport(vtkOpenGLHardwareSupport * renderWindow);
+
+  vtkOpenGLExtensionManager* ExtensionManager;
+  vtkOpenGLHardwareSupport* HardwareSupport;
 };
 
 #endif

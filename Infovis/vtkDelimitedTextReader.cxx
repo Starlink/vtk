@@ -19,20 +19,29 @@
 -------------------------------------------------------------------------*/
 
 #include "vtkDelimitedTextReader.h"
+
 #include "vtkCommand.h"
-#include "vtkTable.h"
-#include "vtkVariantArray.h"
+#include "vtkDataSetAttributes.h"
+#include "vtkIdTypeArray.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkInformation.h"
-#include "vtkStringArray.h"
+#include "vtkSmartPointer.h"
 #include "vtkStdString.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkStringArray.h"
+#include "vtkStringToNumeric.h"
+#include "vtkTable.h"
+#include "vtkVariantArray.h"
 
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkDelimitedTextReader, "$Revision: 1.20 $");
+#include <ctype.h>
+
+vtkCxxRevisionMacro(vtkDelimitedTextReader, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkDelimitedTextReader);
 
 struct vtkDelimitedTextReaderInternals
@@ -55,6 +64,21 @@ static int splitString(const vtkStdString& input,
 // myself.
 static int my_getline(istream& stream, vtkStdString &output, int& line_count);
 
+// Returns true if the line is entirely whitespace, false otherwise.
+static bool isSpaceOnlyString(const vtkStdString& s)
+{
+  vtkStdString::size_type i;
+  const char* c = s.c_str();
+  for (i = 0; i < s.length(); ++i)
+    {
+    if (!isspace(c[i]))
+      {
+      return false;
+      }
+    }
+  return true;
+}
+
 // ----------------------------------------------------------------------
 
 vtkDelimitedTextReader::vtkDelimitedTextReader()
@@ -73,6 +97,7 @@ vtkDelimitedTextReader::vtkDelimitedTextReader()
   this->UseStringDelimiter = true;
   this->MaxRecords = 0;
   this->MergeConsecutiveDelimiters = false;
+  this->DetectNumericColumns = false;
 }
 
 // ----------------------------------------------------------------------
@@ -111,6 +136,8 @@ void vtkDelimitedTextReader::PrintSelf(ostream& os, vtkIndent indent)
      << (this->MergeConsecutiveDelimiters ? "true" : "false") << endl;
   os << indent << "MaxRecords: " << this->MaxRecords
      << endl;
+  os << indent << "DetectNumericColumns: "
+    << (this->DetectNumericColumns? "true" : "false") << endl;
 }
 
 // ----------------------------------------------------------------------
@@ -145,6 +172,15 @@ int vtkDelimitedTextReader::RequestData(
                                         vtkInformationVector**, 
                                         vtkInformationVector* outputVector)
 {
+  // Check piece request. If requested anything but the 0-th piece, nothing to
+  // read.
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()) &&
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()) > 0)
+    {
+    return 1;
+    }
+
   int line_count = 0;
 
   // Check that the filename has been specified
@@ -179,7 +215,17 @@ int vtkDelimitedTextReader::RequestData(
   vtkstd::vector<vtkStdString> firstLineFields;
   vtkStdString firstLine;
 
-  my_getline(*(this->Internals->File), firstLine, line_count);
+  int status = 0;
+  do
+    {
+    status = my_getline(*(this->Internals->File), firstLine, line_count);
+    } while (isSpaceOnlyString(firstLine) && status);
+  // No data in the file, so we are done.
+  if (!status)
+    {
+    return 1;
+    }
+
   vtkDebugMacro(<<"First line of file: " << firstLine.c_str());
    
   if (this->HaveHeaders)
@@ -240,10 +286,18 @@ int vtkDelimitedTextReader::RequestData(
 
   // Okay read the file and add the data to the table
   vtkStdString nextLine;
+
   while (my_getline(*(this->Internals->File), nextLine, line_count))
     {
+    if(isSpaceOnlyString(nextLine))
+      {
+      continue;
+      }
+
     if(this->MaxRecords && line_count > this->MaxRecords)
+      {
       break;
+      }
     
     double progress = total_bytes
       ? static_cast<double>(this->Internals->File->tellg()) / static_cast<double>(total_bytes)
@@ -279,9 +333,39 @@ int vtkDelimitedTextReader::RequestData(
       dataArray->InsertNextValue(vtkVariant());
       }
 
+    // Eliminate any extra columns
+    dataArray->SetNumberOfTuples(table->GetNumberOfColumns());
+
     // Insert the data into the table
     table->InsertNextRow(dataArray);
     dataArray->Delete();
+    }
+
+  // Look for pedigree id array.
+  vtkAbstractArray* pedIds = table->GetColumnByName("id");
+  if (!pedIds)
+    {
+    pedIds = table->GetColumnByName("edge id");
+    }
+  if (!pedIds)
+    {
+    pedIds = table->GetColumnByName("vertex id");
+    }
+  if (pedIds)
+    {
+    table->GetRowData()->SetPedigreeIds(pedIds);
+    }
+
+  if (this->DetectNumericColumns)
+    {
+    vtkStringToNumeric* convertor = vtkStringToNumeric::New();
+    vtkTable* clone = table->NewInstance();
+    clone->ShallowCopy(table);
+    convertor->SetInput(clone);
+    convertor->Update();
+    clone->Delete();
+    table->ShallowCopy(convertor->GetOutputDataObject(0));
+    convertor->Delete();
     }
  
   return 1;
@@ -413,6 +497,3 @@ my_getline(istream& in, vtkStdString &out, int& line_count)
 
   return numCharactersRead;
 }
-  
-      
-  

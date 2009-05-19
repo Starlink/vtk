@@ -298,7 +298,7 @@ private:
 };
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkParallelopipedRepresentation, "$Revision: 1.7.2.2 $");
+vtkCxxRevisionMacro(vtkParallelopipedRepresentation, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkParallelopipedRepresentation);
 
 vtkCxxSetObjectMacro(vtkParallelopipedRepresentation, 

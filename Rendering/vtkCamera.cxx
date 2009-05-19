@@ -22,7 +22,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCamera, "$Revision: 1.113 $");
+vtkCxxRevisionMacro(vtkCamera, "$Revision: 1.118 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -75,7 +75,7 @@ vtkCamera::vtkCamera()
 
   this->Transform = vtkPerspectiveTransform::New();
   this->ViewTransform = vtkTransform::New();
-  this->PerspectiveTransform = vtkPerspectiveTransform::New();
+  this->ProjectionTransform = vtkPerspectiveTransform::New();
   this->CameraLightTransform = vtkTransform::New();
   this->UserTransform = NULL;
 
@@ -90,7 +90,7 @@ vtkCamera::~vtkCamera()
 {
   this->Transform->Delete();
   this->ViewTransform->Delete();
-  this->PerspectiveTransform->Delete();
+  this->ProjectionTransform->Delete();
   this->CameraLightTransform->Delete();
   if (this->UserTransform)
     {
@@ -309,9 +309,9 @@ void vtkCamera::ComputeDistance()
 
   this->Distance = sqrt(dx*dx + dy*dy + dz*dz);
 
-  if (this->Distance < 0.0002) 
+  if (this->Distance < 1e-20) 
     {
-    this->Distance = 0.0002;
+    this->Distance = 1e-20;
     vtkDebugMacro(<< " Distance is set to minimum.");
 
     double *vec = this->DirectionOfProjection;
@@ -513,7 +513,6 @@ void vtkCamera::ApplyTransform(vtkTransform *t)
   this->SetPosition(posNew);
   this->SetFocalPoint(fpNew);
   this->SetViewUp(vuNew);
-
 }
 
 //----------------------------------------------------------------------------
@@ -607,20 +606,20 @@ void vtkCamera::SetClippingRange(double nearz, double farz)
     farz = temp;
     }
 
-  // front should be greater than 0.0001
-  if (nearz < 0.0001)
+  // front should be greater than 1e-20
+  if (nearz < 1e-20)
     {
-    farz += 0.0001 - nearz;
-    nearz = 0.0001;
+    farz += 1e-20 - nearz;
+    nearz = 1e-20;
     vtkDebugMacro(<< " Front clipping range is set to minimum.");
     }
 
   thickness = farz - nearz;
 
-  // thickness should be greater than 0.0001
-  if (thickness < 0.0001)
+  // thickness should be greater than 1e-20
+  if (thickness < 1e-20)
     {
-    thickness = 0.0001;
+    thickness = 1e-20;
     vtkDebugMacro(<< " ClippingRange thickness is set to minimum.");
 
     // set back plane
@@ -657,10 +656,10 @@ void vtkCamera::SetThickness(double s)
 
   this->Thickness = s;
 
-  // thickness should be greater than 0.0001
-  if (this->Thickness < 0.0001)
+  // thickness should be greater than 1e-20
+  if (this->Thickness < 1e-20)
     {
-    this->Thickness = 0.0001;
+    this->Thickness = 1e-20;
     vtkDebugMacro(<< " ClippingRange thickness is set to minimum.");
     }
 
@@ -688,14 +687,14 @@ void vtkCamera::SetWindowCenter(double x, double y)
 //----------------------------------------------------------------------------
 void vtkCamera::SetObliqueAngles(double alpha, double beta)
 {
-  alpha *= vtkMath::DoubleDegreesToRadians();
-  beta *= vtkMath::DoubleDegreesToRadians();
+  alpha = vtkMath::RadiansFromDegrees( alpha );
+  beta = vtkMath::RadiansFromDegrees( beta );
 
-  double cotbeta = cos(beta) / sin(beta);
-  double dxdz = cos(alpha) * cotbeta;
-  double dydz = sin(alpha) * cotbeta;
+  double cotbeta = cos( beta ) / sin( beta );
+  double dxdz = cos( alpha ) * cotbeta;
+  double dydz = sin( alpha ) * cotbeta;
 
-  this->SetViewShear(dxdz, dydz, 1.0);
+  this->SetViewShear( dxdz, dydz, 1.0 );
 }
 
 //----------------------------------------------------------------------------
@@ -727,118 +726,169 @@ void vtkCamera::SetViewShear(double d[3])
   this->SetViewShear(d[0], d[1], d[2]);
 }
 
+#ifndef VTK_LEGACY_REMOVE
 //----------------------------------------------------------------------------
-// Compute the perspective transform matrix. This is used in converting
+// Compute the projection transform matrix. This is used in converting
 // between view and world coordinates.
 void vtkCamera::ComputePerspectiveTransform(double aspect,
                                             double nearz, double farz)
 {
-  this->PerspectiveTransform->Identity();
+  VTK_LEGACY_REPLACED_BODY(vtkCamera::ComputePerspectiveTransform,"VTK 5.4",vtkCamera::ComputeProjectionTransform);
+  this->ComputeProjectionTransform(aspect,nearz,farz);
+}
+#endif
+
+//----------------------------------------------------------------------------
+// Compute the projection transform matrix. This is used in converting
+// between view and world coordinates.
+void vtkCamera::ComputeProjectionTransform(double aspect,
+                                           double nearz, double farz)
+{
+  this->ProjectionTransform->Identity();
 
   // apply user defined transform last if there is one
-  if (this->UserTransform)
+  if ( this->UserTransform )
     {
-    this->PerspectiveTransform->Concatenate(this->UserTransform->GetMatrix());
+    this->ProjectionTransform->Concatenate( this->UserTransform->GetMatrix() );
     }
 
   // adjust Z-buffer range
-  this->PerspectiveTransform->AdjustZBuffer(-1, +1, nearz, farz);
+  this->ProjectionTransform->AdjustZBuffer( -1, +1, nearz, farz );
 
-  if (this->ParallelProjection)
+  if ( this->ParallelProjection)
     {
     // set up a rectangular parallelipiped
 
-    double width = this->ParallelScale*aspect;
+    double width = this->ParallelScale * aspect;
     double height = this->ParallelScale;
 
-    double xmin = (this->WindowCenter[0]-1.0)*width;
-    double xmax = (this->WindowCenter[0]+1.0)*width;
-    double ymin = (this->WindowCenter[1]-1.0)*height;
-    double ymax = (this->WindowCenter[1]+1.0)*height;
+    double xmin = ( this->WindowCenter[0] - 1.0 ) * width;
+    double xmax = ( this->WindowCenter[0] + 1.0 ) * width;
+    double ymin = ( this->WindowCenter[1] - 1.0 ) * height;
+    double ymax = ( this->WindowCenter[1] + 1.0 ) * height;
 
-    this->PerspectiveTransform->Ortho(xmin,xmax,ymin,ymax,
+    this->ProjectionTransform->Ortho( xmin, xmax, ymin, ymax,
                                       this->ClippingRange[0],
-                                      this->ClippingRange[1]);
+                                      this->ClippingRange[1] );
     }
   else
     {
     // set up a perspective frustum
 
-    double tmp = tan(this->ViewAngle*vtkMath::DoubleDegreesToRadians()/2);
+    double tmp = tan( vtkMath::RadiansFromDegrees( this->ViewAngle ) / 2. );
     double width;
     double height;
-    if (this->UseHorizontalViewAngle)
+    if ( this->UseHorizontalViewAngle )
       {
-      width = this->ClippingRange[0]*tmp;
-      height = this->ClippingRange[0]*tmp/aspect;
+      width = this->ClippingRange[0] * tmp;
+      height = this->ClippingRange[0] * tmp / aspect;
       }
     else
       {
-      width = this->ClippingRange[0]*tmp*aspect;
-      height = this->ClippingRange[0]*tmp;
+      width = this->ClippingRange[0] * tmp * aspect;
+      height = this->ClippingRange[0] * tmp;
       }
 
-    double xmin = (this->WindowCenter[0]-1.0)*width;
-    double xmax = (this->WindowCenter[0]+1.0)*width;
-    double ymin = (this->WindowCenter[1]-1.0)*height;
-    double ymax = (this->WindowCenter[1]+1.0)*height;
+    double xmin = ( this->WindowCenter[0] - 1.0 ) * width;
+    double xmax = ( this->WindowCenter[0] + 1.0 ) * width;
+    double ymin = ( this->WindowCenter[1] - 1.0 ) * height;
+    double ymax = ( this->WindowCenter[1] + 1.0 ) * height;
 
-    this->PerspectiveTransform->Frustum(xmin, xmax, ymin, ymax,
+    this->ProjectionTransform->Frustum( xmin, xmax, ymin, ymax,
                                         this->ClippingRange[0],
-                                        this->ClippingRange[1]);
+                                        this->ClippingRange[1] );
     }
 
-  if (this->Stereo)
+  if ( this->Stereo )
     {
     // set up a shear for stereo views
-    if (this->LeftEye)
+    if ( this->LeftEye )
       {
-      this->PerspectiveTransform->Stereo(-this->EyeAngle/2,
-                                         this->Distance);
+      this->ProjectionTransform->Stereo( -this->EyeAngle/2,
+                                          this->Distance );
       }
     else
       {
-      this->PerspectiveTransform->Stereo(+this->EyeAngle/2,
-                                         this->Distance);
+      this->ProjectionTransform->Stereo( +this->EyeAngle/2,
+                                          this->Distance );
       }
     }
 
-  if (this->ViewShear[0] != 0.0 || this->ViewShear[1] != 0.0)
+  if ( this->ViewShear[0] != 0.0 || this->ViewShear[1] != 0.0 )
     {
-    this->PerspectiveTransform->Shear(this->ViewShear[0],
+    this->ProjectionTransform->Shear( this->ViewShear[0],
                                       this->ViewShear[1],
-                                      this->ViewShear[2]*this->Distance);
+                                      this->ViewShear[2] * this->Distance );
     }
 
 }
 
+#ifndef VTK_LEGACY_REMOVE
 //----------------------------------------------------------------------------
-// Return the perspective transform matrix. See ComputePerspectiveTransform.
+// Return the projection transform matrix. See ComputeProjectionTransform.
 vtkMatrix4x4 *vtkCamera::GetPerspectiveTransformMatrix(double aspect,
                                                        double nearz,
                                                        double farz)
 {
-  this->ComputePerspectiveTransform(aspect, nearz, farz);
+  VTK_LEGACY_REPLACED_BODY(vtkCamera::GetPerspectiveTransformMatrix,"VTK 5.4",
+                           vtkCamera::GetProjectionTransformMatrix);
+  return this->GetProjectionTransformMatrix(aspect,nearz,farz);
+}
+#endif
+
+//----------------------------------------------------------------------------
+// Return the projection transform matrix. See ComputeProjectionTransform.
+vtkMatrix4x4 *vtkCamera::GetProjectionTransformMatrix(double aspect,
+                                                      double nearz,
+                                                      double farz)
+{
+  this->ComputeProjectionTransform(aspect, nearz, farz);
 
   // return the transform
-  return this->PerspectiveTransform->GetMatrix();
+  return this->ProjectionTransform->GetMatrix();
 }
 
 //----------------------------------------------------------------------------
-// Return the perspective transform matrix. See ComputePerspectiveTransform.
+// Return the projection transform object. See ComputeProjectionTransform.
+vtkPerspectiveTransform *vtkCamera::GetProjectionTransformObject(double aspect,
+                                                                 double nearz,
+                                                                 double farz)
+{
+  this->ComputeProjectionTransform(aspect, nearz, farz);
+
+  // return the transform
+  return this->ProjectionTransform;
+}
+
+#ifndef VTK_LEGACY_REMOVE
+//----------------------------------------------------------------------------
+// Return the projection transform matrix. See ComputeProjectionTransform.
 vtkMatrix4x4 *vtkCamera::GetCompositePerspectiveTransformMatrix(double aspect,
                                                                 double nearz,
                                                                 double farz)
 {
-  // turn off stereo, the CompositePerspectiveTransformMatrix is used for
+  VTK_LEGACY_REPLACED_BODY(vtkCamera::GetCompositePerspectiveTransformMatrix,
+                           "VTK 5.4",
+                           vtkCamera::GetCompositeProjectionTransformMatrix);
+  return this->GetCompositeProjectionTransformMatrix(aspect,nearz,farz);
+}
+#endif
+
+//----------------------------------------------------------------------------
+// Return the projection transform matrix. See ComputeProjectionTransform.
+vtkMatrix4x4 *vtkCamera::GetCompositeProjectionTransformMatrix(double aspect,
+                                                               double nearz,
+                                                               double farz)
+{
+  // turn off stereo, the CompositeProjectionTransformMatrix is used for
   // picking, not for rendering.
   int stereo = this->Stereo;
   this->Stereo = 0;
 
   this->Transform->Identity();
-  this->Transform->Concatenate(this->GetPerspectiveTransformMatrix(aspect,
-                                                                   nearz,
-                                                                   farz));
+  this->Transform->Concatenate(this->GetProjectionTransformMatrix(aspect,
+                                                                  nearz,
+                                                                  farz));
   this->Transform->Concatenate(this->GetViewTransformMatrix());
 
   this->Stereo = stereo;
@@ -919,7 +969,7 @@ void vtkCamera::GetFrustumPlanes(double aspect, double planes[24])
   // get the composite perspective matrix
   vtkMatrix4x4::DeepCopy(
     *matrix, 
-    this->GetCompositePerspectiveTransformMatrix(aspect,-1,+1));
+    this->GetCompositeProjectionTransformMatrix(aspect,-1,+1));
   
   // transpose the matrix for use with normals
   vtkMatrix4x4::Transpose(*matrix,*matrix);

@@ -26,7 +26,7 @@
 #include "vtkTextMapper.h"
 #include "vtkFreeTypeUtilities.h"
 
-vtkCxxRevisionMacro(vtkCaptionRepresentation, "$Revision: 1.5.2.1 $");
+vtkCxxRevisionMacro(vtkCaptionRepresentation, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkCaptionRepresentation);
 
 //-------------------------------------------------------------------------

@@ -37,32 +37,8 @@
 #include <vtksys/stl/utility>
 #include <vtksys/stl/vector>
 
-vtkCxxRevisionMacro(vtkGroupLeafVertices, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkGroupLeafVertices, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkGroupLeafVertices);
-
-//---------------------------------------------------------------------------
-class vtkVariantCompare
-{
-public:
-  bool operator()(
-    const vtkVariant& a,
-    const vtkVariant& b) const
-  {
-    if (a.GetType() == VTK_STRING)
-      {
-      return a.ToString() < b.ToString();
-      }
-    else if (a.IsNumeric())
-      {
-      return a.ToDouble() < b.ToDouble();
-      }
-    else
-      {
-      // Punt, just do pointer difference.
-      return &a < &b;
-      }
-  }
-};
 
 //---------------------------------------------------------------------------
 class vtkGroupLeafVerticesCompare
@@ -76,7 +52,7 @@ public:
       {
       return a.first < b.first;
       }
-    return vtkVariantCompare()(a.second, b.second);
+    return vtkVariantLessThan()(a.second, b.second);
   }
 };
 
@@ -172,7 +148,7 @@ int vtkGroupLeafVertices::RequestData(
   // so we can call InsertNextBlankRow.
   vtkSmartPointer<vtkTable> treeTable = 
     vtkSmartPointer<vtkTable>::New();
-  treeTable->SetFieldData(builder->GetVertexData());
+  treeTable->SetRowData(builder->GetVertexData());
 
   // Copy everything into the new tree, adding group nodes.
   // Make a map of (parent id, group-by string) -> group vertex id.

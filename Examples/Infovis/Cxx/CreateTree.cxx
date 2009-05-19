@@ -1,8 +1,27 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: CreateTree.cxx,v $
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+//
+// This example...
+//
+
 
 #include "vtkDataSetAttributes.h"
 #include "vtkGraphLayoutView.h"
 #include "vtkMutableDirectedGraph.h"
 #include "vtkRandomGraphSource.h"
+#include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkStringArray.h"
@@ -33,7 +52,7 @@ int main(int, char*[])
   tree->CheckedShallowCopy(graph);
   
   vtkGraphLayoutView* view = vtkGraphLayoutView::New();
-  view->AddRepresentationFromInput(tree);
+  view->SetRepresentationFromInput(tree);
   vtkViewTheme* theme = vtkViewTheme::CreateMellowTheme();
   view->ApplyViewTheme(theme);
   theme->Delete();
@@ -44,6 +63,7 @@ int main(int, char*[])
   
   vtkRenderWindow* window = vtkRenderWindow::New();
   view->SetupRenderWindow(window);
+  view->GetRenderer()->ResetCamera();
   window->GetInteractor()->Start();
   
   graph->Delete();

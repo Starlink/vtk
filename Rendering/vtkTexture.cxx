@@ -21,8 +21,9 @@
 #include "vtkLookupTable.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
+#include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkTexture, "$Revision: 1.55 $");
+vtkCxxRevisionMacro(vtkTexture, "$Revision: 1.61 $");
 vtkCxxSetObjectMacro(vtkTexture, LookupTable, vtkScalarsToColors);
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -34,15 +35,21 @@ vtkTexture::vtkTexture()
 {
   this->Repeat = 1;
   this->Interpolate = 0;
+  this->EdgeClamp = 0;
   this->Quality = VTK_TEXTURE_QUALITY_DEFAULT;
 
   this->LookupTable = NULL;
   this->MappedScalars = NULL;
   this->MapColorScalarsThroughLookupTable = 0;
+  this->Transform = NULL;
 
   this->SelfAdjustingTableRange = 0;
 
   this->SetNumberOfOutputPorts(0);
+
+  this->BlendingMode = VTK_TEXTURE_BLENDING_MODE_NONE;
+
+  this->RestrictPowerOf2ImageSmaller = 0;
 
   // By default select active point scalars.
   this->SetInputArrayToProcess(0,0,0,
@@ -61,6 +68,11 @@ vtkTexture::~vtkTexture()
   if (this->LookupTable != NULL) 
     {
     this->LookupTable->UnRegister(this);
+    }
+
+  if(this->Transform != NULL)
+    {
+    this->Transform->UnRegister(this);
     }
 }
 
@@ -84,12 +96,35 @@ vtkImageData *vtkTexture::GetInput()
 }
 
 //----------------------------------------------------------------------------
+void vtkTexture::SetTransform(vtkTransform *transform)
+{
+  if (transform == this->Transform)
+    {
+    return;
+    }
+
+  if (this->Transform)
+    {
+    this->Transform->Delete();
+    this->Transform = NULL;
+    }
+
+  if (transform)
+    {
+    this->Transform = transform;
+    this->Transform->Register(this);
+    }
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
 void vtkTexture::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
   os << indent << "Interpolate: " << (this->Interpolate ? "On\n" : "Off\n");
   os << indent << "Repeat:      " << (this->Repeat ? "On\n" : "Off\n");
+  os << indent << "EdgeClamp:   " << (this->EdgeClamp ? "On\n" : "Off\n");
   os << indent << "Quality:     ";
   switch (this->Quality)
     {
@@ -132,6 +167,41 @@ void vtkTexture::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << indent << "Mapped Scalars: (none)\n";
     }
+
+  if ( this->Transform )
+    {
+    os << indent << "Transform: " << this->Transform << "\n";
+    }
+  else
+    {
+    os << indent << "Transform: (none)\n";
+    }
+  os << indent << "MultiTexture Blending Mode:     ";
+  switch (this->BlendingMode)
+    {
+    case VTK_TEXTURE_BLENDING_MODE_NONE:
+      os << "None\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_REPLACE:
+      os << "Replace\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_MODULATE:
+      os << "Modulate\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_ADD:
+      os << "Add\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_ADD_SIGNED:
+      os << "Add Signed\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_INTERPOLATE:
+      os << "Interpolate\n";
+      break;
+    case VTK_TEXTURE_BLENDING_MODE_SUBTRACT:
+      os << "Subtract\n";
+      break;
+    }
+  os << indent << "RestrictPowerOf2ImageSmaller:   " << (this->RestrictPowerOf2ImageSmaller ? "On\n" : "Off\n");
 }
 
 //----------------------------------------------------------------------------

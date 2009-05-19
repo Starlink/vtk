@@ -83,7 +83,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPOVExporter, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkPOVExporter, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkPOVExporter);
 
 //Can't use printf("%d", a_vtkIdType) because vtkIdType is not always int.
@@ -137,32 +137,29 @@ public:
 //============================================================================
 vtkPOVExporter::vtkPOVExporter()
 {
-  this->FilePrefix = NULL;
+  this->FileName = NULL;
   this->FilePtr = NULL;
   this->Internals = new vtkPOVInternals;
 }
 
 vtkPOVExporter::~vtkPOVExporter()
 {
+  if(this->FileName!=0)
+    {
+    delete[] this->FileName;
+    }
   delete this->Internals;
 }
 
 void vtkPOVExporter::WriteData()
 {
   // make sure user specified a filename
-  if (this->FilePrefix == NULL) 
+  if (this->FileName == NULL)
     {
-    vtkErrorMacro(<< "Please specify file prefix to use");
+    vtkErrorMacro(<< "Please specify file name to create");
     return;
     }
 
-    // first make sure there is only one renderer in this rendering window
-  if (this->RenderWindow->GetRenderers()->GetNumberOfItems() > 1) 
-    {
-    vtkErrorMacro(<< "POV files only support one renderer per window.");
-    return;
-    }
-    
   //get the renderer
   vtkRenderer *renderer = 
     this->RenderWindow->GetRenderers()->GetFirstRenderer();
@@ -174,17 +171,13 @@ void vtkPOVExporter::WriteData()
     }
     
   // try opening the file
-  char *povFileName = 
-    new char [strlen (this->FilePrefix) + strlen(".pov") + 1];
-  sprintf(povFileName, "%s%s", this->FilePrefix, ".pov");
-  this->FilePtr = fopen(povFileName, "w");
+  this->FilePtr = fopen(this->FileName, "w");
   if (this->FilePtr == NULL) 
     {
-    vtkErrorMacro (<< "Cannot open " << povFileName);
-    delete [] povFileName;
+    vtkErrorMacro (<< "Cannot open " << this->FileName);
     return;
     }
-  delete [] povFileName;
+
     
   // write header
   this->WriteHeader(renderer);
@@ -328,10 +321,6 @@ void vtkPOVExporter::WriteActor(vtkActor *actor)
     }
   dataset->Update();
   
-  // we use mesh2 since it maps better to how VTK stores
-  // polygons/triangle strips
-  fprintf(this->FilePtr, "mesh2 {\n");
-  
   // convert non polygon data to polygon data if needed
   vtkGeometryFilter *geometryFilter = NULL;
   vtkPolyData *polys = NULL;;
@@ -347,8 +336,19 @@ void vtkPOVExporter::WriteActor(vtkActor *actor)
     polys = static_cast<vtkPolyData *>(dataset);
     }
   
+  // we only export Polygons and Triangle Strips
+  if ((polys->GetNumberOfPolys() == 0) && (polys->GetNumberOfStrips() == 0))
+    {
+      return;
+    }
+
   // write point coordinates
   vtkPoints *points = polys->GetPoints();
+
+  // we use mesh2 since it maps better to how VTK stores
+  // polygons/triangle strips
+  fprintf(this->FilePtr, "mesh2 {\n");
+
   fprintf(this->FilePtr, "\tvertex_vectors {\n");
   fprintf(this->FilePtr, VTKPOV_CNTFMT, points->GetNumberOfPoints());
   for (vtkIdType i = 0; i < points->GetNumberOfPoints(); i++) 
@@ -485,7 +485,7 @@ void vtkPOVExporter::WritePolygons(vtkPolyData *polys, bool scalar_visible)
   // the rest of triangles            
     for (vtkIdType i = 3; i < npts; i++) 
       {    
-      triangle[1] = pts[2];
+      triangle[1] = triangle[2];
       triangle[2] = pts[i];
       fprintf(this->FilePtr, VTKPOV_TRIFMT1,
               triangle[0], triangle[1], triangle[2]);
@@ -522,7 +522,7 @@ void vtkPOVExporter::WritePolygons(vtkPolyData *polys, bool scalar_visible)
       // the rest of triangles            
       for (vtkIdType i = 3; i < npts; i++) 
         {    
-        triangle[1] = pts[2];
+        triangle[1] = triangle[2];
         triangle[2] = pts[i];
         fprintf(this->FilePtr, VTKPOV_TRIFMT1,
                 triangle[0], triangle[1], triangle[2]);
@@ -654,12 +654,12 @@ void vtkPOVExporter::WriteProperty(vtkProperty *property)
 void vtkPOVExporter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
-  if (this->FilePrefix) 
+  if (this->FileName)
     {
-    os << indent << "FilePrefix: " << this->FilePrefix << "\n";
+    os << indent << "FileName: " << this->FileName << "\n";
     } 
   else 
     {
-    os << indent << "FilePrefix: (null)\n";
+    os << indent << "FileName: (null)\n";
     }
 }

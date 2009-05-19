@@ -34,8 +34,9 @@
 #include "vtkVoxel.h"
 #include "vtkLine.h"
 #include "vtkSelection.h"
+#include "vtkSelectionNode.h"
 
-vtkCxxRevisionMacro(vtkExtractSelectedFrustum, "$Revision: 1.12 $");
+vtkCxxRevisionMacro(vtkExtractSelectedFrustum, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkExtractSelectedFrustum);
 vtkCxxSetObjectMacro(vtkExtractSelectedFrustum,Frustum,vtkPlanes);
 
@@ -215,32 +216,32 @@ int vtkExtractSelectedFrustum::RequestData(
     vtkInformation *selInfo = inputVector[1]->GetInformationObject(0);
     vtkSelection *sel = vtkSelection::SafeDownCast(
       selInfo->Get(vtkDataObject::DATA_OBJECT()));
-    if (sel && 
-        sel->GetProperties()->Has(vtkSelection::CONTENT_TYPE()) &&
-        (sel->GetProperties()->Get(vtkSelection::CONTENT_TYPE()) 
-         == 
-         vtkSelection::FRUSTUM))
-
+    vtkSelectionNode *node = 0;
+    if (sel->GetNumberOfNodes() == 1)
+      {
+      node = sel->GetNode(0);
+      }
+    if (node && node->GetContentType() == vtkSelectionNode::FRUSTUM)
       {
       vtkDoubleArray *corners = vtkDoubleArray::SafeDownCast(
-        sel->GetSelectionList());
+        node->GetSelectionList());
       this->CreateFrustum(corners->GetPointer(0));
-      if (sel->GetProperties()->Has(vtkSelection::INVERSE()))
+      if (node->GetProperties()->Has(vtkSelectionNode::INVERSE()))
         {
         this->SetInsideOut(
-          sel->GetProperties()->Get(vtkSelection::INVERSE())
+          node->GetProperties()->Get(vtkSelectionNode::INVERSE())
           );
         }
-      if (sel->GetProperties()->Has(vtkSelection::FIELD_TYPE()))
+      if (node->GetProperties()->Has(vtkSelectionNode::FIELD_TYPE()))
         {
         this->SetFieldType(
-          sel->GetProperties()->Get(vtkSelection::FIELD_TYPE())
+          node->GetProperties()->Get(vtkSelectionNode::FIELD_TYPE())
           );
         }
-      if (sel->GetProperties()->Has(vtkSelection::CONTAINING_CELLS()))
+      if (node->GetProperties()->Has(vtkSelectionNode::CONTAINING_CELLS()))
         {
         this->SetContainingCells(
-          sel->GetProperties()->Get(vtkSelection::CONTAINING_CELLS())
+          node->GetProperties()->Get(vtkSelectionNode::CONTAINING_CELLS())
           );
         }
       }    
@@ -409,15 +410,19 @@ int vtkExtractSelectedFrustum::RequestData(
     //the output is a new unstructured grid
     outputUG->Allocate(numCells/4); //allocate storage for geometry/topology
     newPts->Allocate(numPts/4,numPts);
+    outputPD->SetCopyGlobalIds(1);
+    outputPD->CopyFieldOff("vtkOriginalPointIds");
     outputPD->CopyAllocate(pd);
 
-    if ((this->FieldType == vtkSelection::CELL)
+    if ((this->FieldType == vtkSelectionNode::CELL)
         ||
         this->PreserveTopology 
         ||
         this->ContainingCells
       )
       {
+      outputCD->SetCopyGlobalIds(1);
+      outputCD->CopyFieldOff("vtkOriginalCellIds");
       outputCD->CopyAllocate(cd);
 
       originalCellIds = vtkIdTypeArray::New();
@@ -438,7 +443,7 @@ int vtkExtractSelectedFrustum::RequestData(
 
   vtkIdType updateInterval;
 
-  if (this->FieldType == vtkSelection::CELL)
+  if (this->FieldType == vtkSelectionNode::CELL)
     {
     //cell based isect test, a cell is inside if any part of it is inside the
     //frustum, a point is inside if it belongs to an inside cell, or is not 
@@ -562,7 +567,7 @@ int vtkExtractSelectedFrustum::RequestData(
       }
     }
 
-  else //this->FieldType == vtkSelection::POINT
+  else //this->FieldType == vtkSelectionNode::POINT
     {
     //point based isect test
 
@@ -848,7 +853,7 @@ int vtkExtractSelectedFrustum::ABoxFrustumIsect(double *bounds, vtkCell *cell)
   */
   vtkCell *face;
   vtkCell *edge;
-  vtkPoints *pts;
+  vtkPoints *pts=0;
   double *vertbuffer;
   int maxedges = 16;
   //be ready to resize if we hit a polygon with many vertices
@@ -864,8 +869,42 @@ int vtkExtractSelectedFrustum::ABoxFrustumIsect(double *bounds, vtkCell *cell)
     int nedges = cell->GetNumberOfEdges();
     if (nedges < 1)
       {
-      delete[] vertbuffer;
-      return this->IsectDegenerateCell(cell);
+      // VTK_LINE and VTK_POLY_LINE have no "edges" -- the cells
+      // themselves are edges.  We catch them here and assemble the
+      // list of vertices by hand because the code below assumes that
+      // GetNumberOfEdges()==0 means a degenerate cell containing only
+      // points.
+      if (cell->GetCellType() == VTK_LINE)
+        {
+        nedges = 2;
+        vtkPoints *points = cell->GetPoints();
+        points->GetPoint(0, &vlist[0*3]);
+        points->GetPoint(1, &vlist[1*3]);
+        }
+      else if (cell->GetCellType() == VTK_POLY_LINE)
+        {
+        nedges = cell->GetPointIds()->GetNumberOfIds();
+        vtkPoints *points = cell->GetPoints();
+        if (nedges + 4 > maxedges)
+          {
+          delete [] vertbuffer;
+          maxedges = (nedges + 4) * 2;
+          vertbuffer = new double[3*maxedges + 3];
+          vlist = &vertbuffer[0*maxedges*3];
+          wvlist = &vertbuffer[1*maxedges*3];
+          ovlist = &vertbuffer[2*maxedges*3];
+          }
+        for (int i = 0; i < cell->GetPointIds()->GetNumberOfIds(); ++i)
+          {
+          points->GetPoint(cell->GetPointIds()->GetId(i),
+                           &vlist[i*3]);
+          }
+        }
+      else
+        {
+        delete[] vertbuffer;
+        return this->IsectDegenerateCell(cell);
+        }
       }
     if (nedges+4 > maxedges)
       {
@@ -877,9 +916,12 @@ int vtkExtractSelectedFrustum::ABoxFrustumIsect(double *bounds, vtkCell *cell)
       ovlist = &vertbuffer[2*maxedges*3];
       }
     edge = cell->GetEdge(0);
-    pts = edge->GetPoints();
-    pts->GetPoint(0, &vlist[0*3]);
-    pts->GetPoint(1, &vlist[1*3]);
+    if (edge)
+      {
+      pts = edge->GetPoints();
+      pts->GetPoint(0, &vlist[0*3]);
+      pts->GetPoint(1, &vlist[1*3]);
+      }
     switch (cell->GetCellType())
       {
       case VTK_PIXEL:
@@ -898,9 +940,10 @@ int vtkExtractSelectedFrustum::ABoxFrustumIsect(double *bounds, vtkCell *cell)
         break;
         }
       case VTK_LINE:
-        {
-        break;
-        }
+      case VTK_POLY_LINE:
+      {
+      break;
+      }
       default:
         {
         for (int e = 1; e < nedges-1; e++)

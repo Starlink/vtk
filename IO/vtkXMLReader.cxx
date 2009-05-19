@@ -28,12 +28,14 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkInformationQuadratureSchemeDefinitionVectorKey.h"
+#include "vtkQuadratureSchemeDefinition.h"
 
 #include <vtksys/ios/sstream>
 #include <sys/stat.h>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.49.2.1 $");
+vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.55 $");
 //-----------------------------------------------------------------------------
 static void ReadStringVersion(const char* version, int& major, int& minor)
 {
@@ -88,7 +90,6 @@ vtkXMLReader::vtkXMLReader()
   this->InformationError = 0;
   this->DataError = 0;
   this->ReadError = 0;
-  this->CurrentOutput = -1;
   this->ProgressRange[0] = 0;
   this->ProgressRange[1] = 1;
   
@@ -120,6 +121,8 @@ vtkXMLReader::vtkXMLReader()
 
   this->FileMinorVersion = -1;
   this->FileMajorVersion = -1;
+  
+  this->CurrentOutput = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -331,7 +334,6 @@ int vtkXMLReader::ReadXMLInformation()
     // reported by OpenVTKFile.
     if(!this->OpenVTKFile())
       {
-      this->SetupEmptyOutput();
       return 0;
       }
 
@@ -361,7 +363,6 @@ int vtkXMLReader::ReadXMLInformation()
       // The output should be empty to prevent the rest of the pipeline
       // from executing.
       this->ReadError = 1;
-      this->SetupEmptyOutput();
       }
 
     // Close the file to prevent resource leaks.
@@ -436,24 +437,16 @@ int vtkXMLReader
 }
 
 //----------------------------------------------------------------------------
-int vtkXMLReader::RequestData(vtkInformation *request, 
+int vtkXMLReader::RequestData(vtkInformation *vtkNotUsed(request),
                               vtkInformationVector **vtkNotUsed(inputVector),
                               vtkInformationVector *outputVector)
 {
-  // Set which output we are updating.  If the given object is not one
-  // of our outputs, just initialize it to empty and return.
-  this->CurrentOutput = request->Get( vtkDemandDrivenPipeline::FROM_OUTPUT_PORT() );
-  if(this->CurrentOutput < 0)
-    {
-    this->GetExecutive()->GetOutputData(0)->Initialize();
-    return 0;
-    }
-
   this->CurrentTimeStep = this->TimeStep;
 
   // Get the output pipeline information and data object.
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
+  this->CurrentOutput = output;
 
   // Save the time value in the output data information.
   double* steps =
@@ -499,6 +492,7 @@ int vtkXMLReader::RequestData(vtkInformation *request,
   if(!this->OpenVTKFile())
     {
     this->SetupEmptyOutput();
+    this->CurrentOutput = 0;
     return 0;
     }
   if(!this->XMLParser)
@@ -530,13 +524,13 @@ int vtkXMLReader::RequestData(vtkInformation *request,
     // If we aborted or there was an error, provide empty output.
     if(this->DataError || this->AbortExecute)
       {
-      this->GetOutputAsDataSet(this->CurrentOutput)->Initialize();
+      this->SetupEmptyOutput();
       }
     }
   else
     {
     // There was an error reading the file.  Provide empty output.
-    this->GetOutputAsDataSet(this->CurrentOutput)->Initialize();
+    this->SetupEmptyOutput();
     }
   
   // We have finished reading.
@@ -550,6 +544,7 @@ int vtkXMLReader::RequestData(vtkInformation *request,
     this->TimeStepWasReadOnce = 1; 
     }
 
+  this->CurrentOutput = 0;
   return 1;
 }
 
@@ -644,12 +639,42 @@ int vtkXMLReader::ReadPrimaryElement(vtkXMLDataElement* ePrimary)
 void vtkXMLReader::SetupOutputData()
 {
   // Initialize the output.
-  int i;
-  for(i=0; i < this->GetNumberOfOutputPorts(); ++i)
-    {
-    this->GetExecutive()->GetOutputData(i)->Initialize();
-    }
+  this->CurrentOutput->Initialize();
 }
+
+
+//----------------------------------------------------------------------------
+int vtkXMLReader::CreateInformationKey(
+        vtkXMLDataElement *eInfoKey,
+        vtkInformation *info)
+{
+  // Quick sanity check that, this is an InformationKey
+  // and it is defined correctly.
+  const char *name=eInfoKey->GetAttribute("name");
+  const char *location=eInfoKey->GetAttribute("location");
+  if ((strcmp(eInfoKey->GetName(),"InformationKey")!=0)
+      || (location==NULL)
+      || (name==NULL))
+    {
+    vtkWarningMacro("XML representation of Key: "
+                    "\"InformationKey\" is expected to "
+                    "have \"name\" and \"location\" "
+                    "attributes.");
+    return 0;
+    }
+
+  // Check that it's a recognized type, and restore.
+  if ((strcmp(location, "vtkQuadratureSchemeDefinition")==0)
+      &&(strcmp(name, "DICTIONARY")==0))
+    {
+    vtkInformationQuadratureSchemeDefinitionVectorKey *key=vtkQuadratureSchemeDefinition::DICTIONARY();
+    key->RestoreState(info, eInfoKey);
+    vtkIndent indent;
+    }
+
+  return 1;
+}
+
 
 //----------------------------------------------------------------------------
 vtkAbstractArray* vtkXMLReader::CreateArray(vtkXMLDataElement* da)
@@ -658,16 +683,28 @@ vtkAbstractArray* vtkXMLReader::CreateArray(vtkXMLDataElement* da)
   if(!da->GetWordTypeAttribute("type", dataType))
     {
     return 0;
-    }  
-  
+    }
+
   vtkAbstractArray* array = vtkAbstractArray::CreateArray(dataType);
-  
+
   array->SetName(da->GetAttribute("Name"));
-  
+
   int components;
   if(da->GetScalarAttribute("NumberOfComponents", components))
     {
     array->SetNumberOfComponents(components);
+    }
+
+  // Scan/load for vtkInformationKey data.
+  int nElements=da->GetNumberOfNestedElements();
+  for (int i=0; i<nElements; ++i)
+    {
+    vtkXMLDataElement *eInfoKeyData=da->GetNestedElement(i);
+    if(strcmp(eInfoKeyData->GetName(), "InformationKey") == 0)
+      {
+      vtkInformation *info=array->GetInformation();
+      this->CreateInformationKey(eInfoKeyData, info);
+      }
     }
 
   return array;
@@ -872,6 +909,7 @@ void vtkXMLReader::SetDataArraySelections(vtkXMLDataElement* eDSA,
     sel->SetArrays(0, 0);
     return;
     }
+
   int numArrays = eDSA->GetNumberOfNestedElements();
   if(!numArrays)
     {
@@ -1138,6 +1176,8 @@ int vtkXMLReader::ProcessRequest(vtkInformation* request,
                                  vtkInformationVector** inputVector,
                                  vtkInformationVector* outputVector)
 {
+  this->CurrentOutputInformation =
+    outputVector->GetInformationObject(0);
   // FIXME This piece of code should be rewritten to handle at the same
   // time Pieces and TimeSteps. The REQUEST_DATA_NOT_GENERATED should
   // ideally be changed during execution, so that allocation still
@@ -1147,10 +1187,8 @@ int vtkXMLReader::ProcessRequest(vtkInformation* request,
     request->Has(vtkDemandDrivenPipeline::REQUEST_DATA_NOT_GENERATED()))
     {
     vtkInformation* outInfo = outputVector->GetInformationObject(0);
-    if ( this->CurrentOutput == 0)
-      {
-      outInfo->Set(vtkDemandDrivenPipeline::DATA_NOT_GENERATED(), 1);
-      }
+    outInfo->Set(vtkDemandDrivenPipeline::DATA_NOT_GENERATED(), 1);
+    this->CurrentOutputInformation = 0;
     return 1;
     }
   // END FIXME 
@@ -1158,30 +1196,41 @@ int vtkXMLReader::ProcessRequest(vtkInformation* request,
   // generate the data
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()))
     {
-    return this->RequestData(request, inputVector, outputVector);
+    int retVal = this->RequestData(request, inputVector, outputVector);
+    this->CurrentOutputInformation = 0;
+    return retVal;
     }
 
   // create the output
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA_OBJECT()))
     {
-    return this->RequestDataObject(request, inputVector, outputVector);
+    int retVal = this->RequestDataObject(request, inputVector, outputVector);
+    this->CurrentOutputInformation = 0;
+    return retVal;
     }
 
   // execute information
   if(request->Has(vtkDemandDrivenPipeline::REQUEST_INFORMATION()))
     {
-    return this->RequestInformation(request, inputVector, outputVector);
+    int retVal = this->RequestInformation(request, inputVector, outputVector);
+    this->CurrentOutputInformation = 0;
+    return retVal;
     }
 
   // return UE info
   if(request->Has
      (vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT_INFORMATION()))
     {
-    return this->RequestUpdateExtentInformation(request, 
-                                                inputVector, outputVector);
+    int retVal = this->RequestUpdateExtentInformation(request, 
+        inputVector, outputVector);
+    this->CurrentOutputInformation = 0;
+    return retVal;
     }
 
-  return this->Superclass::ProcessRequest(request, inputVector, outputVector);
+  int retVal = 
+    this->Superclass::ProcessRequest(request, inputVector, outputVector);
+  this->CurrentOutputInformation = 0;
+  return retVal;
 }
 
 //----------------------------------------------------------------------------
@@ -1210,3 +1259,14 @@ int vtkXMLReader::IsTimeStepInArray(int timestep, int* timesteps, int length)
   return 0;
 }
 
+//----------------------------------------------------------------------------
+vtkDataObject* vtkXMLReader::GetCurrentOutput()
+{
+  return this->CurrentOutput;
+}
+
+//----------------------------------------------------------------------------
+vtkInformation* vtkXMLReader::GetCurrentOutputInformation()
+{
+  return this->CurrentOutputInformation;
+}

@@ -22,9 +22,9 @@
 // vtkDisplayListPainter --> vtkCompositePainter -->
 // vtkCoincidentTopologyResolutionPainter -->
 // vtkLightingPainter --> vtkRepresentationPainter --> 
-// <Delegate of vtkDefaultPainter>.
+// \<Delegate of vtkDefaultPainter\>.
 // Typically, the delegate of the default painter be one that is capable of r
-// rendering grpahics primitives or a vtkChooserPainter which can select appropriate
+// rendering graphics primitives or a vtkChooserPainter which can select appropriate
 // painters to do the rendering.
 
 #ifndef __vtkDefaultPainter_h
@@ -58,14 +58,14 @@ public:
   vtkGetObjectMacro(ClipPlanesPainter, vtkClipPlanesPainter);
 
   // Description:
-  // Get/Set the painter that controls lighting.
-  void SetLightingPainter(vtkLightingPainter*);
-  vtkGetObjectMacro(LightingPainter, vtkLightingPainter);
-
-  // Description:
   // Get/Set the painter that builds display lists.
   void SetDisplayListPainter(vtkDisplayListPainter*);
   vtkGetObjectMacro(DisplayListPainter, vtkDisplayListPainter);
+
+  // Description:
+  // Get/Set the painter used to handle composite datasets.
+  void SetCompositePainter(vtkCompositePainter*);
+  vtkGetObjectMacro(CompositePainter, vtkCompositePainter);
 
   // Description:
   // Painter used to resolve coincident topology.
@@ -75,14 +75,14 @@ public:
     vtkCoincidentTopologyResolutionPainter);
 
   // Description:
+  // Get/Set the painter that controls lighting.
+  void SetLightingPainter(vtkLightingPainter*);
+  vtkGetObjectMacro(LightingPainter, vtkLightingPainter);
+
+  // Description:
   // Painter used to convert polydata to Wireframe/Points representation.
   void SetRepresentationPainter(vtkRepresentationPainter*);
   vtkGetObjectMacro(RepresentationPainter, vtkRepresentationPainter);
-
-  // Description:
-  // Get/Set the painter used to handle composite datasets.
-  void SetCompositePainter(vtkCompositePainter*);
-  vtkGetObjectMacro(CompositePainter, vtkCompositePainter);
 
   // Description:
   // Set/Get the painter to which this painter should propagare its draw calls.
@@ -99,7 +99,7 @@ public:
   // Building of the chain does not depend on input polydata,
   // hence it does not check if the input has changed at all.
   virtual void Render(vtkRenderer* renderer, vtkActor* actor, 
-    unsigned long typeflags);
+                      unsigned long typeflags, bool forceCompileOnly);
 
   // Description:
   // Release any graphics resources that are being consumed by this painter.
@@ -126,13 +126,13 @@ protected:
   // Take part in garbage collection.
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
+  vtkScalarsToColorsPainter* ScalarsToColorsPainter;
   vtkClipPlanesPainter* ClipPlanesPainter;
-  vtkCoincidentTopologyResolutionPainter* CoincidentTopologyResolutionPainter;
-  vtkCompositePainter* CompositePainter;
   vtkDisplayListPainter* DisplayListPainter;
+  vtkCompositePainter* CompositePainter;
+  vtkCoincidentTopologyResolutionPainter* CoincidentTopologyResolutionPainter;
   vtkLightingPainter* LightingPainter;
   vtkRepresentationPainter* RepresentationPainter;
-  vtkScalarsToColorsPainter* ScalarsToColorsPainter;
   vtkTimeStamp ChainBuildTime;
 
   vtkPainter* DefaultPainterDelegate;

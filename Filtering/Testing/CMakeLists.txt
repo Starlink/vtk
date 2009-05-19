@@ -16,11 +16,16 @@ IF(PYTHON_EXECUTABLE)
     vtkActor2DCollection.h
     vtkAMRBox.h
     vtkApplyFilterCommandInternal.h
+    vtkArrayData.h
+    vtkArrayDataAlgorithm.h
     vtkCellType.h
     vtkCompositeDataSetInternals.h
     vtkDataObjectCollection.h
     vtkDataSetCollection.h
+    vtkFactoredArrayData.h
+    vtkFactoredArrayDataAlgorithm.h
     vtkFilteringInformationKeyManager.h
+    vtkGraphInternals.h
     vtkImageIterator.h
     vtkImageProgressIterator.h
     vtkMarchingCubesCases.h

@@ -15,6 +15,9 @@
 // .NAME vtkOpenGLDisplayListPainter - display list painter using OpenGL.
 // .SECTION Description
 // vtkOpenGLDisplayListPainter creates an OpenGL display list for rendering.
+// This painter creates a different display list for every render request with a
+// different set of typeflags. If any of the data or inputs change, then all
+// display lists are discarded.
 
 #ifndef __vtkOpenGLDisplayListPainter_h
 #define __vtkOpenGLDisplayListPainter_h
@@ -34,25 +37,26 @@ public:
   // The parameter window could be used to determine which graphic
   // resources to release. In this case, releases the display lists.
   virtual void ReleaseGraphicsResources(vtkWindow *);
+//BTX
 protected:
   vtkOpenGLDisplayListPainter();
   ~vtkOpenGLDisplayListPainter();
 
-  unsigned int DisplayListId;
-  vtkTimeStamp BuildTime;
-
-  void ReleaseList();
 
   // Description:
   // If not using ImmediateModeRendering, this will build a display list,
   // if outdated and use the display list.
   virtual void RenderInternal(vtkRenderer* renderer, vtkActor* actor, 
-    unsigned long typeflags);
+                              unsigned long typeflags,
+                              bool forceCompileOnly);
 
-  unsigned long LastUsedTypeFlags;
 private:
   vtkOpenGLDisplayListPainter(const vtkOpenGLDisplayListPainter&); // Not implemented.
   void operator=(const vtkOpenGLDisplayListPainter&); // Not implemented.
+
+  class vtkInternals;
+  vtkInternals* Internals;
+//ETX
 };
 
 #endif

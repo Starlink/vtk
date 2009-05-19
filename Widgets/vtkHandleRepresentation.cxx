@@ -20,7 +20,7 @@
 #include "vtkRenderWindow.h"
 #include "vtkPointPlacer.h"
 
-vtkCxxRevisionMacro(vtkHandleRepresentation, "$Revision: 1.11.14.1 $");
+vtkCxxRevisionMacro(vtkHandleRepresentation, "$Revision: 1.12 $");
 
 vtkCxxSetObjectMacro(vtkHandleRepresentation, PointPlacer, vtkPointPlacer );
 

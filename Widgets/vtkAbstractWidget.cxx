@@ -69,6 +69,7 @@ vtkAbstractWidget::~vtkAbstractWidget()
 
   this->EventTranslator->Delete();
   this->CallbackMapper->Delete();
+  this->SetEnabled(0);
 }
 
 //----------------------------------------------------------------------
@@ -188,11 +189,13 @@ void vtkAbstractWidget::SetEnabled(int enabling)
     this->SetCurrentRenderer(NULL);
     }
 
-  // Should only render if there is no parent
-  if ( this->Interactor && !this->Parent )
-    {
-    this->Interactor->Render();
-    }
+  // We no longer call render when enabled state changes. It's the applicaitons
+  // resposibility to explicitly call render after changing enable state.
+  //// Should only render if there is no parent
+  //if ( this->Interactor && !this->Parent )
+  //  {
+  //  this->Interactor->Render();
+  //  }
 }
 
 //-------------------------------------------------------------------------

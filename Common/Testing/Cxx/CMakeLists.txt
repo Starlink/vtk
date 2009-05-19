@@ -4,17 +4,21 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
   otherArrays.cxx
   otherTimerLog.cxx
   otherLookupTable.cxx
+  otherLookupTableWithEnabling.cxx
   otherByteSwap.cxx
   otherStringArray.cxx
   TestAmoebaMinimizer.cxx
   TestArrayLookup.cxx
+  TestConditionVariable.cxx
   TestGarbageCollector.cxx
   TestDataArray.cxx
   TestDirectory.cxx
+  TestFastNumericConversion.cxx
   TestMath.cxx
   TestPolynomialSolversUnivariate.cxx
   TestSmartPointer.cxx
   TestSortDataArray.cxx
+  TestVariantComparison.cxx
   SystemInformation.cxx
   EXTRA_INCLUDE vtkTestDriver.h
 )
@@ -62,3 +66,31 @@ IF(CYGWIN)
   ADD_TEST(SystemInformation-cygcheck
     "${CMAKE_CURRENT_SOURCE_DIR}/SystemInformation-cygcheck.sh")
 ENDIF(CYGWIN)
+
+IF(VTK_USE_N_WAY_ARRAYS)
+
+  CREATE_TEST_SOURCELIST(ArrayTests ArrayCxxTests.cxx
+    ArrayAPI.cxx
+    ArrayAPIConvenience.cxx
+    ArrayAPIDense.cxx
+    ArrayAPISparse.cxx
+    ArrayBool.cxx
+    ArrayInterpolationDense.cxx
+    ArrayNullValues.cxx
+    ArraySlice.cxx
+    ArrayVariants.cxx
+    )
+
+  ADD_EXECUTABLE(ArrayCxxTests ${ArrayTests})
+  TARGET_LINK_LIBRARIES(ArrayCxxTests vtkCommon)
+
+  SET(ArrayTestsToRun ${ArrayTests})
+  REMOVE(ArrayTestsToRun ArrayCxxTests.cxx)
+
+  FOREACH(test ${ArrayTestsToRun})
+    GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
+    ADD_TEST(Array-${TName} ${CXX_TEST_PATH}/ArrayCxxTests ${TName})
+  ENDFOREACH(test)
+
+ENDIF(VTK_USE_N_WAY_ARRAYS)
+

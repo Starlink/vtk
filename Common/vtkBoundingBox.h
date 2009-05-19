@@ -32,6 +32,10 @@ public:
   // Construct a bounding box with the min point set to 
   // VTK_DOUBLE_MAX and the max point set to VTK_DOUBLE_MIN
   vtkBoundingBox();
+  vtkBoundingBox(double bounds[6]);
+  vtkBoundingBox(double xMin, double xMax,
+                 double yMin, double yMax,
+                 double zMin, double zMax);
   
   // Description:
   // Copy Constructor
@@ -92,6 +96,11 @@ public:
   int Intersects(const vtkBoundingBox &bbox) const;
 
   // Description:
+  // Returns 1 if the min and max points of bbox are contained 
+  // within the bounds of this box, else returns 0.
+  int Contains(const vtkBoundingBox &bbox) const;
+
+  // Description:
   // Get the bounds of the box (defined by vtk style)
   void GetBounds(double bounds[6]) const;
   void GetBounds(double &xMin, double &xMax,
@@ -134,6 +143,11 @@ public:
   double GetMaxLength() const;
 
   // Description:
+  // Return the length of the diagonal.
+  // \pre not_empty: this->IsValid()
+  double GetDiagonalLength() const;
+
+  // Description:
   // Returns 1 if the bounds have been set and 0 if the box is in its
   // initialized state which is an inverted state
   int IsValid() const;
@@ -141,6 +155,17 @@ public:
   // Description:
   // Returns the box to its initialized state
   void Reset();
+
+  // Description:
+  // Scale each dimension of the box by some given factor.
+  // If the box is not valid, it stays unchanged.
+  // If the scalar factor is negative, bounds are flipped: for example,
+  // if (xMin,xMax)=(-2,4) and sx=-3, (xMin,xMax) becomes (-12,6).
+  void Scale(double s[3]);
+  void Scale(double sx,
+             double sy,
+             double sz);
+
 protected:
   double MinPnt[3], MaxPnt[3];
 };
@@ -149,11 +174,6 @@ inline void vtkBoundingBox::Reset()
 {
   this->MinPnt[0] = this->MinPnt[1] = this->MinPnt[2] = VTK_DOUBLE_MAX;    
   this->MaxPnt[0] = this->MaxPnt[1] = this->MaxPnt[2] = VTK_DOUBLE_MIN;
-}
-
-inline vtkBoundingBox::vtkBoundingBox()
-{
-  this->Reset();
 }
 
 inline void vtkBoundingBox::GetBounds(double &xMin, double &xMax,
@@ -222,6 +242,25 @@ inline void vtkBoundingBox::GetBounds(double bounds[6]) const
 {
   this->GetBounds(bounds[0], bounds[1], bounds[2],
                   bounds[3], bounds[4], bounds[5]);
+}
+
+inline vtkBoundingBox::vtkBoundingBox()
+{
+  this->Reset();
+}
+
+inline vtkBoundingBox::vtkBoundingBox(double bounds[6])
+{
+  this->Reset();
+  this->SetBounds(bounds);
+}
+
+inline vtkBoundingBox::vtkBoundingBox(double xMin, double xMax,
+                                      double yMin, double yMax,
+                                      double zMin, double zMax)
+{
+  this->Reset();
+  this->SetBounds(xMin, xMax, yMin, yMax, zMin, zMax);
 }
 
 inline vtkBoundingBox::vtkBoundingBox(const vtkBoundingBox &bbox)

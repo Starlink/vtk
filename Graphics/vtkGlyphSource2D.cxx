@@ -23,7 +23,7 @@
 #include "vtkPolyData.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkGlyphSource2D, "$Revision: 1.16 $");
+vtkCxxRevisionMacro(vtkGlyphSource2D, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkGlyphSource2D);
 
 //----------------------------------------------------------------------------
@@ -71,7 +71,8 @@ int vtkGlyphSource2D::RequestData(
   vtkUnsignedCharArray *colors = vtkUnsignedCharArray::New();
   colors->SetNumberOfComponents(3);
   colors->Allocate(2,2);
-  
+  colors->SetName("Colors");
+
   this->ConvertColor();
 
   //Special options
@@ -156,9 +157,9 @@ int vtkGlyphSource2D::RequestData(
 
 void vtkGlyphSource2D::ConvertColor()
 {
-  this->RGB[0] = (unsigned char) (255.0 * this->Color[0]);
-  this->RGB[1] = (unsigned char) (255.0 * this->Color[1]);
-  this->RGB[2] = (unsigned char) (255.0 * this->Color[2]);
+  this->RGB[0] = static_cast<unsigned char>(255.0 * this->Color[0]);
+  this->RGB[1] = static_cast<unsigned char>(255.0 * this->Color[1]);
+  this->RGB[2] = static_cast<unsigned char>(255.0 * this->Color[2]);
 }
 
 void vtkGlyphSource2D::TransformGlyph(vtkPoints *pts)
@@ -179,7 +180,7 @@ void vtkGlyphSource2D::TransformGlyph(vtkPoints *pts)
     }
   else
     {
-    double angle = this->RotationAngle * vtkMath::DegreesToRadians();
+    double angle = vtkMath::RadiansFromDegrees( this->RotationAngle );
     double xt;
     for (i=0; i<numPts; i++)
       {
@@ -336,8 +337,8 @@ void vtkGlyphSource2D::CreateCircle(vtkPoints *pts, vtkCellArray *lines,
   theta = 2.0 * vtkMath::Pi() / 8.0;
   for (int i=0; i<8; i++)
     {
-    x[0] = 0.5 * cos((double)i*theta);
-    x[1] = 0.5 * sin((double)i*theta);
+    x[0] = 0.5 * cos(i*theta);
+    x[1] = 0.5 * sin(i*theta);
     ptIds[i] = pts->InsertNextPoint(x);
     }
   

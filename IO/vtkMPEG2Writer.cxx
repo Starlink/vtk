@@ -178,7 +178,7 @@ int vtkMPEG2WriterInternal::RemoveImage(const char* fname)
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkMPEG2Writer);
-vtkCxxRevisionMacro(vtkMPEG2Writer, "$Revision: 1.6.48.1 $");
+vtkCxxRevisionMacro(vtkMPEG2Writer, "$Revision: 1.7 $");
 
 //---------------------------------------------------------------------------
 vtkMPEG2Writer::vtkMPEG2Writer()

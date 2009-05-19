@@ -25,7 +25,7 @@
 // The functions that this array calculator understands is:
 // <pre>
 // standard operations: + - * / ^ .
-// access vector components: iHat, jHat, kHat
+// build unit vectors: iHat, jHat, kHat (ie (1,0,0), (0,1,0), (0,0,1))
 // abs
 // acos
 // asin
@@ -78,7 +78,7 @@ public:
 
   // Description:
   // Set/Get the function to be evaluated.
-  void SetFunction(const char* function);
+  virtual void SetFunction(const char* function);
   vtkGetStringMacro(Function);
   
   // Description:
@@ -115,7 +115,13 @@ public:
   // created with the specified name.
   void SetResultArrayName(const char* name);
   vtkGetStringMacro(ResultArrayName);
-  
+
+  // Description:
+  // Type of the result array. It is ignored if CoordinateResults is true.
+  // Initial value is VTK_DOUBLE.
+  vtkGetMacro(ResultArrayType,int);
+  vtkSetMacro(ResultArrayType,int);
+
   // Description:
   // Set whether to output results as coordinates.  ResultArrayName will be
   // ignored.  Outputing as coordinates is only valid with vector results and
@@ -152,19 +158,19 @@ public:
   
   // Description:
   // Remove all the scalar variable names and their associated array names.
-  void RemoveScalarVariables();
+  virtual void RemoveScalarVariables();
   
   // Description:
   // Remove all the scalar variable names and their associated array names.
-  void RemoveVectorVariables();
+  virtual void RemoveVectorVariables();
   
   // Description:
   // Remove all the coordinate variables.
-  void RemoveCoordinateScalarVariables();
+  virtual void RemoveCoordinateScalarVariables();
   
   // Description:
   // Remove all the coordinate variables.
-  void RemoveCoordinateVectorVariables();
+  virtual void RemoveCoordinateVectorVariables();
 
   // Description:
   // Methods to get information about the current variables.
@@ -223,6 +229,8 @@ protected:
   int** SelectedCoordinateVectorComponents;
   int NumberOfCoordinateScalarArrays;
   int NumberOfCoordinateVectorArrays;
+
+  int ResultArrayType;
 
 private:
   vtkArrayCalculator(const vtkArrayCalculator&);  // Not implemented.

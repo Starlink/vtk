@@ -33,8 +33,9 @@
 
 #define VTK_MYSQL_DEFAULT_PORT 3306
  
-vtkCxxRevisionMacro(vtkMySQLDatabase, "$Revision: 1.28 $");
+vtkCxxRevisionMacro(vtkMySQLDatabase, "$Revision: 1.37 $");
 vtkStandardNewMacro(vtkMySQLDatabase);
+
 
 // ----------------------------------------------------------------------
 vtkMySQLDatabase::vtkMySQLDatabase() :
@@ -55,7 +56,6 @@ vtkMySQLDatabase::vtkMySQLDatabase() :
   // Default: connect to local machine on standard port
   this->SetHostName( "localhost" );
   this->ServerPort = VTK_MYSQL_DEFAULT_PORT;
-  //this->SetPassword( "" );
 }
 
 // ----------------------------------------------------------------------
@@ -68,9 +68,9 @@ vtkMySQLDatabase::~vtkMySQLDatabase()
   this->SetDatabaseType( 0 );
   this->SetHostName( 0 );
   this->SetUser( 0 );
-  this->SetPassword( 0 );
   this->SetDatabaseName( 0 );
   this->SetConnectOptions( 0 );
+  this->SetPassword( 0 );
 
   this->Tables->UnRegister(this);
 
@@ -84,7 +84,7 @@ void vtkMySQLDatabase::PrintSelf(ostream &os, vtkIndent indent)
   os << indent << "DatabaseType: " << (this->DatabaseType ? this->DatabaseType : "NULL") << endl;
   os << indent << "HostName: " << (this->HostName ? this->HostName : "NULL") << endl;
   os << indent << "User: " << (this->User ? this->User : "NULL") << endl;
-  os << indent << "Password: " << (this->Password ? this->Password : "NULL") << endl;
+  os << indent << "Password: " << (this->Password ? "(hidden)":"(none)") << endl;
   os << indent << "DatabaseName: " << (this->DatabaseName ? this->DatabaseName : "NULL") << endl;
   os << indent << "ServerPort: " << this->ServerPort << endl;
   os << indent << "ConnectOptions: " << (this->ConnectOptions ? this->ConnectOptions : "NULL") << endl;
@@ -137,9 +137,8 @@ bool vtkMySQLDatabase::IsSupported(int feature)
 }
 
 // ----------------------------------------------------------------------
-bool vtkMySQLDatabase::Open()
+bool vtkMySQLDatabase::Open( const char* password )
 {
-
   if ( this->IsOpen() )
     {
     vtkGenericWarningMacro( "Open(): Database is already open." );
@@ -152,7 +151,7 @@ bool vtkMySQLDatabase::Open()
     mysql_real_connect( &this->Private->NullConnection, 
                         this->GetHostName(),
                         this->GetUser(),
-                        this->GetPassword(), 
+                        ( password && strlen( password ) ? password : this->Password ), 
                         this->GetDatabaseName(),
                         this->GetServerPort(),
                         0, 0);
@@ -166,6 +165,16 @@ bool vtkMySQLDatabase::Open()
   else
     {
     vtkDebugMacro(<<"Open() succeeded.");
+
+    if ( this->Password != password )
+      {
+      if ( this->Password )
+        {
+        delete [] this->Password;
+        }
+      this->Password = password ? vtksys::SystemTools::DuplicateString( password ) : 0;
+      }
+
     return true;
     }
 }
@@ -275,13 +284,30 @@ vtkStringArray* vtkMySQLDatabase::GetRecord(const char *table)
 
 bool vtkMySQLDatabase::HasError()
 { 
-  return (mysql_errno(this->Private->Connection)!=0);
+  if (this->Private->Connection)
+    {
+    return (mysql_errno(this->Private->Connection)!=0);
+    }
+  else
+    {
+    return (mysql_errno(& this->Private->NullConnection)!=0);
+    }
 }
 
 const char* vtkMySQLDatabase::GetLastErrorText()
 {
-  return this->Private->Connection ?
-    mysql_error( this->Private->Connection ) : 0;
+  if (this->Private->Connection)
+    {
+    return mysql_error( this->Private->Connection );
+    }
+  else if (this->HasError())
+    {
+    return mysql_error( & this->Private->NullConnection );
+    }
+  else
+    {
+    return 0;
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -293,11 +319,6 @@ vtkStdString vtkMySQLDatabase::GetURL()
   if ( this->GetUser() && strlen( this->GetUser() ) )
     {
     url += this->GetUser();
-    if ( this->GetPassword() && strlen( this->GetPassword() ) )
-      {
-      url += ":";
-      url += this->GetPassword();
-      }
     url += "@";
     }
   if ( this->GetHostName() && strlen( this->GetHostName() ) )
@@ -321,6 +342,40 @@ vtkStdString vtkMySQLDatabase::GetURL()
   if ( this->GetDatabaseName() && strlen( this->GetDatabaseName() ) )
     url += this->GetDatabaseName();
   return url;
+}
+
+// ----------------------------------------------------------------------
+bool vtkMySQLDatabase::ParseURL(const char* URL)
+{
+  vtkstd::string protocol;
+  vtkstd::string username; 
+  vtkstd::string unused;
+  vtkstd::string hostname; 
+  vtkstd::string dataport; 
+  vtkstd::string database;
+  
+  if ( ! vtksys::SystemTools::ParseURL( URL, protocol, username,
+                                        unused, hostname, dataport, database) )
+    {
+    vtkGenericWarningMacro( "Invalid URL: " << URL );
+    return false;
+    }
+  
+  if ( protocol == "mysql" )
+    {
+    if ( username.size() )
+      {
+      this->SetUser(username.c_str());
+      }
+    if ( dataport.size() )
+      {
+      this->SetServerPort(atoi(dataport.c_str()));
+      }
+    this->SetHostName(hostname.c_str());
+    this->SetDatabaseName(database.c_str());
+    return true;
+    }
+  return false;
 }
 
 // ----------------------------------------------------------------------
@@ -548,7 +603,7 @@ bool vtkMySQLDatabase::CreateDatabase( const char* dbName, bool dropExisting = f
   query->Delete();
   // Close and re-open in case we deleted and recreated the current database
   this->Close();
-  this->Open();
+  this->Open( this->Password );
   return status;
 }
 

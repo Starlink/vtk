@@ -33,6 +33,7 @@ class vtkMatrix4x4;
 class vtkPropCollection;
 class vtkViewport;
 class vtkWindow;
+class vtkInformation;
 
 class VTK_COMMON_EXPORT vtkProp : public vtkObject
 {
@@ -49,7 +50,7 @@ public:
   virtual void GetVolumes(vtkPropCollection *) {}
 
   // Description:
-  // Set/Get visibility of this vtkProp.
+  // Set/Get visibility of this vtkProp. Initial value is true.
   vtkSetMacro(Visibility, int);
   vtkGetMacro(Visibility, int);
   vtkBooleanMacro(Visibility, int);
@@ -57,6 +58,7 @@ public:
   // Description:
   // Set/Get the pickable instance variable.  This determines if the vtkProp
   // can be picked (typically using the mouse). Also see dragable.
+  // Initial value is true.
   vtkSetMacro(Pickable,int);
   vtkGetMacro(Pickable,int);
   vtkBooleanMacro(Pickable,int);
@@ -72,6 +74,7 @@ public:
   // This does not affect methods such as SetPosition, which will continue
   // to work.  It is just intended to prevent some vtkProp'ss from being
   // dragged from within a user interface.
+  // Initial value is true.
   vtkSetMacro(Dragable,int);
   vtkGetMacro(Dragable,int);
   vtkBooleanMacro(Dragable,int);
@@ -84,10 +87,19 @@ public:
   virtual unsigned long GetRedrawMTime() {return this->GetMTime();}
   
   // Description:
+  // In case the Visibility flag is true, tell if the bounds of this prop
+  // should be taken into account or ignored during the computation of other
+  // bounding boxes, like in vtkRenderer::ResetCamera().
+  // Initial value is true.
+  vtkSetMacro(UseBounds,bool);
+  vtkGetMacro(UseBounds,bool);
+  vtkBooleanMacro(UseBounds,bool);
+
+  // Description:
   // Get the bounds for this Prop as (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
   // in world coordinates. NULL means that the bounds are not defined.
   virtual double *GetBounds() {return NULL;}
-
+  
   // Description:
   // Shallow copy of this vtkProp.
   virtual void ShallowCopy(vtkProp *prop);
@@ -114,6 +126,20 @@ public:
   virtual void PokeMatrix(vtkMatrix4x4 *vtkNotUsed(matrix)) {}
   virtual vtkMatrix4x4 *GetMatrix() {return NULL;}
 
+  // Description:
+  // Set/Get property keys. Property keys can be digest by some rendering
+  // passes.
+  // For instance, the user may mark a prop as a shadow caster for a
+  // shadow mapping render pass. Keys are documented in render pass classes.
+  // Initial value is NULL.
+  vtkGetObjectMacro(PropertyKeys,vtkInformation);
+  virtual void SetPropertyKeys(vtkInformation *keys);
+  
+  // Description:
+  // Tells if the prop has all the required keys.
+  // \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+  virtual bool HasKeys(vtkInformation *requiredKeys);
+  
 //BTX  
   // Description:
   // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE
@@ -135,6 +161,54 @@ public:
   virtual int RenderVolumetricGeometry( vtkViewport *) { return 0; }
   virtual int RenderOverlay(             vtkViewport *) { return 0; }
 
+  // Description:
+  // Render the opaque geometry only if the prop has all the requiredKeys.
+  // This is recursive for composite props like vtkAssembly.
+  // An implementation is provided in vtkProp but each composite prop
+  // must override it.
+  // It returns if the rendering was performed.
+  // \pre v_exists: v!=0
+  // \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+  virtual bool RenderFilteredOpaqueGeometry(vtkViewport *v,
+                                            vtkInformation *requiredKeys);
+  
+  // Description:
+  // Render the translucent polygonal geometry only if the prop has all the
+  // requiredKeys.
+  // This is recursive for composite props like vtkAssembly.
+  // An implementation is provided in vtkProp but each composite prop
+  // must override it.
+  // It returns if the rendering was performed.
+  // \pre v_exists: v!=0
+  // \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+  virtual bool RenderFilteredTranslucentPolygonalGeometry(
+    vtkViewport *v,
+    vtkInformation *requiredKeys);
+  
+  // Description:
+  // Render the volumetric geometry only if the prop has all the
+  // requiredKeys.
+  // This is recursive for composite props like vtkAssembly.
+  // An implementation is provided in vtkProp but each composite prop
+  // must override it.
+  // It returns if the rendering was performed.
+  // \pre v_exists: v!=0
+  // \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+  virtual bool RenderFilteredVolumetricGeometry(vtkViewport *v,
+                                                vtkInformation *requiredKeys);
+  
+  // Description:
+  // Render in the overlay of the viewport only if the prop has all the
+  // requiredKeys.
+  // This is recursive for composite props like vtkAssembly.
+  // An implementation is provided in vtkProp but each composite prop
+  // must override it.
+  // It returns if the rendering was performed.
+  // \pre v_exists: v!=0
+  // \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+  virtual bool RenderFilteredOverlay(vtkViewport *v,
+                                     vtkInformation *requiredKeys);
+  
   // Description:
   // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE
   // DO NOT USE THESE METHODS OUTSIDE OF THE RENDERING PROCESS
@@ -241,6 +315,14 @@ public:
   virtual void BuildPaths(vtkAssemblyPaths *paths, vtkAssemblyPath *path);
 
   // Description:
+  // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE
+  // DO NOT USE THIS METHOD OUTSIDE OF THE RENDERING PROCESS
+  // Used by vtkHardwareSelector to determine if the prop supports hardware
+  // selection.
+  virtual bool GetSupportsSelection()
+    { return false; }
+
+  // Description:
   // Get the number of consumers
   vtkGetMacro(NumberOfConsumers,int);
   
@@ -260,7 +342,8 @@ protected:
   int Visibility;
   int Pickable;
   int Dragable;
-
+  bool UseBounds;
+  
   double AllocatedRenderTime;
   double EstimatedRenderTime;
   double SavedEstimatedRenderTime;
@@ -273,6 +356,8 @@ protected:
   // support multi-part props and access to paths of prop
   // stuff that follows is used to build the assembly hierarchy
   vtkAssemblyPaths *Paths;
+  
+  vtkInformation *PropertyKeys;
   
 private:
   vtkProp(const vtkProp&);  // Not implemented.

@@ -33,7 +33,9 @@
 #include "vtkPoints.h"
 #include "vtkShortArray.h"
 #include "vtkStringArray.h"
+#include "vtkTable.h"
 #include "vtkTypeTraits.h"
+#include "vtkSignedCharArray.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedIntArray.h"
 #include "vtkUnsignedLongArray.h"
@@ -42,7 +44,7 @@
 #include <vtksys/ios/sstream>
 
 
-vtkCxxRevisionMacro(vtkDataWriter, "$Revision: 1.131 $");
+vtkCxxRevisionMacro(vtkDataWriter, "$Revision: 1.136 $");
 vtkStandardNewMacro(vtkDataWriter);
 
 // this undef is required on the hp. vtkMutexLock ends up including
@@ -78,7 +80,6 @@ vtkDataWriter::vtkDataWriter()
 
   this->WriteToOutputString = 0;
   this->OutputString = NULL;
-  this->OutputStringAllocatedLength = 0;
   this->OutputStringLength = 0;
 }
 
@@ -134,7 +135,6 @@ vtkDataWriter::~vtkDataWriter()
     delete [] this->OutputString;
     this->OutputString = NULL;
     this->OutputStringLength = 0;
-    this->OutputStringAllocatedLength = 0;
     }
 }
 
@@ -162,7 +162,6 @@ ostream *vtkDataWriter::OpenVTKFile()
       delete [] this->OutputString;
       this->OutputString = NULL;
       this->OutputStringLength = 0;
-      this->OutputStringAllocatedLength = 0;
       }
     // Allocate the new output string. (Note: this will only work with binary).
     if (input == NULL)
@@ -171,9 +170,10 @@ ostream *vtkDataWriter::OpenVTKFile()
       return NULL;    
       }
     input->Update();
-    this->OutputStringAllocatedLength =
-      static_cast<int> (500+ 1024 * input->GetActualMemorySize());
-    this->OutputString = new char[this->OutputStringAllocatedLength];
+    /// OutputString will be allocated on CloseVTKFile().
+    /// this->OutputStringAllocatedLength =
+    ///   static_cast<int> (500+ 1024 * input->GetActualMemorySize());
+    /// this->OutputString = new char[this->OutputStringAllocatedLength];
 
     fptr = new vtksys_ios::ostringstream;
     }
@@ -819,6 +819,148 @@ int vtkDataWriter::WriteEdgeData(ostream *fp, vtkGraph *g)
   return 1;
 }
 
+// Write the row data (e.g., scalars, vectors, ...) of a vtk table.
+// Returns 0 if error.
+int vtkDataWriter::WriteRowData(ostream *fp, vtkTable *t)
+{
+  int numRows;
+  vtkDataArray *scalars;
+  vtkDataArray *vectors;
+  vtkDataArray *normals;
+  vtkDataArray *tcoords;
+  vtkDataArray *tensors;
+  vtkDataArray *globalIds;
+  vtkAbstractArray *pedigreeIds;
+  vtkFieldData *field;
+  vtkDataSetAttributes *cd=t->GetRowData();
+
+  numRows = t->GetNumberOfRows();
+
+  vtkDebugMacro(<<"Writing row data...");
+
+  scalars = cd->GetScalars();
+  if(scalars && scalars->GetNumberOfTuples() <= 0)
+    scalars = 0;
+    
+  vectors = cd->GetVectors();
+  if(vectors && vectors->GetNumberOfTuples() <= 0)
+    vectors = 0;
+    
+  normals = cd->GetNormals();
+  if(normals && normals->GetNumberOfTuples() <= 0)
+    normals = 0;
+    
+  tcoords = cd->GetTCoords();
+  if(tcoords && tcoords->GetNumberOfTuples() <= 0)
+    tcoords = 0;
+    
+  tensors = cd->GetTensors();
+  if(tensors && tensors->GetNumberOfTuples() <= 0)
+    tensors = 0;
+    
+  globalIds = cd->GetGlobalIds();
+  if(globalIds && globalIds->GetNumberOfTuples() <= 0)
+    globalIds = 0;
+    
+  pedigreeIds = cd->GetPedigreeIds();
+  if(pedigreeIds && pedigreeIds->GetNumberOfTuples() <= 0)
+    pedigreeIds = 0;
+    
+  field = cd;
+  if(field && field->GetNumberOfTuples() <= 0)
+    field = 0;
+
+  if(!(scalars || vectors || normals || tcoords || tensors || globalIds || pedigreeIds || field))
+    {
+    vtkDebugMacro(<<"No row data to write!");
+    return 1;
+    }
+
+  *fp << "ROW_DATA " << numRows << "\n";
+  //
+  // Write scalar data
+  //
+  if( scalars )
+    {
+    if ( ! this->WriteScalarData(fp, scalars, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write vector data
+  //
+  if( vectors )
+    {
+    if ( ! this->WriteVectorData(fp, vectors, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write normals
+  //
+  if ( normals )
+    {
+    if ( ! this->WriteNormalData(fp, normals, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write texture coords
+  //
+  if ( tcoords )
+    {
+    if ( ! this->WriteTCoordData(fp, tcoords, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write tensors
+  //
+  if ( tensors )
+    {
+    if ( ! this->WriteTensorData(fp, tensors, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write global ids
+  //
+  if ( globalIds )
+    {
+    if ( ! this->WriteGlobalIdData(fp, globalIds, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write pedigree ids
+  //
+  if ( pedigreeIds )
+    {
+    if ( ! this->WritePedigreeIdData(fp, pedigreeIds, numRows) )
+      {
+      return 0;
+      }
+    }
+  //
+  // Write field
+  //
+  if ( field )
+    {
+    if ( ! this->WriteFieldData(fp, field) )
+      {
+      return 0;
+      }
+    }
+
+  return 1;
+}
+
 // Template to handle writing data in ascii or binary
 // We could change the format into C++ io standard ...
 template <class T>
@@ -923,6 +1065,19 @@ int vtkDataWriter::WriteArray(ostream *fp, int dataType, vtkAbstractArray *data,
       {
       sprintf (str, format, "char"); *fp << str; 
       char *s=static_cast<vtkCharArray *>(data)->GetPointer(0);
+#if VTK_TYPE_CHAR_IS_SIGNED
+      vtkWriteDataArray(fp, s, this->FileType, "%hhd ", num, numComp);
+#else
+      vtkWriteDataArray(fp, s, this->FileType, "%hhu ", num, numComp);
+#endif
+      }
+    break;
+
+    case VTK_SIGNED_CHAR:
+      {
+      sprintf (str, format, "signed_char"); *fp << str; 
+      signed char *s=
+        static_cast<vtkSignedCharArray *>(data)->GetPointer(0);
       vtkWriteDataArray(fp, s, this->FileType, "%hhd ", num, numComp);
       }
     break;
@@ -1697,7 +1852,7 @@ void vtkDataWriter::WriteData()
 void vtkDataWriter::CloseVTKFile(ostream *fp)
 {
   vtkDebugMacro(<<"Closing vtk file\n");
- 
+
   if ( fp != NULL )
     {
     if (this->WriteToOutputString)
@@ -1705,23 +1860,11 @@ void vtkDataWriter::CloseVTKFile(ostream *fp)
       vtksys_ios::ostringstream *ostr =
         static_cast<vtksys_ios::ostringstream*>(fp);
 
-      if (this->OutputString &&
-          static_cast<unsigned int>(this->OutputStringAllocatedLength) > ostr->str().size())
-        {
-        this->OutputStringLength = static_cast<int>(ostr->str().size());
-        memcpy(this->OutputString, ostr->str().c_str(), 
-          this->OutputStringLength);
-        }
-      else
-        {
-        if (this->OutputString)
-          {
-          this->OutputString[0] = 0;
-          }
-        this->OutputStringLength = 0;
-
-        vtkErrorMacro("OutputString allocated buffer is not large enough.");
-        }
+      delete [] this->OutputString;
+      this->OutputStringLength = static_cast<int>(ostr->str().size());
+      this->OutputString = new char[ostr->str().size()];
+      memcpy(this->OutputString, ostr->str().c_str(), 
+        this->OutputStringLength);
       }
     delete fp;
     }
@@ -1733,7 +1876,6 @@ char *vtkDataWriter::RegisterAndGetOutputString()
   
   this->OutputString = NULL;
   this->OutputStringLength = 0;
-  this->OutputStringAllocatedLength = 0;
   
   return tmp;
 }

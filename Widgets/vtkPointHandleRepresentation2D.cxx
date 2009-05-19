@@ -31,7 +31,7 @@
 #include "vtkCamera.h"
 #include "vtkPointPlacer.h"
 
-vtkCxxRevisionMacro(vtkPointHandleRepresentation2D, "$Revision: 1.7.14.1 $");
+vtkCxxRevisionMacro(vtkPointHandleRepresentation2D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkPointHandleRepresentation2D);
 
 vtkCxxSetObjectMacro(vtkPointHandleRepresentation2D,Property,vtkProperty2D);

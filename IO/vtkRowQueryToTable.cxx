@@ -29,7 +29,9 @@
 #include "vtkVariant.h"
 #include "vtkVariantArray.h"
 
-vtkCxxRevisionMacro(vtkRowQueryToTable, "$Revision: 1.3 $");
+#include <vtksys/ios/sstream>
+
+vtkCxxRevisionMacro(vtkRowQueryToTable, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkRowQueryToTable);
 
 vtkRowQueryToTable::vtkRowQueryToTable()
@@ -109,16 +111,48 @@ int vtkRowQueryToTable::RequestData(
       arr = vtkAbstractArray::CreateArray(type);
       }
 
-    arr->SetName(this->Query->GetFieldName(c));
+    // Make sure name doesn't clash with existing name.
+    const char* name = this->Query->GetFieldName(c);
+    if (output->GetColumnByName(name))
+      {
+      int i = 1;
+      vtksys_ios::ostringstream oss;
+      vtkStdString newName;
+      do
+        {
+        oss.str("");
+        oss << name << "_" << i;
+        newName = oss.str();
+        ++i;
+        } while (output->GetColumnByName(newName));
+      arr->SetName(newName);
+      }
+    else
+      {
+      arr->SetName(name);
+      }
+
+    // Add the column to the table.
     output->AddColumn(arr);
     arr->Delete();
     }
 
   // Fill the table
+  int numRows = 0;
+  float progressGuess = 0;
   vtkVariantArray* rowArray = vtkVariantArray::New();
   while (this->Query->NextRow(rowArray))
     {
     output->InsertNextRow(rowArray);
+    
+    // Update progress every 100 rows
+    numRows++;
+    if ((numRows%100)==0)
+      {
+      // 1% for every 100 rows, and then 'spin around'
+      progressGuess = ((numRows/100)%100)*.01;
+      this->UpdateProgress(progressGuess); 
+      } 
     }
   rowArray->Delete();
  

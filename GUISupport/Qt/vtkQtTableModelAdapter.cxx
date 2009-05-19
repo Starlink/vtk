@@ -19,12 +19,12 @@
 -------------------------------------------------------------------------*/
 #include "vtkQtTableModelAdapter.h"
 
+#include "vtkDataSetAttributes.h"
 #include "vtkTable.h"
 #include "vtkIdList.h"
 #include "vtkIdTypeArray.h"
 #include "vtkStdString.h"
 #include "vtkVariant.h"
-#include "vtkFieldData.h"
 
 #include <QIcon>
 #include <QPixmap>
@@ -75,7 +75,8 @@ void vtkQtTableModelAdapter::SetKeyColumnName(const char* name)
 
 void vtkQtTableModelAdapter::GenerateHashMap()
 {
-  vtkIdTypeArray* arr = vtkIdTypeArray::SafeDownCast(this->Table->GetColumnByName("PedigreeVertexId"));
+  vtkAbstractArray *pedigreeIds = this->Table->GetRowData()->GetPedigreeIds();
+
   this->IdToPedigreeHash.clear();
   this->PedigreeToIndexHash.clear();
   this->IndexToIdHash.clear();
@@ -83,9 +84,14 @@ void vtkQtTableModelAdapter::GenerateHashMap()
     {
     QModelIndex idx = this->createIndex(i, 0, static_cast<int>(i));
     vtkIdType pedigree = -1;
-    if (arr != NULL)
+    if (pedigreeIds != NULL)
       {
-      pedigree = arr->GetValue(i);
+      vtkVariant v(0);
+      switch (pedigreeIds->GetDataType())
+        {
+        vtkExtraExtendedTemplateMacro(v = *static_cast<VTK_TT*>(pedigreeIds->GetVoidPointer(i)));
+        }
+      pedigree = v.ToInt();
       }
     else
       {
@@ -184,11 +190,20 @@ QVariant vtkQtTableModelAdapter::data(const QModelIndex &idx, int role) const
   // Return a string if they ask for a display role 
   if (role == Qt::DisplayRole)
     {
-    vtkStdString s = v.ToString();
-    const char* const whitespace = " \t\r\n\v\f";
-    s.erase(0, s.find_first_not_of(whitespace));
-    s.erase(s.find_last_not_of(whitespace) + 1);
-    return QVariant(s.c_str());
+    bool ok;
+    double value = v.ToDouble(&ok);
+    if (ok)
+      {
+      return QVariant(value);
+      }
+    else
+      {
+      vtkStdString s = v.ToString();
+      const char* const whitespace = " \t\r\n\v\f";
+      s.erase(0, s.find_first_not_of(whitespace));
+      s.erase(s.find_last_not_of(whitespace) + 1);
+      return QVariant(s.c_str());
+      }
     }
 
   // Return a byte array if they ask for a decorate role 
@@ -196,7 +211,7 @@ QVariant vtkQtTableModelAdapter::data(const QModelIndex &idx, int role) const
     {
     // Create a QBtyeArray out of the variant
     vtkStdString s = v.ToString();
-    QByteArray byteArray(s,s.length());
+    QByteArray byteArray(s, static_cast<int>(s.length()));
     return QVariant(byteArray);
     }
   

@@ -31,7 +31,7 @@
 #include "vtkMapper.h" //for VTK_MATERIALMODE_*
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPolyData.h"
+#include "vtkDataSet.h"
 #include "vtkProperty.h"
 #include "vtkScalarsToColors.h"
 #include "vtkUnsignedCharArray.h"
@@ -41,7 +41,7 @@
 #define COLOR_TEXTURE_MAP_SIZE 256
 
 //-----------------------------------------------------------------------------
-static inline void vtkMulitplyColorsWithAlpha(vtkDataArray* array)
+static inline void vtkMultiplyColorsWithAlpha(vtkDataArray* array)
 {
   vtkUnsignedCharArray* colors = vtkUnsignedCharArray::SafeDownCast(array);
   if (!colors || colors->GetNumberOfComponents() != 4)
@@ -66,7 +66,7 @@ static inline void vtkMulitplyColorsWithAlpha(vtkDataArray* array)
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkScalarsToColorsPainter);
-vtkCxxRevisionMacro(vtkScalarsToColorsPainter, "$Revision: 1.10.2.1 $");
+vtkCxxRevisionMacro(vtkScalarsToColorsPainter, "$Revision: 1.17 $");
 vtkCxxSetObjectMacro(vtkScalarsToColorsPainter, LookupTable, vtkScalarsToColors);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, USE_LOOKUP_TABLE_SCALAR_RANGE, Integer);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, SCALAR_RANGE, DoubleVector);
@@ -316,9 +316,9 @@ void vtkScalarsToColorsPainter::PrepareForRendering(vtkRenderer* renderer,
     for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); 
       iter->GoToNextItem())
       {
-      vtkPolyData* pdInput = vtkPolyData::SafeDownCast(
+      vtkDataSet* pdInput = vtkDataSet::SafeDownCast(
         iter->GetCurrentDataObject());
-      vtkPolyData* pdOutput = vtkPolyData::SafeDownCast(
+      vtkDataSet* pdOutput = vtkDataSet::SafeDownCast(
         cdOutput->GetDataSet(iter));
       if (pdInput && pdOutput)
         {
@@ -332,10 +332,10 @@ void vtkScalarsToColorsPainter::PrepareForRendering(vtkRenderer* renderer,
     }
   else
     {
-    this->MapScalars(vtkPolyData::SafeDownCast(this->OutputData),
+    this->MapScalars(vtkDataSet::SafeDownCast(this->OutputData),
       actor->GetProperty()->GetOpacity(),
       this->GetPremultiplyColorsWithAlpha(actor),
-      vtkPolyData::SafeDownCast(input));
+      vtkDataSet::SafeDownCast(input));
     }
   this->LastUsedAlpha = actor->GetProperty()->GetOpacity();
   this->Superclass::PrepareForRendering(renderer, actor);
@@ -436,13 +436,15 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     }
   
   double* range = this->LookupTable->GetRange();
+  double orig_alpha = this->LookupTable->GetAlpha();
 
   // If the lookup table has changed, the recreate the color texture map.
   // Set a new lookup table changes this->MTime.
   if (this->ColorTextureMap == 0 || 
     this->GetMTime() > this->ColorTextureMap->GetMTime() ||
     this->LookupTable->GetMTime() > this->ColorTextureMap->GetMTime() ||
-    this->LookupTable->GetAlpha() != alpha)
+    this->LookupTable->GetAlpha() != alpha ||
+    this->LastUsedAlpha != alpha)
     {
     this->LookupTable->SetAlpha(alpha);
     this->ColorTextureMap = 0;
@@ -468,10 +470,11 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
       this->LookupTable->MapScalars(tmp, this->ColorMode, 0);
     if (multiply_with_alpha)
       {
-      vtkMulitplyColorsWithAlpha(colors);
+      vtkMultiplyColorsWithAlpha(colors);
       }
 
     this->ColorTextureMap->GetPointData()->SetScalars(colors);
+    this->LookupTable->SetAlpha(orig_alpha);
     colors->Delete();
     tmp->Delete();
     }
@@ -479,11 +482,12 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
 
 //-----------------------------------------------------------------------------
 // This method has the same functionality as the old vtkMapper::MapScalars.
-void vtkScalarsToColorsPainter::MapScalars(vtkPolyData* output,
+void vtkScalarsToColorsPainter::MapScalars(vtkDataSet* output,
   double alpha, int multiply_with_alpha,
-  vtkPolyData* input)
+  vtkDataSet* input)
 {
   int cellFlag;
+  double orig_alpha;
   vtkDataArray* scalars = vtkAbstractMapper::GetScalars(input,
     this->ScalarMode, this->ArrayAccessMode, this->ArrayId,
     this->ArrayName, cellFlag);
@@ -565,8 +569,10 @@ void vtkScalarsToColorsPainter::MapScalars(vtkPolyData* output,
  
   // Get rid of old colors.
   colors = 0;
+  orig_alpha = lut->GetAlpha();
   lut->SetAlpha(alpha);
   colors = lut->MapScalars(scalars, this->ColorMode, arraycomponent);
+  lut->SetAlpha(orig_alpha);
   if (multiply_with_alpha)
     {
     // It is possible that the LUT simply returns the scalars as the
@@ -580,7 +586,7 @@ void vtkScalarsToColorsPainter::MapScalars(vtkPolyData* output,
       colors = scalars->NewInstance();
       colors->DeepCopy(scalars);
       }
-    vtkMulitplyColorsWithAlpha(colors);
+    vtkMultiplyColorsWithAlpha(colors);
     }
   if (cellFlag == 0)
     {
@@ -677,7 +683,7 @@ void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
 
 //-----------------------------------------------------------------------------
 void vtkScalarsToColorsPainter::MapScalarsToTexture(
-  vtkPolyData* output, vtkDataArray* scalars, vtkPolyData* input)
+  vtkDataSet* output, vtkDataArray* scalars, vtkDataSet* input)
 {
   // Create new coordinates if necessary.
   // Need to compare lookup table incase the range has changed.

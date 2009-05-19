@@ -24,7 +24,7 @@
 #include "vtkPointData.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkExtractUnstructuredGrid, "$Revision: 1.36.66.1 $");
+vtkCxxRevisionMacro(vtkExtractUnstructuredGrid, "$Revision: 1.37 $");
 vtkStandardNewMacro(vtkExtractUnstructuredGrid);
 
 // Construct with all types of clipping turned off.

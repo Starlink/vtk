@@ -3,33 +3,30 @@ from vtk import *
 source = vtkRandomGraphSource()
 source.SetIncludeEdgeWeights(True)
 
-bfs = vtkBoostBreadthFirstSearch()
-bfs.AddInputConnection(source.GetOutputPort())
-bfs.SetOriginVertex(0)
-
 degree = vtkVertexDegree()
-degree.AddInputConnection(bfs.GetOutputPort())
+degree.AddInputConnection(source.GetOutputPort())
 
 view = vtkGraphLayoutView()
 view.AddRepresentationFromInputConnection(degree.GetOutputPort())
-view.SetVertexLabelArrayName("BFS")
+view.SetVertexLabelArrayName("VertexDegree")
 view.SetVertexLabelVisibility(True)
 view.SetVertexColorArrayName("VertexDegree")
 view.SetColorVertices(True)
-view.SetEdgeLabelArrayName("edge_weights")
+view.SetEdgeLabelArrayName("edge weight")
 view.SetEdgeLabelVisibility(True)
-view.SetEdgeColorArrayName("edge_weights")
+view.SetEdgeColorArrayName("edge weight")
 view.SetColorEdges(True)
+view.SetLayoutStrategyToSimple2D()
 
 theme = vtkViewTheme.CreateMellowTheme()
-theme.SetCellHueRange(0.7, 0.7)
-theme.SetCellSaturationRange(0, 1)
-theme.SetCellOpacity(1)
+theme.SetLineWidth(4)
 view.ApplyViewTheme(theme)
 theme.FastDelete()
 
 window = vtkRenderWindow()
 window.SetSize(600, 600)
 view.SetupRenderWindow(window)
+view.GetRenderer().ResetCamera()
+
 window.GetInteractor().Start()
 

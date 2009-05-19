@@ -44,6 +44,7 @@
 
 class vtkActor;
 class vtkActor2D;
+class vtkArcParallelEdgeStrategy;
 class vtkCircularLayoutStrategy;
 class vtkClustering2DLayoutStrategy;
 class vtkCoordinate;
@@ -51,6 +52,8 @@ class vtkCommunity2DLayoutStrategy;
 class vtkConstrained2DLayoutStrategy;
 class vtkDynamic2DLabelMapper;
 class vtkEdgeCenters;
+class vtkEdgeLayout;
+class vtkEdgeLayoutStrategy;
 class vtkExtractSelectedGraph;
 class vtkFast2DLayoutStrategy;
 class vtkForceDirectedLayoutStrategy;
@@ -60,16 +63,19 @@ class vtkGraphMapper;
 class vtkGraphToPolyData;
 class vtkKdTreeSelector;
 class vtkLookupTable;
+class vtkPassThroughEdgeStrategy;
 class vtkPassThroughLayoutStrategy;
+class vtkPerturbCoincidentVertices;
 class vtkPolyDataMapper;
 class vtkRandomLayoutStrategy;
+class vtkScalarBarWidget;
 class vtkSelectionLink;
 class vtkSimple2DLayoutStrategy;
 class vtkTexture;
 class vtkVertexDegree;
 class vtkVertexGlyphFilter;
 class vtkViewTheme;
-class vtkVisibleCellSelector;
+class vtkHardwareSelector;
 
 
 
@@ -127,7 +133,27 @@ public:
   bool GetColorEdges();
   void ColorEdgesOn();
   void ColorEdgesOff();
+
+  // Description:
+  // The array to use for coloring edges.
+  void SetEnabledEdgesArrayName(const char* name);
+  const char* GetEnabledEdgesArrayName();
   
+  // Description:
+  // Whether to color edges.  Default is off.
+  void SetEnableEdgesByArray(bool vis);
+  int GetEnableEdgesByArray();
+
+  // Description:
+  // The array to use for coloring vertices. 
+  void SetEnabledVerticesArrayName(const char* name);
+  const char* GetEnabledVerticesArrayName();
+  
+  // Description:
+  // Whether to color vertices.  Default is off.
+  void SetEnableVerticesByArray(bool vis);
+  int GetEnableVerticesByArray();
+
   // Description:
   // The array used for scaling (if ScaledGlyphs is ON)
   void SetScalingArrayName(const char* name);
@@ -142,32 +168,65 @@ public:
   // Description:
   // The layout strategy to use when performing the graph layout.
   // The possible strings are:
-  //   "Random"         - Randomly places vertices in a box.
-  //   "Force Directed" - A layout in 3D or 2D simulating forces on edges.
-  //   "Simple 2D"      - A simple 2D force directed layout.
-  //   "Clustering 2D"  - A 2D force directed layout that's just like
-  //                    - simple 2D but uses some techniques to cluster better.
-  //   "Fast 2D"        - A linear-time 2D layout.
-  //   "Pass Through"   - Use locations assigned to the input.
-  //   "Circular"       - Places vertices uniformly on a circle.
+  //  - "Random"         Randomly places vertices in a box.
+  //  - "Force Directed" A layout in 3D or 2D simulating forces on edges.
+  //  - "Simple 2D"      A simple 2D force directed layout.
+  //  - "Clustering 2D"  A 2D force directed layout that's just like
+  //                     simple 2D but uses some techniques to cluster better.
+  //  - "Community 2D"   A linear-time 2D layout that's just like
+  //                    Fast 2D but looks for and uses a community 
+  //                    array to 'accentuate' clusters.
+  //  - "Fast 2D"       A linear-time 2D layout.
+  //  - "Pass Through"  Use locations assigned to the input.
+  //  - "Circular"      Places vertices uniformly on a circle.
   // Default is "Simple 2D".
   void SetLayoutStrategy(const char* name);
-  void SetLayoutStrategyToRandom()        { this->SetLayoutStrategy("Random"); }
-  void SetLayoutStrategyToForceDirected() { this->SetLayoutStrategy("Force Directed"); }
-  void SetLayoutStrategyToSimple2D()      { this->SetLayoutStrategy("Simple 2D"); }
-  void SetLayoutStrategyToClustering2D()  { this->SetLayoutStrategy("Cluster 2D"); }
-  void SetLayoutStrategyToCommunity2D()   { this->SetLayoutStrategy("Community 2D"); }
-  void SetLayoutStrategyToFast2D()        { this->SetLayoutStrategy("Fast 2D"); }
-  void SetLayoutStrategyToPassThrough()   { this->SetLayoutStrategy("Pass Through"); }
-  void SetLayoutStrategyToCircular()      { this->SetLayoutStrategy("Circular"); }
-  const char* GetLayoutStrategyName()     { return this->GetLayoutStrategyNameInternal(); }
+  void SetLayoutStrategyToRandom()
+    { this->SetLayoutStrategy("Random"); }
+  void SetLayoutStrategyToForceDirected()
+    { this->SetLayoutStrategy("Force Directed"); }
+  void SetLayoutStrategyToSimple2D()
+    { this->SetLayoutStrategy("Simple 2D"); }
+  void SetLayoutStrategyToClustering2D()
+    { this->SetLayoutStrategy("Clustering 2D"); }
+  void SetLayoutStrategyToCommunity2D()
+    { this->SetLayoutStrategy("Community 2D"); }
+  void SetLayoutStrategyToFast2D()
+    { this->SetLayoutStrategy("Fast 2D"); }
+  void SetLayoutStrategyToPassThrough()
+    { this->SetLayoutStrategy("Pass Through"); }
+  void SetLayoutStrategyToCircular()
+    { this->SetLayoutStrategy("Circular"); }
+  const char* GetLayoutStrategyName()
+    { return this->GetLayoutStrategyNameInternal(); }
 
   // Description:
   // The layout strategy to use when performing the graph layout.
   // This signature allows an application to create a layout
-  // object directly and simply set the pointer through this method
+  // object directly and simply set the pointer through this method.
   vtkGetObjectMacro(LayoutStrategy,vtkGraphLayoutStrategy);
   void SetLayoutStrategy(vtkGraphLayoutStrategy *s);
+
+  // Description:
+  // The layout strategy to use when performing the edge layout.
+  // The possible strings are:
+  //   "Arc Parallel"   - Arc parallel edges and self loops.
+  //   "Pass Through"   - Use edge routes assigned to the input.
+  // Default is "Arc Parallel".
+  void SetEdgeLayoutStrategy(const char* name);
+  void SetEdgeLayoutStrategyToArcParallel()
+    { this->SetEdgeLayoutStrategy("Arc Parallel"); }
+  void SetEdgeLayoutStrategyToPassThrough()
+    { this->SetEdgeLayoutStrategy("Pass Through"); }
+  const char* GetEdgeLayoutStrategyName()
+    { return this->GetEdgeLayoutStrategyNameInternal(); }
+
+  // Description:
+  // The layout strategy to use when performing the edge layout.
+  // This signature allows an application to create a layout
+  // object directly and simply set the pointer through this method.
+  vtkGetObjectMacro(EdgeLayoutStrategy,vtkEdgeLayoutStrategy);
+  void SetEdgeLayoutStrategy(vtkEdgeLayoutStrategy *s);
 
   // Description:
   // Set the number of iterations per refresh (defaults to all)
@@ -212,11 +271,6 @@ public:
   const char* GetIconArrayName();
   
   // Description:
-  // The array used for populating the selection list
-  void SetSelectionArrayName(const char* name);
-  const char* GetSelectionArrayName();
-
-  // Description:
   // Sets up interactor style.
   virtual void SetupRenderWindow(vtkRenderWindow* win);
   
@@ -233,6 +287,14 @@ public:
   // The size of the font used for edge labeling
   virtual void SetEdgeLabelFontSize(const int size);
   virtual int GetEdgeLabelFontSize();
+
+  // Description:
+  // Whether the scalar bar for edges is visible.  Default is off.
+  void SetEdgeScalarBarVisibility(bool vis);
+
+  // Description:
+  // Whether the scalar bar for vertices is visible.  Default is off.
+  void SetVertexScalarBarVisibility(bool vis);
 
   // Description:
   // Is the graph layout complete? This method is useful
@@ -264,15 +326,15 @@ protected:
   // Description:
   // Connects the algorithm output to the internal pipeline.
   // This view only supports a single representation.
-  virtual void AddInputConnection(vtkAlgorithmOutput* conn);
+  virtual void AddInputConnection( int port, int item,
+    vtkAlgorithmOutput* conn,
+    vtkAlgorithmOutput* selectionConn);
   
   // Description:
   // Removes the algorithm output from the internal pipeline.
-  virtual void RemoveInputConnection(vtkAlgorithmOutput* conn);
-  
-  // Description:
-  // Connects the selection link to the internal pipeline.
-  virtual void SetSelectionLink(vtkSelectionLink* link);
+  virtual void RemoveInputConnection( int port, int item,
+    vtkAlgorithmOutput* conn,
+    vtkAlgorithmOutput* selectionConn);
   
   // Decsription:
   // Prepares the view for rendering.
@@ -293,11 +355,21 @@ protected:
   vtkGraphLayoutStrategy* LayoutStrategy;
   
   // Description:
-  // Used to store the selection array name
-  vtkGetStringMacro(SelectionArrayNameInternal);
-  vtkSetStringMacro(SelectionArrayNameInternal);
-  char* SelectionArrayNameInternal;
+  // Used to store the layout strategy name
+  vtkGetStringMacro(EdgeLayoutStrategyNameInternal);
+  vtkSetStringMacro(EdgeLayoutStrategyNameInternal);
+  char* EdgeLayoutStrategyNameInternal;
   
+  // Description:
+  // Used to store the current edge layout strategy
+  vtkEdgeLayoutStrategy* EdgeLayoutStrategy;
+  
+  // Description:
+  // Used to store the preferred edge layout strategy
+  // when the graph layout has been been set to PassThrough
+  // so that we can change it back when needed.
+  vtkEdgeLayoutStrategy* EdgeLayoutPreference;
+
   // Description:
   // Used to store the icon array name
   vtkGetStringMacro(IconArrayNameInternal);
@@ -319,6 +391,10 @@ protected:
   vtkSmartPointer<vtkFast2DLayoutStrategy>         Fast2DStrategy;
   vtkSmartPointer<vtkPassThroughLayoutStrategy>    PassThroughStrategy;
   vtkSmartPointer<vtkCircularLayoutStrategy>       CircularStrategy;
+  vtkSmartPointer<vtkEdgeLayout>                   EdgeLayout;
+  vtkSmartPointer<vtkArcParallelEdgeStrategy>      ArcParallelStrategy;
+  vtkSmartPointer<vtkPassThroughEdgeStrategy>      PassThroughEdgeStrategy;
+  vtkSmartPointer<vtkPerturbCoincidentVertices>    PerturbCoincidentVertices;
   vtkSmartPointer<vtkVertexDegree>                 VertexDegree;
   vtkSmartPointer<vtkEdgeCenters>                  EdgeCenters;
   vtkSmartPointer<vtkActor>                        GraphActor;
@@ -327,13 +403,20 @@ protected:
   vtkSmartPointer<vtkActor2D>                      VertexLabelActor;
   vtkSmartPointer<vtkDynamic2DLabelMapper>         EdgeLabelMapper;
   vtkSmartPointer<vtkActor2D>                      EdgeLabelActor;
+  vtkSmartPointer<vtkScalarBarWidget>              VertexScalarBar;
+  vtkSmartPointer<vtkScalarBarWidget>              EdgeScalarBar;
   
   // Selection objects
   vtkSmartPointer<vtkKdTreeSelector>               KdTreeSelector;
-  vtkSmartPointer<vtkVisibleCellSelector>          VisibleCellSelector;
+  vtkSmartPointer<vtkHardwareSelector>             HardwareSelector;
   vtkSmartPointer<vtkExtractSelectedGraph>         ExtractSelectedGraph;
   vtkSmartPointer<vtkActor>                        SelectedGraphActor;
   vtkSmartPointer<vtkGraphMapper>                  SelectedGraphMapper;
+
+  // Actor for edge selection
+  vtkSmartPointer<vtkGraphToPolyData>              EdgeSelectionPoly;
+  vtkSmartPointer<vtkPolyDataMapper>               EdgeSelectionMapper;
+  vtkSmartPointer<vtkActor>                        EdgeSelectionActor;
   //ETX
 
 private:

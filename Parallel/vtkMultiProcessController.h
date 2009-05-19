@@ -21,7 +21,7 @@
 // and communication. Please note that the communication is done using
 // the communicator which is accessible to the user. Therefore it is
 // possible to get the communicator with GetCommunicator() and use
-// it to send and receive data. This is the encoured communication method.
+// it to send and receive data. This is the encouraged communication method.
 // The internal (RMI) communications are done using a second internal
 // communicator (called RMICommunicator).
 //
@@ -36,13 +36,14 @@
 
 #include "vtkCommunicator.h" // Needed for direct access to communicator
 
+class vtkCollection;
+class vtkDataObject;
 class vtkDataSet;
 class vtkImageData;
-class vtkCollection;
-class vtkOutputWindow;
-class vtkDataObject;
-class vtkProcessGroup;
 class vtkMultiProcessController;
+class vtkMultiProcessStream;
+class vtkOutputWindow;
+class vtkProcessGroup;
 
 //BTX
 // The type of function that gets called when new processes are initiated.
@@ -205,6 +206,24 @@ public:
     { this->TriggerRMI(remoteProcessId, NULL, 0, tag); }
 
   // Description:
+  // This is a convenicence method to trigger an RMI call on all the "children"
+  // of the current node. The children of the current node can be determined by
+  // drawing a binary tree starting at node 0 and then assigned nodes ids
+  // incrementally in a breadth-first fashion from left to right. This is
+  // designed to be used when trigger an RMI call on all satellites from the
+  // root node.
+  void TriggerRMIOnAllChildren(void *arg, int argLength, int tag);
+  void TriggerRMIOnAllChildren(const char *arg, int tag) 
+    { 
+    this->TriggerRMIOnAllChildren(
+      (void*)arg, static_cast<int>(strlen(arg))+1, tag);
+    }
+  void TriggerRMIOnAllChildren(int tag)
+    { 
+    this->TriggerRMIOnAllChildren(NULL, 0, tag);
+    }
+
+  // Description:
   // Calling this method gives control to the controller to start
   // processing RMIs. Possible return values are:
   // RMI_NO_ERROR,
@@ -273,6 +292,7 @@ public:
   // This method sends data to another process.  Tag eliminates ambiguity
   // when multiple sends or receives exist in the same process.
   int Send(const int* data, vtkIdType length, int remoteProcessId, int tag);
+  int Send(const unsigned int* data, vtkIdType length, int remoteProcessId, int tag);
   int Send(const unsigned long* data, vtkIdType length, int remoteProcessId, 
            int tag);
   int Send(const char* data, vtkIdType length, int remoteProcessId, int tag);
@@ -285,24 +305,53 @@ public:
   int Send(vtkDataObject *data, int remoteId, int tag);
   int Send(vtkDataArray *data, int remoteId, int tag);
 
+//BTX
+  // Description:
+  // Send a stream to another process. vtkMultiProcessStream makes it possible
+  // to send data with arbitrary length and different base types to the other 
+  // process(es). Instead of making several Send() requests for each type of
+  // arguments, it's generally more efficient to push the arguments into the
+  // stream and the send the stream over.
+  int Send(const vtkMultiProcessStream& stream, int remoteId, int tag);
+//ETX
+
   // Description:
   // This method receives data from a corresponding send. It blocks
   // until the receive is finished.  It calls methods in "data"
-  // to communicate the sending data.
-  int Receive(int* data, vtkIdType length, int remoteProcessId, int tag);
-  int Receive(unsigned long* data, vtkIdType length, int remoteProcessId, 
+  // to communicate the sending data. In the overrloads that take in a \c
+  // maxlength argument, this length is the maximum length of the message to
+  // receive. If the maxlength is less than the length of the message sent by
+  // the sender, an error will be flagged. Once a message is received, use the
+  // GetCount() method to determine the actual size of the data received.
+  int Receive(int* data, vtkIdType maxlength, int remoteProcessId, int tag);
+  int Receive(unsigned int* data, vtkIdType maxlength, int remoteProcessId, int tag);
+  int Receive(unsigned long* data, vtkIdType maxlength, int remoteProcessId, 
               int tag);
-  int Receive(char* data, vtkIdType length, int remoteProcessId, int tag);
-  int Receive(unsigned char* data, vtkIdType length, int remoteProcessId, int tag);
-  int Receive(float* data, vtkIdType length, int remoteProcessId, int tag);
-  int Receive(double* data, vtkIdType length, int remoteProcessId, int tag);
+  int Receive(char* data, vtkIdType maxlength, int remoteProcessId, int tag);
+  int Receive(unsigned char* data, vtkIdType maxlength, int remoteProcessId, int tag);
+  int Receive(float* data, vtkIdType maxlength, int remoteProcessId, int tag);
+  int Receive(double* data, vtkIdType maxlength, int remoteProcessId, int tag);
 #ifdef VTK_USE_64BIT_IDS
-  int Receive(vtkIdType* data, vtkIdType length, int remoteProcessId, int tag);
+  int Receive(vtkIdType* data, vtkIdType maxlength, int remoteProcessId, int tag);
 #endif
   int Receive(vtkDataObject* data, int remoteId, int tag);
   int Receive(vtkDataArray* data, int remoteId, int tag);
-
+//BTX
+  // Description:
+  // Receive a stream from the other processes.
+  int Receive(vtkMultiProcessStream& stream, int remoteId, int tag);
+//ETX
   vtkDataObject *ReceiveDataObject(int remoteId, int tag);
+
+  // Description:
+  // Returns the number of words received by the most recent Receive().
+  // Note that this is not the number of bytes received, but the number of items
+  // of the data-type received by the most recent Receive() eg. if
+  // Receive(int*,..) was used, then this returns the number of ints received;
+  // if Receive(double*,..) was used, then this returns the number of doubles
+  // received etc. The return value is valid only after a successful Receive().
+  vtkIdType GetCount();
+
 
   //---------------------- Collective Operations ----------------------
 
@@ -339,6 +388,11 @@ public:
   int Broadcast(vtkDataArray *data, int srcProcessId) {
     return this->Communicator->Broadcast(data, srcProcessId);
   }
+//BTX
+  int Broadcast(vtkMultiProcessStream& stream, int srcProcessId) {
+    return this->Communicator->Broadcast(stream, srcProcessId);
+  }
+//ETX
 
   // Description:
   // Gather collects arrays in the process with id \c destProcessId.  Each
@@ -839,6 +893,13 @@ public:
 protected:
   vtkMultiProcessController();
   ~vtkMultiProcessController();
+
+  // Description:
+  // Implementation for TriggerRMI() provides subclasses an opportunity to
+  // modify the behaviour eg. MPIController provides ability to use SSend
+  // instead of Send.
+  virtual void TriggerRMIInternal(int remoteProcessId, 
+    void* arg, int argLength, int rmiTag, bool propagate);
   
   vtkProcessFunctionType      SingleMethod;
   void                       *SingleData;
@@ -912,6 +973,19 @@ inline int vtkMultiProcessController::Send(vtkDataArray *data,
 }
 
 inline int vtkMultiProcessController::Send(const int* data, vtkIdType length, 
+                                           int remoteProcessId, int tag)
+{
+  if (this->Communicator)
+    {
+    return this->Communicator->Send(data, length, remoteProcessId, tag);
+    }
+  else
+    {
+    return 0;
+    }
+}
+
+inline int vtkMultiProcessController::Send(const unsigned int* data, vtkIdType length, 
                                            int remoteProcessId, int tag)
 {
   if (this->Communicator)
@@ -1008,6 +1082,16 @@ inline int vtkMultiProcessController::Send(const vtkIdType* data,
 }
 #endif
 
+inline int vtkMultiProcessController::Send(const vtkMultiProcessStream& stream,
+  int remoteId, int tag)
+{
+  if (this->Communicator)
+    {
+    return this->Communicator->Send(stream, remoteId, tag);
+    }
+  return 0;
+}
+
 inline int vtkMultiProcessController::Receive(vtkDataObject* data, 
                                               int remoteProcessId, int tag)
 {
@@ -1048,6 +1132,19 @@ inline int vtkMultiProcessController::Receive(vtkDataArray* data,
 }
 
 inline int vtkMultiProcessController::Receive(int* data, vtkIdType length, 
+                                              int remoteProcessId, int tag)
+{
+  if (this->Communicator)
+    {
+    return this->Communicator->Receive(data, length, remoteProcessId, tag);
+    }
+  else
+    {
+    return 0;
+    }
+}
+
+inline int vtkMultiProcessController::Receive(unsigned int* data, vtkIdType length, 
                                               int remoteProcessId, int tag)
 {
   if (this->Communicator)
@@ -1144,12 +1241,32 @@ inline int vtkMultiProcessController::Receive(vtkIdType* data,
 }
 #endif
 
+
+inline int vtkMultiProcessController::Receive(vtkMultiProcessStream& stream,
+  int remoteId, int tag)
+{
+  if (this->Communicator)
+    {
+    return this->Communicator->Receive(stream, remoteId, tag);
+    }
+  return 0;
+}
+
 inline void vtkMultiProcessController::Barrier()
 {
   if (this->Communicator)
     {
     this->Communicator->Barrier();
     }
+}
+
+inline vtkIdType vtkMultiProcessController::GetCount()
+{
+  if (this->Communicator)
+    {
+    return this->Communicator->GetCount();
+    }
+  return 0;
 }
 
 #endif

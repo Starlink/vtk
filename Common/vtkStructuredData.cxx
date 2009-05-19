@@ -18,7 +18,7 @@
 #include "vtkObjectFactory.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkStructuredData, "$Revision: 1.63 $");
+vtkCxxRevisionMacro(vtkStructuredData, "$Revision: 1.65 $");
 
 // Return the topological dimension of the data (e.g., 0, 1, 2, or 3D).
 int vtkStructuredData::GetDataDimension(int dataDescription)
@@ -42,6 +42,20 @@ int vtkStructuredData::GetDataDimension(int dataDescription)
     default:
       return -1;
     }
+}
+
+// Returns the data description given the dimensions (eg. VTK_SINGLE_POINT,
+// VTK_X_LINE, VTK_XY_PLANE etc.)
+int vtkStructuredData::GetDataDescription(int dims[3])
+{
+  int tempDims[3];
+  // It is essential that dims != tempDims, then alone will SetDimensions()
+  // return the correct data description.
+  tempDims[0] = dims[0] + 1;
+  tempDims[1] = dims[1] + 1;
+  tempDims[2] = dims[2] + 1;
+
+  return vtkStructuredData::SetDimensions(dims, tempDims);
 }
 
 // Specify the dimensions of a regular, rectangular dataset. The input is
@@ -253,7 +267,7 @@ void vtkStructuredData::GetCellPoints(vtkIdType cellId, vtkIdList *ptIds,
       kMax = kMin + 1;
       break;
     default:
-      assert("check: impossible case."); // reaching this line is a bug.
+      assert("check: impossible case." && 0); // reaching this line is a bug.
       break;
     }
 

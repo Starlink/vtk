@@ -19,14 +19,14 @@
 #include "vtkCompositeDataPipeline.h"
 #include "vtkCompositeDataSetInternals.h"
 #include "vtkDataSet.h"
-#include "vtkInformationDataObjectKey.h"
 #include "vtkInformation.h"
-#include "vtkInformationIntegerKey.h"
+#include "vtkInformationStringKey.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkCompositeDataSet, "$Revision: 1.12 $");
+vtkCxxRevisionMacro(vtkCompositeDataSet, "$Revision: 1.17 $");
+vtkInformationKeyMacro(vtkCompositeDataSet, NAME, String);
 //----------------------------------------------------------------------------
 vtkCompositeDataSet::vtkCompositeDataSet()
 {
@@ -99,6 +99,20 @@ void vtkCompositeDataSet::SetChild(unsigned int index, vtkDataObject* dobj)
   this->Modified();
 }
 
+//----------------------------------------------------------------------------
+void vtkCompositeDataSet::RemoveChild(unsigned int index)
+{
+  if (this->Internals->Children.size() <= index)
+    {
+    vtkErrorMacro("The input index is out of range.");
+    return;
+    }
+
+  vtkCompositeDataSetItem& item = this->Internals->Children[index];
+  item.DataObject = NULL;
+  this->Internals->Children.erase(this->Internals->Children.begin()+index);
+  this->Modified();
+}
 
 //----------------------------------------------------------------------------
 vtkDataObject* vtkCompositeDataSet::GetChild(unsigned int index)
@@ -385,10 +399,18 @@ void vtkCompositeDataSet::ShallowCopy(vtkDataObject* src)
     this->SetNumberOfChildren(numChildren);
     for (unsigned int cc=0; cc < numChildren; cc++)
       {
-      this->SetChild(cc, from->GetChild(cc));
+      vtkDataObject* child = from->GetChild(cc);
+      if (child)
+        {
+        vtkDataObject* clone = child->NewInstance();
+        clone->ShallowCopy(child);
+        this->SetChild(cc, clone);
+        clone->Delete();
+        }
       if (from->HasChildMetaData(cc))
         {
-        this->SetChildMetaData(cc, from->GetChildMetaData(cc));
+        vtkInformation* toInfo = this->GetChildMetaData(cc);
+        toInfo->Copy(from->GetChildMetaData(cc), /*deep=*/0);
         }
       }
     }
@@ -419,6 +441,7 @@ void vtkCompositeDataSet::DeepCopy(vtkDataObject* src)
         vtkDataObject* toChild = fromChild->NewInstance();
         toChild->DeepCopy(fromChild);
         this->SetChild(cc, toChild);
+        toChild->Delete();
         if (from->HasChildMetaData(cc))
           {
           vtkInformation* toInfo = this->GetChildMetaData(cc);
@@ -459,5 +482,19 @@ vtkIdType vtkCompositeDataSet::GetNumberOfPoints()
 void vtkCompositeDataSet::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  os << indent << "Number Of Children: " << this->GetNumberOfChildren() << endl;
+  for (unsigned int cc=0; cc < this->GetNumberOfChildren(); cc++)
+    {
+    vtkDataObject* child = this->GetChild(cc);
+    if (child)
+      {
+      os << indent << "Child " << cc << ": " << child->GetClassName() << endl;
+      child->PrintSelf(os, indent.GetNextIndent());
+      }
+    else
+      {
+      os << indent << "Child " << cc << ": NULL" << endl;
+      }
+    }
 }
 

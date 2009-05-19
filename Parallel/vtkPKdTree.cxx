@@ -78,7 +78,7 @@ static char * makeEntry(const char *s)
 
 // Timing data ---------------------------------------------
 
-vtkCxxRevisionMacro(vtkPKdTree, "$Revision: 1.34 $");
+vtkCxxRevisionMacro(vtkPKdTree, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkPKdTree);
 
 const int vtkPKdTree::NoRegionAssignment = 0;   // default
@@ -296,6 +296,7 @@ double *vtkPKdTree::VolumeBounds()
   if (number_of_datasets == 0)
     {
     VTKERROR("NumberOfDatasets = 0, cannot determine volume bounds.");
+    delete []volBounds;
     return NULL;
     }
 
@@ -313,11 +314,23 @@ double *vtkPKdTree::VolumeBounds()
       }
     }
 
-  this->SubGroup->ReduceMin(localMin, globalMin, 3, 0);
-  this->SubGroup->Broadcast(globalMin, 3, 0);
+  // trick to reduce the number of global communications for getting both
+  // min and max
+  double localReduce[6], globalReduce[6];
+  for(i=0;i<3;i++)
+    {
+    localReduce[i] = localMin[i];
+    localReduce[i+3] = -localMax[i];
+    }
+  this->SubGroup->ReduceMin(localReduce, globalReduce, 6, 0);
+  this->SubGroup->Broadcast(globalReduce, 6, 0);
 
-  this->SubGroup->ReduceMax(localMax, globalMax, 3, 0);
-  this->SubGroup->Broadcast(globalMax, 3, 0);
+  for(i=0;i<3;i++)
+    {
+    globalMin[i] = globalReduce[i];
+    globalMax[i] = -globalReduce[i+3];
+    }
+
 
   MinMaxToBounds(volBounds, globalMin, globalMax);
 
@@ -333,6 +346,7 @@ double *vtkPKdTree::VolumeBounds()
   if ((aLittle /= 100.0) <= 0.0)
     {
      VTKERROR("VolumeBounds - degenerate volume");
+     delete []volBounds;
      return NULL;
     }
 
@@ -3135,7 +3149,10 @@ int vtkPKdTree::AssignRegionsContiguous()
 
   int floorLogP, ceilLogP;
 
-  for (floorLogP = 0; (nProcesses >> floorLogP) > 0; floorLogP++);
+  for (floorLogP = 0; (nProcesses >> floorLogP) > 0; floorLogP++)
+    {
+    // empty loop.
+    }
   floorLogP--;
 
   int P = 1 << floorLogP;
@@ -3250,7 +3267,7 @@ int vtkPKdTree::FindNextLocalArrayIndex(const char *n,
 int vtkPKdTree::GetCellArrayGlobalRange(const char *n, double range[2])
 {
   int first = 1;
-  double tmp[2];
+  double tmp[2] = {0, 0};
   int start = 0;
 
   while (1)
@@ -3288,7 +3305,7 @@ int vtkPKdTree::GetCellArrayGlobalRange(const char *n, double range[2])
 }
 int vtkPKdTree::GetCellArrayGlobalRange(const char *n, float range[2])
 {
-  double tmp[2];
+  double tmp[2] = {0, 0 };
 
   int fail = this->GetCellArrayGlobalRange(n, tmp);
 
@@ -3303,7 +3320,7 @@ int vtkPKdTree::GetCellArrayGlobalRange(const char *n, float range[2])
 int vtkPKdTree::GetPointArrayGlobalRange(const char *n, double range[2])
 {
   int first = 1;
-  double tmp[2];
+  double tmp[2]={0, 0};
   int start = 0;
 
   while (1)
@@ -3341,7 +3358,7 @@ int vtkPKdTree::GetPointArrayGlobalRange(const char *n, double range[2])
 }
 int vtkPKdTree::GetPointArrayGlobalRange(const char *n, float range[2])
 {
-  double tmp[2];
+  double tmp[2] = {0, 0};
 
   int fail = this->GetPointArrayGlobalRange(n, tmp);
 

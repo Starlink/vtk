@@ -55,7 +55,7 @@ public:
   // Open a new connection to the database.  You need to set the
   // filename before calling this function.  Returns true if the
   // database was opened successfully; false otherwise.
-  bool Open();
+  bool Open( const char* password = 0 );
 
   // Description:
   // Close the connection to the database.
@@ -106,7 +106,6 @@ public:
   // Description:
   // The user's password for connecting to the database server.
   vtkSetStringMacro(Password);
-  vtkGetStringMacro(Password);
 
   // Description:
   // The name of the database to connect to.
@@ -138,7 +137,9 @@ public:
   // Return the SQL string with the syntax to create a column inside a
   // "CREATE TABLE" SQL statement.
   // NB1: this method implements the MySQL-specific syntax:
+  // \verbatim
   // `<column name>` <column type> <column attributes>
+  // \endverbatim
   // NB2: if a column has type SERIAL in the schema, this will be turned
   // into INT NOT NULL AUTO_INCREMENT. Therefore, one should not pass
   // NOT NULL as an attribute of a column whose type is SERIAL.
@@ -150,7 +151,9 @@ public:
   // Return the SQL string with the syntax to create an index inside a
   // "CREATE TABLE" SQL statement.
   // NB1: this method implements the MySQL-specific syntax:
+  // \verbatim
   // <index type> [<index name>]  (`<column name 1>`,... )
+  // \endverbatim
   // NB2: since MySQL supports INDEX creation within a CREATE TABLE statement,
   // skipped is always returned false.
   virtual vtkStdString GetIndexSpecification( vtkSQLDatabaseSchema* schema,
@@ -171,6 +174,12 @@ public:
 protected:
   vtkMySQLDatabase();
   ~vtkMySQLDatabase();
+
+  // Description:
+  // Overridden to determine connection paramters given the URL. 
+  // This is called by CreateFromURL() to initialize the instance.
+  // Look at CreateFromURL() for details about the URL format.
+  virtual bool ParseURL(const char* url);
 
 private:
   // We want this to be private, a user of this class

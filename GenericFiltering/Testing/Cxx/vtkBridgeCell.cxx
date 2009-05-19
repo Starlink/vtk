@@ -67,7 +67,7 @@
 # include "vtkQuadraticPyramid.h"
 
 
-vtkCxxRevisionMacro(vtkBridgeCell, "$Revision: 1.18.42.1 $");
+vtkCxxRevisionMacro(vtkBridgeCell, "$Revision: 1.19 $");
 
 vtkStandardNewMacro(vtkBridgeCell);
 

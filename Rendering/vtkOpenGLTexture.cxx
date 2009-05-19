@@ -14,13 +14,16 @@
 =========================================================================*/
 #include "vtkOpenGLTexture.h"
 
+#include "vtkHomogeneousTransform.h"
 #include "vtkImageData.h"
 #include "vtkLookupTable.h"
 #include "vtkObjectFactory.h"
 #include "vtkOpenGLRenderer.h"
 #include "vtkPointData.h"
 #include "vtkRenderWindow.h"
+#include "vtkOpenGLExtensionManager.h"
 #include "vtkOpenGLRenderWindow.h"
+#include "vtkTransform.h"
 
 #include "vtkOpenGL.h"
 #include "vtkgl.h" // vtkgl namespace
@@ -28,7 +31,7 @@
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLTexture, "$Revision: 1.67 $");
+vtkCxxRevisionMacro(vtkOpenGLTexture, "$Revision: 1.75 $");
 vtkStandardNewMacro(vtkOpenGLTexture);
 #endif
 
@@ -48,6 +51,12 @@ vtkOpenGLTexture::~vtkOpenGLTexture()
   this->RenderWindow = NULL;
 }
 
+//-----------------------------------------------------------------------------
+void vtkOpenGLTexture::Initialize(vtkRenderer * vtkNotUsed(ren))
+{
+}
+
+//-----------------------------------------------------------------------------
 // Release the graphics resources used by this texture.  
 void vtkOpenGLTexture::ReleaseGraphicsResources(vtkWindow *renWin)
 {
@@ -76,12 +85,15 @@ void vtkOpenGLTexture::ReleaseGraphicsResources(vtkWindow *renWin)
   this->Modified();
 }
 
+//-----------------------------------------------------------------------------
 // Implement base class method.
 void vtkOpenGLTexture::Load(vtkRenderer *ren)
 {
   GLenum format = GL_LUMINANCE;
   vtkImageData *input = this->GetInput();
-  
+
+  this->Initialize(ren);
+
   // Need to reload the texture.
   // There used to be a check on the render window's mtime, but
   // this is too broad of a check (e.g. it would cause all textures
@@ -90,6 +102,56 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
   // like the graphics context.
   vtkOpenGLRenderWindow* renWin = 
     static_cast<vtkOpenGLRenderWindow*>(ren->GetRenderWindow());
+
+  if(this->BlendingMode != VTK_TEXTURE_BLENDING_MODE_NONE && vtkgl::ActiveTexture)
+    {
+    glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, vtkgl::COMBINE);
+
+    switch(this->BlendingMode)
+      {
+      case VTK_TEXTURE_BLENDING_MODE_REPLACE:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, GL_REPLACE);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, GL_REPLACE);
+        break;
+        }
+      case VTK_TEXTURE_BLENDING_MODE_MODULATE:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, GL_MODULATE);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, GL_MODULATE);
+        break;
+        }
+      case VTK_TEXTURE_BLENDING_MODE_ADD:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, GL_ADD);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, GL_ADD);
+        break;
+        }
+      case VTK_TEXTURE_BLENDING_MODE_ADD_SIGNED:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, vtkgl::ADD_SIGNED);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, vtkgl::ADD_SIGNED);
+        break;
+        }
+      case VTK_TEXTURE_BLENDING_MODE_INTERPOLATE:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, vtkgl::INTERPOLATE);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, vtkgl::INTERPOLATE);
+        break;
+        }
+      case VTK_TEXTURE_BLENDING_MODE_SUBTRACT:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, vtkgl::SUBTRACT);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, vtkgl::SUBTRACT);
+        break;
+        }
+      default:
+        {
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_RGB, GL_ADD);
+        glTexEnvf (GL_TEXTURE_ENV, vtkgl::COMBINE_ALPHA, GL_ADD);
+        }
+      }
+    }
 
   if (this->GetMTime() > this->LoadTime.GetMTime() ||
       input->GetMTime() > this->LoadTime.GetMTime() ||
@@ -252,6 +314,7 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
  
     // define a display list for this texture
     // get a unique display list id
+
 #ifdef GL_VERSION_1_1
     glGenTextures(1, &tempIndex);
     this->Index = static_cast<long>(tempIndex);
@@ -288,8 +351,19 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
       }
     else
       {
-      glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP );
-      glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP );
+      vtkOpenGLExtensionManager* manager = renWin->GetExtensionManager();
+      if (this->EdgeClamp &&
+           (manager->ExtensionSupported("GL_VERSION_1_2") ||
+            manager->ExtensionSupported("GL_EXT_texture_edge_clamp")))
+        {
+        glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, vtkgl::CLAMP_TO_EDGE );
+        glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, vtkgl::CLAMP_TO_EDGE );
+        }
+      else
+        {
+        glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP );
+        glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP );
+        }
       }
     int internalFormat = bytesPerPixel;
     switch (bytesPerPixel)
@@ -350,8 +424,39 @@ void vtkOpenGLTexture::Load(vtkRenderer *ren)
   glAlphaFunc (GL_GREATER, static_cast<GLclampf>(0));
   glEnable (GL_ALPHA_TEST);
 
-  // now bind it 
+  // now bind it
   glEnable(GL_TEXTURE_2D);
+
+  // clear any texture transform
+  glMatrixMode(GL_TEXTURE);
+  glLoadIdentity();
+
+  // build transformation 
+  if (this->Transform)
+    {
+    double *mat = this->Transform->GetMatrix()->Element[0];
+    double mat2[16];
+    mat2[0] = mat[0];
+    mat2[1] = mat[4];
+    mat2[2] = mat[8];
+    mat2[3] = mat[12];
+    mat2[4] = mat[1];
+    mat2[5] = mat[5];
+    mat2[6] = mat[9];
+    mat2[7] = mat[13];
+    mat2[8] = mat[2];
+    mat2[9] = mat[6];
+    mat2[10] = mat[10];
+    mat2[11] = mat[14];
+    mat2[12] = mat[3];
+    mat2[13] = mat[7];
+    mat2[14] = mat[11];
+    mat2[15] = mat[15];
+    
+    // insert texture transformation 
+    glMultMatrixd(mat2);
+    }
+  glMatrixMode(GL_MODELVIEW);
   
   GLint uUseTexture=-1;
   GLint uTexture=-1;
@@ -392,7 +497,7 @@ static int FindPowerOfTwo(int i)
   return size;
 }
 
-// Creates resampled unsigned char texture map that is a power of two in bith x and y.
+// Creates resampled unsigned char texture map that is a power of two in both x and y.
 unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned char *dptr,
                                                       int bpp)
 {
@@ -402,7 +507,17 @@ unsigned char *vtkOpenGLTexture::ResampleToPowerOfTwo(int &xs, int &ys, unsigned
 
   xsize = FindPowerOfTwo(xs);
   ysize = FindPowerOfTwo(ys);
-  
+  if (this->RestrictPowerOf2ImageSmaller)
+    {
+    if (xsize > xs)
+      {
+      xsize /= 2;
+      }
+    if (ysize > ys)
+      {
+      ysize /= 2;
+      }
+    }
   hx = static_cast<float>(xs - 1.0) / (xsize - 1.0);
   hy = static_cast<float>(ys - 1.0) / (ysize - 1.0);
 

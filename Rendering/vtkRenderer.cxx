@@ -23,7 +23,7 @@
 #include "vtkCuller.h"
 #include "vtkFrustumCoverageCuller.h"
 #include "vtkGraphicsFactory.h"
-#include "vtkIdentColoredPainter.h"
+#include "vtkHardwareSelector.h"
 #include "vtkLightCollection.h"
 #include "vtkLight.h"
 #include "vtkMath.h"
@@ -33,13 +33,21 @@
 #include "vtkPicker.h"
 #include "vtkProp3DCollection.h"
 #include "vtkPropCollection.h"
+#include "vtkRendererDelegate.h"
 #include "vtkRenderWindow.h"
 #include "vtkTimerLog.h"
 #include "vtkVolume.h"
+#include "vtkRenderPass.h"
+#include "vtkRenderState.h"
 
-vtkCxxRevisionMacro(vtkRenderer, "$Revision: 1.240 $");
+vtkCxxRevisionMacro(vtkRenderer, "$Revision: 1.246 $");
+vtkCxxSetObjectMacro(vtkRenderer, Delegate, vtkRendererDelegate);
+vtkCxxSetObjectMacro(vtkRenderer, Pass, vtkRenderPass);
 
+#if !defined(VTK_LEGACY_REMOVE)
+#include "vtkIdentColoredPainter.h"
 vtkCxxSetObjectMacro(vtkRenderer, IdentPainter, vtkIdentColoredPainter);
+#endif
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -87,6 +95,7 @@ vtkRenderer::vtkRenderer()
   this->PathArrayCount = 0;
 
   this->Layer                    = 0;
+  this->PreserveDepthBuffer = 0;
 
   this->ComputedVisiblePropBounds[0] = VTK_DOUBLE_MAX;
   this->ComputedVisiblePropBounds[1] = -VTK_DOUBLE_MAX;
@@ -107,16 +116,22 @@ vtkRenderer::vtkRenderer()
   this->Erase = 1;
   this->Draw = 1;
 
+#if !defined(VTK_LEGACY_REMOVE)
   this->SelectMode = vtkRenderer::NOT_SELECTING;
   this->SelectConst = 1;
   this->PropsSelectedFrom = NULL;
   this->PropsSelectedFromCount = 0;
   this->IdentPainter = NULL;
-  
+#endif
+
   this->UseDepthPeeling=0;
   this->OcclusionRatio=0.0;
   this->MaximumNumberOfPeels=4;
   this->LastRenderingUsedDepthPeeling=0;
+
+  this->Selector = 0;
+  this->Delegate=0;
+  this->Pass=0;
 }
 
 vtkRenderer::~vtkRenderer()
@@ -149,6 +164,7 @@ vtkRenderer::~vtkRenderer()
   this->Cullers->Delete();
   this->Cullers = NULL;
 
+#if !defined(VTK_LEGACY_REMOVE)
   if ( this->PropsSelectedFrom)
     {
     delete [] this->PropsSelectedFrom;
@@ -160,7 +176,16 @@ vtkRenderer::~vtkRenderer()
     this->IdentPainter->Delete();
     this->IdentPainter = NULL;
     }
-
+#endif
+  
+  if(this->Delegate!=0)
+    {
+    this->Delegate->UnRegister(this);
+    }
+  if(this->Pass!=0)
+    {
+    this->Pass->UnRegister(this);
+    }
 }
 
 // return the correct type of Renderer 
@@ -174,6 +199,12 @@ vtkRenderer *vtkRenderer::New()
 // Concrete render method.
 void vtkRenderer::Render(void)
 {
+  if(this->Delegate!=0 && this->Delegate->GetUsed())
+    {
+      this->Delegate->Render(this);
+      return;
+    }
+
   double   t1, t2;
   int      i;
   vtkProp  *aProp;
@@ -293,7 +324,17 @@ void vtkRenderer::Render(void)
     }
 
   // do the render library specific stuff
-  this->DeviceRender();
+  if(this->Pass!=0)
+    {
+    vtkRenderState s(this);
+    s.SetPropArrayAndCount(this->PropArray,this->PropArrayCount);
+    s.SetFrameBuffer(0);
+    this->Pass->Render(&s);
+    }
+  else
+    {
+    this->DeviceRender();
+    }
 
   // If we aborted, restore old estimated times
   // Setting the allocated render time to zero also sets the 
@@ -539,6 +580,7 @@ int vtkRenderer::UpdateGeometry()
     return 0;
     }
 
+#if !defined(VTK_LEGACY_REMOVE)
   if (this->SelectMode != vtkRenderer::NOT_SELECTING)
     {
     //we are doing a visible polygon selection instead of a normal render
@@ -551,6 +593,20 @@ int vtkRenderer::UpdateGeometry()
                    this->NumberOfPropsRendered << " actors" );
 
     return ret;
+    }
+#endif
+
+  if (this->Selector)
+    {
+    // When selector is present, we are performing a selection,
+    // so do the selection rendering pass instead of the normal passes.
+    // Delegate the rendering of the props to the selector itself.
+    this->NumberOfPropsRendered = this->Selector->Render(this,
+      this->PropArray, this->PropArrayCount);
+    this->InvokeEvent(vtkCommand::EndEvent,NULL);
+    this->RenderTime.Modified();
+    vtkDebugMacro("Rendered " << this->NumberOfPropsRendered << " actors" );
+    return this->NumberOfPropsRendered;
     }
 
   // We can render everything because if it was
@@ -581,8 +637,6 @@ int vtkRenderer::UpdateGeometry()
     this->DeviceRenderTranslucentPolygonalGeometry();
     }
   
-  
-    
   // loop through props and give them a chance to 
   // render themselves as volumetric geometry.
   for ( i = 0; i < this->PropArrayCount; i++ )
@@ -833,8 +887,9 @@ void vtkRenderer::ComputeVisiblePropBounds( double allBounds[6] )
   for (this->Props->InitTraversal(pit); 
        (prop = this->Props->GetNextProp(pit)); )
     {
-    // if it's invisible, or has no geometry, we can skip the rest 
-    if ( prop->GetVisibility() )
+    // if it's invisible, or if its bounds should be ignored,
+    // or has no geometry, we can skip the rest 
+    if ( prop->GetVisibility() && prop->GetUseBounds())
       {
       bounds = prop->GetBounds();
       // make sure we haven't got bogus bounds
@@ -1154,9 +1209,13 @@ void vtkRenderer::SetRenderWindow(vtkRenderWindow *renwin)
     // what about lights?
     // what about cullers?
     
+    if(this->Pass!=0 && this->RenderWindow!=0)
+      {
+      this->Pass->ReleaseGraphicsResources(this->RenderWindow);
+      }
+    this->VTKWindow = renwin;
+    this->RenderWindow = renwin;
     }
-  this->VTKWindow = renwin;
-  this->RenderWindow = renwin;
 }
 
 // Given a pixel location, return the Z value
@@ -1198,7 +1257,7 @@ void vtkRenderer::ViewToWorld(double &x, double &y, double &z)
 
   // get the perspective transformation from the active camera 
   mat->DeepCopy(this->ActiveCamera->
-                GetCompositePerspectiveTransformMatrix(
+                GetCompositeProjectionTransformMatrix(
                   this->GetTiledAspectRatio(),0,1));
   
   // use the inverse matrix 
@@ -1242,7 +1301,7 @@ void vtkRenderer::WorldToView(double &x, double &y, double &z)
 
   // get the perspective transformation from the active camera 
   matrix->DeepCopy(this->ActiveCamera->
-                GetCompositePerspectiveTransformMatrix(
+                GetCompositeProjectionTransformMatrix(
                   this->GetTiledAspectRatio(),0,1));
 
   view[0] = x*matrix->Element[0][0] + y*matrix->Element[0][1] +
@@ -1292,6 +1351,8 @@ void vtkRenderer::PrintSelf(ostream& os, vtkIndent indent)
      << (this->AutomaticLightCreation ? "On\n" : "Off\n");
 
   os << indent << "Layer = " << this->Layer << "\n";
+  os << indent << "PreserveDepthBuffer: " <<
+    (this->PreserveDepthBuffer? "On" : "Off") << "\n";
   os << indent << "Interactive = " << (this->Interactive ? "On" : "Off") 
      << "\n";
 
@@ -1322,6 +1383,27 @@ void vtkRenderer::PrintSelf(ostream& os, vtkIndent indent)
   
   // I don't want to print this since it is used just internally
   // os << indent << this->NumberOfPropsRendered;
+  
+  os << indent << "Delegate:";
+  if(this->Delegate!=0)
+    {
+      os << "exists" << endl;
+    }
+  else
+    {
+      os << "null" << endl;
+    }
+  os << indent << "Selector: " << this->Selector << endl;
+  
+  os << indent << "Pass:";
+  if(this->Pass!=0)
+    {
+      os << "exists" << endl;
+    }
+  else
+    {
+      os << "null" << endl;
+    }
 }
 
 int vtkRenderer::VisibleActorCount()
@@ -1695,6 +1777,7 @@ double vtkRenderer::GetTiledAspectRatio()
   return finalAspect;
 }
 
+#if !defined(VTK_LEGACY_REMOVE)
 //----------------------------------------------------------------------------
 int vtkRenderer::UpdateGeometryForSelection()
 {
@@ -1872,3 +1955,4 @@ void vtkRenderer::SwapOutSelectablePainter(
     prop->SetVisibility(orig_visibility);
     }
 }
+#endif

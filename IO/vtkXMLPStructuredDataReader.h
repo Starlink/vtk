@@ -28,7 +28,7 @@
 
 class vtkExtentSplitter;
 class vtkExtentTranslator;
-class vtkTableExtentTranslator;
+//class vtkTableExtentTranslator;
 class vtkXMLStructuredDataReader;
 
 class VTK_IO_EXPORT vtkXMLPStructuredDataReader : public vtkXMLPDataReader
@@ -66,7 +66,6 @@ protected:
   
   void SetupOutputData();
 
-  void SetupEmptyOutput();
   void SetupPieces(int numPieces);
   void DestroyPieces();
   int ReadPiece(vtkXMLDataElement* ePiece);
@@ -77,7 +76,7 @@ protected:
                      vtkDataArray* inArray, vtkDataArray* outArray);
   int ComputePieceSubExtents();
   
-  vtkTableExtentTranslator* ExtentTranslator;
+  //vtkTableExtentTranslator* ExtentTranslator;
   vtkExtentSplitter* ExtentSplitter;
   
   // The extent to be updated in the output.
@@ -99,7 +98,11 @@ protected:
   
   // Information per-piece.
   int* PieceExtents;
-  
+
+  virtual int RequestInformation(vtkInformation *request,
+                                 vtkInformationVector **inputVector,
+                                 vtkInformationVector *outputVector);
+
 private:
   vtkXMLPStructuredDataReader(const vtkXMLPStructuredDataReader&);  // Not implemented.
   void operator=(const vtkXMLPStructuredDataReader&);  // Not implemented.

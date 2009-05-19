@@ -35,7 +35,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkInteractorObserver.h"
 
-vtkCxxRevisionMacro(vtkBalloonRepresentation, "$Revision: 1.8.32.2 $");
+vtkCxxRevisionMacro(vtkBalloonRepresentation, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkBalloonRepresentation);
 
 vtkCxxSetObjectMacro(vtkBalloonRepresentation, TextProperty, vtkTextProperty);

@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <vtkstd/exception>
 
-vtkCxxRevisionMacro(vtkImageImport, "$Revision: 1.51 $");
+vtkCxxRevisionMacro(vtkImageImport, "$Revision: 1.54 $");
 vtkStandardNewMacro(vtkImageImport);
 
 
@@ -84,6 +84,9 @@ vtkImageImport::vtkImageImport()
   vtkExecutive *exec = vtkImageImportExecutive::New();
   this->SetExecutive(exec);
   exec->Delete();
+
+  this->ScalarArrayName=0;
+  this->SetScalarArrayName("scalars");
 }
 
 //----------------------------------------------------------------------------
@@ -93,6 +96,7 @@ vtkImageImport::~vtkImageImport()
     {
     delete [] static_cast<char *>(this->ImportVoidPointer);
     }
+  this->SetScalarArrayName(NULL);
 }
 
 //----------------------------------------------------------------------------
@@ -173,6 +177,16 @@ void vtkImageImport::PrintSelf(ostream& os, vtkIndent indent)
   
   os << indent << "BufferPointerCallback: "
      << (this->BufferPointerCallback? "Set" : "Not Set") << "\n";
+
+  os << indent << "ScalarArrayName: ";
+  if(this->ScalarArrayName!=0)
+    {
+      os  << this->ScalarArrayName << endl;
+    }
+  else
+    {
+      os  << "(none)" << endl;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -244,6 +258,7 @@ void vtkImageImport::ExecuteData(vtkDataObject *output)
 
   data->SetExtent(this->DataExtent);
   data->GetPointData()->GetScalars()->SetVoidArray(ptr,size,1);
+  data->GetPointData()->GetScalars()->SetName(this->ScalarArrayName);
 }
 
 //----------------------------------------------------------------------------

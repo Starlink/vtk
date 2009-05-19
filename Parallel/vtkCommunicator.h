@@ -38,6 +38,7 @@ class vtkDataObject;
 class vtkDataSet;
 class vtkImageData;
 class vtkMultiBlockDataSet;
+class vtkMultiProcessStream;
 class vtkTemporalDataSet;
 
 class VTK_PARALLEL_EXPORT vtkCommunicator : public vtkObject
@@ -139,6 +140,9 @@ public:
   int Send(const int* data, vtkIdType length, int remoteHandle, int tag) {
     return this->SendVoidArray(data, length, VTK_INT, remoteHandle, tag);
   }
+  int Send(const unsigned int* data, vtkIdType length, int remoteHandle, int tag) {
+    return this->SendVoidArray(data, length, VTK_INT, remoteHandle, tag);
+  }
   int Send(const unsigned long* data, vtkIdType length,
            int remoteHandle, int tag) {
     return this->SendVoidArray(data, length,VTK_UNSIGNED_LONG,remoteHandle,tag);
@@ -161,6 +165,9 @@ public:
     return this->SendVoidArray(data, length, VTK_ID_TYPE, remoteHandle, tag);
   }
 #endif
+//BTX
+  int Send(const vtkMultiProcessStream& stream, int remoteId, int tag);
+//ETX
 
 
   // Description:
@@ -181,38 +188,57 @@ public:
   // Description:
   // Subclasses have to supply this method to receive various arrays of data.
   // The \c type arg is one of the VTK type constants recognized by the
-  // vtkTemplateMacro (VTK_FLOAT, VTK_INT, etc.).  \c length is measured
-  // in number of values (as opposed to number of bytes).
-  virtual int ReceiveVoidArray(void *data, vtkIdType length, int type,
+  // vtkTemplateMacro (VTK_FLOAT, VTK_INT, etc.).  \c maxlength is measured
+  // in number of values (as opposed to number of bytes) and is the maxmum
+  // lenght of the data to receive.  If the maxlength is less than the length
+  // of the message sent by the sender, an error will be flagged. Once a
+  // message is received, use the GetCount() method to determine the actual
+  // size of the data received.
+  virtual int ReceiveVoidArray(void *data, vtkIdType maxlength, int type,
                                int remoteHandle, int tag) = 0;
 
   // Description:
   // Convenience methods for receiving data arrays.
-  int Receive(int* data, vtkIdType length, int remoteHandle, int tag) {
-    return this->ReceiveVoidArray(data, length, VTK_INT, remoteHandle, tag);
+  int Receive(int* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_INT, remoteHandle, tag);
   }
-  int Receive(unsigned long* data, vtkIdType length, int remoteHandle, int tag){
-    return this->ReceiveVoidArray(data, length, VTK_UNSIGNED_LONG, remoteHandle,
+  int Receive(unsigned int* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_INT, remoteHandle, tag);
+  }
+  int Receive(unsigned long* data, vtkIdType maxlength, int remoteHandle, int tag){
+    return this->ReceiveVoidArray(data, maxlength, VTK_UNSIGNED_LONG, remoteHandle,
                                   tag);
   }
-  int Receive(unsigned char* data, vtkIdType length, int remoteHandle, int tag){
-    return this->ReceiveVoidArray(data, length, VTK_UNSIGNED_CHAR, remoteHandle,
+  int Receive(unsigned char* data, vtkIdType maxlength, int remoteHandle, int tag){
+    return this->ReceiveVoidArray(data, maxlength, VTK_UNSIGNED_CHAR, remoteHandle,
                                   tag);
   }
-  int Receive(char* data, vtkIdType length, int remoteHandle, int tag) {
-    return this->ReceiveVoidArray(data, length, VTK_CHAR, remoteHandle, tag);
+  int Receive(char* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_CHAR, remoteHandle, tag);
   }
-  int Receive(float* data, vtkIdType length, int remoteHandle, int tag) {
-    return this->ReceiveVoidArray(data, length, VTK_FLOAT, remoteHandle, tag);
+  int Receive(float* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_FLOAT, remoteHandle, tag);
   }
-  int Receive(double* data, vtkIdType length, int remoteHandle, int tag) {
-    return this->ReceiveVoidArray(data, length, VTK_DOUBLE, remoteHandle, tag);
+  int Receive(double* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_DOUBLE, remoteHandle, tag);
   }
 #ifdef VTK_USE_64BIT_IDS
-  int Receive(vtkIdType* data, vtkIdType length, int remoteHandle, int tag) {
-    return this->ReceiveVoidArray(data, length, VTK_ID_TYPE, remoteHandle, tag);
+  int Receive(vtkIdType* data, vtkIdType maxlength, int remoteHandle, int tag) {
+    return this->ReceiveVoidArray(data, maxlength, VTK_ID_TYPE, remoteHandle, tag);
   }
 #endif
+//BTX
+  int Receive(vtkMultiProcessStream& stream, int remoteId, int tag);
+//ETX
+
+  // Description:
+  // Returns the number of words received by the most recent Receive().
+  // Note that this is not the number of bytes received, but the number of items
+  // of the data-type received by the most recent Receive() eg. if
+  // Receive(int*,..) was used, then this returns the number of ints received;
+  // if Receive(double*,..) was used, then this returns the number of doubles
+  // received etc. The return value is valid only after a successful Receive().
+  vtkGetMacro(Count, vtkIdType);
 
   //---------------------- Collective Operations ----------------------
 
@@ -250,6 +276,9 @@ public:
 #endif
   int Broadcast(vtkDataObject *data, int srcProcessId);
   int Broadcast(vtkDataArray *data, int srcProcessId);
+//BTX
+  int Broadcast(vtkMultiProcessStream& stream, int srcProcessId);
+//ETX
 
   // Description:
   // Gather collects arrays in the process with id \c destProcessId.  Each
@@ -298,7 +327,7 @@ public:
 #endif
   int Gather(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
              int destProcessId);
-
+  
   // Description:
   // GatherV is the vector variant of Gather.  It extends the functionality of
   // Gather by allowing a varying count of data from each process.
@@ -816,6 +845,8 @@ protected:
   int LocalProcessId;
 
   static int UseCopy;
+
+  vtkIdType Count;
 
 private:
   vtkCommunicator(const vtkCommunicator&);  // Not implemented.

@@ -13,6 +13,11 @@
 
 =========================================================================*/
 
+// to remove warning about deprecated method
+// vtkPainterDeviceAdapter::MakeVertexEmphasisWithStencilCheck
+// as class vtkIdentColoredPainter is deprecated
+#define VTK_LEGACY_SILENT
+
 #include "vtkIdentColoredPainter.h"
 
 #include "vtkActor.h"
@@ -37,7 +42,7 @@
 #endif
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkIdentColoredPainter, "$Revision: 1.24 $");
+vtkCxxRevisionMacro(vtkIdentColoredPainter, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkIdentColoredPainter);
 
 //-----------------------------------------------------------------------------
@@ -258,7 +263,8 @@ void vtkIdentColoredPainter::GetCurrentColor(unsigned char *RGB)
 //-----------------------------------------------------------------------------
 void vtkIdentColoredPainter::RenderInternal(vtkRenderer* renderer, 
                                             vtkActor* actor, 
-                                            unsigned long typeflags)
+                                            unsigned long typeflags,
+                                            bool forceCompileOnly)
 {
   if (typeflags == 0)
     {
@@ -342,7 +348,8 @@ void vtkIdentColoredPainter::RenderInternal(vtkRenderer* renderer,
   // let the superclass pass on the request to delegate painter.
   // Ofcouse, more than likely, this call will never have a delegate,
   // but anyways.
-  this->Superclass::RenderInternal(renderer, actor, typeflags);
+  this->Superclass::RenderInternal(renderer, actor, typeflags,
+                                   forceCompileOnly);
 }
 
 //-----------------------------------------------------------------------------
@@ -389,7 +396,7 @@ void vtkIdentColoredPainter::DrawCells(int mode, vtkCellArray *connectivity,
           color[1] = 0;
           color[2] = 0;
           device->WriteStencil(cellId);
-          device->MakeVertexEmphasis(0);
+          device->MakeVertexEmphasisWithStencilCheck(0);
           }
         else
           {
@@ -397,7 +404,7 @@ void vtkIdentColoredPainter::DrawCells(int mode, vtkCellArray *connectivity,
           this->GetCurrentColor(color);
           tmode = VTK_POLY_VERTEX;
           device->TestStencil(cellId);
-          device->MakeVertexEmphasis(1);
+          device->MakeVertexEmphasisWithStencilCheck(1);
           }          
         }
       
@@ -438,7 +445,7 @@ void vtkIdentColoredPainter::DrawCells(int mode, vtkCellArray *connectivity,
         if (this->ColorMode == COLORBYVERTEX)
           {
           device->Stencil(0);
-          device->MakeVertexEmphasis(0);
+          device->MakeVertexEmphasisWithStencilCheck(0);
           }
         return;
         }
@@ -447,7 +454,7 @@ void vtkIdentColoredPainter::DrawCells(int mode, vtkCellArray *connectivity,
   if (this->ColorMode == COLORBYVERTEX)
     {
     device->Stencil(0);
-    device->MakeVertexEmphasis(0);
+    device->MakeVertexEmphasisWithStencilCheck(0);
     }
 }
 

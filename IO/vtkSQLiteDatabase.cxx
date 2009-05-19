@@ -31,7 +31,7 @@
 #include <vtksqlite/vtk_sqlite3.h>
 
 vtkStandardNewMacro(vtkSQLiteDatabase);
-vtkCxxRevisionMacro(vtkSQLiteDatabase, "$Revision: 1.17 $");
+vtkCxxRevisionMacro(vtkSQLiteDatabase, "$Revision: 1.19 $");
 
 // ----------------------------------------------------------------------
 vtkSQLiteDatabase::vtkSQLiteDatabase()
@@ -240,8 +240,12 @@ bool vtkSQLiteDatabase::IsSupported(int feature)
 }
 
 // ----------------------------------------------------------------------
-bool vtkSQLiteDatabase::Open()
+bool vtkSQLiteDatabase::Open(const char* password)
 {
+  if(password && strlen(password))
+    {
+    vtkGenericWarningMacro("Password will be ignored by vtkSQLiteDatabase::Open().");
+    }
 
   if ( this->IsOpen() )
     {
@@ -389,6 +393,27 @@ vtkStdString vtkSQLiteDatabase::GetURL()
     url += fname;
     }
   return url;
+}
+
+// ----------------------------------------------------------------------
+bool vtkSQLiteDatabase::ParseURL(const char* URL)
+{
+  vtkstd::string protocol;
+  vtkstd::string dataglom;
+  
+  if ( ! vtksys::SystemTools::ParseURLProtocol( URL, protocol, dataglom))
+    {
+    vtkErrorMacro( "Invalid URL: " << URL );
+    return false;
+    }
+
+  if ( protocol == "sqlite" )
+    {
+    this->SetDatabaseFileName(dataglom.c_str());
+    return true;
+    }
+
+  return false;
 }
 
 // ----------------------------------------------------------------------

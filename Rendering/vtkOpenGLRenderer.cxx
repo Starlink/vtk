@@ -30,6 +30,8 @@ PURPOSE.  See the above copyright notice for more information.
 # include "vtkOpenGL.h"
 #endif
 
+#include "vtkShaderProgram2.h"
+
 #include <math.h>
 #include <assert.h>
 #include <vtkstd/list>
@@ -43,9 +45,11 @@ public:
 };
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLRenderer, "$Revision: 1.87.2.2 $");
+vtkCxxRevisionMacro(vtkOpenGLRenderer, "$Revision: 1.94 $");
 vtkStandardNewMacro(vtkOpenGLRenderer);
 #endif
+
+vtkCxxSetObjectMacro(vtkOpenGLRenderer,ShaderProgram,vtkShaderProgram2);
 
 #define VTK_MAX_LIGHTS 8
 
@@ -56,40 +60,7 @@ public:
   vtkstd::list<GLuint> List;
 };
 
-const char *vtkOpenGLRenderer_PeelingFS=
-//  "#extension GL_ARB_texture_rectangle: enable\n"
-  "uniform sampler2DRectShadow shadowTex;\n"
-  "uniform sampler2DRectShadow opaqueShadowTex;\n"
-  "uniform float offsetX;\n"
-  "uniform float offsetY;\n"
-  "uniform int useTexture;\n"
-  "uniform sampler2D texture;\n"
-  "void main()\n"
-  "{\n"
-  "vec4 r0=gl_FragCoord;\n"
-  "r0.x=r0.x-offsetX;\n"
-  "r0.y=r0.y-offsetY;\n"
-  "float r1=shadow2DRect(opaqueShadowTex,r0.xyz).x;\n"
-  "r1=r1-0.5;\n"
-  "if(r1<0.0)\n"
-  "{\n"
-  " discard;\n"
-  "}\n"
-  "r0.x=shadow2DRect(shadowTex,r0.xyz).x;\n"
-  "r0.x=r0.x-0.5;\n"
-  "if(r0.x<0.0)\n"
-  "{\n"
-  " discard;\n"
-  "}\n"
-  "if(useTexture==1)\n"
-  "{\n"
-  " gl_FragColor=gl_Color*texture2D(texture,gl_TexCoord[0].xy);\n"
-  "}\n"
-  "else\n"
-  "{\n"
-  " gl_FragColor=gl_Color;\n"
-  "}\n"
-  "}\n";
+extern const char *vtkOpenGLRenderer_PeelingFS;
 
 vtkOpenGLRenderer::vtkOpenGLRenderer()
 {
@@ -108,6 +79,8 @@ vtkOpenGLRenderer::vtkOpenGLRenderer()
   this->ProgramShader=0;
   this->DepthFormat=0;
   this->DepthPeelingHigherLayer=0;
+  
+  this->ShaderProgram=0;
 }
 
 // Internal method temporarily removes lights before reloading them
@@ -495,22 +468,12 @@ void vtkOpenGLRenderer::DeviceRenderTranslucentPolygonalGeometry()
       if(this->DepthPeelingIsSupported)
         {
         // Some OpenGL implementations are buggy so depth peeling does not work:
-        //  - ATI on iMac, Mac Pro, Power Mac G5, etc.  Bug <rdar://4975997>.
-        //  - ATI on some PCs
+        //  - ATI
         //  - Mesa 6.5.2 and lower
         // Do alpha blending always.
         const char* gl_renderer =
           reinterpret_cast<const char *>(glGetString(GL_RENDERER));
-        int isATIRadeonX1600 =
-          strstr(gl_renderer, "ATI Radeon X1600 OpenGL Engine") != 0;
-        int isATIRadeonX1900 =
-          strstr(gl_renderer, "ATI Radeon X1900 OpenGL Engine") != 0;
-        int isATIFireGLV3300 =
-          strstr(gl_renderer, "ATI FireGL V3300 Pentium 4 (SSE2)") != 0;
-        int isATIRadeon9600XT =
-          strstr(gl_renderer, "ATI Radeon 9600 XT OpenGL Engine") != 0;
-        int isATIRadeonX300X550 =
-          strstr(gl_renderer, "RADEON X300/X550 Series x86/SSE2") != 0;
+        int isATI = strstr(gl_renderer, "ATI") != 0;
         
         const char* gl_version =
           reinterpret_cast<const char *>(glGetString(GL_VERSION));
@@ -535,34 +498,9 @@ void vtkOpenGLRenderer::DeviceRenderTranslucentPolygonalGeometry()
               }
             }
           }
-        else if(isATIRadeon9600XT)
+        else if(isATI)
           {
-          // The Mac OS X 10.4.9->10.4.10, 10.5.0->10.5.1
-          // versions of the ATI driver, known not to work
-          // 1.5 ATI-1.4.18, 2.0 ATI-1.5.16, 2.0 ATI-1.5.18
           this->DepthPeelingIsSupported = 0;
-          }
-        else if(isATIFireGLV3300)
-          {
-            // so far, 2.0.6237 and 2.0.6672 don't work
-            this->DepthPeelingIsSupported = 0;
-          }
-        else if(isATIRadeonX1600 || isATIRadeonX1900)
-          {
-          // The Mac OS X 10.4.8->10.4.11, 10.5.0->10.5.1
-          // versions of the ATI driver, known not to work
-          // 2.0 ATI-1.4.40, 2.0 ATI-1.4.52, 2.0 ATI-1.4.56,
-          // 2.0 ATI-1.4.58
-          // 2.0 ATI-1.5.16, 2.0 ATI-1.5.18,
-          this->DepthPeelingIsSupported = 0;
-          }
-        else if(isATIRadeonX300X550)
-          {
-          // Windows XP 2.0.6479 version of the ATI driver, known not to work
-          if(strstr(gl_version, "2.0.6479 WinXP Release")==0)
-            {
-            this->DepthPeelingIsSupported = 0;
-            }
           }
         }
       }
@@ -1103,8 +1041,11 @@ void vtkOpenGLRenderer::Clear(void)
     clear_mask |= GL_COLOR_BUFFER_BIT;
     }
 
-  glClearDepth(static_cast<GLclampf>(1.0));
-  clear_mask |= GL_DEPTH_BUFFER_BIT;
+  if (!this->GetPreserveDepthBuffer())
+    {
+    glClearDepth(static_cast<GLclampf>(1.0));
+    clear_mask |= GL_DEPTH_BUFFER_BIT;
+    }
 
   vtkDebugMacro(<< "glClear\n");
   glClear(clear_mask);
@@ -1284,6 +1225,11 @@ vtkOpenGLRenderer::~vtkOpenGLRenderer()
     this->PickInfo->PickBuffer = 0;
     }
   delete this->PickInfo;
+  
+  if(this->ShaderProgram!=0)
+    {
+    this->ShaderProgram->Delete();
+    }
 }
 
 unsigned int vtkOpenGLRenderer::GetNumPickedIds()

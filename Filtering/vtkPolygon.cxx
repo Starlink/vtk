@@ -28,7 +28,7 @@
 #include "vtkBox.h"
 #include "vtkMergePoints.h"
 
-vtkCxxRevisionMacro(vtkPolygon, "$Revision: 1.8.2.1 $");
+vtkCxxRevisionMacro(vtkPolygon, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkPolygon);
 
 //----------------------------------------------------------------------------

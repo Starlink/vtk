@@ -3,8 +3,8 @@
   Program:   MetaIO
   Module:    $RCSfile: metaImage.h,v $
   Language:  C++
-  Date:      $Date: 2008-04-09 17:42:28 $
-  Version:   $Revision: 1.7 $
+  Date:      $Date: 2009-02-16 00:02:06 $
+  Version:   $Revision: 1.11 $
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -280,6 +280,7 @@ class METAIO_EXPORT MetaImage : public MetaObject
     virtual bool WriteStream(METAIO_STREAM::ofstream * _stream,
                              bool _writeElements=true,
                              const void * _constElementData=NULL);
+    
 
     virtual bool Append(const char *_headName=NULL);
 
@@ -298,7 +299,7 @@ class METAIO_EXPORT MetaImage : public MetaObject
                        
     MET_CompressionTableType*  m_CompressionTable;
 
-    int                       m_DimSize[10];
+    int                    m_DimSize[10];
     METAIO_STL::streamsize m_SubQuantity[10];
     METAIO_STL::streamsize m_Quantity;
 
@@ -344,12 +345,18 @@ class METAIO_EXPORT MetaImage : public MetaObject
                             METAIO_STL::streamsize _dataQuantity,
                             int * _indexMin,
                             int* _indexMax,
-                            unsigned int subSamplingFactor=1
-                            );
+                            unsigned int subSamplingFactor=1,
+                            METAIO_STL::streamsize _totalDataQuantity=0);
 
     bool  M_WriteElements(METAIO_STREAM::ofstream * _fstream,
                           const void * _data,
                           METAIO_STL::streamsize _dataQuantity);
+
+    bool  M_WriteElementsROI(METAIO_STREAM::ofstream * _fstream,
+                             const void * _data,
+                             unsigned long _dataPos,
+                             int * _indexMin,
+                             int* _indexMax);
 
     bool  M_WriteElementData(METAIO_STREAM::ofstream * _fstream,
                              const void * _data,

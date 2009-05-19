@@ -58,6 +58,21 @@ public:
 
   //BTX
   // Description:
+  // Random-access method for retrieving the in edges of a vertex.
+  // For an undirected graph, this is the same as the out edges.
+  virtual vtkInEdgeType GetInEdge(vtkIdType v, vtkIdType i);
+  //ETX
+
+  // Description:
+  // Random-access method for retrieving incoming edges to vertex v.
+  // The method fills the vtkGraphEdge instance with the id, source, and
+  // target of the edge. This method is provided for wrappers,
+  // GetInEdge(vtkIdType, vtkIdType) is preferred.
+  virtual void GetInEdge(vtkIdType v, vtkIdType i, vtkGraphEdge* e)
+    { this->Superclass::GetInEdge(v, i, e); }
+
+  //BTX
+  // Description:
   // Retrieve a graph from an information vector.
   static vtkUndirectedGraph *GetData(vtkInformation *info);
   static vtkUndirectedGraph *GetData(vtkInformationVector *v, int i=0);

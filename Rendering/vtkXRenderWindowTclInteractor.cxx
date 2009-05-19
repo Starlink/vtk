@@ -24,7 +24,7 @@
 #include <vtkTk.h>
 
 //-------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkXRenderWindowTclInteractor, "$Revision: 1.53.14.1 $");
+vtkCxxRevisionMacro(vtkXRenderWindowTclInteractor, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkXRenderWindowTclInteractor);
 
 

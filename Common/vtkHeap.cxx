@@ -15,7 +15,7 @@
 #include "vtkHeap.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkHeap, "$Revision: 1.15.4.1 $");
+vtkCxxRevisionMacro(vtkHeap, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkHeap);
 
 struct vtkTestAlignLong

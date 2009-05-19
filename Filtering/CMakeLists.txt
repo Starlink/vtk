@@ -6,16 +6,21 @@ SET(KIT_JAVA_LIBS vtkCommonJava)
 SET(KIT_LIBS vtkCommon)
 
 SET( Kit_SRCS
+vtkAbstractCellLocator.cxx
 vtkAbstractMapper.cxx
+vtkAbstractPointLocator.cxx
 vtkActor2DCollection.cxx
 vtkActor2D.cxx
 vtkAdjacentVertexIterator.cxx
 vtkAlgorithm.cxx
 vtkAlgorithmOutput.cxx
+vtkAMRBox.cxx
 vtkAttributesErrorMetric.cxx
 vtkBiQuadraticQuad.cxx
 vtkBiQuadraticQuadraticHexahedron.cxx
 vtkBiQuadraticQuadraticWedge.cxx
+vtkBSPCuts.cxx
+vtkBSPIntersections.cxx
 vtkCachedStreamingDemandDrivenPipeline.cxx
 vtkCardinalSpline.cxx
 vtkCastToConcrete.cxx
@@ -55,6 +60,7 @@ vtkDemandDrivenPipeline.cxx
 vtkDirectedAcyclicGraph.cxx
 vtkDirectedGraphAlgorithm.cxx
 vtkDirectedGraph.cxx
+vtkDistributedGraphHelper.cxx
 vtkEdgeListIterator.cxx
 vtkEmptyCell.cxx
 vtkExecutive.cxx
@@ -77,6 +83,7 @@ vtkGeometricErrorMetric.cxx
 vtkGraphAlgorithm.cxx
 vtkGraph.cxx
 vtkGraphEdge.cxx
+vtkGraphInternals.cxx
 vtkHexagonalPrism.cxx
 vtkHexahedron.cxx
 vtkHierarchicalBoxDataIterator.cxx
@@ -99,6 +106,7 @@ vtkImageToStructuredPoints.cxx
 vtkImageTwoInputFilter.cxx
 vtkImplicitBoolean.cxx
 vtkImplicitDataSet.cxx
+vtkImplicitHalo.cxx
 vtkImplicitSelectionLoop.cxx
 vtkImplicitSum.cxx
 vtkImplicitVolume.cxx
@@ -108,6 +116,9 @@ vtkInformation.cxx
 vtkInformationExecutivePortKey.cxx
 vtkInformationExecutivePortVectorKey.cxx
 vtkInterpolatedVelocityField.cxx
+vtkKdNode.cxx
+vtkKdTree.cxx
+vtkKdTreePointLocator.cxx
 vtkKochanekSpline.cxx
 vtkLine.cxx
 vtkLocator.cxx
@@ -129,12 +140,14 @@ vtkPiecewiseFunctionAlgorithm.cxx
 vtkPiecewiseFunction.cxx
 vtkPiecewiseFunctionShiftScale.cxx
 vtkPixel.cxx
+vtkPlanesIntersection.cxx
 vtkPointData.cxx
 vtkPointLocator.cxx
 vtkPointSetAlgorithm.cxx
 vtkPointSet.cxx
 vtkPointSetSource.cxx
 vtkPointSetToPointSetFilter.cxx
+vtkPointsProjectedHull.cxx
 vtkPolyDataAlgorithm.cxx
 vtkPolyDataCollection.cxx
 vtkPolyData.cxx
@@ -163,6 +176,7 @@ vtkRectilinearGridToPolyDataFilter.cxx
 vtkScalarTree.cxx
 vtkSelectionAlgorithm.cxx
 vtkSelection.cxx
+vtkSelectionNode.cxx
 vtkSimpleCellTessellator.cxx
 vtkSimpleImageToImageFilter.cxx
 vtkSimpleScalarTree.cxx
@@ -213,7 +227,9 @@ vtkWedge.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
+vtkAbstractCellLocator
 vtkAbstractMapper
+vtkAbstractPointLocator
 vtkCell
 vtkCell3D
 vtkCompositeDataIterator
@@ -227,6 +243,7 @@ vtkDataSetToPolyDataFilter
 vtkDataSetToStructuredGridFilter
 vtkDataSetToStructuredPointsFilter
 vtkDataSetToUnstructuredGridFilter
+vtkDistributedGraphHelper
 vtkExecutive
 vtkExplicitCell
 vtkFilteringInformationKeyManager
@@ -284,6 +301,7 @@ vtkViewport
 )
 
 SET_SOURCE_FILES_PROPERTIES(
+  vtkAMRBox.cxx
   vtkFilteringInformationKeyManager.cxx
   vtkImageIterator.cxx
   vtkInformation.cxx
@@ -299,6 +317,18 @@ SET(Kit_JAVA_EXTRA_SRCS)
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
 SET(KIT_JAVA_DEPS)
+
+IF(VTK_USE_N_WAY_ARRAYS)
+
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkArrayData.cxx
+    vtkArrayDataAlgorithm.cxx
+    vtkFactoredArrayData.cxx
+    vtkFactoredArrayDataAlgorithm.cxx
+    )
+
+ENDIF(VTK_USE_N_WAY_ARRAYS)
 
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
@@ -320,7 +350,6 @@ ENDIF(CMAKE_COMPILER_IS_GNUCXX AND MINGW)
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   INSTALL(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkAMRBox.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkCellType.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkImageIterator.txx
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkImageProgressIterator.txx

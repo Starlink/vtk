@@ -1,22 +1,22 @@
 /*=========================================================================
 
-Program:   Visualization Toolkit
-Module:    $RCSfile: vtkPostgreSQLDatabase.cxx,v $
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: vtkPostgreSQLDatabase.cxx,v $
 
-Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-All rights reserved.
-See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-This software is distributed WITHOUT ANY WARRANTY; without even
-the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  See the above copyright notice for more information.
+  This software is distributed WITHOUT ANY WARRANTY; without even
+  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+  PURPOSE.  See the above copyright notice for more information.
 
-=========================================================================*/
+  =========================================================================*/
 /*-------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
--------------------------------------------------------------------------*/
+  -------------------------------------------------------------------------*/
 #include "vtkPostgreSQLDatabase.h"
 #include "vtkPostgreSQLDatabasePrivate.h"
 #include "vtkPostgreSQLQuery.h"
@@ -29,11 +29,15 @@ PURPOSE.  See the above copyright notice for more information.
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/ios/sstream>
 
-#define PQXX_ALLOW_LONG_LONG
-#include <pqxx/pqxx>
+#include <vtkSmartPointer.h>
+#define VTK_CREATE(classname, varname) vtkSmartPointer<classname> varname = vtkSmartPointer<classname>::New()
+
+#include <libpq-fe.h>
+
+#include <assert.h>
 
 vtkStandardNewMacro(vtkPostgreSQLDatabase);
-vtkCxxRevisionMacro(vtkPostgreSQLDatabase, "$Revision: 1.26 $");
+vtkCxxRevisionMacro(vtkPostgreSQLDatabase, "$Revision: 1.34 $");
 
 // ----------------------------------------------------------------------
 vtkPostgreSQLDatabase::vtkPostgreSQLDatabase()
@@ -62,7 +66,6 @@ vtkPostgreSQLDatabase::~vtkPostgreSQLDatabase()
 
   this->SetHostName( 0 );
   this->SetUser( 0 );
-  this->SetPassword( 0 );
   this->SetDatabaseName( 0 );
   this->SetConnectOptions( 0 );
   this->SetDatabaseType( 0 );
@@ -85,7 +88,7 @@ void vtkPostgreSQLDatabase::PrintSelf(ostream &os, vtkIndent indent)
   os << indent << "DatabaseType: " << (this->DatabaseType ? this->DatabaseType : "NULL") << endl;
   os << indent << "HostName: " << (this->HostName ? this->HostName : "NULL") << endl;
   os << indent << "User: " << (this->User ? this->User : "NULL") << endl;
-  os << indent << "Password: " << (this->Password ? this->Password : "NULL") << endl;
+  os << indent << "Password: " << (this->Password? "(hidden)":"(none)") << endl;
   os << indent << "DatabaseName: " << (this->DatabaseName ? this->DatabaseName : "NULL") << endl;
   os << indent << "ServerPort: " << this->ServerPort << endl;
   os << indent << "ConnectOptions: " << (this->ConnectOptions ? this->ConnectOptions : "NULL") << endl;
@@ -224,7 +227,7 @@ vtkStdString vtkPostgreSQLDatabase::GetColumnSpecification(
 }
 
 // ----------------------------------------------------------------------
-bool vtkPostgreSQLDatabase::Open()
+bool vtkPostgreSQLDatabase::Open( const char* password )
 {
   if ( ! this->HostName || ! this->DatabaseName )
     {
@@ -246,7 +249,7 @@ bool vtkPostgreSQLDatabase::Open()
   options = "dbname=";
   options += this->DatabaseName;
 
-  if ( this->ServerPort )
+  if ( this->ServerPort > 0 )
     {
     options += " port=";
     vtksys_ios::ostringstream stream;
@@ -258,10 +261,10 @@ bool vtkPostgreSQLDatabase::Open()
     options += " user=";
     options += this->User;
     }
-  if ( this->Password && strlen( this->Password ) > 0 )
+  if ( password && strlen( password ) > 0 )
     {
     options += " password=";
-    options += this->Password;
+    options += password;
     }
   if ( this->ConnectOptions && strlen( this->ConnectOptions ) > 0 )
     {
@@ -276,7 +279,14 @@ bool vtkPostgreSQLDatabase::Open()
     if ( this->OpenInternal( options.c_str() ) )
       {
       this->SetLastErrorText( 0 );
-      this->Connection->LastErrorText.clear();
+      if ( this->Password != password )
+        {
+        if ( this->Password )
+          {
+          delete [] this->Password;
+          }
+        this->Password = password ? vtksys::SystemTools::DuplicateString( password ) : 0;
+        }
       return true;
       }
     }
@@ -286,7 +296,14 @@ bool vtkPostgreSQLDatabase::Open()
   if ( this->OpenInternal( options.c_str() ) )
     {
     this->SetLastErrorText( 0 );
-    this->Connection->LastErrorText.clear();
+    if ( this->Password != password )
+      {
+      if ( this->Password )
+        {
+        delete this->Password;
+        }
+      this->Password = password ? vtksys::SystemTools::DuplicateString( password ) : 0;
+      }
     return true;
     }
 
@@ -308,7 +325,9 @@ void vtkPostgreSQLDatabase::Close()
 // ----------------------------------------------------------------------
 bool vtkPostgreSQLDatabase::IsOpen()
 {
-  return this->Connection != 0;
+  return (this->Connection != 0 &&
+          this->Connection->Connection != 0 &&
+          PQstatus(this->Connection->Connection) == CONNECTION_OK);
 }
 
 // ----------------------------------------------------------------------
@@ -324,15 +343,19 @@ bool vtkPostgreSQLDatabase::HasError()
 {
   // Assume that an unopened connection is not a symptom of failure.
   if ( this->Connection )
-    return this->Connection->LastErrorText.empty() ? false : true;
-  return this->LastErrorText ? true : false;
+    {
+    return this->LastErrorText ? true : false;
+    }
+  else
+    {
+    return false; 
+    }
 }
 
 // ----------------------------------------------------------------------
 const char* vtkPostgreSQLDatabase::GetLastErrorText()
 {
-  return this->Connection ?
-    this->Connection->LastErrorText.c_str() : this->LastErrorText;
+  return this->LastErrorText; 
 }
 
 // ----------------------------------------------------------------------
@@ -342,14 +365,9 @@ vtkStdString vtkPostgreSQLDatabase::GetURL()
   url += "://";
   if ( this->HostName && this->DatabaseName )
     {
-    if ( this->User )
+    if ( this->User && strlen( this->User ) > 0 )
       {
       url += this->User;
-      if ( this->Password && strlen( this->Password ) )
-        {
-        url += ":";
-        url += this->Password;
-        }
       url += "@";
       }
     url += this->HostName;
@@ -357,6 +375,36 @@ vtkStdString vtkPostgreSQLDatabase::GetURL()
     url += this->DatabaseName;
     }
   return url;
+}
+
+// ----------------------------------------------------------------------
+bool vtkPostgreSQLDatabase::ParseURL( const char* URL )
+{
+  vtkstd::string protocol;
+  vtkstd::string username; 
+  vtkstd::string unused;
+  vtkstd::string hostname; 
+  vtkstd::string dataport; 
+  vtkstd::string database;
+
+  // Okay now for all the other database types get more detailed info
+  if ( ! vtksys::SystemTools::ParseURL(
+      URL, protocol, username, unused, hostname, dataport, database) )
+    {
+    vtkErrorMacro( "Invalid URL: " << URL );
+    return false;
+    }
+
+  if ( protocol == "psql" )
+    {
+    this->SetUser( username.empty() ? 0 : username.c_str() );
+    this->SetHostName( hostname.empty() ? 0 : hostname.c_str() );
+    this->SetServerPort( atoi( dataport.c_str() ) );
+    this->SetDatabaseName( database.empty() ? 0 : database.c_str() );
+    return true;
+    }
+
+  return false;
 }
 
 // ----------------------------------------------------------------------
@@ -381,7 +429,7 @@ vtkStringArray* vtkPostgreSQLDatabase::GetTables()
   if ( ! status )
     {
     vtkErrorMacro(<< "Database returned error: " << query->GetLastErrorText());
-    this->Connection->LastErrorText = query->GetLastErrorText();
+    this->SetLastErrorText(query->GetLastErrorText());
     query->Delete();
     return 0;
     }
@@ -392,7 +440,7 @@ vtkStringArray* vtkPostgreSQLDatabase::GetTables()
     results->InsertNextValue( query->DataValue( 0 ).ToString() );
     }
   query->Delete();
-  this->Connection->LastErrorText.clear();
+  this->SetLastErrorText(NULL);
   return results;
 }
 
@@ -416,7 +464,7 @@ vtkStringArray* vtkPostgreSQLDatabase::GetRecord( const char* table )
     {
     vtkErrorMacro(<< "GetRecord(" << table << "): Database returned error: "
                   << query->GetLastErrorText());
-    this->Connection->LastErrorText = query->GetLastErrorText();
+    this->SetLastErrorText(query->GetLastErrorText());
     query->Delete();
     return 0;
     }
@@ -431,7 +479,7 @@ vtkStringArray* vtkPostgreSQLDatabase::GetRecord( const char* table )
     }
 
   query->Delete();
-  this->Connection->LastErrorText.clear();
+  this->SetLastErrorText(0);
   return results;
 }
 
@@ -452,12 +500,12 @@ bool vtkPostgreSQLDatabase::IsSupported( int feature )
     case VTK_SQL_FEATURE_TRIGGERS:
       return true;
     default:
-      {
-      vtkErrorMacro(
-        << "Unknown SQL feature code " << feature << "!  See "
-        << "vtkSQLDatabase.h for a list of possible features.");
-      return false;
-      };
+    {
+    vtkErrorMacro(
+      << "Unknown SQL feature code " << feature << "!  See "
+      << "vtkSQLDatabase.h for a list of possible features.");
+    return false;
+    };
     }
 }
 
@@ -519,6 +567,12 @@ bool vtkPostgreSQLDatabase::CreateDatabase( const char* dbName, bool dropExistin
 
   if ( ! this->Connection )
     {
+    if ( this->DatabaseName && ! strcmp( this->DatabaseName, dbName ) )
+      {
+      // we can't connect to a database we haven't created yet and aren't connected to...
+      this->SetDatabaseName( "template1" );
+      dropCurrentlyConnected = true;
+      }
     bool err = true;
     if ( this->DatabaseName && this->HostName )
       {
@@ -539,28 +593,24 @@ bool vtkPostgreSQLDatabase::CreateDatabase( const char* dbName, bool dropExistin
   vtkstd::string qstr( "CREATE DATABASE \"" );
   qstr += dbName;
   qstr += "\"";
-  try
+  vtkSQLQuery *query = this->GetQueryInstance();
+  query->SetQuery(qstr.c_str());
+  if (query->Execute() == false)
     {
-    pqxx::nontransaction work( this->Connection->Connection );
-    pqxx::result res = work.exec( qstr.c_str() );
-    work.commit();
-    }
-  catch ( const vtkstd::exception& e )
-    {
+    this->SetLastErrorText(query->GetLastErrorText());
     vtkErrorMacro(
       "Could not create database \"" << dbName << "\". "
-      << this->GetLastErrorText() << "\n" );
+      << this->GetLastErrorText() << "\n");
+    query->Delete();
     return false;
     }
 
+  query->Delete();
+  this->SetLastErrorText(0);
   if ( dropCurrentlyConnected )
     {
     this->SetDatabaseName( dbName );
     this->Open();
-    }
-  if ( this->Connection )
-    {
-    this->Connection->LastErrorText.clear();
     }
   return true;
 }
@@ -598,21 +648,19 @@ bool vtkPostgreSQLDatabase::DropDatabase( const char* dbName )
   qstr += dbName;
   qstr += "\"";
   //qstr += " IF EXISTS";
-  try
+  vtkSQLQuery *query = this->GetQueryInstance();
+  query->SetQuery(qstr.c_str());
+  if (query->Execute() == false)
     {
-    pqxx::nontransaction work( this->Connection->Connection );
-    pqxx::result res = work.exec( qstr.c_str() );
-    work.commit();
-    }
-  catch ( const vtkstd::exception& e )
-    {
-    this->Connection->LastErrorText = e.what();
+    this->SetLastErrorText(query->GetLastErrorText());
+    vtkErrorMacro(<<"Could not drop database \""
+                  << dbName << "\".  "
+                  << query->GetLastErrorText());
+    query->Delete();
     return false;
     }
-  if ( this->Connection )
-    {
-    this->Connection->LastErrorText.clear();
-    }
+  this->SetLastErrorText(0);
+  query->Delete();
   return true;
 }
 
@@ -629,25 +677,98 @@ void vtkPostgreSQLDatabase::NullTrailingWhitespace( char* msg )
 
 bool vtkPostgreSQLDatabase::OpenInternal( const char* connectionOptions )
 {
-  try
+  assert(this->Connection == NULL);
+  this->Connection = new vtkPostgreSQLDatabasePrivate;
+  this->Connection->Connection = PQconnectdb(connectionOptions);
+  if (PQstatus(this->Connection->Connection) == CONNECTION_OK)
     {
-    this->Connection = new vtkPostgreSQLDatabasePrivate( connectionOptions );
-    this->ConnectionMTime.Modified();
+    this->SetLastErrorText(0);
+    this->UpdateDataTypeMap();
+    return true;
     }
-  catch ( pqxx::sql_error& e )
+  else
     {
-    this->SetLastErrorText( e.what() );
-    this->NullTrailingWhitespace( this->LastErrorText );
-    this->Connection = 0; // we weren't able to construct
+    this->SetLastErrorText(PQerrorMessage(this->Connection->Connection));
+    vtkErrorMacro(<<"Unable to open database connection. "
+                  << this->GetLastErrorText());
+    delete this->Connection;
+    this->Connection = 0;
     return false;
     }
-  catch ( pqxx::broken_connection& e )
-    {
-    this->SetLastErrorText( e.what() );
-    this->NullTrailingWhitespace( this->LastErrorText );
-    this->Connection = 0; // we weren't able to construct
-    return false;
-    }
-  return true;
 }
 
+// ----------------------------------------------------------------------
+
+void vtkPostgreSQLDatabase::UpdateDataTypeMap()
+{
+  if (!this->IsOpen())
+    {
+    return;
+    }
+  
+  this->Connection->DataTypeMap.clear();
+
+  vtkSQLQuery *typeQuery = this->GetQueryInstance();
+  typeQuery->SetQuery("SELECT oid, typname, typlen FROM pg_type");
+  bool status = typeQuery->Execute();
+  if (!status)
+    {
+    vtkErrorMacro(<<"I was totally surprised to see the data type query fail.  Error message: "
+                  << typeQuery->GetLastErrorText());
+    typeQuery->Delete();
+    }
+  else
+    {
+    while (typeQuery->NextRow())
+      {
+      Oid oid;
+      vtkStdString name;
+      int len;
+
+      // Caution: this assumes that the Postgres OID type is a 32-bit
+      // unsigned int.
+      oid = typeQuery->DataValue(0).ToUnsignedInt();
+      name = typeQuery->DataValue(1).ToString();
+      len = typeQuery->DataValue(2).ToInt();
+
+      if ( name == "int8" || ( name == "oid" && len == 8 ) )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_TYPE_INT64;
+        }
+      else if ( name == "int4" || ( name == "oid" && len == 4 ) )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_TYPE_INT32;
+        }
+      else if ( name == "int2" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_TYPE_INT16;
+        }
+      else if ( name == "char" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_TYPE_INT8;
+        }
+      else if ( name == "time_stamp" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_TYPE_INT64;
+        }
+      else if ( name == "float4" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_FLOAT;
+        }
+      else if ( name == "float8" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_DOUBLE;
+        }
+      else if ( name == "abstime" || name == "reltime" )
+        {
+        this->Connection->DataTypeMap[ oid ] = ( len == 4 ? VTK_TYPE_INT32 : VTK_TYPE_INT64 );
+        }
+      else if ( name == "text" )
+        {
+        this->Connection->DataTypeMap[ oid ] = VTK_STRING;
+        }
+      } // done looping over rows
+    } // done with "query is successful"
+  typeQuery->Delete();
+} 
+      

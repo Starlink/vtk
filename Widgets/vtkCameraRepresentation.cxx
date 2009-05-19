@@ -30,7 +30,7 @@
 #include "vtkTransformPolyDataFilter.h"
 
 
-vtkCxxRevisionMacro(vtkCameraRepresentation, "$Revision: 1.4.14.1 $");
+vtkCxxRevisionMacro(vtkCameraRepresentation, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkCameraRepresentation);
 
 vtkCxxSetObjectMacro(vtkCameraRepresentation, Camera, vtkCamera);

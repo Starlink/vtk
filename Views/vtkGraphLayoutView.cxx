@@ -23,6 +23,7 @@
 #include "vtkActor.h"
 #include "vtkActor2D.h"
 #include "vtkAlgorithmOutput.h"
+#include "vtkArcParallelEdgeStrategy.h"
 #include "vtkCamera.h"
 #include "vtkCellData.h"
 #include "vtkCircularLayoutStrategy.h"
@@ -31,9 +32,11 @@
 #include "vtkCommunity2DLayoutStrategy.h"
 #include "vtkConstrained2DLayoutStrategy.h"
 #include "vtkCoordinate.h"
+#include "vtkConvertSelection.h"
 #include "vtkDataRepresentation.h"
 #include "vtkDynamic2DLabelMapper.h"
 #include "vtkEdgeCenters.h"
+#include "vtkEdgeLayout.h"
 #include "vtkExtractSelectedGraph.h"
 #include "vtkFast2DLayoutStrategy.h"
 #include "vtkForceDirectedLayoutStrategy.h"
@@ -47,6 +50,8 @@
 #include "vtkLookupTable.h"
 #include "vtkObjectFactory.h"
 #include "vtkPassThroughLayoutStrategy.h"
+#include "vtkPassThroughEdgeStrategy.h"
+#include "vtkPerturbCoincidentVertices.h"
 #include "vtkPointData.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkProperty.h"
@@ -54,18 +59,21 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkScalarBarActor.h"
+#include "vtkScalarBarWidget.h"
 #include "vtkSelection.h"
 #include "vtkSelectionLink.h"
+#include "vtkSelectionNode.h"
 #include "vtkSimple2DLayoutStrategy.h"
 #include "vtkTextProperty.h"
 #include "vtkVertexDegree.h"
 #include "vtkVertexGlyphFilter.h"
 #include "vtkViewTheme.h"
-#include "vtkVisibleCellSelector.h"
+#include "vtkHardwareSelector.h"
 
 #include <ctype.h> // for tolower()
 
-vtkCxxRevisionMacro(vtkGraphLayoutView, "$Revision: 1.28 $");
+vtkCxxRevisionMacro(vtkGraphLayoutView, "$Revision: 1.52 $");
 vtkStandardNewMacro(vtkGraphLayoutView);
 //----------------------------------------------------------------------------
 vtkGraphLayoutView::vtkGraphLayoutView()
@@ -81,6 +89,10 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   this->ForceDirectedStrategy  = vtkSmartPointer<vtkForceDirectedLayoutStrategy>::New();
   this->PassThroughStrategy    = vtkSmartPointer<vtkPassThroughLayoutStrategy>::New();
   this->CircularStrategy       = vtkSmartPointer<vtkCircularLayoutStrategy>::New();
+  this->EdgeLayout             = vtkSmartPointer<vtkEdgeLayout>::New();
+  this->ArcParallelStrategy    = vtkSmartPointer<vtkArcParallelEdgeStrategy>::New();
+  this->PassThroughEdgeStrategy = vtkSmartPointer<vtkPassThroughEdgeStrategy>::New();
+  this->PerturbCoincidentVertices = vtkSmartPointer<vtkPerturbCoincidentVertices>::New();
   this->VertexDegree           = vtkSmartPointer<vtkVertexDegree>::New();
   this->EdgeCenters            = vtkSmartPointer<vtkEdgeCenters>::New();
   this->GraphMapper            = vtkSmartPointer<vtkGraphMapper>::New();
@@ -89,14 +101,19 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   this->VertexLabelActor       = vtkSmartPointer<vtkActor2D>::New();
   this->EdgeLabelMapper        = vtkSmartPointer<vtkDynamic2DLabelMapper>::New();
   this->EdgeLabelActor         = vtkSmartPointer<vtkActor2D>::New();
-  this->VisibleCellSelector    = vtkSmartPointer<vtkVisibleCellSelector>::New();
+  this->HardwareSelector       = vtkSmartPointer<vtkHardwareSelector>::New();
   this->KdTreeSelector         = vtkSmartPointer<vtkKdTreeSelector>::New();
   this->ExtractSelectedGraph   = vtkSmartPointer<vtkExtractSelectedGraph>::New();
   this->SelectedGraphMapper    = vtkSmartPointer<vtkGraphMapper>::New();
   this->SelectedGraphActor     = vtkSmartPointer<vtkActor>::New();
+  this->VertexScalarBar        = vtkSmartPointer<vtkScalarBarWidget>::New();
+  this->EdgeScalarBar          = vtkSmartPointer<vtkScalarBarWidget>::New();
+  this->EdgeSelectionPoly      = vtkSmartPointer<vtkGraphToPolyData>::New();
+  this->EdgeSelectionMapper    = vtkSmartPointer<vtkPolyDataMapper>::New();
+  this->EdgeSelectionActor     = vtkSmartPointer<vtkActor>::New();
   
   this->LayoutStrategyNameInternal = 0;
-  this->SelectionArrayNameInternal = 0;
+  this->EdgeLayoutStrategyNameInternal = 0;
   this->IconArrayNameInternal = 0;
   
   // Replace the interactor style.
@@ -106,7 +123,7 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   
   // Setup view
   this->Renderer->GetActiveCamera()->ParallelProjectionOn();
-  this->InteractorStyle->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
+  //this->InteractorStyle->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
   this->Coordinate->SetCoordinateSystemToDisplay();
   
   // Setup parameters on the various mappers and actors
@@ -125,11 +142,14 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   this->EdgeLabelMapper->GetLabelTextProperty()->SetVerticalJustificationToCentered();
   this->EdgeLabelMapper->GetLabelTextProperty()->SetFontSize(10);
   this->EdgeLabelMapper->GetLabelTextProperty()->SetItalic(0);
-  this->EdgeLabelMapper->GetLabelTextProperty()->SetLineOffset(-10);
   this->EdgeLabelActor->PickableOff();
   this->SelectedGraphActor->PickableOff();
   this->SelectedGraphActor->SetPosition(0, 0, -0.01);
   this->SelectedGraphMapper->SetScalarVisibility(false);
+  this->VertexScalarBar->GetScalarBarActor()->SetLookupTable(
+      this->GraphMapper->GetVertexLookupTable());
+  this->EdgeScalarBar->GetScalarBarActor()->SetLookupTable(
+      this->GraphMapper->GetEdgeLookupTable());
   
   // Set default parameters
   this->SetVertexLabelArrayName("label");
@@ -139,8 +159,15 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   this->SetVertexColorArrayName("VertexDegree");
   this->ColorVerticesOff();
   this->SetEdgeColorArrayName("weight");
+  this->SetEnabledEdgesArrayName("weight");
+  this->SetEnabledVerticesArrayName("label");
   this->ColorEdgesOff();
+  this->SetEnableEdgesByArray(false);
+  this->SetEnableVerticesByArray(false);
+  this->EdgeLayoutStrategy   = 0;
+  this->EdgeLayoutPreference = this->ArcParallelStrategy;
   this->SetLayoutStrategyToFast2D();
+  this->SetEdgeLayoutStrategyToArcParallel();
   
   // Apply default theme
   vtkViewTheme* theme = vtkViewTheme::New();
@@ -148,8 +175,12 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   theme->Delete();
   
   // Connect pipeline
-  this->VertexDegree->SetInputConnection(this->GraphLayout->GetOutputPort());
+  this->PerturbCoincidentVertices->SetInputConnection(this->GraphLayout->GetOutputPort());
+  this->EdgeLayout->SetInputConnection(this->PerturbCoincidentVertices->GetOutputPort());
+  this->VertexDegree->SetInputConnection(this->EdgeLayout->GetOutputPort());
   
+  //this->PerturbCoincidentVertices->SetInputConnection(this->VertexDegree->GetOutputPort());
+  //this->GraphMapper->SetInputConnection(this->PerturbCoincidentVertices->GetOutputPort());
   this->GraphMapper->SetInputConnection(this->VertexDegree->GetOutputPort());
   this->GraphActor->SetMapper(this->GraphMapper);
   this->VertexLabelMapper->SetInputConnection(this->VertexDegree->GetOutputPort());
@@ -159,17 +190,33 @@ vtkGraphLayoutView::vtkGraphLayoutView()
   this->EdgeLabelActor->SetMapper(this->EdgeLabelMapper);
 
   this->KdTreeSelector->SetInputConnection(this->GraphLayout->GetOutputPort());
-  this->ExtractSelectedGraph->SetInputConnection(0, this->GraphLayout->GetOutputPort());
-  vtkSelection* empty = vtkSelection::New();
-  empty->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::INDICES);
-  vtkIdTypeArray* arr = vtkIdTypeArray::New();
-  empty->SetSelectionList(arr);
-  arr->Delete();
+  this->ExtractSelectedGraph->SetInputConnection(0, this->EdgeLayout->GetOutputPort());
+  vtkSmartPointer<vtkSelection> empty = vtkSmartPointer<vtkSelection>::New();
+  vtkSmartPointer<vtkSelectionNode> emptyNode = vtkSmartPointer<vtkSelectionNode>::New();
+  emptyNode->SetContentType(vtkSelectionNode::INDICES);
+  vtkSmartPointer<vtkIdTypeArray> arr = vtkSmartPointer<vtkIdTypeArray>::New();
+  emptyNode->SetSelectionList(arr);
+  empty->AddNode(emptyNode);
   this->ExtractSelectedGraph->SetInput(1, empty);
-  empty->Delete();
   
   this->SelectedGraphMapper->SetInputConnection(this->ExtractSelectedGraph->GetOutputPort());
   this->SelectedGraphActor->SetMapper(this->SelectedGraphMapper);
+
+  // An actor that just draws edges used for edge selection.
+  this->EdgeSelectionPoly->SetInputConnection(this->VertexDegree->GetOutputPort());
+  this->EdgeSelectionMapper->SetInputConnection(this->EdgeSelectionPoly->GetOutputPort());
+  this->EdgeSelectionActor->SetMapper(this->EdgeSelectionMapper);
+  this->EdgeSelectionActor->VisibilityOff();
+
+  // Register for progress.
+  this->RegisterProgress(this->GraphLayout);
+  this->RegisterProgress(this->EdgeLayout);
+  this->RegisterProgress(this->GraphMapper);
+  this->RegisterProgress(this->VertexLabelMapper);
+  this->RegisterProgress(this->EdgeLabelMapper);
+  this->RegisterProgress(this->ExtractSelectedGraph);
+  this->RegisterProgress(this->SelectedGraphMapper);
+  this->RegisterProgress(this->EdgeCenters);
 }
 
 //----------------------------------------------------------------------------
@@ -179,11 +226,23 @@ vtkGraphLayoutView::~vtkGraphLayoutView()
   // Note: All of the smartpointer objects 
   //       will be deleted for us
     
-  vtkGraphLayoutStrategy *nothing = 0;
-  this->SetLayoutStrategy(nothing);
+  vtkGraphLayoutStrategy *nullGraphLayout = 0;
+  this->SetLayoutStrategy(nullGraphLayout);
+  vtkEdgeLayoutStrategy *nullEdgeLayout = 0;
+  this->SetEdgeLayoutStrategy(nullEdgeLayout);
   this->SetLayoutStrategyNameInternal(0);
-  this->SetSelectionArrayNameInternal(0);
+  this->SetEdgeLayoutStrategyNameInternal(0);
   this->SetIconArrayNameInternal(0);
+
+  // UnRegister for progress.
+  this->UnRegisterProgress(this->GraphLayout);
+  this->UnRegisterProgress(this->EdgeLayout);
+  this->UnRegisterProgress(this->GraphMapper);
+  this->UnRegisterProgress(this->VertexLabelMapper);
+  this->UnRegisterProgress(this->EdgeLabelMapper);
+  this->UnRegisterProgress(this->ExtractSelectedGraph);
+  this->UnRegisterProgress(this->SelectedGraphMapper);
+  this->UnRegisterProgress(this->EdgeCenters);
 }
 
 //----------------------------------------------------------------------------
@@ -262,6 +321,7 @@ void vtkGraphLayoutView::EdgeLabelVisibilityOff()
 void vtkGraphLayoutView::SetVertexColorArrayName(const char* name)
 {
   this->GraphMapper->SetVertexColorArrayName(name);
+  this->VertexScalarBar->GetScalarBarActor()->SetTitle(name);
 }
 
 //----------------------------------------------------------------------------
@@ -295,9 +355,16 @@ void vtkGraphLayoutView::ColorVerticesOff()
 }
 
 //----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetVertexScalarBarVisibility(bool vis)
+{
+  this->VertexScalarBar->SetEnabled(vis);
+}
+
+//----------------------------------------------------------------------------
 void vtkGraphLayoutView::SetEdgeColorArrayName(const char* name)
 {
   this->GraphMapper->SetEdgeColorArrayName(name);
+  this->EdgeScalarBar->GetScalarBarActor()->SetTitle(name);
 }
 
 //----------------------------------------------------------------------------
@@ -331,6 +398,60 @@ void vtkGraphLayoutView::ColorEdgesOff()
 }
 
 //----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEdgeScalarBarVisibility(bool vis)
+{
+  this->EdgeScalarBar->SetEnabled(vis);
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEnabledEdgesArrayName(const char* name)
+{
+  this->GraphMapper->SetEnabledEdgesArrayName(name);
+}
+
+//----------------------------------------------------------------------------
+const char* vtkGraphLayoutView::GetEnabledEdgesArrayName()
+{
+  return this->GraphMapper->GetEnabledEdgesArrayName();
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEnableEdgesByArray(bool vis)
+{
+  this->GraphMapper->SetEnableEdgesByArray(vis);
+}
+
+//----------------------------------------------------------------------------
+int vtkGraphLayoutView::GetEnableEdgesByArray()
+{
+  return this->GraphMapper->GetEnableEdgesByArray();
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEnabledVerticesArrayName(const char* name)
+{
+  this->GraphMapper->SetEnabledVerticesArrayName(name);
+}
+
+//----------------------------------------------------------------------------
+const char* vtkGraphLayoutView::GetEnabledVerticesArrayName()
+{
+  return this->GraphMapper->GetEnabledVerticesArrayName();
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEnableVerticesByArray(bool vis)
+{
+  this->GraphMapper->SetEnableVerticesByArray(vis);
+}
+
+//----------------------------------------------------------------------------
+int vtkGraphLayoutView::GetEnableVerticesByArray()
+{
+  return this->GraphMapper->GetEnableVerticesByArray();
+}
+
+//----------------------------------------------------------------------------
 void vtkGraphLayoutView::SetScaledGlyphs(bool arg)
 {
   this->GraphMapper->SetScaledGlyphs(arg);
@@ -353,19 +474,6 @@ void vtkGraphLayoutView::SetScalingArrayName(const char* name)
 const char* vtkGraphLayoutView::GetScalingArrayName()
 {
   return this->GraphMapper->GetScalingArrayName();
-}
-
-//----------------------------------------------------------------------------
-void vtkGraphLayoutView::SetSelectionArrayName(const char* name)
-{
-  this->SetSelectionArrayNameInternal(name);
-  this->KdTreeSelector->SetSelectionFieldName(name);
-}
-
-//----------------------------------------------------------------------------
-const char* vtkGraphLayoutView::GetSelectionArrayName()
-{
-  return this->GetSelectionArrayNameInternal();
 }
 
 //----------------------------------------------------------------------------
@@ -426,6 +534,18 @@ void vtkGraphLayoutView::UpdateLayout()
 //----------------------------------------------------------------------------
 void vtkGraphLayoutView::SetLayoutStrategy(vtkGraphLayoutStrategy *s)
 {
+  // Set the edge layout to pass through if the graph layout is.
+  if(vtkPassThroughLayoutStrategy::SafeDownCast(s))
+    {
+    this->EdgeLayoutPreference = this->EdgeLayoutStrategy;
+    this->SetEdgeLayoutStrategy("passthrough");
+    }
+  else if(this->EdgeLayoutStrategy != this->EdgeLayoutPreference)
+    {
+    // Otherwise, set it to whatever our preferred strategy is
+    this->SetEdgeLayoutStrategy(this->EdgeLayoutPreference);
+    }
+
   this->LayoutStrategy = s;
   this->GraphLayout->SetLayoutStrategy(this->LayoutStrategy);
 }
@@ -497,8 +617,89 @@ void vtkGraphLayoutView::SetLayoutStrategy(const char* name)
     vtkErrorMacro("Unknown strategy " << name << " (" << str << ").");
     return;
     }
+
+  // Set the edge layout to pass through if the graph layout is.
+  if(vtkPassThroughLayoutStrategy::SafeDownCast(this->LayoutStrategy))
+    {
+    this->EdgeLayoutPreference = this->EdgeLayoutStrategy;
+    this->SetEdgeLayoutStrategy("passthrough");
+    }
+  else if(this->EdgeLayoutStrategy != this->EdgeLayoutPreference)
+    {
+    // Otherwise, set it to whatever our preferred strategy is
+    this->SetEdgeLayoutStrategy(this->EdgeLayoutPreference);
+    }
+
   this->GraphLayout->SetLayoutStrategy(this->LayoutStrategy);
   this->SetLayoutStrategyNameInternal(name);
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEdgeLayoutStrategy(vtkEdgeLayoutStrategy *s)
+{
+  // If our graph layout strategy is PassThrough, just store this edge
+  // layout strategy for later
+  if(vtkPassThroughLayoutStrategy::SafeDownCast(this->LayoutStrategy))
+    {
+    this->EdgeLayoutPreference = s;
+    return;
+    }
+
+  this->EdgeLayoutStrategy = s;
+  this->EdgeLayout->SetLayoutStrategy(this->EdgeLayoutStrategy);
+}
+
+//----------------------------------------------------------------------------
+void vtkGraphLayoutView::SetEdgeLayoutStrategy(const char* name)
+{
+  this->EdgeLayoutStrategy = this->ArcParallelStrategy;
+  if (!name)
+    {
+    return;
+    }
+  
+  // Take out spaces and make lowercase.
+  char str[20];
+  strncpy(str, name, 20);
+  int pos = 0;
+  for (int i = 0; str[i] != '\0' && i < 20; i++, pos++)
+    {
+    if (str[i] == ' ')
+      {
+      pos--;
+      }
+    else
+      {
+      str[pos] = tolower(str[i]);
+      }
+    }
+  str[pos] = '\0';
+  
+  if (!strcmp(str, "arcparallel"))
+    {
+    this->EdgeLayoutStrategy = this->ArcParallelStrategy;
+    }
+  else if (!strcmp(str, "passthrough"))
+    {
+    this->EdgeLayoutStrategy = this->PassThroughEdgeStrategy;
+    }
+  else
+    {
+    vtkErrorMacro("Unknown strategy " << name << " (" << str << ").");
+    return;
+    }
+
+  // If our graph layout strategy is PassThrough, just store this edge
+  // layout strategy for later
+  if(vtkPassThroughLayoutStrategy::SafeDownCast(this->LayoutStrategy))
+    {
+    this->EdgeLayoutPreference = this->EdgeLayoutStrategy;
+    this->EdgeLayoutStrategy = this->PassThroughEdgeStrategy;
+    return;
+    }
+
+  this->EdgeLayout->SetLayoutStrategy(this->EdgeLayoutStrategy);
+  this->SetEdgeLayoutStrategyNameInternal(name);
 }
 
 //----------------------------------------------------------------------------
@@ -555,19 +756,29 @@ void vtkGraphLayoutView::SetupRenderWindow(vtkRenderWindow* win)
 {
   this->Superclass::SetupRenderWindow(win);
   win->GetInteractor()->SetInteractorStyle(this->InteractorStyle);
+  this->VertexScalarBar->SetInteractor(win->GetInteractor());
+  this->EdgeScalarBar->SetInteractor(win->GetInteractor());
 }
 
 //----------------------------------------------------------------------------
-void vtkGraphLayoutView::AddInputConnection(vtkAlgorithmOutput* conn)
+void vtkGraphLayoutView::AddInputConnection( int port, int item,
+  vtkAlgorithmOutput* conn, vtkAlgorithmOutput* selectionConn)
 {
-  if (this->GraphLayout->GetNumberOfInputConnections(0) == 0)
+  if( port != 0 || item != 0 )
+  {
+    vtkErrorMacro("This view only supports one representation.");
+    return;
+  }
+  else if (this->GraphLayout->GetNumberOfInputConnections(0) == 0)
     {
     this->GraphLayout->SetInputConnection(conn);
+    this->ExtractSelectedGraph->SetInputConnection(1, selectionConn);
   
     this->Renderer->AddActor(this->GraphActor);
     this->Renderer->AddActor(this->SelectedGraphActor);
     this->Renderer->AddActor(this->VertexLabelActor);
     this->Renderer->AddActor(this->EdgeLabelActor);
+    this->Renderer->AddActor(this->EdgeSelectionActor);
     }
   else
     {
@@ -577,24 +788,26 @@ void vtkGraphLayoutView::AddInputConnection(vtkAlgorithmOutput* conn)
 }
 
 //----------------------------------------------------------------------------
-void vtkGraphLayoutView::RemoveInputConnection(vtkAlgorithmOutput* conn)
+void vtkGraphLayoutView::RemoveInputConnection( int port, int item,
+  vtkAlgorithmOutput* conn, vtkAlgorithmOutput* selectionConn)
 {
+  if( port != 0 || item != 0 )
+    {
+    vtkErrorMacro("This view only supports one representation.");
+    }
+
   if (this->GraphLayout->GetNumberOfInputConnections(0) > 0 &&
       this->GraphLayout->GetInputConnection(0, 0) == conn)
     {
     this->GraphLayout->RemoveInputConnection(0, conn);
+    this->ExtractSelectedGraph->RemoveInputConnection(1, selectionConn);
   
     this->Renderer->RemoveActor(this->GraphActor);
     this->Renderer->RemoveActor(this->SelectedGraphActor);
     this->Renderer->RemoveActor(this->VertexLabelActor);
     this->Renderer->RemoveActor(this->EdgeLabelActor);
+    this->Renderer->RemoveActor(this->EdgeSelectionActor);
     }
-}
-
-//----------------------------------------------------------------------------
-void vtkGraphLayoutView::SetSelectionLink(vtkSelectionLink* link)
-{
-  this->ExtractSelectedGraph->SetInputConnection(1, link->GetOutputPort());
 }
 
 //----------------------------------------------------------------------------
@@ -661,71 +874,82 @@ void vtkGraphLayoutView::ProcessEvents(
     double dist2 = radiusX*radiusX + radiusY*radiusY;
     this->KdTreeSelector->SetSingleSelectionThreshold(dist2);
     this->KdTreeSelector->Update();
-    vtkSelection* selection = this->KdTreeSelector->GetOutput();
-    selection->Register(0);
-    
-    // FIXME: Selection on edges needs to be supported.
-#if 0
-    // If the selection is empty, do a visible cell selection
-    // to attempt to pick up an edge.
-    vtkAbstractArray* list = selection->GetSelectionList();
-    if (list && (list->GetNumberOfTuples() == 0))
+    vtkSelection* kdSelection = this->KdTreeSelector->GetOutput();
+
+    // Convert to the proper selection type.
+    this->GraphLayout->Update();
+    vtkGraph* data = vtkGraph::SafeDownCast(this->GraphLayout->GetOutput());
+    vtkSmartPointer<vtkSelection> vertexSelection;
+    vertexSelection.TakeReference(vtkConvertSelection::ToSelectionType(
+      kdSelection, data, this->SelectionType, this->SelectionArrayNames));
+
+    vtkSmartPointer<vtkSelection> selection = vtkSmartPointer<vtkSelection>::New();
+    selection = vertexSelection;
+    if (kdSelection->GetNode(0)->GetSelectionList()->GetNumberOfTuples() == 0)
       {
-      // The edge actor must be opaque for visible cell selector.
-      double opacity = this->EdgeActor->GetProperty()->GetOpacity();
-      this->EdgeActor->GetProperty()->SetOpacity(1);
+      // If we didn't find any vertices, perform edge selection.
+      // The edge actor must be opaque for visible cell selection
+      this->EdgeSelectionActor->VisibilityOn();
       
       unsigned int screenMinX = pos1X < pos2X ? pos1X : pos2X;
       unsigned int screenMaxX = pos1X < pos2X ? pos2X : pos1X;
       unsigned int screenMinY = pos1Y < pos2Y ? pos1Y : pos2Y;
       unsigned int screenMaxY = pos1Y < pos2Y ? pos2Y : pos1Y;
-      this->VisibleCellSelector->SetRenderer(this->Renderer);
-      this->VisibleCellSelector->SetArea(screenMinX, screenMinY, screenMaxX, screenMaxY);
-      this->VisibleCellSelector->SetProcessorId(0);
-      this->VisibleCellSelector->SetRenderPasses(0, 0, 0, 0, 1);
-      this->VisibleCellSelector->Select();  
-      vtkIdTypeArray* ids = vtkIdTypeArray::New();
-      this->VisibleCellSelector->GetSelectedIds(ids);
-      
-      // Set the opacity back to the original value.
-      this->EdgeActor->GetProperty()->SetOpacity(opacity);
-      
-      vtkIdTypeArray* selectedIds = vtkIdTypeArray::New();
-      vtkGraph* graph = this->GraphLayout->GetOutput();
-      for (vtkIdType i = 0; i < ids->GetNumberOfTuples(); i++)
+      this->HardwareSelector->SetRenderer(this->Renderer);
+      this->HardwareSelector->SetArea(screenMinX, screenMinY, screenMaxX, screenMaxY);
+      this->HardwareSelector->SetFieldAssociation(
+        vtkDataObject::FIELD_ASSOCIATION_CELLS);
+      vtkSmartPointer<vtkSelection> sel;
+      sel.TakeReference(this->HardwareSelector->Select());
+      vtkSmartPointer<vtkIdTypeArray> ids;
+      if (sel)
         {
-        vtkIdType edge = ids->GetValue(4*i+3);
-        vtkIdType source = graph->GetSourceVertex(edge);
-        vtkIdType target = graph->GetTargetVertex(edge);
-        selectedIds->InsertNextValue(source);
-        selectedIds->InsertNextValue(target);
+        vtkSelectionNode* node = sel->GetNode(0);
+        ids = node ? vtkIdTypeArray::SafeDownCast(node->GetSelectionList()) : 0;
+        }
+
+      // Turn off the special edge actor
+      this->EdgeSelectionActor->VisibilityOff();
+      
+      vtkSmartPointer<vtkIdTypeArray> selectedIds = vtkSmartPointer<vtkIdTypeArray>::New();
+      for (vtkIdType i = 0; ids && (i < ids->GetNumberOfTuples()); i++)
+        {
+        vtkIdType edge = ids->GetValue(i);
+        selectedIds->InsertNextValue(edge);
         if (singleSelectMode)
           {
           break;
           }
         }
       
-      selection->Delete();
-      selection = vtkSelection::New();
-      selection->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::INDICES);
-      selection->GetProperties()->Set(vtkSelection::FIELD_TYPE(), vtkSelection::POINT);
-      selection->SetSelectionList(selectedIds);
-      ids->Delete();
-      selectedIds->Delete();      
+      vtkSmartPointer<vtkSelection> edgeIndexSelection = vtkSmartPointer<vtkSelection>::New();
+      vtkSmartPointer<vtkSelectionNode> edgeIndexSelectionNode = vtkSmartPointer<vtkSelectionNode>::New();
+      edgeIndexSelection->AddNode(edgeIndexSelectionNode);
+      edgeIndexSelectionNode->SetContentType(vtkSelectionNode::INDICES);
+      edgeIndexSelectionNode->SetFieldType(vtkSelectionNode::EDGE);
+      edgeIndexSelectionNode->SetSelectionList(selectedIds);
+
+      // Convert to the proper selection type.
+      vtkSmartPointer<vtkSelection> edgeSelection;
+      edgeSelection.TakeReference(vtkConvertSelection::ToSelectionType(
+        edgeIndexSelection, data, this->SelectionType, this->SelectionArrayNames));
+
+      if (edgeIndexSelectionNode->GetSelectionList()->GetNumberOfTuples() > 0)
+        {
+        selection = edgeSelection;
+        }
       }
-#endif
-    
+
     // If this is a union selection, append the selection
     if (rect[4] == vtkInteractorStyleRubberBand2D::SELECT_UNION)
       {
-      vtkSelection* oldSelection = this->GetRepresentation()->GetSelectionLink()->GetSelection();
+      vtkSelection* oldSelection =
+        this->GetRepresentation()->GetSelectionLink()->GetSelection();
       selection->Union(oldSelection);
       }
-    
+  
     // Call select on the representation(s)
     this->GetRepresentation()->Select(this, selection);
-    
-    selection->Delete();
     }
   else
     {
@@ -747,15 +971,10 @@ void vtkGraphLayoutView::PrepareForRendering()
   vtkAlgorithmOutput* conn = rep->GetInputConnection();
   if (this->GraphLayout->GetInputConnection(0, 0) != conn)
     {
-    this->RemoveInputConnection(this->GraphLayout->GetInputConnection(0, 0));
-    this->AddInputConnection(conn);
-    }
-  
-  // Make sure the selection link is up to date.
-  vtkSelectionLink* link = rep->GetSelectionLink();
-  if (this->ExtractSelectedGraph->GetInputConnection(1, 0)->GetProducer() != link)
-    {
-    this->SetSelectionLink(link);
+      this->RemoveInputConnection( 0, 0,
+      this->GraphLayout->GetInputConnection(0, 0),
+      this->ExtractSelectedGraph->GetInputConnection(1, 0));
+    this->AddInputConnection(0, 0, conn, rep->GetSelectionConnection());
     }
   
   this->Superclass::PrepareForRendering();
@@ -778,12 +997,7 @@ void vtkGraphLayoutView::ApplyViewTheme(vtkViewTheme* theme)
     
   // Pass theme to the graph mapper
   this->GraphMapper->ApplyViewTheme(theme);
-  
-  // Set vertex size and edge size on mapper
-  this->GraphMapper->SetVertexPointSize(theme->GetPointSize());
-  this->GraphMapper->SetEdgeLineWidth(theme->GetLineWidth());
-  
-  
+    
   // Pull selection info from theme, create a new theme, 
   // and pass to the selection graph mapper
   vtkViewTheme *selectTheme = vtkViewTheme::New();
@@ -859,8 +1073,8 @@ void vtkGraphLayoutView::PrintSelf(ostream& os, vtkIndent indent)
   this->EdgeLabelMapper->PrintSelf(os, indent.GetNextIndent());
   os << indent << "KdTreeSelector: " << endl;
   this->KdTreeSelector->PrintSelf(os, indent.GetNextIndent());
-  os << indent << "VisibleCellSelector: " << endl;
-  this->VisibleCellSelector->PrintSelf(os, indent.GetNextIndent());
+  os << indent << "HardwareSelector: " << endl;
+  this->HardwareSelector->PrintSelf(os, indent.GetNextIndent());
   os << indent << "ExtractSelectedGraph: " << endl;
   this->ExtractSelectedGraph->PrintSelf(os, indent.GetNextIndent());
   os << indent << "LayoutStrategyName: "
@@ -870,6 +1084,12 @@ void vtkGraphLayoutView::PrintSelf(ostream& os, vtkIndent indent)
   if (this->LayoutStrategy)
     {
     this->LayoutStrategy->PrintSelf(os, indent.GetNextIndent());   
+    }
+  os << indent << "EdgeLayoutStrategy: " 
+     << (this->EdgeLayoutStrategy ? "" : "(none)") << endl;
+  if (this->EdgeLayoutStrategy)
+    {
+    this->EdgeLayoutStrategy->PrintSelf(os, indent.GetNextIndent());   
     }
   if (this->GetRepresentation())
     {

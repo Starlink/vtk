@@ -39,9 +39,23 @@ class QVTKInteractor;
 #include <vtkRenderWindowInteractor.h>
 #include <vtkCommand.h>
 #include <vtkConfigure.h>
+#include <vtkToolkits.h>
 class vtkImageData;
 
-#if defined(Q_WS_MAC) && QT_VERSION >= 0x040000
+#if defined(Q_WS_MAC)
+# if defined(QT_MAC_USE_COCOA) && defined(VTK_USE_COCOA)
+#  define QVTK_USE_COCOA
+# elif !defined(QT_MAC_USE_COCOA) && defined(VTK_USE_CARBON)
+#  define QVTK_USE_CARBON
+# elif defined(VTK_USE_COCOA)
+#  error "VTK configured to use Cocoa, but Qt configured to use Carbon"
+# elif defined(VTK_USE_CARBON)
+#  error "VTK configured to use Carbon, but Qt configured to use Cocoa"
+# endif
+#endif
+
+
+#if defined(QVTK_USE_CARBON) && QT_VERSION >= 0x040000
 #include <Carbon/Carbon.h>    // Event handling for dirty region
 #endif
 
@@ -209,13 +223,13 @@ protected:
   // that VTK chooses
   void x11_setup_window();
 
-#if defined(Q_WS_MAC) && QT_VERSION < 0x040000
+#if defined(QVTK_USE_CARBON) && QT_VERSION < 0x040000
   void macFixRect();
   virtual void setRegionDirty(bool);
   virtual void macWidgetChangedWindow();
 #endif    
 
-#if defined(Q_WS_MAC) && QT_VERSION >= 0x040000
+#if defined(QVTK_USE_CARBON) && QT_VERSION >= 0x040000
   EventHandlerUPP DirtyRegionHandlerUPP;
   EventHandlerRef DirtyRegionHandler;
   static OSStatus DirtyRegionProcessor(EventHandlerCallRef er, EventRef event, void*);
@@ -261,6 +275,7 @@ public:
   // Overloaded start method does nothing.
   // Use qApp->exec() instead.
   virtual void Start();
+  virtual void Initialize();
  
 public @Q_SLOTS@:
 // timer event slot

@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// This tests vtkVisibleCellSelector, vtkExtractSelectedFrustum, 
+// This tests vtkHardwareSelector, vtkExtractSelectedFrustum, 
 // vtkRenderedAreaPicker, and vtkInteractorStyleRubberBandPick.
 // 
 // The command line arguments are:
@@ -30,8 +30,9 @@
 #include "vtkActor.h"
 #include "vtkInteractorStyleRubberBandPick.h"
 #include "vtkCallbackCommand.h"
-#include "vtkVisibleCellSelector.h"
+#include "vtkHardwareSelector.h"
 #include "vtkSelection.h"
+#include "vtkSelectionNode.h"
 #include "vtkExtractSelectedPolyDataIds.h"
 #include "vtkIdTypeArray.h"
 #include "vtkRenderedAreaPicker.h"
@@ -40,19 +41,23 @@
 #include "vtkImageActor.h"
 #include "vtkExtractSelectedFrustum.h"
 #include "vtkDataSetMapper.h"
+#include "vtkSmartPointer.h"
 
 #include "vtkDataSetReader.h"
 
-vtkRenderer *renderer = NULL;
-vtkSphereSource* SS1 = NULL;
-vtkDataSetMapper* sMap = NULL;
-vtkPolyData* emptyPD = NULL;
+vtkSmartPointer<vtkRenderer> renderer;
+vtkSmartPointer<vtkSphereSource> SS1;
+vtkSmartPointer<vtkDataSetMapper> sMap;
+vtkSmartPointer<vtkPolyData> emptyPD;
+
+#define MY_CREATE_NEW(class, variable)\
+  vtkSmartPointer<class> variable = vtkSmartPointer<class>::New();
 
 static void EndPick(vtkObject *vtkNotUsed( caller ),
                     unsigned long vtkNotUsed(eventId), 
                     void *, void *)
 {
-  vtkVisibleCellSelector *sel = vtkVisibleCellSelector::New();
+  MY_CREATE_NEW(vtkHardwareSelector, sel);
   sel->SetRenderer(renderer);
 
   double x0 = renderer->GetPickX1();
@@ -60,12 +65,15 @@ static void EndPick(vtkObject *vtkNotUsed( caller ),
   double x1 = renderer->GetPickX2();
   double y1 = renderer->GetPickY2();
 
-  sel->SetRenderPasses(0,1,0,1,1);
   sel->SetArea(static_cast<int>(x0),static_cast<int>(y0),static_cast<int>(x1),
                static_cast<int>(y1));
-  sel->Select();
-  vtkSelection *res = vtkSelection::New();
-  sel->GetSelectedIds(res);
+  vtkSmartPointer<vtkSelection> res;
+  res.TakeReference(sel->Select());
+  if (!res)
+    {
+    cerr << "Selection not supported." << endl;
+    return;
+    }
 
   /*
   cerr << "x0 " << x0 << " y0 " << y0 << "\t";
@@ -77,12 +85,15 @@ static void EndPick(vtkObject *vtkNotUsed( caller ),
   a->Delete();
   */
 
-  vtkSelection *cellids = res->GetChild(0);
-  vtkExtractSelectedPolyDataIds *extr = vtkExtractSelectedPolyDataIds::New();
+  vtkSelectionNode *cellids = res->GetNode(0);
+  MY_CREATE_NEW(vtkExtractSelectedPolyDataIds, extr);
   if (cellids)
     {
     extr->SetInput(0, SS1->GetOutput());
-    extr->SetInput(1, cellids);
+    vtkSmartPointer<vtkSelection> temp=
+      vtkSmartPointer<vtkSelection>::New();
+    temp->AddNode(cellids);
+    extr->SetInput(1, temp);
     extr->Update();
     sMap->SetInput(extr->GetOutput());
     }
@@ -92,19 +103,15 @@ static void EndPick(vtkObject *vtkNotUsed( caller ),
     cerr << "Check display color depth. Must be at least 24 bit." << endl;
     sMap->SetInput(emptyPD);
     }
-
-  sel->Delete();
-  res->Delete();
-  extr->Delete();
 }
 
 int TestAreaSelections(int argc, char* argv[])
 {
   // Standard rendering classes
-  renderer = vtkRenderer::New();
-  vtkRenderWindow *renWin = vtkRenderWindow::New();
+  renderer = vtkSmartPointer<vtkRenderer>::New();
+  MY_CREATE_NEW(vtkRenderWindow, renWin);
   renWin->AddRenderer(renderer);
-  vtkRenderWindowInteractor *iren = vtkRenderWindowInteractor::New();
+  MY_CREATE_NEW(vtkRenderWindowInteractor, iren);
   iren->SetRenderWindow(renWin);  
 
   //set up the view
@@ -116,80 +123,88 @@ int TestAreaSelections(int argc, char* argv[])
 
   //use the rubber band pick interactor style
   vtkRenderWindowInteractor* rwi = renWin->GetInteractor();
-  vtkInteractorStyleRubberBandPick *rbp = 
-    vtkInteractorStyleRubberBandPick::New();
+  MY_CREATE_NEW(vtkInteractorStyleRubberBandPick, rbp);
   rwi->SetInteractorStyle(rbp);
 
-  vtkRenderedAreaPicker *areaPicker = vtkRenderedAreaPicker::New();
+  MY_CREATE_NEW(vtkRenderedAreaPicker, areaPicker);
   rwi->SetPicker(areaPicker);
 
   ////////////////////////////////////////////////////////////
   //Create a unstructured grid data source to test FrustumExtractor with.
-  vtkDataSetReader *reader = vtkDataSetReader::New();
+  MY_CREATE_NEW(vtkDataSetReader, reader);
   char *cfname=vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/SampleStructGrid.vtk");
   reader->SetFileName(cfname);
+  delete [] cfname;
   
-  vtkDataSetMapper *map1 = vtkDataSetMapper::New();
+  MY_CREATE_NEW(vtkDataSetMapper, map1);
   map1->SetInput(reader->GetOutput());
 
-  vtkActor *act1 = vtkActor::New();
+  MY_CREATE_NEW(vtkActor, act1);
   act1->SetMapper(map1);
   act1->PickableOff(); //prevents the visible cell selector from trying
   renderer->AddActor(act1);
 
   //frustum extractor works on geometry and doesn't care about pickability
-  vtkExtractSelectedFrustum *extractor = vtkExtractSelectedFrustum::New();
+  MY_CREATE_NEW(vtkExtractSelectedFrustum, extractor);
   extractor->SetInputConnection(reader->GetOutputPort());
   extractor->PreserveTopologyOff();
   extractor->SetFrustum(areaPicker->GetFrustum());
 
-  vtkDataSetMapper *eMap = vtkDataSetMapper::New();
+  MY_CREATE_NEW(vtkDataSetMapper, eMap);
   eMap->SetInput(vtkDataSet::SafeDownCast(extractor->GetOutput()));
 
-  vtkActor *eAct = vtkActor::New();
+  MY_CREATE_NEW(vtkActor, eAct);
   eAct->SetPosition(2,0,0);
   eAct->SetMapper(eMap);
   eAct->PickableOff();
   renderer->AddActor(eAct);
 
   ////////////////////////////////////////////////////////////
-  emptyPD = vtkPolyData::New();
+  emptyPD = vtkSmartPointer<vtkPolyData>::New();
 
   int res = 20;
-  SS1 = vtkSphereSource::New();
+  SS1 = vtkSmartPointer<vtkSphereSource>::New();
   SS1->SetThetaResolution(res);
   SS1->SetPhiResolution(res);
   SS1->SetRadius(0.5);
   SS1->SetCenter(0.5,-1.5,0);
-  vtkPolyDataMapper *map2 = vtkPolyDataMapper::New();
+  MY_CREATE_NEW(vtkPolyDataMapper, map2);
   map2->SetInput(SS1->GetOutput());
   
-  vtkActor* act2 = vtkActor::New();
+  MY_CREATE_NEW(vtkActor, act2);
   act2->SetMapper(map2);
-  act2->PickableOn(); //lets the VisibleCellSelector select in it
+  act2->PickableOn(); //lets the HardwareSelector select in it
   renderer->AddActor(act2);
 
-  sMap = vtkDataSetMapper::New();
+  sMap = vtkSmartPointer<vtkDataSetMapper>::New();
   sMap->SetInput(SS1->GetOutput());
 
-  vtkActor *sAct = vtkActor::New();
+  MY_CREATE_NEW(vtkActor, sAct);
   sAct->SetMapper(sMap);
   sAct->SetPosition(2,0,0);
   sAct->PickableOff();
   renderer->AddActor(sAct);
 
-  //pass pick events to the VisibleCellSelector
-  vtkCallbackCommand *cbc = vtkCallbackCommand::New();
+  //pass pick events to the HardwareSelector
+  MY_CREATE_NEW(vtkCallbackCommand, cbc);
   cbc->SetCallback(EndPick);
   cbc->SetClientData(renderer);
   rwi->AddObserver(vtkCommand::EndPickEvent,cbc);
-  cbc->Delete();
 
   ////////////////////////////////////////////////////////////
 
   //run the test
 
   renWin->Render();
+  int rgba[4];
+  renWin->GetColorBufferSizes(rgba);
+  if (rgba[0] < 8 || rgba[1] < 8 || rgba[2] < 8)
+    {
+    cout <<"Color buffer depth must be atleast 8 bit. Currently: " 
+      << rgba[0] << ", " << rgba[1] << ", " << rgba[2] << endl;
+    return 0;
+    }
+
   areaPicker->AreaPick(51,78,82,273,renderer);
   EndPick(NULL, 0, NULL, NULL);
   renWin->Render();
@@ -200,24 +215,11 @@ int TestAreaSelections(int argc, char* argv[])
     iren->Start();
     }
 
+  renderer = 0;
+  SS1 = 0;
+  sMap = 0;
+  emptyPD = 0;
+
   // Cleanup
-  renderer->Delete();
-  renWin->Delete();
-  iren->Delete();
-  rbp->Delete();
-  areaPicker->Delete();
-  reader->Delete();
-  map1->Delete();
-  act1->Delete();
-  extractor->Delete();
-  eMap->Delete();
-  eAct->Delete();
-  emptyPD->Delete();
-  SS1->Delete();
-  map2->Delete();
-  act2->Delete();
-  sMap->Delete();
-  sAct->Delete();
-  delete [] cfname;
   return !retVal;
 }

@@ -1,36 +1,43 @@
 /*=========================================================================
 
-Program:   Visualization Toolkit
-Module:    $RCSfile: vtkOpenGLRenderWindow.cxx,v $
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: vtkOpenGLRenderWindow.cxx,v $
 
-Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-All rights reserved.
-See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
-This software is distributed WITHOUT ANY WARRANTY; without even
-the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  See the above copyright notice for more information.
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 #include "vtkOpenGLRenderWindow.h"
-#include "vtkOpenGLRenderer.h"
-#include "vtkOpenGLProperty.h"
-#include "vtkOpenGLTexture.h"
-#include "vtkOpenGLCamera.h"
-#include "vtkOpenGLLight.h"
-#include "vtkOpenGLActor.h"
-#include "vtkOpenGLPolyDataMapper.h"
+#include "assert.h"
+#include "vtkFloatArray.h"
+#include "vtkgl.h"
 #include "vtkIdList.h"
 #include "vtkObjectFactory.h"
-#include "vtkFloatArray.h"
-#include "vtkUnsignedCharArray.h"
-#include "assert.h"
+#include "vtkOpenGLActor.h"
+#include "vtkOpenGLCamera.h"
 #include "vtkOpenGLExtensionManager.h"
-#include "vtkgl.h"
+#include "vtkOpenGLHardwareSupport.h"
+#include "vtkOpenGLLight.h"
+#include "vtkOpenGLPolyDataMapper.h"
+#include "vtkOpenGLProperty.h"
+#include "vtkOpenGLRenderer.h"
+#include "vtkOpenGLTexture.h"
+#include "vtkUnsignedCharArray.h"
+#include "vtkTextureUnitManager.h"
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLRenderWindow, "$Revision: 1.95.2.2 $");
+
+vtkCxxRevisionMacro(vtkOpenGLRenderWindow, "$Revision: 1.104 $");
 #endif
+
+vtkCxxSetObjectMacro(vtkOpenGLRenderWindow, ExtensionManager, vtkOpenGLExtensionManager);
+vtkCxxSetObjectMacro(vtkOpenGLRenderWindow, HardwareSupport, vtkOpenGLHardwareSupport);
+vtkCxxSetObjectMacro(vtkOpenGLRenderWindow, TextureUnitManager, vtkTextureUnitManager);
 
 #define MAX_LIGHTS 8
 
@@ -50,6 +57,10 @@ int vtkOpenGLRenderWindow::GetGlobalMaximumNumberOfMultiSamples()
 
 vtkOpenGLRenderWindow::vtkOpenGLRenderWindow()
 {
+  this->ExtensionManager = NULL;
+  this->HardwareSupport = NULL;
+  this->TextureUnitManager=0;
+  
   this->MultiSamples = vtkOpenGLRenderWindowGlobalMaximumNumberOfMultiSamples;
   this->TextureResourceIds = vtkIdList::New();
   if ( this->WindowName ) 
@@ -73,6 +84,23 @@ vtkOpenGLRenderWindow::vtkOpenGLRenderWindow()
 vtkOpenGLRenderWindow::~vtkOpenGLRenderWindow()
 {
   this->TextureResourceIds->Delete();
+  if(this->TextureUnitManager!=0)
+    {
+    this->TextureUnitManager->SetContext(0);
+    }
+  
+  if (this->ExtensionManager)
+    {
+    this->ExtensionManager->SetRenderWindow(0);
+    }
+  if (this->HardwareSupport)
+    {
+    this->HardwareSupport->SetExtensionManager(0);
+    //this->HardwareSupport->Delete();
+    }
+  this->SetTextureUnitManager(0);
+  this->SetExtensionManager(0);
+  this->SetHardwareSupport(0);
 }
 
 // ----------------------------------------------------------------------------
@@ -170,6 +198,10 @@ void vtkOpenGLRenderWindow::StereoUpdate(void)
         break;      
       case VTK_STEREO_INTERLACED:
         this->StereoStatus = 1;
+        break;
+      case VTK_STEREO_CHECKERBOARD:
+        this->StereoStatus = 1;
+        break;
       }
     }
   else if ((!this->StereoRender) && this->StereoStatus)
@@ -191,6 +223,9 @@ void vtkOpenGLRenderWindow::StereoUpdate(void)
       case VTK_STEREO_INTERLACED:
         this->StereoStatus = 0;
         break;
+      case VTK_STEREO_CHECKERBOARD:
+        this->StereoStatus = 0;
+        break;
       }
     }
 }
@@ -198,6 +233,10 @@ void vtkOpenGLRenderWindow::StereoUpdate(void)
 
 void vtkOpenGLRenderWindow::OpenGLInit()
 {
+  // When a new OpenGL context is created, we want to get rid of the old OpenGL
+  // extension manager, if any.
+  this->SetExtensionManager(0);
+
   this->ContextCreationTime.Modified();
   glMatrixMode( GL_MODELVIEW );
   glDepthFunc( GL_LEQUAL );
@@ -213,20 +252,18 @@ void vtkOpenGLRenderWindow::OpenGLInit()
   vtkgl::BlendFuncSeparate=0;
   
   // Try to initialize vtkgl::BlendFuncSeparate() if available.
-  vtkOpenGLExtensionManager *extensions=vtkOpenGLExtensionManager::New();
-  extensions->SetRenderWindow(this);
-  if(extensions->ExtensionSupported("GL_VERSION_1_4"))
+  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
+  if (extensions->ExtensionSupported("GL_VERSION_1_4"))
     {
     extensions->LoadExtension("GL_VERSION_1_4");
     }
   else
     {
-    if(extensions->ExtensionSupported("GL_EXT_blend_func_separate"))
+    if (extensions->ExtensionSupported("GL_EXT_blend_func_separate"))
       {
       extensions->LoadCorePromotedExtension("GL_EXT_blend_func_separate");
       }
     }
-  extensions->Delete();
   
   if(vtkgl::BlendFuncSeparate!=0)
     {
@@ -269,6 +306,16 @@ void vtkOpenGLRenderWindow::OpenGLInit()
   glEnable(GL_NORMALIZE);
   glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
   glAlphaFunc(GL_GREATER,0);
+  
+  // Default OpenGL is 4 bytes but it is only safe with RGBA format.
+  // If format is RGB, row alignment is 4 bytes only if the width is divisible
+  // by 4. Let's do it the safe way: 1-byte alignment.
+  // If an algorithm really need 4 bytes alignment, it should set it itself,
+  // this is the recommended way in "Avoiding 16 Common OpenGL Pitfalls",
+  // section 7:
+  // http://www.opengl.org/resources/features/KilgardTechniques/oglpitfall/
+  glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+  glPixelStorei(GL_PACK_ALIGNMENT,1);
 }
 
 
@@ -1509,8 +1556,7 @@ int vtkOpenGLRenderWindow::CreateHardwareOffScreenWindow(int width, int height)
   
   // 2. check for OpenGL extensions GL_EXT_framebuffer_object and
   // GL_ARB_texture_non_power_of_two (core-promoted feature in OpenGL 2.0)
-  vtkOpenGLExtensionManager *extensions=vtkOpenGLExtensionManager::New();
-  extensions->SetRenderWindow(this);
+  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
   
   int supports_GL_EXT_framebuffer_object=
     extensions->ExtensionSupported("GL_EXT_framebuffer_object");
@@ -1541,11 +1587,14 @@ int vtkOpenGLRenderWindow::CreateHardwareOffScreenWindow(int width, int height)
     {
     if(!supports_GL_EXT_framebuffer_object)
       {
-      vtkDebugMacro(<<" extension GL_EXT_framebuffer_object is not supported. Hardware accelerated offscreen rendering is not available");
+      vtkDebugMacro( << " extension GL_EXT_framebuffer_object is not supported. "
+        "Hardware accelerated offscreen rendering is not available" );
       }
     if(!supports_texture_non_power_of_two)
       {
-      vtkDebugMacro(<<" extension texture_non_power_of_two is not supported because neither OpenGL 2.0 nor GL_ARB_texture_non_power_of_two extension is supported. Hardware accelerated offscreen rendering is not available");
+      vtkDebugMacro( << " extension texture_non_power_of_two is not supported "
+        "because neither OpenGL 2.0 nor GL_ARB_texture_non_power_of_two extension "
+        "is supported. Hardware accelerated offscreen rendering is not available");
       }
     if(!supports_texture_rectangle)
       {
@@ -1553,11 +1602,13 @@ int vtkOpenGLRenderWindow::CreateHardwareOffScreenWindow(int width, int height)
       }
     if(isMesa)
       {
-      vtkDebugMacro(<<" Renderer is Mesa. Hardware accelerated offscreen rendering is not available");
+      vtkDebugMacro(<<" Renderer is Mesa. Hardware accelerated offscreen "
+        "rendering is not available");
       }
     if(this->StencilCapable && !supports_packed_depth_stencil)
       {
-      vtkDebugMacro(<<" a stencil buffer is required but extension GL_EXT_packed_depth_stencil is not supported");
+      vtkDebugMacro(<<" a stencil buffer is required but extension "
+        "GL_EXT_packed_depth_stencil is not supported");
       }
     this->DestroyWindow();
     }
@@ -1734,7 +1785,6 @@ int vtkOpenGLRenderWindow::CreateHardwareOffScreenWindow(int width, int height)
         }
       }
     }
-  extensions->Delete();
   
   // A=>B = !A || B
   assert("post: valid_result" && (result==0 || result==1)
@@ -1848,4 +1898,61 @@ const char *vtkOpenGLRenderWindow::GetLastGraphicErrorString()
       break;
     }
   return result;
+}
+
+
+// ----------------------------------------------------------------------------
+// Description:
+// Returns the extension manager. A new one will be created if one hasn't
+// already been set up.
+vtkOpenGLExtensionManager* vtkOpenGLRenderWindow::GetExtensionManager()
+{
+  if (!this->ExtensionManager)
+    {
+    vtkOpenGLExtensionManager* mgr = vtkOpenGLExtensionManager::New();
+    // This does not form a reference loop since vtkOpenGLExtensionManager does
+    // not keep a reference to the render window.
+    mgr->SetRenderWindow(this);
+    this->SetExtensionManager(mgr);
+    mgr->Delete();
+    }
+  return this->ExtensionManager;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Returns an Hardware Support object. A new one will be created if one hasn't
+// already been set up.
+vtkOpenGLHardwareSupport* vtkOpenGLRenderWindow::GetHardwareSupport()
+{
+  if (!this->HardwareSupport)
+    {
+    vtkOpenGLHardwareSupport* hardware = vtkOpenGLHardwareSupport::New();
+    
+    // This does not form a reference loop since vtkOpenGLHardwareSupport does
+    // not keep a reference to the render window.
+    hardware->SetExtensionManager(this->GetExtensionManager());
+    this->SetHardwareSupport(hardware);
+    hardware->Delete();
+    }
+  return this->HardwareSupport;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Returns its texture unit manager object. A new one will be created if one
+// hasn't already been set up.
+vtkTextureUnitManager *vtkOpenGLRenderWindow::GetTextureUnitManager()
+{
+  if(this->TextureUnitManager==0)
+    {
+    vtkTextureUnitManager *manager=vtkTextureUnitManager::New();
+    
+    // This does not form a reference loop since vtkOpenGLHardwareSupport does
+    // not keep a reference to the render window.
+    manager->SetContext(this);
+    this->SetTextureUnitManager(manager);
+    manager->Delete();
+    }
+  return this->TextureUnitManager;
 }

@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <vtksys/SystemTools.hxx>
 
-vtkCxxRevisionMacro(vtkDirectory, "$Revision: 1.33 $");
+vtkCxxRevisionMacro(vtkDirectory, "$Revision: 1.35 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -202,7 +202,7 @@ int vtkDirectory::MakeDirectory(const char* dir)
 }
 
 
-const char* vtkDirectory::GetFile(int index)
+const char* vtkDirectory::GetFile(vtkIdType index)
 {
   if(index >= this->Files->GetNumberOfValues() || index < 0)
     {
@@ -214,7 +214,7 @@ const char* vtkDirectory::GetFile(int index)
 }
 
 
-int vtkDirectory::GetNumberOfFiles()
+vtkIdType vtkDirectory::GetNumberOfFiles()
 {
   return this->Files->GetNumberOfValues();
 }

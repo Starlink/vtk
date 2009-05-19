@@ -37,7 +37,7 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLScalarsToColorsPainter);
-vtkCxxRevisionMacro(vtkOpenGLScalarsToColorsPainter, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkOpenGLScalarsToColorsPainter, "$Revision: 1.8 $");
 #endif
 //-----------------------------------------------------------------------------
 vtkOpenGLScalarsToColorsPainter::vtkOpenGLScalarsToColorsPainter()
@@ -81,8 +81,10 @@ int vtkOpenGLScalarsToColorsPainter::GetPremultiplyColorsWithAlpha(
 }
 
 //-----------------------------------------------------------------------------
-void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer* renderer, 
-  vtkActor* actor, unsigned long typeflags)
+void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer *renderer, 
+                                                     vtkActor *actor,
+                                                     unsigned long typeflags,
+                                                     bool forceCompileOnly)
 {
   vtkProperty* prop = actor->GetProperty();
 
@@ -140,12 +142,15 @@ void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer* renderer,
       {
       lmcolorMode = GL_DIFFUSE;
       } 
-    glColorMaterial( GL_FRONT_AND_BACK, lmcolorMode);
-    glEnable( GL_COLOR_MATERIAL );
 
     if (this->ColorTextureMap)
       {
       this->InternalColorTexture->Load(renderer);
+      }
+    else
+      {
+      glColorMaterial( GL_FRONT_AND_BACK, lmcolorMode);
+      glEnable( GL_COLOR_MATERIAL );
       }
     }
 
@@ -164,7 +169,7 @@ void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer* renderer,
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-  this->Superclass::RenderInternal(renderer, actor, typeflags);
+  this->Superclass::RenderInternal(renderer, actor, typeflags,forceCompileOnly);
 
   if (pre_multiplied_by_alpha)
     {

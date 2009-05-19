@@ -4,14 +4,13 @@ SET(KIT_TCL_LIBS vtkFilteringTCL)
 SET(KIT_PYTHON_LIBS vtkFilteringPythonD)
 SET(KIT_JAVA_LIBS vtkFilteringJava)
 SET(KIT_LIBS vtkFiltering vtkverdict )
-
-
 SET( Kit_SRCS
 vtkAppendCompositeDataLeaves.cxx
 vtkAppendFilter.cxx
 vtkAppendPolyData.cxx
 vtkAppendSelection.cxx
 vtkApproximatingSubdivisionFilter.cxx
+vtkArcSource.cxx
 vtkArrayCalculator.cxx
 vtkArrowSource.cxx
 vtkAssignAttribute.cxx
@@ -23,8 +22,6 @@ vtkBlankStructuredGridWithImage.cxx
 vtkBlockIdScalars.cxx
 vtkBoxClipDataSet.cxx
 vtkBrownianPoints.cxx
-vtkBSPCuts.cxx
-vtkBSPIntersections.cxx
 vtkButterflySubdivisionFilter.cxx
 vtkButtonSource.cxx
 vtkCellCenters.cxx
@@ -49,7 +46,7 @@ vtkCurvatures.cxx
 vtkCutter.cxx
 vtkCylinderSource.cxx
 vtkDashedStreamLine.cxx
-#vtkDataObjectGenerator.cxx
+vtkDataObjectGenerator.cxx
 vtkDataObjectToDataSetFilter.cxx
 vtkDataSetEdgeSubdivisionCriterion.cxx
 vtkDataSetSurfaceFilter.cxx
@@ -61,6 +58,7 @@ vtkDelaunay2D.cxx
 vtkDelaunay3D.cxx
 vtkDicer.cxx
 vtkDijkstraGraphGeodesicPath.cxx
+vtkDijkstraImageGeodesicPath.cxx
 vtkDiscreteMarchingCubes.cxx
 vtkDiskSource.cxx
 vtkEdgePoints.cxx
@@ -93,6 +91,7 @@ vtkExtractVectorComponents.cxx
 vtkFeatureEdges.cxx
 vtkFieldDataToAttributeDataFilter.cxx
 vtkFillHolesFilter.cxx
+vtkFrustumSource.cxx
 vtkGeodesicPath.cxx
 vtkGeometryFilter.cxx
 vtkGlyph2D.cxx
@@ -126,8 +125,6 @@ vtkImageMarchingCubes.cxx
 vtkImplicitTextureCoords.cxx
 vtkInterpolateDataSetAttributes.cxx
 vtkInterpolatingSubdivisionFilter.cxx
-vtkKdNode.cxx
-vtkKdTree.cxx
 vtkKdTreeSelector.cxx
 vtkLevelIdScalars.cxx
 vtkLinearExtrusionFilter.cxx
@@ -158,12 +155,10 @@ vtkOutlineCornerSource.cxx
 vtkOutlineFilter.cxx
 vtkOutlineSource.cxx
 vtkParametricFunctionSource.cxx
-vtkPlanesIntersection.cxx
 vtkPlaneSource.cxx
 vtkPlatonicSolidSource.cxx
 vtkPointDataToCellData.cxx
 vtkPointSource.cxx
-vtkPointsProjectedHull.cxx
 vtkPolyDataConnectivityFilter.cxx
 vtkPolyDataNormals.cxx
 vtkPolyDataPointSampler.cxx
@@ -176,6 +171,10 @@ vtkProgrammableFilter.cxx
 vtkProgrammableGlyphFilter.cxx
 vtkProgrammableSource.cxx
 vtkProjectedTexture.cxx
+vtkQuadraturePointInterpolator.cxx
+vtkQuadraturePointsGenerator.cxx
+vtkQuadraturePointStatistics.cxx
+vtkQuadratureSchemeDictionaryGenerator.cxx
 vtkQuadricClustering.cxx
 vtkQuadricDecimation.cxx
 vtkQuantizePolyDataPoints.cxx
@@ -194,6 +193,7 @@ vtkRibbonFilter.cxx
 vtkRotationalExtrusionFilter.cxx
 vtkRotationFilter.cxx
 vtkRuledSurfaceFilter.cxx
+vtkSectorSource.cxx
 vtkSelectEnclosedPoints.cxx
 vtkSelectionLink.cxx
 vtkSelectionSource.cxx
@@ -225,6 +225,10 @@ vtkSuperquadricSource.cxx
 vtkSynchronizedTemplates2D.cxx
 vtkSynchronizedTemplates3D.cxx
 vtkSynchronizedTemplatesCutter3D.cxx
+vtkTableToPolyData.cxx
+vtkTableToStructuredGrid.cxx
+vtkTemporalPathLineFilter.cxx
+vtkTemporalStatistics.cxx
 vtkTensorGlyph.cxx
 vtkTessellatorFilter.cxx
 vtkTextSource.cxx
@@ -255,7 +259,6 @@ vtkWarpTo.cxx
 vtkWarpVector.cxx
 vtkWindowedSincPolyDataFilter.cxx
 )
-
 SET_SOURCE_FILES_PROPERTIES(
 vtkApproximatingSubdivisionFilter
 vtkButtonSource
@@ -268,7 +271,6 @@ vtkInterpolatingSubdivisionFilter
 vtkStreamer
 ABSTRACT
 )
-
 SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS)
@@ -277,7 +279,6 @@ SET(Kit_JAVA_EXTRA_SRCS)
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
 SET(KIT_JAVA_DEPS)
-
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
 INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)

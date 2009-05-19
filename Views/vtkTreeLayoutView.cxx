@@ -25,6 +25,7 @@
 #include "vtkCamera.h"
 #include "vtkCellData.h"
 #include "vtkCommand.h"
+#include "vtkConvertSelection.h"
 #include "vtkDataRepresentation.h"
 #include "vtkDynamic2DLabelMapper.h"
 #include "vtkEdgeListIterator.h"
@@ -45,18 +46,19 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSelection.h"
 #include "vtkSelectionLink.h"
+#include "vtkSelectionNode.h"
 #include "vtkSmartPointer.h"
 #include "vtkTextProperty.h"
 #include "vtkTreeLayoutStrategy.h"
 #include "vtkVertexGlyphFilter.h"
 #include "vtkViewTheme.h"
-#include "vtkVisibleCellSelector.h"
+#include "vtkHardwareSelector.h"
 
 #include <vtksys/stl/set>
 
 using vtksys_stl::set;
 
-vtkCxxRevisionMacro(vtkTreeLayoutView, "$Revision: 1.9 $");
+vtkCxxRevisionMacro(vtkTreeLayoutView, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkTreeLayoutView);
 //----------------------------------------------------------------------------
 vtkTreeLayoutView::vtkTreeLayoutView()
@@ -76,7 +78,7 @@ vtkTreeLayoutView::vtkTreeLayoutView()
   this->EdgeActor              = vtkActor::New();
   this->LabelMapper            = vtkDynamic2DLabelMapper::New();
   this->LabelActor             = vtkActor2D::New();
-  this->VisibleCellSelector    = vtkVisibleCellSelector::New();
+  this->HardwareSelector       = vtkHardwareSelector::New();
   this->KdTreeSelector         = vtkKdTreeSelector::New();
   this->ExtractSelectedGraph   = vtkExtractSelectedGraph::New();
   this->SelectionToPolyData    = vtkGraphToPolyData::New();
@@ -155,13 +157,13 @@ vtkTreeLayoutView::vtkTreeLayoutView()
 
   this->KdTreeSelector->SetInputConnection(this->GraphLayout->GetOutputPort());
   this->ExtractSelectedGraph->SetInputConnection(0, this->GraphLayout->GetOutputPort());
-  vtkSelection *empty = vtkSelection::New();
-  empty->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::INDICES);
-  vtkIdTypeArray *arr = vtkIdTypeArray::New();
-  empty->SetSelectionList(arr);
-  arr->Delete();
+  vtkSmartPointer<vtkSelection> empty = vtkSmartPointer<vtkSelection>::New();
+  vtkSmartPointer<vtkSelectionNode> node = vtkSmartPointer<vtkSelectionNode>::New();
+  node->SetContentType(vtkSelectionNode::INDICES);
+  vtkSmartPointer<vtkIdTypeArray> arr = vtkSmartPointer<vtkIdTypeArray>::New();
+  node->SetSelectionList(arr);
   this->ExtractSelectedGraph->SetInput(1, empty);
-  empty->Delete();
+  empty->AddNode(node);
   
   this->SelectionToPolyData->SetInputConnection(this->ExtractSelectedGraph->GetOutputPort());
   this->SelectionVertexGlyph->SetInputConnection(this->SelectionToPolyData->GetOutputPort());
@@ -190,7 +192,7 @@ vtkTreeLayoutView::~vtkTreeLayoutView()
   this->LabelMapper->Delete();
   this->LabelActor->Delete();
   this->KdTreeSelector->Delete();
-  this->VisibleCellSelector->Delete();
+  this->HardwareSelector->Delete();
   this->ExtractSelectedGraph->Delete();
   this->SelectionToPolyData->Delete();
   this->SelectionVertexGlyph->Delete();
@@ -395,11 +397,18 @@ void vtkTreeLayoutView::SetupRenderWindow(vtkRenderWindow *win)
 }
 
 //----------------------------------------------------------------------------
-void vtkTreeLayoutView::AddInputConnection(vtkAlgorithmOutput *conn)
+void vtkTreeLayoutView::AddInputConnection( int port, int item,
+  vtkAlgorithmOutput *conn, vtkAlgorithmOutput *selectionConn)
 {
-  if (this->GraphLayout->GetNumberOfInputConnections(0) == 0)
+  if( port != 0 || item != 0 )
+    {
+    vtkErrorMacro("This view only supports one representation.");
+    return;
+    }
+  else if (this->GraphLayout->GetNumberOfInputConnections(0) == 0)
     {
     this->GraphLayout->SetInputConnection(conn);
+    this->ExtractSelectedGraph->SetInputConnection(1, selectionConn);
   
     this->Renderer->AddActor(this->VertexActor);
     this->Renderer->AddActor(this->OutlineActor);
@@ -417,12 +426,19 @@ void vtkTreeLayoutView::AddInputConnection(vtkAlgorithmOutput *conn)
 }
 
 //----------------------------------------------------------------------------
-void vtkTreeLayoutView::RemoveInputConnection(vtkAlgorithmOutput *conn)
+void vtkTreeLayoutView::RemoveInputConnection( int port, int item,
+  vtkAlgorithmOutput *conn, vtkAlgorithmOutput *selectionConn)
 {
+  if( port != 0 || item != 0 )
+    {
+    vtkErrorMacro("This view only supports one representation.");
+    }
+
   if (this->GraphLayout->GetNumberOfInputConnections(0) > 0 &&
       this->GraphLayout->GetInputConnection(0, 0) == conn)
     {
     this->GraphLayout->RemoveInputConnection(0, conn);
+    this->ExtractSelectedGraph->RemoveInputConnection(1, selectionConn);
   
     this->Renderer->RemoveActor(this->VertexActor);
     this->Renderer->RemoveActor(this->OutlineActor);
@@ -431,12 +447,6 @@ void vtkTreeLayoutView::RemoveInputConnection(vtkAlgorithmOutput *conn)
     this->Renderer->RemoveActor(this->SelectionVertexActor);
     this->Renderer->RemoveActor(this->SelectionEdgeActor);
     }
-}
-
-//----------------------------------------------------------------------------
-void vtkTreeLayoutView::SetSelectionLink(vtkSelectionLink* link)
-{
-  this->ExtractSelectedGraph->SetInputConnection(1, link->GetOutputPort());
 }
 
 //----------------------------------------------------------------------------
@@ -503,9 +513,14 @@ void vtkTreeLayoutView::ProcessEvents(
     double dist2 = radiusX*radiusX + radiusY*radiusY;
     this->KdTreeSelector->SetSingleSelectionThreshold(dist2);
     this->KdTreeSelector->Update();
-    vtkSelection *selection = this->KdTreeSelector->GetOutput();
-    selection->Register(0);
+    vtkSelection *kdSelection = this->KdTreeSelector->GetOutput();
+    this->GraphLayout->Update();
+    vtkDataObject *data = this->GraphLayout->GetOutput();
+    vtkSmartPointer<vtkSelection> selection;
+    selection.TakeReference(vtkConvertSelection::ToSelectionType(
+      kdSelection, data, this->SelectionType, this->SelectionArrayNames));
     
+#if 0
     // If the selection is empty, do a visible cell selection
     // to attempt to pick up an edge.
     vtkAbstractArray *list = selection->GetSelectionList();
@@ -519,15 +534,15 @@ void vtkTreeLayoutView::ProcessEvents(
       unsigned int screenMaxX = pos1X < pos2X ? pos2X : pos1X;
       unsigned int screenMinY = pos1Y < pos2Y ? pos1Y : pos2Y;
       unsigned int screenMaxY = pos1Y < pos2Y ? pos2Y : pos1Y;
-      this->VisibleCellSelector->SetRenderer(this->Renderer);
+      this->HardwareSelector->SetRenderer(this->Renderer);
       //cerr << "area=" << screenMinX << "," << screenMaxX << "," << screenMinY << "," << screenMaxY << endl;
-      this->VisibleCellSelector->SetArea(screenMinX, screenMinY, screenMaxX, screenMaxY);
-      this->VisibleCellSelector->SetProcessorId(0);
-      this->VisibleCellSelector->SetRenderPasses(0, 0, 0, 0, 1);
-      this->VisibleCellSelector->Select();  
+      this->HardwareSelector->SetArea(screenMinX, screenMinY, screenMaxX, screenMaxY);
+      this->HardwareSelector->SetProcessorId(0);
+      this->HardwareSelector->SetRenderPasses(0, 0, 0, 0, 1);
+      this->HardwareSelector->Select();  
       vtkSmartPointer<vtkIdTypeArray> ids = 
         vtkSmartPointer<vtkIdTypeArray>::New();
-      this->VisibleCellSelector->GetSelectedIds(ids);
+      this->HardwareSelector->GetSelectedIds(ids);
       
       // Set the opacity back to the original value.
       this->EdgeActor->GetProperty()->SetOpacity(opacity);
@@ -575,6 +590,7 @@ void vtkTreeLayoutView::ProcessEvents(
       selection->GetProperties()->Set(vtkSelection::FIELD_TYPE(), vtkSelection::POINT);
       selection->SetSelectionList(selectedVertices);
       }
+#endif
     
     // If this is a union selection, append the selection
     if (rect[4] == vtkInteractorStyleRubberBand2D::SELECT_UNION)
@@ -585,8 +601,6 @@ void vtkTreeLayoutView::ProcessEvents(
     
     // Call select on the representation
     this->GetRepresentation()->Select(this, selection);
-    
-    selection->Delete();
     }
   else
     {
@@ -607,17 +621,12 @@ void vtkTreeLayoutView::PrepareForRendering()
   vtkAlgorithmOutput* conn = rep->GetInputConnection();
   if (this->GraphLayout->GetInputConnection(0, 0) != conn)
     {
-    this->RemoveInputConnection(this->GraphLayout->GetInputConnection(0, 0));
-    this->AddInputConnection(conn);
+      this->RemoveInputConnection( 0, 0,
+      this->GraphLayout->GetInputConnection(0, 0),
+      this->ExtractSelectedGraph->GetInputConnection(1, 0));
+    this->AddInputConnection(0, 0, conn, rep->GetSelectionConnection());
     }
 
-  // Make sure the selection link is up to date.
-  vtkSelectionLink* link = rep->GetSelectionLink();
-  if (this->ExtractSelectedGraph->GetInputConnection(1, 0)->GetProducer() != link)
-    {
-    this->SetSelectionLink(link);
-    }
-  
   // Update the pipeline up until the graph to polydata
   this->GraphToPolyData->Update();
   vtkPolyData* pd = this->GraphToPolyData->GetOutput();
@@ -722,8 +731,8 @@ void vtkTreeLayoutView::PrintSelf(ostream& os, vtkIndent indent)
   this->LabelMapper->PrintSelf(os, indent.GetNextIndent());
   os << indent << "KdTreeSelector: " << endl;
   this->KdTreeSelector->PrintSelf(os, indent.GetNextIndent());
-  os << indent << "VisibleCellSelector: " << endl;
-  this->VisibleCellSelector->PrintSelf(os, indent.GetNextIndent());
+  os << indent << "HardwareSelector: " << endl;
+  this->HardwareSelector->PrintSelf(os, indent.GetNextIndent());
   os << indent << "ExtractSelectedGraph: " << endl;
   this->ExtractSelectedGraph->PrintSelf(os, indent.GetNextIndent());
   os << indent << "SelectionToPolyData: " << endl;

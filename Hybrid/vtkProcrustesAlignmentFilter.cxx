@@ -22,7 +22,7 @@
 #include "vtkPolyData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkProcrustesAlignmentFilter, "$Revision: 1.20.66.1 $");
+vtkCxxRevisionMacro(vtkProcrustesAlignmentFilter, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkProcrustesAlignmentFilter);
 
 //----------------------------------------------------------------------------

@@ -38,8 +38,7 @@ public:
   static vtkXMLImageDataReader *New();
   
   // Description:
-  // Get/Set the reader's output.
-  void SetOutput(vtkImageData *output);
+  // Get the reader's output.
   vtkImageData *GetOutput();
   vtkImageData *GetOutput(int idx);
 
@@ -47,22 +46,27 @@ public:
   // For the specified port, copy the information this reader sets up in
   // SetupOutputInformation to outInfo
   virtual void CopyOutputInformation(vtkInformation *outInfo, int port);
-  
+
 protected:
   vtkXMLImageDataReader();
   ~vtkXMLImageDataReader();  
   
   double Origin[3];
   double Spacing[3];
+  int PieceExtent[6];
   
   const char* GetDataSetName();
   void SetOutputExtent(int* extent);
+  virtual void SetupUpdateExtentInformation(vtkInformation *outInfo);
+ 
   int ReadPrimaryElement(vtkXMLDataElement* ePrimary);
 
   // Setup the output's information.
   void SetupOutputInformation(vtkInformation *outInfo);
 
   virtual int FillOutputPortInformation(int, vtkInformation*);
+
+
   
 private:
   vtkXMLImageDataReader(const vtkXMLImageDataReader&);  // Not implemented.

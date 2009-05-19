@@ -22,7 +22,12 @@
 #include "vtkObjectFactory.h"
 #include "vtkXMLDataElement.h"
 
-vtkCxxRevisionMacro(vtkXMLDataParser, "$Revision: 1.34.2.1 $");
+#include <vtksys/ios/sstream>
+
+#include "vtkXMLUtilities.h"
+
+
+vtkCxxRevisionMacro(vtkXMLDataParser, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkXMLDataParser);
 vtkCxxSetObjectMacro(vtkXMLDataParser, Compressor, vtkDataCompressor);
 
@@ -59,8 +64,10 @@ vtkXMLDataParser::vtkXMLDataParser()
 
   this->AttributesEncoding = VTK_ENCODING_NONE;
 
-  //change default because vtk file formats store this information elsewhere
-  this->IgnoreCharacterData = 1;
+  // Have specialized methods for reading array data both inline or
+  // appended, however typical tags may use the more general CharacterData
+  // methods.
+  this->IgnoreCharacterData = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -137,7 +144,8 @@ void vtkXMLDataParser::StartElement(const char* name, const char** atts)
   vtkXMLDataElement* element = vtkXMLDataElement::New();
   element->SetName(name);
   element->SetXMLByteIndex(this->GetXMLByteIndex());
-  element->ReadXMLAttributes(atts, this->AttributesEncoding);
+  vtkXMLUtilities::ReadElementFromAttributeArray(element, atts, this->AttributesEncoding);
+
   const char* id = element->GetAttribute("id");
   if(id)
     {
@@ -158,6 +166,33 @@ void vtkXMLDataParser::StartElement(const char* name, const char** atts)
       this->AppendedDataStream = vtkInputStream::New();
       }
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkXMLDataParser::SeekInlineDataPosition(vtkXMLDataElement *element)
+{
+  istream* stream = this->GetStream();
+  if(!element->GetInlineDataPosition())
+    {
+    // Scan for the start of the actual inline data.
+    char c=0;
+    stream->clear(stream->rdstate() & ~ios::eofbit);
+    stream->clear(stream->rdstate() & ~ios::failbit);
+    this->SeekG(element->GetXMLByteIndex());
+    while(stream->get(c) && (c != '>'))
+      {
+      ;
+      }
+    while(stream->get(c) && element->IsSpace(c))
+      {
+      ;
+      }
+    unsigned long pos = this->TellG();
+    element->SetInlineDataPosition(pos-1);
+    }
+
+  // Seek to the data position.
+  this->SeekG(element->GetInlineDataPosition());
 }
 
 //----------------------------------------------------------------------------
@@ -519,14 +554,17 @@ int vtkXMLDataParser::ReadBlock(unsigned int block, unsigned char* buffer)
 {
   OffsetType uncompressedSize = this->FindBlockSize(block);
   unsigned int compressedSize = this->BlockCompressedSizes[block];
-  unsigned char* readBuffer = new unsigned char[compressedSize];
 
   if(!this->DataStream->Seek(this->BlockStartOffsets[block]))
     {
     return 0;
     }
+  
+  unsigned char* readBuffer = new unsigned char[compressedSize];
+  
   if(this->DataStream->Read(readBuffer, compressedSize) < compressedSize)
     {
+    delete [] readBuffer;
     return 0;
     }
 
@@ -535,7 +573,7 @@ int vtkXMLDataParser::ReadBlock(unsigned int block, unsigned char* buffer)
                                  buffer, uncompressedSize);
 
   delete [] readBuffer;
-  return (result > 0)? 1:0;
+  return result > 0;
 }
 
 //----------------------------------------------------------------------------
@@ -592,8 +630,8 @@ vtkXMLDataParser::ReadUncompressedData(unsigned char* data,
     return 0;
     }
 
-  // Read data in 32KB blocks and report progress.
-  const long blockSize = 32768;
+  // Read data in 2MB blocks and report progress.
+  const long blockSize = 2097152;
   long left = length;
   p = data;
   this->UpdateProgress(0);
@@ -850,7 +888,7 @@ vtkXMLDataParser::ReadInlineData(vtkXMLDataElement* element,
                                  int wordType)
 {
   this->DataStream = this->InlineDataStream;
-  element->SeekInlineDataPosition(this);
+  this->SeekInlineDataPosition(element);
   if(isAscii)
     {
     return this->ReadAsciiData(buffer, startWord, numWords, wordType);
@@ -1072,15 +1110,4 @@ void vtkXMLDataParser::UpdateProgress(float progress)
   this->Progress = progress;
   double dProgress=progress;
   this->InvokeEvent(vtkCommand::ProgressEvent, &dProgress);
-}
-
-//----------------------------------------------------------------------------
-void vtkXMLDataParser::CharacterDataHandler( 
-  const char* data, int length )
-{  
-  unsigned int numOpen = this->NumberOfOpenElements;
-  if(numOpen > 0)
-    {
-    this->OpenElements[numOpen-1]->AddCharacterData(data, length);
-    }
 }

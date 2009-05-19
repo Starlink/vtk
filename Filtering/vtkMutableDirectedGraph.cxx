@@ -20,13 +20,15 @@
 
 #include "vtkMutableDirectedGraph.h"
 
+#include "vtkDataSetAttributes.h"
 #include "vtkGraphEdge.h"
+#include "vtkGraphInternals.h"
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
 // class vtkMutableDirectedGraph
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMutableDirectedGraph, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkMutableDirectedGraph, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkMutableDirectedGraph);
 //----------------------------------------------------------------------------
 vtkMutableDirectedGraph::vtkMutableDirectedGraph()
@@ -43,13 +45,149 @@ vtkMutableDirectedGraph::~vtkMutableDirectedGraph()
 //----------------------------------------------------------------------------
 vtkIdType vtkMutableDirectedGraph::AddVertex()
 {
-  return this->AddVertexInternal();
+  if (this->Internals->UsingPedigreeIds && 
+      this->GetDistributedGraphHelper() != 0)
+    {
+    vtkErrorMacro("Adding vertex without a pedigree ID into a distributed graph that uses pedigree IDs to name vertices");
+    }
+
+  return this->AddVertex(0);
+}
+//----------------------------------------------------------------------------
+vtkIdType vtkMutableDirectedGraph::AddVertex(vtkVariantArray *propertyArr)
+{
+  if (this->GetVertexData()->GetPedigreeIds() != 0)
+    {
+    this->Internals->UsingPedigreeIds = true;
+    }
+
+  vtkIdType vertex;
+  this->AddVertexInternal(propertyArr, &vertex);
+  return vertex;
+}
+
+//----------------------------------------------------------------------------
+vtkIdType vtkMutableDirectedGraph::AddVertex(const vtkVariant& pedigreeId)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  vtkIdType vertex;
+  this->AddVertexInternal(pedigreeId, &vertex);
+  return vertex;
 }
 
 //----------------------------------------------------------------------------
 vtkEdgeType vtkMutableDirectedGraph::AddEdge(vtkIdType u, vtkIdType v)
 {
-  return this->AddEdgeInternal(u, v, true);
+  return this->AddEdge(u, v, 0);
+}
+
+//----------------------------------------------------------------------------
+vtkEdgeType vtkMutableDirectedGraph::AddEdge(vtkIdType u, vtkIdType v,
+                                             vtkVariantArray *propertyArr)
+{
+  vtkEdgeType e;
+  this->AddEdgeInternal(u, v, true, propertyArr, &e);
+  return e;
+}
+
+//----------------------------------------------------------------------------
+vtkEdgeType vtkMutableDirectedGraph::AddEdge(const vtkVariant& u, vtkIdType v,
+                                             vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  vtkEdgeType e;
+  this->AddEdgeInternal(u, v, true, propertyArr, &e);
+  return e;
+}
+
+//----------------------------------------------------------------------------
+vtkEdgeType vtkMutableDirectedGraph::AddEdge(vtkIdType u, const vtkVariant& v,
+                                             vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  vtkEdgeType e;
+  this->AddEdgeInternal(u, v, true, propertyArr, &e);
+  return e;
+}
+
+//----------------------------------------------------------------------------
+vtkEdgeType vtkMutableDirectedGraph::AddEdge(const vtkVariant& u, 
+                                             const vtkVariant& v,
+                                             vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  vtkEdgeType e;
+  this->AddEdgeInternal(u, v, true, propertyArr, &e);
+  return e;
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddVertex()
+{
+  if (this->Internals->UsingPedigreeIds
+      && this->GetDistributedGraphHelper() != 0)
+    {
+    vtkErrorMacro("Adding vertex without a pedigree ID into a distributed graph that uses pedigree IDs to name vertices");
+    }
+
+  this->LazyAddVertex(0);
+}
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddVertex(vtkVariantArray *propertyArr)
+{
+  if (this->GetVertexData()->GetPedigreeIds() != 0)
+    {
+    this->Internals->UsingPedigreeIds = true;
+    }
+
+  this->AddVertexInternal(propertyArr, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddVertex(const vtkVariant& pedigreeId)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  this->AddVertexInternal(pedigreeId, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddEdge(vtkIdType u, vtkIdType v,
+                                          vtkVariantArray *propertyArr)
+{
+  this->AddEdgeInternal(u, v, true, propertyArr, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddEdge(const vtkVariant& u, vtkIdType v,
+                                          vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  this->AddEdgeInternal(u, v, true, propertyArr, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddEdge(vtkIdType u, const vtkVariant& v,
+                                          vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  this->AddEdgeInternal(u, v, true, propertyArr, 0);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::LazyAddEdge(const vtkVariant& u, 
+                                          const vtkVariant& v,
+                                          vtkVariantArray *propertyArr)
+{
+  this->Internals->UsingPedigreeIds = true;
+
+  this->AddEdgeInternal(u, v, true, propertyArr, 0);
 }
 
 //----------------------------------------------------------------------------
@@ -63,10 +201,11 @@ vtkGraphEdge *vtkMutableDirectedGraph::AddGraphEdge(vtkIdType u, vtkIdType v)
 }
 
 //----------------------------------------------------------------------------
-vtkIdType vtkMutableDirectedGraph::AddChild(vtkIdType parent)
+vtkIdType vtkMutableDirectedGraph::AddChild(vtkIdType parent,
+  vtkVariantArray *propertyArr/* = 0*/)
 {
   vtkIdType v = this->AddVertex();
-  this->AddEdge(parent, v);
+  this->AddEdge(parent, v, propertyArr);
   return v;
 }
 

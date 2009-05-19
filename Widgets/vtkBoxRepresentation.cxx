@@ -37,7 +37,7 @@
 #include "vtkObjectFactory.h"
 
 
-vtkCxxRevisionMacro(vtkBoxRepresentation, "$Revision: 1.6.2.2 $");
+vtkCxxRevisionMacro(vtkBoxRepresentation, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBoxRepresentation);
 
 //----------------------------------------------------------------------------
@@ -1067,9 +1067,9 @@ void vtkBoxRepresentation::BuildRepresentation()
   // Rebuild only if necessary
   if ( this->GetMTime() > this->BuildTime ||
        (this->Renderer && this->Renderer->GetVTKWindow() &&
-        this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime) )
+        (this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime ||
+        this->Renderer->GetActiveCamera()->GetMTime() > this->BuildTime)) )
     {
-
     this->SizeHandles();
     this->BuildTime.Modified();
     }
@@ -1133,7 +1133,15 @@ int vtkBoxRepresentation::HasTranslucentPolygonalGeometry()
 
   result |= this->HexActor->HasTranslucentPolygonalGeometry();
   result |= this->HexOutline->HasTranslucentPolygonalGeometry();
-  result |= this->HexFace->HasTranslucentPolygonalGeometry();
+
+  // If the face is not selected, we are not really rendering translucent faces,
+  // hence don't bother taking it's opacity into consideration.
+  // Look at BUG #7301.
+  if (this->HexFace->GetProperty() == this->SelectedFaceProperty)
+    {
+    result |= this->HexFace->HasTranslucentPolygonalGeometry();
+    }
+
   // render the handles
   for (int j=0; j<7; j++)
     {

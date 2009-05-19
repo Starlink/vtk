@@ -59,13 +59,26 @@ IF(DESIRED_QT_VERSION MATCHES 4)
   # add additional files depending on infovis and/or views
   IF(VTK_USE_VIEWS)
     SET( QVTKLibSrcs ${QVTKLibSrcs}
+      vtkQtChartRepresentation.cxx
+      vtkQtChartTableRepresentation.cxx
+      vtkQtChartView.cxx
+      vtkQtChartViewBase.cxx
+      vtkQtBarChartView.cxx
+      vtkQtLineChartView.cxx
+      vtkQtStackedChartView.cxx
+      vtkQtStatisticalBoxChartView.cxx
       vtkQtItemView.cxx
       vtkQtListView.cxx
+      vtkQtTableDataRepresentation.cxx
+      vtkQtTableMetadataRepresentation.cxx
+      vtkQtTableRepresentation.cxx
       vtkQtTableView.cxx
       vtkQtTreeView.cxx
+      vtkQtView.cxx
       ) 
     SET ( QVTKMocHeaders ${QVTKMocHeaders}
       vtkQtItemView.h
+      vtkQtChartRepresentation.h
       )
   ENDIF(VTK_USE_VIEWS)
   
@@ -89,7 +102,14 @@ IF(DESIRED_QT_VERSION MATCHES 4)
   SET_SOURCE_FILES_PROPERTIES(Q4VTKWidgetPlugin.cxx PROPERTIES 
                               OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QVTKWidget.xpm)
 
+  # Reduce the number of dirs that get included on moc command line
+  # since it causes issues on Windows 2000.
+  GET_DIRECTORY_PROPERTY(include_dirs_tmp INCLUDE_DIRECTORIES)
+  SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${MOC_INCLUDE_DIRS}")
+
   QT4_WRAP_CPP ( QVTKLibMocSrcs ${QVTKMocHeaders} )
+
+  SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${include_dirs_tmp}")
 
   SET(QT_LIBS "${QT_LIBRARIES}")
   
@@ -145,6 +165,7 @@ TARGET_LINK_LIBRARIES( QVTK
 
 # add extra dependencies if necessary
 IF(DESIRED_QT_VERSION MATCHES 4)
+  TARGET_LINK_LIBRARIES( QVTK vtkQtChart )
   IF(VTK_USE_VIEWS)
     TARGET_LINK_LIBRARIES( QVTK vtkViews )
   ENDIF(VTK_USE_VIEWS)
@@ -252,6 +273,12 @@ ENDIF(NOT VTK_INSTALL_NO_LIBRARIES)
 
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/CTestCustom.ctest.in"
   "${CMAKE_CURRENT_BINARY_DIR}/CTestCustom.ctest" @ONLY IMMEDIATE)
+
+
+# recurse into Chart directory if we have Qt4
+IF(DESIRED_QT_VERSION MATCHES 4)
+  SUBDIRS(Chart)
+ENDIF(DESIRED_QT_VERSION MATCHES 4)
 
 # recurse into testing directory if testing is on
 IF(DESIRED_QT_VERSION MATCHES 4)

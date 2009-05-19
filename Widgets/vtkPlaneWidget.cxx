@@ -38,7 +38,7 @@
 #include "vtkSphereSource.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkPlaneWidget, "$Revision: 1.2.32.1 $");
+vtkCxxRevisionMacro(vtkPlaneWidget, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPlaneWidget);
 
 vtkCxxSetObjectMacro(vtkPlaneWidget,PlaneProperty,vtkProperty);
@@ -135,9 +135,6 @@ vtkPlaneWidget::vtkPlaneWidget() : vtkPolyDataSourceWidget()
   bounds[4] = -0.5;
   bounds[5] = 0.5;
 
-  // Initial creation of the widget, serves to initialize it
-  this->PlaceWidget(bounds);
-
   //Manage the picking stuff
   this->HandlePicker = vtkCellPicker::New();
   this->HandlePicker->SetTolerance(0.001);
@@ -166,7 +163,11 @@ vtkPlaneWidget::vtkPlaneWidget() : vtkPolyDataSourceWidget()
   this->CreateDefaultProperties();
   
   this->SelectRepresentation();
-
+  
+  // Initial creation of the widget, serves to initialize it
+  // Call PlaceWidget() LAST in the constructor as it depends on ivar
+  // values.
+  this->PlaceWidget(bounds);
 }
 
 vtkPlaneWidget::~vtkPlaneWidget()
@@ -515,7 +516,7 @@ int vtkPlaneWidget::HighlightHandle(vtkProp *prop)
     this->CurrentHandle->SetProperty(this->HandleProperty);
     }
 
-  this->CurrentHandle = (vtkActor *)prop;
+  this->CurrentHandle = static_cast<vtkActor *>(prop);
 
   if ( this->CurrentHandle )
     {
@@ -1094,7 +1095,7 @@ void vtkPlaneWidget::Rotate(int X, int Y, double *p1, double *p2, double *vpn)
     (X-this->Interactor->GetLastEventPosition()[0]) + 
     (Y-this->Interactor->GetLastEventPosition()[1])*
     (Y-this->Interactor->GetLastEventPosition()[1]);
-  theta = 360.0 * sqrt(l2/((double)size[0]*size[0]+size[1]*size[1]));
+  theta = 360.0 * sqrt(l2/(size[0]*size[0]+size[1]*size[1]));
 
   //Manipulate the transform to reflect the rotation
   this->Transform->Identity();
@@ -1147,8 +1148,7 @@ void vtkPlaneWidget::Spin(double *p1, double *p2)
   vtkMath::Cross(axis,rv,ax_cross_rv);
 
   // Spin angle
-  double theta = 
-    vtkMath::RadiansToDegrees() * vtkMath::Dot(v,ax_cross_rv)  / rs;
+  double theta = vtkMath::DegreesFromRadians( vtkMath::Dot( v, ax_cross_rv ) / rs );
 
   // Manipulate the transform to reflect the rotation
   this->Transform->Identity();

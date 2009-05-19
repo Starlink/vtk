@@ -41,7 +41,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkFast2DLayoutStrategy, "$Revision: 1.20 $");
+vtkCxxRevisionMacro(vtkFast2DLayoutStrategy, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkFast2DLayoutStrategy);
 
 // This is just a convenient macro for smart pointers
@@ -88,6 +88,10 @@ vtkFast2DLayoutStrategy::vtkFast2DLayoutStrategy()
 vtkFast2DLayoutStrategy::~vtkFast2DLayoutStrategy()
 {
   this->SetEdgeWeightField(0);
+  if(this->EdgeArray!=0)
+    {
+    delete[] this->EdgeArray;
+    }
 }
 
 
@@ -459,6 +463,9 @@ void vtkFast2DLayoutStrategy::Layout()
     // I'm done
     this->LayoutComplete = 1;
     }
+
+  // Mark points as modified
+  this->Graph->GetPoints()->Modified();
 }
 
 void vtkFast2DLayoutStrategy::ResolveCoincidentVertices()

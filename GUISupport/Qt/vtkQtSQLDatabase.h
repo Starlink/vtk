@@ -48,7 +48,7 @@ public:
   // Open a new connection to the database.
   // You need to set up any database parameters before calling this function.
   // Returns true is the database was opened sucessfully, and false otherwise.
-  virtual bool Open();
+  virtual bool Open(const char* password);
 
   // Description:
   // Close the connection to the database.
@@ -110,11 +110,6 @@ public:
   vtkGetStringMacro(UserName);
 
   // Description:
-  // The user's password for connecting to the database server.
-  vtkSetStringMacro(Password);
-  vtkGetStringMacro(Password);
-
-  // Description:
   // The name of the database to connect to.
   vtkSetStringMacro(DatabaseName);
   vtkGetStringMacro(DatabaseName);
@@ -130,9 +125,16 @@ public:
   vtkGetMacro(Port, int);
   
   // Description:
+  // Create a the proper subclass given a URL.
+  // The URL format for SQL databases is a true URL of the form:
+  //   'protocol://'[[username[':'password]'@']hostname[':'port]]'/'[dbname] .
+  static vtkSQLDatabase* CreateFromURL( const char* URL );
+  
+  // Description:
   // Get the URL of the database.
   virtual vtkStdString GetURL();
 
+//BTX
 protected:
   vtkQtSQLDatabase();
   ~vtkQtSQLDatabase();
@@ -140,17 +142,19 @@ protected:
   char* DatabaseType;
   char* HostName;
   char* UserName;
-  char* Password;
   char* DatabaseName;
   int Port;
   char* ConnectOptions;
 
   QSqlDatabase QtDatabase;
 
-  //BTX
   friend class vtkQtSQLQuery;
-  //ETX
 
+  // Description:
+  // Overridden to determine connection paramters given the URL. 
+  // This is called by CreateFromURL() to initialize the instance.
+  // Look at CreateFromURL() for details about the URL format.
+  virtual bool ParseURL(const char* url);
 private:
   
   // Storing the tables in the database, this array
@@ -163,12 +167,11 @@ private:
   vtkStringArray *currentRecord;
   
   // Used to assign unique identifiers for database instances
-  //BTX
   static int id;
-  //ETX
   
   vtkQtSQLDatabase(const vtkQtSQLDatabase &); // Not implemented.
   void operator=(const vtkQtSQLDatabase &); // Not implemented.
+//ETX
 };
 
 #endif // (QT_EDITION & QT_MODULE_SQL)

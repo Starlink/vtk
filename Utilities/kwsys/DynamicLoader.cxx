@@ -305,7 +305,7 @@ const char* DynamicLoader::LibExtension()
 //----------------------------------------------------------------------------
 const char* DynamicLoader::LastError()
 {
-  LPVOID lpMsgBuf;
+  LPVOID lpMsgBuf=NULL;
 
   FormatMessage(
     FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -316,6 +316,11 @@ const char* DynamicLoader::LastError()
     0,
     NULL
     );
+
+  if(!lpMsgBuf)
+    {
+    return NULL;
+    }
 
   static char* str = 0;
   delete [] str;
@@ -331,10 +336,13 @@ const char* DynamicLoader::LastError()
 
 // ---------------------------------------------------------------
 // 4. Implementation for BeOS
-#ifdef __BEOS__
+#if defined __BEOS__
+
 #include <string.h> // for strerror()
+
 #include <be/kernel/image.h>
 #include <be/support/Errors.h>
+
 #define DYNAMICLOADER_DEFINED 1
 
 namespace KWSYS_NAMESPACE

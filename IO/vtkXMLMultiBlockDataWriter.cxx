@@ -22,7 +22,7 @@
 #include "vtkXMLDataElement.h"
 
 vtkStandardNewMacro(vtkXMLMultiBlockDataWriter);
-vtkCxxRevisionMacro(vtkXMLMultiBlockDataWriter, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkXMLMultiBlockDataWriter, "$Revision: 1.3 $");
 //----------------------------------------------------------------------------
 vtkXMLMultiBlockDataWriter::vtkXMLMultiBlockDataWriter()
 {
@@ -45,10 +45,11 @@ int vtkXMLMultiBlockDataWriter::FillInputPortInformation(
 int vtkXMLMultiBlockDataWriter::WriteComposite(vtkCompositeDataSet* compositeData, 
     vtkXMLDataElement* parent, int &writerIdx)
 {
-  if (!compositeData->IsA("vtkMultiBlockDataSet"))
+  if (! (compositeData->IsA("vtkMultiBlockDataSet")
+        ||compositeData->IsA("vtkMultiPieceDataSet")) )
     {
-    vtkErrorMacro("vtkMultiBlockDataSet can only contain other "
-      "vtkMultiBlockDataSet dataset nodes");
+    vtkErrorMacro("Unsupported composite dataset type: "
+                  << compositeData->GetClassName() << ".");
     return 0;
     }
 
@@ -64,20 +65,33 @@ int vtkXMLMultiBlockDataWriter::WriteComposite(vtkCompositeDataSet* compositeDat
     {
     vtkDataObject* curDO = iter->GetCurrentDataObject();
     if (curDO->IsA("vtkCompositeDataSet"))
+    // if node is a supported composite dataset
+    // note in structure file and recurse.
       {
-      // Write a composite dataset.
-      vtkCompositeDataSet* curCD = vtkCompositeDataSet::SafeDownCast(curDO);
-      vtkXMLDataElement* block = vtkXMLDataElement::New();
-      block->SetName("Block");
-      block->SetIntAttribute("index", index);
-      if (!this->WriteComposite(curCD, block, writerIdx))
+      vtkXMLDataElement* tag = vtkXMLDataElement::New();
+
+      if (curDO->IsA("vtkMultiPieceDataSet"))
         {
+        tag->SetName("Piece");
+        tag->SetIntAttribute("index", index);
+        }
+      else if (curDO->IsA("vtkMultiBlockDataSet"))
+        {
+        tag->SetName("Block");
+        tag->SetIntAttribute("index", index);
+        }
+      vtkCompositeDataSet* curCD
+        = vtkCompositeDataSet::SafeDownCast(curDO);
+      if (!this->WriteComposite(curCD, tag, writerIdx))
+        {
+        tag->Delete();
         return 0;
         }
-      parent->AddNestedElement(block);
-      block->Delete();
+      parent->AddNestedElement(tag);
+      tag->Delete();
       }
     else
+    // this node is not a composite data set.
       {
       vtkXMLDataElement* datasetXML = vtkXMLDataElement::New();
       datasetXML->SetName("DataSet");

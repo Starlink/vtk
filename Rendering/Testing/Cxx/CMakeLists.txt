@@ -17,30 +17,43 @@ IF(VTK_USE_DISPLAY)
   SET(RenderingTestsWithArguments
     ${RenderingTestsWithArguments}
     LoadOpenGLExtension.cxx
+    SurfacePlusEdges.cxx
+    TestActorLightingFlag.cxx
+    TestBlurAndSobelPasses.cxx
     TestDynamic2DLabelMapper.cxx
     TestFBO.cxx
+    TestGaussianBlurPass.cxx
     TestGradientBackground.cxx
     TestInteractorTimers.cxx
+    TestLabelPlacer.cxx
+    TestLabelPlacer2D.cxx
+    TestLabelPlacerCoincidentPoints.cxx
+    TestLightActor.cxx
     TestLODActor.cxx
     TestManyActors.cxx
     TestOrderedTriangulator.cxx
     TestOpacity.cxx
     TestOSConeCxx.cxx
     TestPOVExporter.cxx
+    TestSobelGradientMagnitudePass.cxx
+    TestShadowMapPass.cxx
     TestTextActorAlphaBlending.cxx
     TestTextActorDepthPeeling.cxx
     TestTextActor3DAlphaBlending.cxx
     TestTextActor3DDepthPeeling.cxx
     TestTranslucentLUTAlphaBlending.cxx
     TestTranslucentLUTDepthPeeling.cxx
+    TestTranslucentLUTDepthPeelingPass.cxx
     TestTranslucentLUTTextureAlphaBlending.cxx
-    TestTranslucentLUTTextureDepthPeeling.cxx    
+    TestTranslucentLUTTextureDepthPeeling.cxx
     )
 
   IF(VTK_DATA_ROOT)
     SET(RenderingTestsWithArguments
       ${RenderingTestsWithArguments}
       TestAreaSelections.cxx
+      TestMultiTexturing.cxx
+      TestMultiTexturingTransform.cxx
       TestScenePicker.cxx
       TestTextureRGBA.cxx
       TestTextureRGBADepthPeeling.cxx
@@ -52,6 +65,16 @@ IF(VTK_USE_DISPLAY)
       TestTStripsTCoords.cxx
       )
   ENDIF(VTK_DATA_ROOT)
+
+  IF (VTK_USE_GLSL_SHADERS)
+    # Tests testing GLSL Shaders.
+    SET(RenderingTestsWithArguments
+      ${RenderingTestsWithArguments}
+      TestGenericVertexAttributesGLSLCxx.cxx
+      TestGenericVertexAttributesGLSLAlphaBlending.cxx
+      TestGenericVertexAttributesGLSLDepthPeelingPass.cxx
+      )
+  ENDIF (VTK_USE_GLSL_SHADERS)
 
 ENDIF(VTK_USE_DISPLAY)
 
@@ -118,3 +141,7 @@ FOREACH (exe
     TARGET_LINK_LIBRARIES(${exe} "-framework GLUT")
   ENDIF (APPLE)
 ENDFOREACH (exe)
+
+IF(VTK_USE_GLSL_SHADERS AND VTK_USE_DISPLAY)
+  set_tests_properties(TestGenericVertexAttributesGLSLDepthPeelingPass PROPERTIES FAIL_REGULAR_EXPRESSION "ERROR:.*vtkOpenGLProperty.*Couldn't build the shader program. At this point , it can be an error in a shader or a driver bug.")
+ENDIF(VTK_USE_GLSL_SHADERS AND VTK_USE_DISPLAY)

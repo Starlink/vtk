@@ -59,7 +59,7 @@ public:
   vtkGetMacro(Append, int);
   vtkBooleanMacro(Append, int);
 
- protected:
+protected:
   vtkFileOutputWindow(); 
   virtual ~vtkFileOutputWindow(); 
   void Initialize();
@@ -68,6 +68,7 @@ public:
   ofstream* OStream;
   int Flush;
   int Append;
+
 private:
   vtkFileOutputWindow(const vtkFileOutputWindow&);  // Not implemented.
   void operator=(const vtkFileOutputWindow&);  // Not implemented.

@@ -38,7 +38,7 @@
 
 //-----------------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkGradientFilter, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkGradientFilter, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkGradientFilter);
 
 template<class data_type>
@@ -60,6 +60,7 @@ void vtkGradientFilterDoComputeCellGradients(vtkDataSet *structure,
 vtkGradientFilter::vtkGradientFilter()
 {
   this->ResultArrayName = NULL;
+  this->FasterApproximation = 0;
   this->SetInputScalars(vtkDataObject::FIELD_ASSOCIATION_POINTS_THEN_CELLS,
                         vtkDataSetAttributes::SCALARS);
 }
@@ -75,6 +76,7 @@ void vtkGradientFilter::PrintSelf(ostream &os, vtkIndent indent)
 
   os << indent << "Result Array Name:"
      << (this->ResultArrayName ? this->ResultArrayName : "Gradients") << endl;
+  os << indent << "Faster Approximation:" << this->FasterApproximation << endl;
 }
 
 //-----------------------------------------------------------------------------
@@ -222,15 +224,55 @@ int vtkGradientFilter::RequestData(vtkInformation *vtkNotUsed(request),
 
   if (fieldAssociation == vtkDataObject::FIELD_ASSOCIATION_POINTS)
     {
-    switch (scalars->GetDataType())
+    if (!this->FasterApproximation)
       {
-      vtkTemplateMacro(vtkGradientFilterDoComputePointGradients(
-                                       input,
-                                       (VTK_TT *)scalars->GetVoidPointer(0),
-                                       (VTK_TT *)gradients->GetVoidPointer(0)));
-      }
+      switch (scalars->GetDataType())
+        {
+        vtkTemplateMacro(vtkGradientFilterDoComputePointGradients(
+                          input,
+                          static_cast<VTK_TT *>(scalars->GetVoidPointer(0)),
+                          static_cast<VTK_TT *>(gradients->GetVoidPointer(0))));
+        }
 
-    output->GetPointData()->AddArray(gradients);
+      output->GetPointData()->AddArray(gradients);
+      }
+    else // this->FasterApproximation
+      {
+      // The cell computation is faster and works off of point data anyway.  The
+      // faster approximation is to use the cell algorithm and then convert the
+      // result to point data.
+      vtkDataArray *cellGradients
+        = vtkDataArray::CreateDataArray(gradients->GetDataType());
+      cellGradients->SetName(gradients->GetName());
+      cellGradients->SetNumberOfComponents(3);
+      cellGradients->SetNumberOfTuples(input->GetNumberOfCells());
+
+      switch (scalars->GetDataType())
+        {
+        vtkTemplateMacro(vtkGradientFilterDoComputeCellGradients(
+                      input,
+                      static_cast<VTK_TT *>(scalars->GetVoidPointer(0)),
+                      static_cast<VTK_TT *>(cellGradients->GetVoidPointer(0))));
+        }
+
+      // We need to convert cell scalars to points scalars.
+      vtkDataSet *dummy = input->NewInstance();
+      dummy->CopyStructure(input);
+      dummy->GetCellData()->AddArray(cellGradients);
+
+      vtkCellDataToPointData *cd2pd = vtkCellDataToPointData::New();
+      cd2pd->SetInput(dummy);
+      cd2pd->PassCellDataOff();
+      cd2pd->Update();
+
+      // Set the gradients array in the output and cleanup.
+      vtkDataArray *pointGradients
+        = cd2pd->GetOutput()->GetPointData()->GetArray(gradients->GetName());
+      output->GetPointData()->AddArray(pointGradients);
+      cd2pd->Delete();
+      dummy->Delete();
+      cellGradients->Delete();
+      }
     }
   else  // fieldAssocation == vtkDataObject::FIELD_ASSOCIATION_CELLS
     {
@@ -252,9 +294,9 @@ int vtkGradientFilter::RequestData(vtkInformation *vtkNotUsed(request),
     switch (pointScalars->GetDataType())
       {
       vtkTemplateMacro(vtkGradientFilterDoComputeCellGradients(
-                                     input,
-                                     (VTK_TT *)pointScalars->GetVoidPointer(0),
-                                     (VTK_TT *)gradients->GetVoidPointer(0)));
+                          input,
+                          static_cast<VTK_TT *>(pointScalars->GetVoidPointer(0)),
+                          static_cast<VTK_TT *>(gradients->GetVoidPointer(0))));
       }
 
     output->GetCellData()->AddArray(gradients);
@@ -351,15 +393,16 @@ int vtkGradientFilterAddCellContribution(vtkIdType pointId,
 
   // Watch out for degenerate cells.  They make the derivative calculation
   // fail.
-  int numedges = cell->GetNumberOfEdges();
-  for (i = 0; i < numedges; i++)
+  vtkIdList *pointIds = cell->GetPointIds();
+  int timesPointRegistered = 0;
+  for (i = 0; i < pointIds->GetNumberOfIds(); i++)
     {
-    vtkCell *edge = cell->GetEdge(i);
-    if ((pointId == edge->GetPointId(0)) && (pointId == edge->GetPointId(1)))
-      {
-      // Found a collapsed edge associated with this point.  Not good.
-      return 0;
-      }
+    if (pointId == pointIds->GetId(i)) timesPointRegistered++;
+    }
+  if (timesPointRegistered != 1)
+    {
+    // The cell should have the point exactly once.  Not good.
+    return 0;
     }
 
   // Get parametric position of point.
@@ -414,7 +457,7 @@ void vtkGradientFilterDoComputeCellGradients(vtkDataSet *structure,
       }
 
     cell->Derivatives(subId, cellCenter, values, 1, derivative);
-
+    delete[] values;
     g[0] = static_cast<data_type>(derivative[0]);
     g[1] = static_cast<data_type>(derivative[1]);
     g[2] = static_cast<data_type>(derivative[2]);

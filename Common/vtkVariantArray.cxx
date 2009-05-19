@@ -37,6 +37,12 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(vtkVariant);
 
 #include <vtkstd/utility>
 #include <vtkstd/algorithm>
+#include <vtkstd/map>
+
+// Map containing updates to a vtkVariantArray that have occurred
+// since we last build the vtkVariantArrayLookup.
+typedef vtkstd::multimap<vtkVariant, vtkIdType, vtkVariantLessThan> 
+  vtkVariantCachedUpdates;
 
 //----------------------------------------------------------------------------
 class vtkVariantArrayLookup
@@ -62,6 +68,7 @@ public:
     }
   vtkVariantArray* SortedArray;
   vtkIdList* IndexArray;
+  vtkVariantCachedUpdates CachedUpdates;
   bool Rebuild;
 };
 
@@ -69,7 +76,7 @@ public:
 // Standard functions
 //
 
-vtkCxxRevisionMacro(vtkVariantArray, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkVariantArray, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkVariantArray);
 //----------------------------------------------------------------------------
 void vtkVariantArray::PrintSelf(ostream& os, vtkIndent indent)
@@ -200,8 +207,8 @@ void vtkVariantArray::SetTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* sourc
       // TODO : This just makes a double variant by default.
       //        We really should make the appropriate type of variant
       //        based on the subclass of vtkDataArray.
-      int tuple = (locj + cur) / a->GetNumberOfComponents();
-      int component = (locj + cur) % a->GetNumberOfComponents();
+      vtkIdType tuple = (locj + cur) / a->GetNumberOfComponents();
+      int component = static_cast<int>((locj + cur) % a->GetNumberOfComponents());
       this->SetValue(loci + cur, vtkVariant(a->GetComponent(tuple, component)));
       }
     }
@@ -242,8 +249,8 @@ void vtkVariantArray::InsertTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* so
     vtkIdType locj = j * a->GetNumberOfComponents();
     for (vtkIdType cur = 0; cur < this->NumberOfComponents; cur++)
       {
-      int tuple = (locj + cur) / a->GetNumberOfComponents();
-      int component = (locj + cur) % a->GetNumberOfComponents();
+      vtkIdType tuple = (locj + cur) / a->GetNumberOfComponents();
+      int component = static_cast<int>((locj + cur) % a->GetNumberOfComponents());
       this->InsertValue(loci + cur, vtkVariant(a->GetComponent(tuple, component)));
       }
     }
@@ -282,8 +289,8 @@ vtkIdType vtkVariantArray::InsertNextTuple(vtkIdType j, vtkAbstractArray* source
     vtkIdType locj = j * a->GetNumberOfComponents();
     for (vtkIdType cur = 0; cur < this->NumberOfComponents; cur++)
       {
-      int tuple = (locj + cur) / a->GetNumberOfComponents();
-      int component = (locj + cur) % a->GetNumberOfComponents();
+      vtkIdType tuple = (locj + cur) / a->GetNumberOfComponents();
+      int component = static_cast<int>((locj + cur) % a->GetNumberOfComponents());
       this->InsertNextValue(vtkVariant(a->GetComponent(tuple, component)));
       }
     }
@@ -457,9 +464,9 @@ int vtkVariantArray::Resize(vtkIdType sz)
 
   if(this->Array)
     {
-    int numCopy = (newSize < this->Size ? newSize : this->Size);
+    vtkIdType numCopy = (newSize < this->Size ? newSize : this->Size);
 
-    for (int i = 0; i < numCopy; ++i)
+    for (vtkIdType i = 0; i < numCopy; ++i)
       {
       newArray[i] = this->Array[i];
       }
@@ -492,12 +499,13 @@ void vtkVariantArray::SetVoidArray(void *arr, vtkIdType size, int save)
 unsigned long vtkVariantArray::GetActualMemorySize()
 {
   // NOTE: Currently does not take into account the "pointed to" data.
-  unsigned long totalSize = 0;
-  unsigned long numPrims = this->GetSize();
+  size_t totalSize = 0;
+  size_t numPrims = static_cast<size_t>(this->GetSize());
 
   totalSize = numPrims*sizeof(vtkVariant);
 
-  return static_cast<unsigned long>(ceil(totalSize / 1024.0)); // kilobytes
+  return static_cast<unsigned long>(
+    ceil(static_cast<double>(totalSize) / 1024.0)); // kilobytes
 }
 
 //----------------------------------------------------------------------------
@@ -531,7 +539,7 @@ vtkVariant& vtkVariantArray::GetValue(vtkIdType id) const
 void vtkVariantArray::SetValue(vtkIdType id, vtkVariant value)
 {
   this->Array[id] = value;
-  this->DataChanged();
+  this->DataElementChanged(id);
 }
 
 //----------------------------------------------------------------------------
@@ -546,14 +554,20 @@ void vtkVariantArray::InsertValue(vtkIdType id, vtkVariant value)
     {
     this->MaxId = id;
     }
-  this->DataChanged();
+  this->DataElementChanged(id);
+}
+
+//----------------------------------------------------------------------------
+void vtkVariantArray::InsertVariantValue(vtkIdType id, vtkVariant value)
+{
+  this->InsertValue(id, value);
 }
 
 //----------------------------------------------------------------------------
 vtkIdType vtkVariantArray::InsertNextValue(vtkVariant value)
 {
   this->InsertValue(++this->MaxId, value);
-  this->DataChanged();
+  this->DataElementChanged(this->MaxId);
   return this->MaxId;
 }
 
@@ -634,8 +648,8 @@ vtkVariant* vtkVariantArray::ResizeAndExtend(vtkIdType sz)
   if(this->Array)
     {
     // can't use memcpy here
-    int numCopy = (newSize < this->Size ? newSize : this->Size);
-    for (int i = 0; i < numCopy; ++i)
+    vtkIdType numCopy = (newSize < this->Size ? newSize : this->Size);
+    for (vtkIdType i = 0; i < numCopy; ++i)
       {
       newArray[i] = this->Array[i];
       }
@@ -678,6 +692,7 @@ void vtkVariantArray::UpdateLookup()
       }
     vtkSortDataArray::Sort(this->Lookup->SortedArray, this->Lookup->IndexArray);
     this->Lookup->Rebuild = false;
+    this->Lookup->CachedUpdates.clear();
     }
 }
 
@@ -686,20 +701,70 @@ vtkIdType vtkVariantArray::LookupValue(vtkVariant value)
 {
   this->UpdateLookup();
   
-  // Perform a binary search of the sorted array using STL lower_bound.
-  int numComps = this->GetNumberOfComponents();
-  vtkIdType numTuples = this->GetNumberOfTuples();
+  // First look into the cached updates, to see if there were any
+  // cached changes. Find an equivalent element in the set of cached
+  // indices for this value. Some of the indices may have changed
+  // values since the cache was built, so we need to do this equality
+  // check.
+  typedef vtkVariantCachedUpdates::iterator CacheIterator;
+  CacheIterator cached    = this->Lookup->CachedUpdates.lower_bound(value),
+                cachedEnd = this->Lookup->CachedUpdates.end();
+  while (cached != cachedEnd)
+    {
+    // Check that we are still in the same equivalence class as the
+    // value.
+    if (value == (*cached).first)
+      {
+      // Check that the value in the original array hasn't changed.
+      vtkVariant currentValue = this->GetValue(cached->second);
+      if (value == currentValue)
+        {
+        return (*cached).second;
+        }
+      }
+    else
+      {
+      break;
+      }
+
+    ++cached;
+    }
+
+  // Perform a binary search of the sorted array using STL equal_range.
+  int numComps = this->Lookup->SortedArray->GetNumberOfComponents();
+  vtkIdType numTuples = this->Lookup->SortedArray->GetNumberOfTuples();
   vtkVariant* ptr = this->Lookup->SortedArray->GetPointer(0);
   vtkVariant* ptrEnd = ptr + numComps*numTuples;
   vtkVariant* found = vtkstd::lower_bound(
     ptr, ptrEnd, value, vtkVariantLessThan());
-  
-  // Check for equality before returning the value 
-  // (i.e. neither is less than the other).
-  if (found != ptrEnd && !vtkVariantLessThan()(*found,value) && !vtkVariantLessThan()(value,*found))
+
+  // Find an index with a matching value. Non-matching values might
+  // show up here when the underlying value at that index has been
+  // changed (so the sorted array is out-of-date).
+  vtkIdType offset = static_cast<vtkIdType>(found - ptr);
+  while (found != ptrEnd)
     {
-    return this->Lookup->IndexArray->GetId(static_cast<vtkIdType>(found - ptr));
+    // Check whether we still have a value equivalent to what we're
+    // looking for.
+    if (value == *found)
+      {
+      // Check that the value in the original array hasn't changed.
+      vtkIdType index = this->Lookup->IndexArray->GetId(offset);
+      vtkVariant currentValue = this->GetValue(index);
+      if (value == currentValue)
+        {
+        return index;
+        }
+      }
+    else
+      {
+      break;
+      }
+
+    ++found; 
+    ++offset;
     }
+
   return -1;
 }
 
@@ -708,20 +773,49 @@ void vtkVariantArray::LookupValue(vtkVariant value, vtkIdList* ids)
 {
   this->UpdateLookup();
   ids->Reset();
+
+  // First look into the cached updates, to see if there were any
+  // cached changes. Find an equivalent element in the set of cached
+  // indices for this value. Some of the indices may have changed
+  // values since the cache was built, so we need to do this equality
+  // check.
+  typedef vtkVariantCachedUpdates::iterator CacheIterator;
+  vtkstd::pair<CacheIterator, CacheIterator> cached    
+    = this->Lookup->CachedUpdates.equal_range(value);
+  while (cached.first != cached.second) 
+    {
+    // Check that the value in the original array hasn't changed.
+    vtkVariant currentValue = this->GetValue(cached.first->second);
+    if (cached.first->first == currentValue)
+      {
+      ids->InsertNextId(cached.first->second);
+      }
+
+    ++cached.first;
+    }
   
   // Perform a binary search of the sorted array using STL equal_range.
   int numComps = this->GetNumberOfComponents();
   vtkIdType numTuples = this->GetNumberOfTuples();
   vtkVariant* ptr = this->Lookup->SortedArray->GetPointer(0);
-  vtkstd::pair<vtkVariant*,vtkVariant*> found = 
-    vtkstd::equal_range(ptr, ptr + numComps*numTuples, value, vtkVariantLessThan());
+  vtkVariant* ptrEnd = ptr + numComps*numTuples;
+  vtkstd::pair<vtkVariant*, vtkVariant*> found = 
+    vtkstd::equal_range(ptr, ptrEnd, value, vtkVariantLessThan());
   
   // Add the indices of the found items to the ID list.
-  vtkIdType ind = static_cast<vtkIdType>(found.first - ptr);
-  vtkIdType endInd = static_cast<vtkIdType>(found.second - ptr);
-  for (; ind != endInd; ++ind)
+  vtkIdType offset = static_cast<vtkIdType>(found.first - ptr);
+  while (found.first != found.second)
     {
-    ids->InsertNextId(this->Lookup->IndexArray->GetId(ind));
+    // Check that the value in the original array hasn't changed.
+    vtkIdType index = this->Lookup->IndexArray->GetId(offset); 
+    vtkVariant currentValue = this->GetValue(index);
+    if (*(found.first) == currentValue)
+      {
+      ids->InsertNextId(index);
+      }
+
+    ++found.first;
+    ++offset;
     }
 }
 
@@ -731,6 +825,33 @@ void vtkVariantArray::DataChanged()
   if (this->Lookup)
     {
     this->Lookup->Rebuild = true;
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkVariantArray::DataElementChanged(vtkIdType id)
+{
+  if (this->Lookup)
+    {
+      if (this->Lookup->Rebuild)
+        {
+        // We're already going to rebuild the lookup table. Do nothing.
+        return;
+        }
+
+      if (this->Lookup->CachedUpdates.size() >
+          static_cast<size_t>(this->GetNumberOfTuples()/10))
+        {
+        // At this point, just rebuild the full table.
+        this->Lookup->Rebuild = true;
+        }
+      else
+        {
+        // Insert this change into the set of cached updates
+        vtkstd::pair<const vtkVariant, vtkIdType> 
+          value(this->GetValue(id), id);
+        this->Lookup->CachedUpdates.insert(value);
+        }
     }
 }
 

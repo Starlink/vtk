@@ -28,7 +28,7 @@
 #include "vtkTriangle.h"
 #include <vtkstd/set> // keep track of inserted triangles
 
-vtkCxxRevisionMacro(vtkQuadricClustering, "$Revision: 1.82.2.1 $");
+vtkCxxRevisionMacro(vtkQuadricClustering, "$Revision: 1.88 $");
 vtkStandardNewMacro(vtkQuadricClustering);
 
 //----------------------------------------------------------------------------
@@ -86,6 +86,9 @@ vtkQuadricClustering::vtkQuadricClustering()
 
   this->InCellCount = this->OutCellCount = 0;
   this->CopyCellData = 0;
+
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_RANGES(), 1);
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_BOUNDS(), 1);
 }
 
 //----------------------------------------------------------------------------
@@ -1390,7 +1393,7 @@ void vtkQuadricClustering::EndAppendVertexGeometry(vtkPolyData *input,
       {
       if (tmp)
         {
-        delete tmp;
+        delete[] tmp;
         }
       tmp = new vtkIdType[numPts];
       tmpLength = numPts;
@@ -1493,7 +1496,7 @@ void vtkQuadricClustering::FindFeaturePoints(vtkCellArray *edges,
   double featureEdges[2][3];
   double point1[3], point2[3];
   vtkIdType *cellPointIds;
-  double radAngle = vtkMath::DegreesToRadians() * this->FeaturePointsAngle;
+  double radAngle = vtkMath::RadiansFromDegrees( this->FeaturePointsAngle );
   
   this->FeaturePoints->Allocate(numPts);
   

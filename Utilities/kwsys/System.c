@@ -75,6 +75,13 @@ static int kwsysSystem_Shell__CharNeedsQuotesOnUnix(char c)
 }
 
 /*--------------------------------------------------------------------------*/
+static int kwsysSystem_Shell__CharNeedsQuotesOnWindows(char c)
+{
+  return ((c == '\'') || (c == '#') || (c == '&') ||
+          (c == '<') || (c == '>') || (c == '|') || (c == '^'));
+}
+
+/*--------------------------------------------------------------------------*/
 static int kwsysSystem_Shell__CharNeedsQuotes(char c, int isUnix, int flags)
 {
   /* On Windows the built-in command shell echo never needs quotes.  */
@@ -99,14 +106,10 @@ static int kwsysSystem_Shell__CharNeedsQuotes(char c, int isUnix, int flags)
     }
   else
     {
-    /* On Windows single-quotes must be escaped in some make
-       environments, such as in mingw32-make.  */
-    if(flags & kwsysSystem_Shell_Flag_Make)
+    /* On Windows several special characters need quotes to preserve them.  */
+    if(kwsysSystem_Shell__CharNeedsQuotesOnWindows(c))
       {
-      if(c == '\'')
-        {
-        return 1;
-        }
+      return 1;
       }
     }
   return 0;
@@ -167,6 +170,12 @@ flag later when we understand applications of this better.
 static int kwsysSystem_Shell__ArgumentNeedsQuotes(const char* in, int isUnix,
                                                   int flags)
 {
+  /* The empty string needs quotes.  */
+  if(!*in)
+    {
+    return 1;
+    }
+
   /* Scan the string for characters that require quoting.  */
   {
   const char* c;
@@ -379,6 +388,10 @@ static char* kwsysSystem_Shell__GetArgument(const char* in, char* out,
           {
           *out++ = *c++;
           }
+
+        /* The make variable reference eliminates any escaping needed
+           for preceding backslashes.  */
+        windows_backslashes = 0;
 
         /* Stop if we have reached the end of the string.  */
         if(!*c)

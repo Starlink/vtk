@@ -41,7 +41,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkHAVSVolumeMapper_k6FP.h"
 #include "vtkHAVSVolumeMapper_k6EndFP.h"
 
-vtkCxxRevisionMacro(vtkOpenGLHAVSVolumeMapper, "$Revision: 1.12.2.1 $");
+vtkCxxRevisionMacro(vtkOpenGLHAVSVolumeMapper, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkOpenGLHAVSVolumeMapper);
 
 //----------------------------------------------------------------------------

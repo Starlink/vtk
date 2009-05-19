@@ -25,6 +25,7 @@
 #include "vtkInformationIntegerKey.h"
 #include "vtkInformationStringKey.h"
 #include "vtkInformationIdTypeKey.h"
+#include "vtkInformationInformationVectorKey.h"
 #include "vtkInformationIntegerVectorKey.h"
 #include "vtkInformationObjectBaseKey.h"
 #include "vtkInformationRequestKey.h"
@@ -32,7 +33,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkStreamingDemandDrivenPipeline, "$Revision: 1.54 $");
+vtkCxxRevisionMacro(vtkStreamingDemandDrivenPipeline, "$Revision: 1.63 $");
 vtkStandardNewMacro(vtkStreamingDemandDrivenPipeline);
 
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, CONTINUE_EXECUTING, Integer);
@@ -55,7 +56,11 @@ vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, TIME_STEPS, DoubleVecto
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, UPDATE_TIME_STEPS, DoubleVector);
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, PREVIOUS_UPDATE_TIME_STEPS, DoubleVector);
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, TIME_RANGE, DoubleVector);
+
+vtkInformationKeyRestrictedMacro(vtkStreamingDemandDrivenPipeline, PIECE_BOUNDING_BOX, DoubleVector, 6);
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, PRIORITY, Double);
+vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, REMOVE_ATTRIBUTE_INFORMATION, Integer);
+
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, FAST_PATH_FOR_TEMPORAL_DATA, Integer);
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, FAST_PATH_OBJECT_TYPE, String);
 vtkInformationKeyMacro(vtkStreamingDemandDrivenPipeline, FAST_PATH_ID_TYPE, String);
@@ -128,7 +133,31 @@ int vtkStreamingDemandDrivenPipeline
 
     // If we need to execute, propagate the update extent.
     int result = 1;
-    if(this->NeedToExecuteData(outputPort,inInfoVec,outInfoVec))
+    int N2E = this->NeedToExecuteData(outputPort,inInfoVec,outInfoVec);
+    if (!N2E && outputPort>-1 && this->GetNumberOfInputPorts() && inInfoVec[0]->GetNumberOfInformationObjects () > 0)
+      {
+      vtkInformation* outInfo = outInfoVec->GetInformationObject(outputPort);
+      vtkInformation* inInfo = inInfoVec[0]->GetInformationObject(0);
+      int outNumberOfPieces = outInfo->Get(UPDATE_NUMBER_OF_PIECES());
+      int inNumberOfPieces = inInfo->Get(UPDATE_NUMBER_OF_PIECES());
+      if(inNumberOfPieces != outNumberOfPieces)
+        {
+        N2E = 1;
+        }
+      else
+        {
+        if (outNumberOfPieces != 1)
+          {
+          int outPiece = outInfo->Get(UPDATE_PIECE_NUMBER()); 
+          int inPiece = inInfo->Get(UPDATE_PIECE_NUMBER());
+          if (inPiece != outPiece)
+            {
+            N2E = 1;
+            }
+          }
+        }
+      }
+    if(N2E)
       {
       // Make sure input types are valid before algorithm does anything.
       if(!this->InputCountIsValid(inInfoVec) || 
@@ -136,6 +165,9 @@ int vtkStreamingDemandDrivenPipeline
         {
         return 0;
         }
+
+      // Remove update-related keys from the input information.
+      this->ResetUpdateInformation(request, inInfoVec, outInfoVec);
 
       // Invoke the request on the algorithm.
       this->LastPropogateUpdateExtentShortCircuited = 0;
@@ -510,6 +542,94 @@ vtkStreamingDemandDrivenPipeline
         }
       }
     }
+  if(request->Has(REQUEST_UPDATE_EXTENT_INFORMATION()))
+    {
+    // Copy the meta information across that algorithm as long as 
+    // the algorithm doesn't change the information that the meta-information
+    // is about.
+    if(this->GetNumberOfInputPorts() > 0 &&
+       inInfoVec[0]->GetNumberOfInformationObjects() > 0)
+      {
+      vtkInformation* inInfo = inInfoVec[0]->GetInformationObject(0);
+      int oiobj = outInfoVec->GetNumberOfInformationObjects();
+      for(int i=0; i < oiobj; ++i)
+        {
+        vtkInformation* outInfo = outInfoVec->GetInformationObject(i);
+
+        // Copy the priority result always, algorithms can modify it in RUEI if needed
+        outInfo->CopyEntry(inInfo, PRIORITY());
+
+        // Copy the attribute meta information when algorithm is known not to modify it
+        vtkInformation *algsProps = this->GetAlgorithm()->GetInformation();
+        if (
+            algsProps->Has(vtkAlgorithm::PRESERVES_RANGES()) ||
+            algsProps->Has(vtkAlgorithm::PRESERVES_ATTRIBUTES()) ||
+            algsProps->Has(vtkAlgorithm::PRESERVES_DATASET())
+            )
+          {
+          if (inInfo->Has(vtkDataObject::CELL_DATA_VECTOR()))
+            {
+            outInfo->CopyEntry(inInfo, vtkDataObject::CELL_DATA_VECTOR(), 1);
+            }
+          if (inInfo->Has(vtkDataObject::POINT_DATA_VECTOR()))
+            {
+            outInfo->CopyEntry(inInfo, vtkDataObject::POINT_DATA_VECTOR(), 1);
+            }
+          }
+        else
+          {
+          //RI normally passes it on always, so this flag says remove it downstream
+          request->Set(REMOVE_ATTRIBUTE_INFORMATION(), 1);
+          }
+
+        //remove the attribute range information downstream
+        if(request->Has(REMOVE_ATTRIBUTE_INFORMATION()))
+          {
+          vtkInformationVector *miv;
+          miv = outInfo->Get(vtkDataObject::CELL_DATA_VECTOR());
+          if (miv)
+            {
+            int nArrays = miv->GetNumberOfInformationObjects();
+            for (int n = 0; n < nArrays; n++)
+              {
+              vtkInformation *oArray = miv->GetInformationObject(n);
+              oArray->Remove(vtkDataObject::PIECE_FIELD_RANGE());
+              }
+            }
+          miv = outInfo->Get(vtkDataObject::POINT_DATA_VECTOR());
+          if (miv)
+            {
+            int nArrays = miv->GetNumberOfInformationObjects();
+            for (int n = 0; n < nArrays; n++)
+              {
+              vtkInformation *oArray = miv->GetInformationObject(n);
+              oArray->Remove(vtkDataObject::PIECE_FIELD_RANGE());
+              }
+            }
+          }
+
+        // Copy the geometric meta information when algorithm is known not to modify it
+        if (
+            algsProps->Has(vtkAlgorithm::PRESERVES_BOUNDS()) ||
+            algsProps->Has(vtkAlgorithm::PRESERVES_GEOMETRY()) ||
+            algsProps->Has(vtkAlgorithm::PRESERVES_DATASET())
+            )
+          {
+          outInfo->CopyEntry(inInfo, PIECE_BOUNDING_BOX());          
+          }        
+
+        // Copy the topological meta information when algorithm is known not to modify it
+        if (
+            algsProps->Has(vtkAlgorithm::PRESERVES_TOPOLOGY()) ||
+            algsProps->Has(vtkAlgorithm::PRESERVES_DATASET())
+            )
+          {
+          outInfo->CopyEntry(inInfo, vtkDataObject::DATA_GEOMETRY_UNMODIFIED());
+          }        
+        }
+      }
+    }
+
 }
 
 //----------------------------------------------------------------------------
@@ -777,6 +897,36 @@ vtkStreamingDemandDrivenPipeline
   // Tell outputs they have been generated.
   this->Superclass::MarkOutputsGenerated(request,inInfoVec,outInfoVec);
 
+  int outputPort = 0;
+  if(request->Has(FROM_OUTPUT_PORT()))
+    {
+    outputPort = request->Get(FROM_OUTPUT_PORT());
+    outputPort = (outputPort >= 0 ? outputPort : 0);
+    }
+
+  // Get the piece request from the update port (port 0 if none)
+  // The defaults are:
+  int piece = 0;
+  int numPieces = 1;
+  int ghostLevel = 0;
+  vtkInformation* fromInfo = 0;
+  if (outputPort < outInfoVec->GetNumberOfInformationObjects())
+    {
+    fromInfo = outInfoVec->GetInformationObject(outputPort);
+    if (fromInfo->Has(UPDATE_PIECE_NUMBER()))
+      {
+      piece = fromInfo->Get(UPDATE_PIECE_NUMBER());
+      }
+    if (fromInfo->Has(UPDATE_NUMBER_OF_PIECES()))
+      {
+      numPieces = fromInfo->Get(UPDATE_NUMBER_OF_PIECES());
+      }
+    if (fromInfo->Has(UPDATE_NUMBER_OF_GHOST_LEVELS()))
+      {
+      ghostLevel = fromInfo->Get(UPDATE_NUMBER_OF_GHOST_LEVELS());
+      }
+    }
+
   for(int i=0; i < outInfoVec->GetNumberOfInformationObjects(); ++i)
     {
     vtkInformation* outInfo = outInfoVec->GetInformationObject(i);
@@ -795,6 +945,18 @@ vtkStreamingDemandDrivenPipeline
           }
         }
       
+      // Copy the update piece information from the update port to
+      // the data piece information of all output ports UNLESS the
+      // algorithm already specified it.
+      vtkInformation* dataInfo = data->GetInformation();
+      if (!dataInfo->Has(vtkDataObject::DATA_PIECE_NUMBER()) ||
+          dataInfo->Get(vtkDataObject::DATA_PIECE_NUMBER()) == - 1)
+        {
+        dataInfo->Set(vtkDataObject::DATA_PIECE_NUMBER(), piece);
+        dataInfo->Set(vtkDataObject::DATA_NUMBER_OF_PIECES(), numPieces);
+        dataInfo->Set(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS(), ghostLevel);
+        }
+        
       // In this block, we make sure that DATA_TIME_STEPS() is set if:
       // * There was someone upstream that supports time (TIME_RANGE() key
       //   is present)
@@ -807,7 +969,6 @@ vtkStreamingDemandDrivenPipeline
       // be copied from input to output.
       //
       // Check if the output has DATA_TIME_STEPS().
-      vtkInformation* dataInfo = data->GetInformation();
       if (!dataInfo->Has(vtkDataObject::DATA_TIME_STEPS()) &&
           outInfo->Has(TIME_RANGE()))
         {
@@ -836,11 +997,11 @@ vtkStreamingDemandDrivenPipeline
         }
 
       // We are keeping track of the previous time request.
-      if (outInfo->Has(UPDATE_TIME_STEPS()))
+      if (fromInfo->Has(UPDATE_TIME_STEPS()))
         {
         outInfo->Set(PREVIOUS_UPDATE_TIME_STEPS(),
-                     outInfo->Get(UPDATE_TIME_STEPS()),
-                     outInfo->Length(UPDATE_TIME_STEPS()));
+                     fromInfo->Get(UPDATE_TIME_STEPS()),
+                     fromInfo->Length(UPDATE_TIME_STEPS()));
         }
       else
         {
@@ -1641,18 +1802,8 @@ int vtkStreamingDemandDrivenPipeline::SetWholeBoundingBox(int port,
 //----------------------------------------------------------------------------
 void vtkStreamingDemandDrivenPipeline::GetWholeBoundingBox(int port, double extent[6])
 {
-  static double emptyBoundingBox[6] = {0,-1,0,-1,0,-1};
-  if(!this->OutputPortIndexInRange(port, "get whole bounding box from"))
-    {
-    memcpy(extent, emptyBoundingBox, sizeof(double)*6);
-    return;
-    }
-  vtkInformation* info = this->GetOutputInformation(port);
-  if(!info->Has(WHOLE_BOUNDING_BOX()))
-    {
-    info->Set(WHOLE_BOUNDING_BOX(), emptyBoundingBox, 6);
-    }
-  info->Get(WHOLE_BOUNDING_BOX(), extent);
+  double *bbox = this->GetWholeBoundingBox(port);
+  memcpy(extent, bbox, 6*sizeof(double));
 }
 
 //----------------------------------------------------------------------------
@@ -1669,4 +1820,134 @@ double* vtkStreamingDemandDrivenPipeline::GetWholeBoundingBox(int port)
     info->Set(WHOLE_BOUNDING_BOX(), emptyBoundingBox, 6);
     }
   return info->Get(WHOLE_BOUNDING_BOX());
+}
+
+//----------------------------------------------------------------------------
+int vtkStreamingDemandDrivenPipeline::SetPieceBoundingBox(int port, 
+                                                          double extent[6])
+{
+  if(!this->OutputPortIndexInRange(port, "set piece bounding box on"))
+    {
+    return 0;
+    }
+  vtkInformation* info = this->GetOutputInformation(port);
+  int modified = 0;
+  double oldBoundingBox[6];
+  this->GetPieceBoundingBox(port, oldBoundingBox);
+  if(oldBoundingBox[0] != extent[0] || oldBoundingBox[1] != extent[1] ||
+     oldBoundingBox[2] != extent[2] || oldBoundingBox[3] != extent[3] ||
+     oldBoundingBox[4] != extent[4] || oldBoundingBox[5] != extent[5])
+    {
+    modified = 1;
+    info->Set(PIECE_BOUNDING_BOX(), extent, 6);
+    }
+  return modified;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingDemandDrivenPipeline::GetPieceBoundingBox(int port, double extent[6])
+{
+  double *bbox = this->GetPieceBoundingBox(port);
+  memcpy(extent, bbox, 6*sizeof(double));
+}
+
+//----------------------------------------------------------------------------
+double* vtkStreamingDemandDrivenPipeline::GetPieceBoundingBox(int port)
+{
+  static double emptyBoundingBox[6] = {0,-1,0,-1,0,-1};
+  if(!this->OutputPortIndexInRange(port, "get piece bounding box from"))
+    {
+    return emptyBoundingBox;
+    }
+  vtkInformation* info = this->GetOutputInformation(port);
+  if(!info->Has(PIECE_BOUNDING_BOX()))
+    {
+    info->Set(PIECE_BOUNDING_BOX(), emptyBoundingBox, 6);
+    }
+  return info->Get(PIECE_BOUNDING_BOX());
+}
+
+//----------------------------------------------------------------------------
+double vtkStreamingDemandDrivenPipeline::ComputePriority(int port)
+{
+  vtkInformation* rqst;
+
+  vtkInformationVector **inVec = this->GetInputInformation();
+  vtkInformationVector *outVec = this->GetOutputInformation();
+
+  //make sure global information is up to date
+  //make sure global information is up to date
+  rqst = vtkInformation::New();
+  rqst->Set(REQUEST_DATA_OBJECT());
+  rqst->Set(REQUEST_REGENERATE_INFORMATION(), 1);
+  rqst->Set(vtkExecutive::FORWARD_DIRECTION(),
+            vtkExecutive::RequestUpstream);
+  rqst->Set(vtkExecutive::ALGORITHM_AFTER_FORWARD(), 1);
+  rqst->Set(vtkExecutive::FROM_OUTPUT_PORT(), port);
+  this->ProcessRequest(rqst, inVec, outVec);
+  rqst->Delete();
+
+  rqst = vtkInformation::New();
+  rqst->Set(REQUEST_INFORMATION());
+  rqst->Set(REQUEST_REGENERATE_INFORMATION(), 1);
+  rqst->Set(vtkExecutive::FORWARD_DIRECTION(),
+            vtkExecutive::RequestUpstream);
+  rqst->Set(vtkExecutive::ALGORITHM_AFTER_FORWARD(), 1);
+  rqst->Set(vtkExecutive::FROM_OUTPUT_PORT(), port);
+  this->ProcessRequest(rqst, inVec, outVec);
+  rqst->Delete();
+
+  //tell pipeline what piece to ask about
+  rqst = vtkInformation::New();
+  rqst->Set(REQUEST_UPDATE_EXTENT());
+  rqst->Set(vtkExecutive::FORWARD_DIRECTION(),
+            vtkExecutive::RequestUpstream);
+  rqst->Set(vtkExecutive::ALGORITHM_BEFORE_FORWARD(), 1);
+  rqst->Set(vtkExecutive::FROM_OUTPUT_PORT(), port);
+  this->ProcessRequest(rqst, inVec, outVec);
+  rqst->Delete();
+
+  //ask upstream filters to estimate priority for the piece
+  rqst = vtkInformation::New();
+  rqst->Set(REQUEST_UPDATE_EXTENT_INFORMATION());
+  rqst->Set(vtkExecutive::FORWARD_DIRECTION(),
+            vtkExecutive::RequestUpstream);
+  rqst->Set(vtkExecutive::ALGORITHM_AFTER_FORWARD(), 1);
+  rqst->Set(vtkExecutive::FROM_OUTPUT_PORT(), port);
+  this->ProcessRequest(rqst, inVec, outVec);
+  rqst->Delete();
+
+  //obtain the priority returned
+  double priority = 1.0;
+  vtkInformation *info = outVec->GetInformationObject(port);
+  if (info && info->Has(PRIORITY()))
+    {
+    priority = info->Get(PRIORITY());
+    }
+
+  return priority;
+}
+
+//----------------------------------------------------------------------------
+void vtkStreamingDemandDrivenPipeline::ResetUpdateInformation(
+  vtkInformation* vtkNotUsed(request),
+  vtkInformationVector** inInfoVec,
+  vtkInformationVector* vtkNotUsed(outInfoVec))
+{
+  int num_ports = this->GetNumberOfInputPorts();
+
+  for (int cc=0; cc < num_ports; cc++)
+    {
+    int num_conns = inInfoVec[cc]->GetNumberOfInformationObjects();
+    for (int kk=0; kk < num_conns; kk++)
+      {
+      vtkInformation* inInfo = inInfoVec[cc]->GetInformationObject(kk);
+      if (inInfo)
+        {
+        inInfo->Remove(vtkStreamingDemandDrivenPipeline::FAST_PATH_OBJECT_ID());
+        inInfo->Remove(vtkStreamingDemandDrivenPipeline::FAST_PATH_OBJECT_TYPE());
+        inInfo->Remove(vtkStreamingDemandDrivenPipeline::FAST_PATH_ID_TYPE());
+        }
+      }
+    }
 }

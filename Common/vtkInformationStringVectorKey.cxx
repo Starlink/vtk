@@ -20,7 +20,7 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkInformationStringVectorKey, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkInformationStringVectorKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationStringVectorKey
@@ -75,15 +75,19 @@ void vtkInformationStringVectorKey::Set(vtkInformation* info, const char* value,
     (this->GetAsObjectBase(info));
   if(oldv)
     {
-    while(static_cast<int>(oldv->Value.size()) <= index)
+    if (   (static_cast<int>(oldv->Value.size()) <= index)
+        || (oldv->Value[index] != value))
       {
-      oldv->Value.push_back("");
+      while(static_cast<int>(oldv->Value.size()) <= index)
+        {
+        oldv->Value.push_back("");
+        }
+      oldv->Value[index] = value;
+      // Since this sets a value without call SetAsObjectBase(),
+      // the info has to be modified here (instead of 
+      // vtkInformation::SetAsObjectBase()
+      info->Modified(this);
       }
-    oldv->Value[index] = value;
-    // Since this sets a value without call SetAsObjectBase(),
-    // the info has to be modified here (instead of 
-    // vtkInformation::SetAsObjectBase()
-    info->Modified();
     }
   else
     {
@@ -120,12 +124,6 @@ int vtkInformationStringVectorKey::Length(vtkInformation* info)
     static_cast<vtkInformationStringVectorValue *>
     (this->GetAsObjectBase(info));
   return v?static_cast<int>(v->Value.size()):0;
-}
-
-//----------------------------------------------------------------------------
-int vtkInformationStringVectorKey::Has(vtkInformation* info)
-{
-  return this->GetAsObjectBase(info)?1:0;
 }
 
 //----------------------------------------------------------------------------

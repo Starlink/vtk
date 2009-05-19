@@ -91,6 +91,12 @@ public:
   //ETX
 
   // Description:
+  // Set/Get lighting flag for an object. Initial value is true.
+  vtkGetMacro(Lighting,bool);
+  vtkSetMacro(Lighting,bool);
+  vtkBooleanMacro(Lighting,bool);
+  
+  // Description:
   // Set the shading interpolation method for an object.
   vtkSetClampMacro(Interpolation,int,VTK_FLAT,VTK_PHONG);
   vtkGetMacro(Interpolation,int);
@@ -136,7 +142,7 @@ public:
 
   // Description:
   // Set/Get the specular power.
-  vtkSetClampMacro(SpecularPower,double,0.0,100.0);
+  vtkSetClampMacro(SpecularPower,double,0.0,128.0);
   vtkGetMacro(SpecularPower,double);
 
   // Description:
@@ -332,6 +338,16 @@ public:
   vtkTexture* GetTexture(const char* name);
 
   // Description:
+  // Set/Get the texture object to control rendering texture maps.  This will
+  // be a vtkTexture object. A property does not need to have an associated
+  // texture map and multiple properties can share one texture. Textures
+  // must be assigned unique names.
+  void SetTexture(int unit, vtkTexture* texture);
+  vtkTexture* GetTexture(int unit);
+  void RemoveTexture(int unit);
+
+
+  // Description:
   // Remove a texture from the collection. Note that the
   // indices of all the subsquent textures, if any, will change.
   void RemoveTexture(const char* name);
@@ -349,6 +365,23 @@ public:
   // property. The parameter window could be used to determine which graphic
   // resources to release.
   virtual void ReleaseGraphicsResources(vtkWindow *win);
+
+  // Description:
+  // Used to specify which texture unit a texture will use.
+  // Only relevant when multitexturing.
+//BTX
+  enum VTKTextureUnit
+  {
+    VTK_TEXTURE_UNIT_0 = 0,
+    VTK_TEXTURE_UNIT_1,
+    VTK_TEXTURE_UNIT_2,
+    VTK_TEXTURE_UNIT_3,
+    VTK_TEXTURE_UNIT_4,
+    VTK_TEXTURE_UNIT_5,
+    VTK_TEXTURE_UNIT_6,
+    VTK_TEXTURE_UNIT_7
+  };
+//ETX
 
 protected:
   vtkProperty();
@@ -381,6 +414,7 @@ protected:
   int   EdgeVisibility;
   int   BackfaceCulling;
   int   FrontfaceCulling;
+  bool Lighting;
 
   int Shading;
 
@@ -392,8 +426,12 @@ protected:
 
   vtkXMLMaterial* Material; // TODO: I wonder if this reference needs to be maintained.
 
+  // Description:
+  // Read this->Material from new style shaders.
+  // Default implementation is empty.
+  virtual void ReadFrameworkMaterial();
+  
 //BTX
-private:
   // These friends are provided only for the time being
   // till we device a graceful way of loading texturing for GLSL.
   friend class vtkGLSLShaderProgram;
@@ -402,8 +440,10 @@ private:
   // Don't use these methods. They will be removed. They are provided only
   // for the time-being.
   vtkTexture* GetTextureAtIndex(int index);
-  int GetTextureIndex(const char* name);
+  int GetTextureUnitAtIndex(int index);
+  int GetTextureUnit(const char* name);
 //ETX
+
 private:
   vtkProperty(const vtkProperty&);  // Not implemented.
   void operator=(const vtkProperty&);  // Not implemented.

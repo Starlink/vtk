@@ -30,17 +30,11 @@
 
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkMPICommunicator, "$Revision: 1.47 $");
+vtkCxxRevisionMacro(vtkMPICommunicator, "$Revision: 1.50 $");
 vtkStandardNewMacro(vtkMPICommunicator);
 
 vtkMPICommunicator* vtkMPICommunicator::WorldCommunicator = 0;
 
-//-----------------------------------------------------------------------------
-class vtkMPICommunicatorOpaqueRequest
-{
-public:
-  MPI_Request Handle;
-};
 
 vtkMPICommunicatorOpaqueComm::vtkMPICommunicatorOpaqueComm()
 {
@@ -200,34 +194,49 @@ template <class T>
 int vtkMPICommunicatorSendData(const T* data, int length, int sizeoftype, 
                                int remoteProcessId, int tag, 
                                MPI_Datatype datatype, MPI_Comm *Handle, 
-                               int useCopy) 
+                               int useCopy,
+                               int useSsend)
 {
   if (useCopy)
     {
     int retVal;
-    
+
     char* tmpData = vtkMPICommunicator::Allocate(length*sizeoftype);
     memcpy(tmpData, data, length*sizeoftype);
-    retVal = MPI_Send(tmpData, length, datatype, remoteProcessId, tag, 
-                      *(Handle));
+    if (useSsend)
+      {
+      retVal = MPI_Ssend(tmpData, length, datatype, remoteProcessId, tag, 
+        *(Handle));
+      }
+    else
+      {
+      retVal = MPI_Send(tmpData, length, datatype, remoteProcessId, tag, 
+        *(Handle));
+      }
     vtkMPICommunicator::Free(tmpData);
     return retVal;
     }
   else
     {
-    return MPI_Send(const_cast<T *>(data), length, datatype,
-                    remoteProcessId, tag, *(Handle));
+    if (useSsend)
+      {
+      return MPI_Ssend(const_cast<T *>(data), length, datatype,
+        remoteProcessId, tag, *(Handle));
+      }
+    else
+      {
+      return MPI_Send(const_cast<T *>(data), length, datatype,
+        remoteProcessId, tag, *(Handle));
+      }
     }
 }
 //----------------------------------------------------------------------------
-template <class T>
-int vtkMPICommunicatorReceiveData(T* data, int length, int sizeoftype, 
-                                  int remoteProcessId, int tag, 
-                                  MPI_Datatype datatype, MPI_Comm *Handle, 
-                                  int useCopy, int& senderId)
+int vtkMPICommunicator::ReceiveDataInternal(
+  char* data, int length, int sizeoftype,
+  int remoteProcessId, int tag,
+  vtkMPICommunicatorReceiveDataInfo* info,
+  int useCopy, int& senderId)
 {
-  MPI_Status status; 
-  
   if (remoteProcessId == vtkMultiProcessController::ANY_SOURCE)
     {
     remoteProcessId = MPI_ANY_SOURCE;
@@ -238,23 +247,24 @@ int vtkMPICommunicatorReceiveData(T* data, int length, int sizeoftype,
   if (useCopy)
     {
     char* tmpData = vtkMPICommunicator::Allocate(length*sizeoftype);
-    retVal = MPI_Recv(tmpData, length, datatype, remoteProcessId, tag, 
-                      *(Handle), &status);
+    retVal = MPI_Recv(tmpData, length, info->DataType, remoteProcessId, tag, 
+                      *(info->Handle), &(info->Status));
     memcpy(data, tmpData, length*sizeoftype);
     vtkMPICommunicator::Free(tmpData);
     }
   else
     {
-    retVal = MPI_Recv(data, length, datatype, remoteProcessId, tag, 
-                      *(Handle), &status);
+    retVal = MPI_Recv(data, length, info->DataType, remoteProcessId, tag, 
+                      *(info->Handle), &(info->Status));
     }
 
   if (retVal == MPI_SUCCESS)
     {
-    senderId = status.MPI_SOURCE;
+    senderId = info->Status.MPI_SOURCE;
     }
   return retVal;
 }
+
 //----------------------------------------------------------------------------
 template <class T>
 int vtkMPICommunicatorNoBlockSendData(const T* data, int length, 
@@ -365,6 +375,7 @@ void vtkMPICommunicator::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "(none)\n";
     }
+  os << indent << "UseSsend: " << (this->UseSsend? "On" : " Off") << endl;
   os << indent << "Initialized: " << (this->Initialized ? "On\n" : "Off\n");
   os << indent << "Keep handle: " << (this->KeepHandle ? "On\n" : "Off\n");
   if ( this != vtkMPICommunicator::WorldCommunicator )
@@ -391,6 +402,7 @@ vtkMPICommunicator::vtkMPICommunicator()
   this->Initialized = 0;
   this->KeepHandle = 0;
   this->LastSenderId = -1;
+  this->UseSsend = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -686,25 +698,38 @@ int vtkMPICommunicator::SendVoidArray(const void *data, vtkIdType length,
       break;
     }
 
-  int maxSend = VTK_INT_MAX/sizeOfType;
-  while (length > maxSend)
+  int maxSend = VTK_INT_MAX;
+  while (length >= maxSend)
     {
-    vtkMPICommunicatorSendData(byteData, maxSend, sizeOfType, remoteProcessId,
-                               tag, mpiType, this->MPIComm->Handle,
-                               vtkCommunicator::UseCopy);
+    if (CheckForMPIError(
+        vtkMPICommunicatorSendData(byteData, maxSend, sizeOfType, remoteProcessId,
+          tag, mpiType, this->MPIComm->Handle,
+          vtkCommunicator::UseCopy,
+          this->UseSsend)) == 0)
+      {
+      // Failed to send.
+      return 0;
+      }
     byteData += maxSend*sizeOfType;
     length -= maxSend;
     }
   return CheckForMPIError
     (vtkMPICommunicatorSendData(byteData, length, sizeOfType, remoteProcessId,
                                 tag, mpiType, this->MPIComm->Handle,
-                                vtkCommunicator::UseCopy));
+                                vtkCommunicator::UseCopy, this->UseSsend));
 }
 
 //-----------------------------------------------------------------------------
-int vtkMPICommunicator::ReceiveVoidArray(void *data, vtkIdType length, int type,
+inline vtkIdType vtkMPICommunicatorMin(vtkIdType a, vtkIdType b)
+{
+  return (a > b)? b : a;
+}
+
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::ReceiveVoidArray(void *data, vtkIdType maxlength, int type,
                                          int remoteProcessId, int tag)
 {
+  this->Count = 0;
   char *byteData = static_cast<char *>(data);
   MPI_Datatype mpiType = vtkMPICommunicatorGetMPIType(type);
   int sizeOfType;
@@ -717,24 +742,44 @@ int vtkMPICommunicator::ReceiveVoidArray(void *data, vtkIdType length, int type,
       break;
     }
 
-  int maxReceive = VTK_INT_MAX/sizeOfType;
-  while (length > maxReceive)
+  // maxReceive is the maximum size of data that can be fetched in a one atomic
+  // receive. If when sending the data-length >= maxReceive, then the sender
+  // splits it into multiple packets of at most maxReceive size each.  (Note
+  // that when the sending exactly maxReceive length message, it is split into 2
+  // packets of sizes maxReceive and 0 repectively).
+  int maxReceive = VTK_INT_MAX;
+  vtkMPICommunicatorReceiveDataInfo info;
+  info.Handle = this->MPIComm->Handle;
+  info.DataType = mpiType;
+  while (CheckForMPIError(
+      this->ReceiveDataInternal(byteData,
+        vtkMPICommunicatorMin(maxlength, maxReceive),
+        sizeOfType, remoteProcessId,
+        tag, &info,
+        vtkCommunicator::UseCopy,
+        this->LastSenderId)) != 0)
     {
-    vtkMPICommunicatorReceiveData(byteData, maxReceive, sizeOfType,
-                                  remoteProcessId,
-                                  tag, mpiType, this->MPIComm->Handle,
-                                  vtkCommunicator::UseCopy,
-                                  this->LastSenderId);
     remoteProcessId = this->LastSenderId;
-    byteData += maxReceive*sizeOfType;
-    length -= maxReceive;
+
+    int words_received=0;
+    if (CheckForMPIError(MPI_Get_count(&info.Status, mpiType, &words_received)) == 0)
+      {
+      // Failed.
+      return 0;
+      }
+    this->Count += words_received;
+    byteData += words_received*sizeOfType;
+    maxlength -= words_received;
+    if (words_received < maxReceive)
+      {
+      // words_received in this packet is exactly equal to maxReceive, then it
+      // means that the sender is sending atleast one more packet for this
+      // message. Otherwise, we have received all the packets for this message 
+      // and we no longer need to iterate.
+      return 1;
+      }
     }
-  return CheckForMPIError
-    (vtkMPICommunicatorReceiveData(byteData, length, sizeOfType,
-                                   remoteProcessId,
-                                   tag, mpiType, this->MPIComm->Handle,
-                                   vtkCommunicator::UseCopy,
-                                   this->LastSenderId));
+  return 0;
 }
 
 //----------------------------------------------------------------------------

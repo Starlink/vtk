@@ -102,6 +102,10 @@ public:
   void Squeeze() { this->ResizeAndExtend (this->MaxId+1); }
 
   // Description:
+  // Return the capacity in typeof T units of the current array.
+  vtkIdType Capacity() { return this->Size; }
+
+  // Description:
   // Resize the array while conserving the data.
   virtual int Resize(vtkIdType numTuples);
 
@@ -124,6 +128,10 @@ public:
   // Description:
   // Insert data at a specified position in the array.
   void InsertValue(vtkIdType id, T f);
+
+  // Description:
+  // Insert data at a specified position in the array.
+  void InsertVariantValue(vtkIdType id, vtkVariant value);
 
   // Description:
   // Insert data at the end of the array. Return its location in the array.
@@ -213,10 +221,6 @@ public:
   virtual void ExportToVoidPointer(void *out_ptr);
 
   // Description:
-  // Do not call.  Use GetRange.
-  virtual void ComputeRange(int comp);
-
-  // Description:
   // Returns a vtkArrayIteratorTemplate<T>.
   virtual vtkArrayIterator* NewIterator();
   
@@ -239,6 +243,12 @@ public:
   virtual void DataChanged();
   
   // Description:
+  // Tell the array explicitly that a single data element has
+  // changed. Like DataChanged(), then is only necessary when you
+  // modify the array contents without using the array's API. 
+  virtual void DataElementChanged(vtkIdType id);
+
+  // Description:
   // Delete the associated fast lookup data structure on this array,
   // if it exists.  The lookup will be rebuilt on the next call to a lookup
   // function.
@@ -258,8 +268,8 @@ protected:
   int SaveUserArray;
   int DeleteMethod;
 
-  void ComputeScalarRange(int comp);
-  void ComputeVectorRange();
+  virtual void ComputeScalarRange(int comp);
+  virtual void ComputeVectorRange();
 private:
   vtkDataArrayTemplate(const vtkDataArrayTemplate&);  // Not implemented.
   void operator=(const vtkDataArrayTemplate&);  // Not implemented.

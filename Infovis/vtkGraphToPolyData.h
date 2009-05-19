@@ -67,6 +67,8 @@ protected:
   
   bool EdgeGlyphOutput;
   double EdgeGlyphPosition;
+  bool ArcEdges;
+  vtkIdType NumberOfArcSubdivisions;
 
   // Description:
   // Convert the vtkGraph into vtkPolyData.

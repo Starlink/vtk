@@ -54,8 +54,9 @@ public:
 
   // Description:
   // Re-implement the superclass GetBounds method.
-  void GetBounds(double bounds[6]);
-  double *GetBounds();
+  virtual void GetBounds(double bounds[6])
+    { this->Superclass::GetBounds(bounds); }
+  virtual double *GetBounds();
 
   // Description:
   // Select a data array from the point/cell data
@@ -71,6 +72,10 @@ public:
     const char* vertexAttributeName,
     const char* dataArrayName, int fieldAssociation, int componentno=-1);
 
+  virtual void MapDataArrayToMultiTextureAttribute(
+    int unit,
+    const char* dataArrayName, int fieldAssociation, int componentno=-1);
+
   // Description:
   // Remove a vertex attribute mapping.
   virtual void RemoveVertexAttributeMapping(const char* vertexAttributeName);
@@ -78,7 +83,20 @@ public:
   // Description:
   // Remove all vertex attributes.
   virtual void RemoveAllVertexAttributeMappings();
-    
+  
+  // Description:
+  // Get/Set the painter used when rendering the selection pass.
+  vtkGetObjectMacro(SelectionPainter, vtkPainter);
+  void SetSelectionPainter(vtkPainter*);
+
+  // Description:
+  // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE
+  // DO NOT USE THIS METHOD OUTSIDE OF THE RENDERING PROCESS
+  // Used by vtkHardwareSelector to determine if the prop supports hardware
+  // selection.
+  virtual bool GetSupportsSelection()
+    { return (this->SelectionPainter != 0); }
+
 protected:
   vtkPainterPolyDataMapper();
   ~vtkPainterPolyDataMapper();
@@ -95,6 +113,9 @@ protected:
   vtkInformation* PainterInformation;
   vtkTimeStamp PainterUpdateTime;
   vtkPainter* Painter;
+  // Painter used when rendering for hardware selection 
+  // (look at vtkHardwareSelector).
+  vtkPainter* SelectionPainter;
   vtkPainterPolyDataMapperObserver* Observer;
 private:
   vtkPainterPolyDataMapper(const vtkPainterPolyDataMapper&); // Not implemented.

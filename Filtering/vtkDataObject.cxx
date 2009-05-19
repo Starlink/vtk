@@ -36,7 +36,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInformationVector.h"
 #include "vtkDataSetAttributes.h"
 
-vtkCxxRevisionMacro(vtkDataObject, "$Revision: 1.38 $");
+vtkCxxRevisionMacro(vtkDataObject, "$Revision: 1.45 $");
 vtkStandardNewMacro(vtkDataObject);
 
 vtkCxxSetObjectMacro(vtkDataObject,Information,vtkInformation);
@@ -61,11 +61,14 @@ vtkInformationKeyMacro(vtkDataObject, FIELD_NAME, String);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_COMPONENTS, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_TUPLES, Integer);
 vtkInformationKeyRestrictedMacro(vtkDataObject, FIELD_RANGE, DoubleVector, 2);
+vtkInformationKeyRestrictedMacro(vtkDataObject, PIECE_FIELD_RANGE, DoubleVector, 2);
+vtkInformationKeyRestrictedMacro(vtkDataObject, PIECE_EXTENT, IntegerVector, 6);
 vtkInformationKeyMacro(vtkDataObject, FIELD_OPERATION, Integer);
 vtkInformationKeyRestrictedMacro(vtkDataObject, DATA_EXTENT, IntegerPointer, 6);
 vtkInformationKeyRestrictedMacro(vtkDataObject, ORIGIN, DoubleVector, 3);
 vtkInformationKeyRestrictedMacro(vtkDataObject, SPACING, DoubleVector, 3);
 vtkInformationKeyMacro(vtkDataObject, DATA_GEOMETRY_UNMODIFIED, Integer);
+vtkInformationKeyMacro(vtkDataObject, SIL, DataObject);
 
 class vtkDataObjectToSourceFriendship
 {
@@ -107,7 +110,8 @@ const char vtkDataObject
   "vtkDataObject::FIELD_ASSOCIATION_NONE",
   "vtkDataObject::FIELD_ASSOCIATION_POINTS_THEN_CELLS",
   "vtkDataObject::FIELD_ASSOCIATION_VERTICES",
-  "vtkDataObject::FIELD_ASSOCIATION_EDGES"
+  "vtkDataObject::FIELD_ASSOCIATION_EDGES",
+  "vtkDataObject::FIELD_ASSOCIATION_ROWS"
 };
 
 //----------------------------------------------------------------------------
@@ -422,6 +426,7 @@ void vtkDataObject::CopyInformationToPipeline(vtkInformation *request,
         {
         output->CopyEntry(input, EDGE_DATA_VECTOR(), 1);
         }
+
       // copy the actual time
       if (input->Has(DATA_TIME_STEPS()))
         {
@@ -740,26 +745,6 @@ void vtkDataObject::DataHasBeenGenerated()
 {
   this->DataReleased = 0;
   this->UpdateTime.Modified();
-
-  // Assume that the algorithm produced the required data unless the
-  // algorithm sets otherwise.
-  // NOTE: This is a temporary fix. We should check if the algorithm
-  // produced what was requested and produce an error if it didn't.
-  // However, when such a check is added, all algorithms that do this:
-  // internalAlg->Update();
-  // myOutput->ShallowCopy(internalAlg->GetOutput());
-  // will break when running in parallel because ShallowCopy() will 
-  // copy that piece related keys which will be 0 of 1.
-  if (true || !this->Information->Has(DATA_PIECE_NUMBER()) ||
-      this->Information->Get(DATA_PIECE_NUMBER()) == - 1)
-    {
-    this->Information->Set(DATA_PIECE_NUMBER(), 
-                           this->GetUpdatePiece());
-    this->Information->Set(DATA_NUMBER_OF_PIECES(), 
-                           this->GetUpdateNumberOfPieces());
-    this->Information->Set(DATA_NUMBER_OF_GHOST_LEVELS(), 
-                           this->GetUpdateGhostLevel());
-    }
 }
 
 //----------------------------------------------------------------------------
@@ -963,6 +948,13 @@ void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
     }
 
   this->DataReleased = src->DataReleased;
+  
+  // Do not copy pipeline specific information from data object to
+  // data object. This meta-data is specific to the algorithm and the
+  // what was requested of it when it executed. What looks like a single
+  // piece to an internal algorithm may be a piece to an external
+  // algorithm.
+  /*
   if(src->Information->Has(DATA_PIECE_NUMBER()))
     {
     this->Information->Set(DATA_PIECE_NUMBER(),
@@ -978,10 +970,12 @@ void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
     this->Information->Set(DATA_NUMBER_OF_GHOST_LEVELS(),
                            src->Information->Get(DATA_NUMBER_OF_GHOST_LEVELS()));
     }
+  */
   if(src->Information->Has(DATA_TIME_STEPS()))
     {
     this->Information->CopyEntry(src->Information, DATA_TIME_STEPS(), 1);
     }
+  
   vtkInformation* thatPInfo = src->GetPipelineInformation();
   vtkInformation* thisPInfo = this->GetPipelineInformation();
   if(thisPInfo && thatPInfo)

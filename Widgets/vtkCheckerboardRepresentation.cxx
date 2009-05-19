@@ -20,7 +20,7 @@
 #include "vtkCommand.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCheckerboardRepresentation, "$Revision: 1.5.14.1 $");
+vtkCxxRevisionMacro(vtkCheckerboardRepresentation, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkCheckerboardRepresentation);
 
 vtkCxxSetObjectMacro(vtkCheckerboardRepresentation,Checkerboard,vtkImageCheckerboard);

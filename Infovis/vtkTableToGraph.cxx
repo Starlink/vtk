@@ -26,6 +26,7 @@
 #include "vtkDataArray.h"
 #include "vtkEdgeListIterator.h"
 #include "vtkExecutive.h"
+#include "vtkExtractSelectedGraph.h"
 #include "vtkGraph.h"
 #include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
@@ -35,6 +36,8 @@
 #include "vtkMutableUndirectedGraph.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkSelection.h"
+#include "vtkSelectionNode.h"
 #include "vtkSmartPointer.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
@@ -49,7 +52,7 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-vtkCxxRevisionMacro(vtkTableToGraph, "$Revision: 1.9 $");
+vtkCxxRevisionMacro(vtkTableToGraph, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkTableToGraph);
 vtkCxxSetObjectMacro(vtkTableToGraph, LinkGraph, vtkMutableDirectedGraph);
 //---------------------------------------------------------------------------
@@ -115,6 +118,20 @@ int vtkTableToGraph::ValidateLinkGraph()
     hidden->Delete();
     this->Modified();
     }
+  if (!vtkIntArray::SafeDownCast(
+      this->LinkGraph->GetVertexData()->GetAbstractArray("active")))
+    {
+    vtkIntArray* active = vtkIntArray::New();
+    active->SetName("active");
+    active->SetNumberOfTuples(this->LinkGraph->GetNumberOfVertices());
+    for (vtkIdType i = 0; i < this->LinkGraph->GetNumberOfVertices(); ++i)
+      {
+      active->SetValue(i, 1);
+      }
+    this->LinkGraph->GetVertexData()->AddArray(active);
+    active->Delete();
+    this->Modified();
+    }
   return 1;
 }
 
@@ -143,7 +160,9 @@ void vtkTableToGraph::AddLinkVertex(const char* column, const char* domain, int 
       this->LinkGraph->GetVertexData()->GetAbstractArray("domain"));
   vtkBitArray* hiddenArr = vtkBitArray::SafeDownCast(
       this->LinkGraph->GetVertexData()->GetAbstractArray("hidden"));
-  
+  vtkIntArray* activeArr = vtkIntArray::SafeDownCast(
+      this->LinkGraph->GetVertexData()->GetAbstractArray("active"));
+
   vtkIdType index = -1;
   for (vtkIdType i = 0; i < this->LinkGraph->GetNumberOfVertices(); i++)
     {
@@ -157,6 +176,7 @@ void vtkTableToGraph::AddLinkVertex(const char* column, const char* domain, int 
     {
     domainArr->SetValue(index, domainStr);
     hiddenArr->SetValue(index, hidden);
+    activeArr->SetValue(index, 1);
     }
   else
     {
@@ -164,6 +184,7 @@ void vtkTableToGraph::AddLinkVertex(const char* column, const char* domain, int 
     columnArr->InsertNextValue(column);
     domainArr->InsertNextValue(domainStr);
     hiddenArr->InsertNextValue(hidden);
+    activeArr->InsertNextValue(1);
     }
   this->Modified();
 }
@@ -171,11 +192,13 @@ void vtkTableToGraph::AddLinkVertex(const char* column, const char* domain, int 
 //---------------------------------------------------------------------------
 void vtkTableToGraph::ClearLinkVertices()
 {
-  if (!this->LinkGraph)
+  this->ValidateLinkGraph();
+  vtkIntArray* activeArr = vtkIntArray::SafeDownCast(
+    this->LinkGraph->GetVertexData()->GetAbstractArray("active"));
+  for (vtkIdType i = 0; i < this->LinkGraph->GetNumberOfVertices(); ++i)
     {
-    this->LinkGraph = vtkMutableDirectedGraph::New();
+    activeArr->SetValue(i, 0);
     }
-  this->LinkGraph->Initialize();
   this->Modified();
 }
 
@@ -277,30 +300,6 @@ int vtkTableToGraph::FillInputPortInformation(int port, vtkInformation* info)
 }
 
 //---------------------------------------------------------------------------
-class vtkVariantCompare
-{
-public:
-  bool operator()(
-    const vtkVariant& a, 
-    const vtkVariant& b) const
-  {
-    if (a.GetType() == VTK_STRING)
-      {
-      return a.ToString() < b.ToString();
-      }
-    else if (a.IsNumeric())
-      {
-      return a.ToDouble() < b.ToDouble();
-      }
-    else
-      {
-      // Punt, just do pointer difference.
-      return &a < &b;
-      }
-  }
-};
-
-//---------------------------------------------------------------------------
 class vtkTableToGraphCompare
 {
 public:
@@ -312,7 +311,7 @@ public:
       {
       return a.first < b.first;
       }
-    return vtkVariantCompare()(a.second, b.second);
+    return vtkVariantLessThan()(a.second, b.second);
   }
 };
 
@@ -331,11 +330,11 @@ void vtkTableToGraphFindVertices(
   vtksys_stl::map<vtksys_stl::pair<vtkStdString, vtkVariant>, vtkIdType, vtkTableToGraphCompare>& vertexMap,
                                      // A map of domain-value pairs to graph id
   vtkStringArray *domainArr,         // The domain of each vertex
-  vtkStringArray *stringValueArr,    // The string value of each vertex
-  vtkVariantArray *variantValueArr,  // The variant value of each vertex
+  vtkStringArray *labelArr,          // The label of each vertex
+  vtkVariantArray *idArr,            // The pedigree id of each vertex
   vtkIdType & curVertex,             // The current vertex id
-  vtkTable *vertexTable,  // An array that holds the actual value of each vertex
-  vtkStdString domain)  // The domain of the array
+  vtkTable *vertexTable,             // An array that holds the actual value of each vertex
+  vtkStdString domain)               // The domain of the array
 {
   for (vtkIdType i = 0; i < size; i++)
     {
@@ -348,8 +347,8 @@ void vtkTableToGraphFindVertices(
       vertexTable->SetValueByName(row, domain, val);
       vertexMap[value] = row;
       domainArr->InsertNextValue(domain);
-      stringValueArr->InsertNextValue(val.ToString());
-      variantValueArr->InsertNextValue(val);
+      labelArr->InsertNextValue(val.ToString());
+      idArr->InsertNextValue(val);
       curVertex = row;
       }
     }
@@ -404,6 +403,31 @@ int vtkTableToGraph::RequestData(
       vertexTableInfo->Get(vtkDataObject::DATA_OBJECT()));
     }
 
+  if (vtkIntArray::SafeDownCast(
+    this->LinkGraph->GetVertexData()->GetAbstractArray("active")))
+    {
+    // Extract only the active link graph.
+    vtkSelection* activeSel = vtkSelection::New();
+    vtkSelectionNode* activeSelNode = vtkSelectionNode::New();
+    activeSel->AddNode(activeSelNode);
+    activeSelNode->SetContentType(vtkSelectionNode::VALUES);
+    activeSelNode->SetFieldType(vtkSelectionNode::VERTEX);
+    vtkIntArray* list = vtkIntArray::New();
+    list->SetName("active");
+    list->InsertNextValue(1);
+    activeSelNode->SetSelectionList(list);
+    vtkExtractSelectedGraph* extract = vtkExtractSelectedGraph::New();
+    extract->SetInput(0, this->LinkGraph);
+    extract->SetInput(1, activeSel);
+    extract->Update();
+    vtkGraph* g = extract->GetOutput();
+    this->LinkGraph->ShallowCopy(g);
+    list->Delete();
+    activeSel->Delete();
+    activeSelNode->Delete();
+    extract->Delete();
+    }
+
   vtkStringArray* linkColumn = vtkStringArray::SafeDownCast(
     this->LinkGraph->GetVertexData()->GetAbstractArray("column"));
   
@@ -412,7 +436,7 @@ int vtkTableToGraph::RequestData(
     vtkErrorMacro("The link graph must have a string array named \"column\".");
     return 0;
     }
-  
+
   vtkStringArray* linkDomain = vtkStringArray::SafeDownCast(
     this->LinkGraph->GetVertexData()->GetAbstractArray("domain"));
   vtkBitArray* linkHidden = vtkBitArray::SafeDownCast(
@@ -449,15 +473,15 @@ int vtkTableToGraph::RequestData(
 
   // Create the auxiliary arrays.  These arrays summarize the
   // meaning of each row in the vertex table.
-  // Domain contains the domain string of the vertex.
-  // Value contains the string value of each vertex (appropriate for labeling).
-  // Variant value contains the raw value of the vertex as a variant.
+  // domainArr contains the domain string of the vertex.
+  // labelArr contains the string value of each vertex (appropriate for labeling).
+  // idArr contains the raw value of the vertex as a variant.
   VTK_CREATE(vtkStringArray, domainArr);
   domainArr->SetName("domain");
-  VTK_CREATE(vtkStringArray, stringValueArr);
-  stringValueArr->SetName("value");
-  VTK_CREATE(vtkVariantArray, variantValueArr);
-  variantValueArr->SetName("variantvalue");
+  VTK_CREATE(vtkStringArray, labelArr);
+  labelArr->SetName("label");
+  VTK_CREATE(vtkVariantArray, idArr);
+  idArr->SetName("ids");
   
   // Create the lookup maps for vertices and hidden vertices.
   // When edges are added later, we need to be able to lookup the
@@ -498,20 +522,27 @@ int vtkTableToGraph::RequestData(
         vertexTable->Delete();
         return 0;
         }
-      // For each new domain, add a variant array for that domain 
+      // For each new domain, add an array for that domain 
       // containing the values for only that domain.
-      vtkVariantArray *domainValuesArr = 
-        vtkVariantArray::SafeDownCast(vertexTable->GetColumnByName(domain));
+      vtkAbstractArray *domainValuesArr = vertexTable->GetColumnByName(domain);
       if (!domainValuesArr && !hidden)
         {
-        domainValuesArr = vtkVariantArray::New();
+        domainValuesArr = vtkAbstractArray::CreateArray(arr->GetDataType());
         domainValuesArr->SetName(domain);
-        for (vtkIdType i = 0; i < vertexTable->GetNumberOfRows(); ++i)
-          {
-          domainValuesArr->InsertNextValue(vtkVariant());
-          }
+        domainValuesArr->SetNumberOfTuples(vertexTable->GetNumberOfRows());
         vertexTable->AddColumn(domainValuesArr);
         domainValuesArr->Delete();
+        for (vtkIdType r = 0; r < vertexTable->GetNumberOfRows(); ++r)
+          {
+          if (vtkStringArray::SafeDownCast(domainValuesArr))
+            {
+            vertexTable->SetValueByName(r, domain, "");
+            }
+          else
+            {
+            vertexTable->SetValueByName(r, domain, 0);
+            }
+          }
         }
       if (hidden)
         {
@@ -534,7 +565,7 @@ int vtkTableToGraph::RequestData(
           vtkExtendedTemplateMacro(vtkTableToGraphFindVertices(
             static_cast<VTK_TT*>(arr->GetVoidPointer(0)), 
             arr->GetNumberOfTuples(), vertexMap, domainArr, 
-            stringValueArr, variantValueArr, curVertex,
+            labelArr, idArr, curVertex,
             vertexTable, domain));
           }
         }
@@ -555,8 +586,8 @@ int vtkTableToGraph::RequestData(
     // We know the number of vertices, so set the auxiliary array sizes.
     vtkIdType numRows = vertexTable->GetNumberOfRows();
     domainArr->SetNumberOfTuples(numRows);
-    stringValueArr->SetNumberOfTuples(numRows);
-    variantValueArr->SetNumberOfTuples(numRows);
+    labelArr->SetNumberOfTuples(numRows);
+    idArr->SetNumberOfTuples(numRows);
     
     // Keep track of the current hidden vertex id.
     vtkIdType curHiddenVertex = 0;
@@ -593,12 +624,23 @@ int vtkTableToGraph::RequestData(
           {
           vtkVariant val = vertexTable->GetValueByName(i, domain);
           vtksys_stl::pair<vtkStdString, vtkVariant> value(domain, val);
-          if (vertexMap.count(value) == 0 && val.IsValid() && val.ToString().length() > 0)
+          // Fancy check for whether we have a valid value.
+          // 1. It must not exist yet in the vertex map.
+          // 2. The variant value must be valid.
+          //    This allows invalid variants to indicate null entries.
+          // 3. It's string equivalent must be at least 1 character long.
+          //    This is to allow the empty string to indicate null entries.
+          // 4. If it is numeric, it's value must be at least 0.
+          //    This is to allow a negative value to indicate null entries.
+          if (vertexMap.count(value) == 0
+              && val.IsValid()
+              && val.ToString().length() > 0
+              && (!val.IsNumeric() || val.ToDouble() >= 0.0))
             {
             vertexMap[value] = i;
             domainArr->InsertValue(i, domain);
-            stringValueArr->InsertValue(i, val.ToString());
-            variantValueArr->InsertValue(i, val);
+            labelArr->InsertValue(i, val.ToString());
+            idArr->InsertValue(i, val);
             }
           }
         }
@@ -641,7 +683,7 @@ int vtkTableToGraph::RequestData(
 
   // Add the correct number of vertices to the graph based on the number of
   // rows in the vertex table.
-  builder->GetVertexData()->PassData(vertexTable->GetFieldData());
+  builder->GetVertexData()->PassData(vertexTable->GetRowData());
   for (vtkIdType i = 0; i < vertexTable->GetNumberOfRows(); ++i)
     {
     if (this->Directed)
@@ -655,15 +697,15 @@ int vtkTableToGraph::RequestData(
     }
   
   // Add the auxiliary arrays to the vertex table.
-  builder->GetVertexData()->AddArray(stringValueArr);
-  builder->GetVertexData()->AddArray(variantValueArr);
+  builder->GetVertexData()->AddArray(labelArr);
+  builder->GetVertexData()->SetPedigreeIds(idArr);
   builder->GetVertexData()->AddArray(domainArr);
 
   // Now go through the edge table, adding edges.
   // For each row in the edge table, add one edge to the
   // output graph for each edge in the link graph.
   VTK_CREATE(vtkDataSetAttributes, edgeTableData);
-  edgeTableData->ShallowCopy(edgeTable->GetFieldData());
+  edgeTableData->ShallowCopy(edgeTable->GetRowData());
   builder->GetEdgeData()->CopyAllocate(edgeTableData);
   vtksys_stl::map<vtkIdType, vtksys_stl::vector< vtksys_stl::pair<vtkIdType, vtkIdType> > > hiddenInEdges;
   vtksys_stl::map<vtkIdType, vtksys_stl::vector<vtkIdType> > hiddenOutEdges;
@@ -815,6 +857,17 @@ int vtkTableToGraph::RequestData(
       }
     ++curHidden;
     }
+
+  // Add pedigree ids to the edges of the graph.
+  vtkIdType numEdges = builder->GetNumberOfEdges();
+  vtkSmartPointer<vtkIdTypeArray> edgeIds = vtkSmartPointer<vtkIdTypeArray>::New();
+  edgeIds->SetNumberOfTuples(numEdges);
+  edgeIds->SetName("edge");
+  for (vtkIdType i = 0; i < numEdges; ++i)
+    {
+    edgeIds->SetValue(i, i);
+    }
+  builder->GetEdgeData()->SetPedigreeIds(edgeIds);
 
   // Copy structure into output graph.
   vtkInformation* outputInfo = outputVector->GetInformationObject(0);

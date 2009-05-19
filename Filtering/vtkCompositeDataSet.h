@@ -34,6 +34,7 @@
 class vtkCompositeDataIterator;
 class vtkCompositeDataSetInternals;
 class vtkInformation;
+class vtkInformationStringKey;
 
 class VTK_FILTERING_EXPORT vtkCompositeDataSet : public vtkDataObject
 {
@@ -111,6 +112,10 @@ public:
   // iterate over all blocks and call GetNumberOfPoints() so it
   // might be expansive.
   virtual vtkIdType GetNumberOfPoints();
+  
+  // Description:
+  // Key used to put node name in the meta-data associated with a node.
+  static vtkInformationStringKey* NAME();
 
 //BTX
 protected:
@@ -129,6 +134,10 @@ protected:
   // Set child dataset at a given index. The number of children is adjusted to
   // to be greater than the index specified. 
   void SetChild(unsigned int index, vtkDataObject*);
+
+  // Description:
+  // Remove the child at a given index. 
+  void RemoveChild(unsigned int index);
 
   // Description:
   // Returns a child dataset at a given index.

@@ -16,7 +16,7 @@
 
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkInformationDoubleKey, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkInformationDoubleKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationDoubleKey::vtkInformationDoubleKey(const char* name, const char* location):
@@ -51,12 +51,15 @@ void vtkInformationDoubleKey::Set(vtkInformation* info, double value)
      static_cast<vtkInformationDoubleValue *>(
        this->GetAsObjectBase(info)))
     {
-    // Replace the existing value.
-    oldv->Value = value;
-    // Since this sets a value without call SetAsObjectBase(),
-    // the info has to be modified here (instead of 
-    // vtkInformation::SetAsObjectBase()
-    info->Modified();
+    if (oldv->Value != value)
+      {
+      // Replace the existing value.
+      oldv->Value = value;
+      // Since this sets a value without call SetAsObjectBase(),
+      // the info has to be modified here (instead of 
+      // vtkInformation::SetAsObjectBase()
+      info->Modified(this);
+      }
     }
   else
     {
@@ -76,12 +79,6 @@ double vtkInformationDoubleKey::Get(vtkInformation* info)
     static_cast<vtkInformationDoubleValue *>(
       this->GetAsObjectBase(info));
   return v?v->Value:0;
-}
-
-//----------------------------------------------------------------------------
-int vtkInformationDoubleKey::Has(vtkInformation* info)
-{
-  return this->GetAsObjectBase(info)?1:0;
 }
 
 //----------------------------------------------------------------------------

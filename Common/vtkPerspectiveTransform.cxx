@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 
-vtkCxxRevisionMacro(vtkPerspectiveTransform, "$Revision: 1.30.4.1 $");
+vtkCxxRevisionMacro(vtkPerspectiveTransform, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkPerspectiveTransform);
 
 //----------------------------------------------------------------------------
@@ -329,7 +329,7 @@ void vtkPerspectiveTransform::Frustum(double xmin, double xmax,
 void vtkPerspectiveTransform::Perspective(double angle, double aspect,
                                           double znear, double zfar)
 {
-  double ymax =  tan(angle*vtkMath::DoubleDegreesToRadians()/2)*znear;
+  double ymax =  tan( vtkMath::RadiansFromDegrees( angle ) / 2 ) * znear;
   double ymin = -ymax; 
 
   double xmax =  ymax*aspect;
@@ -413,7 +413,7 @@ void vtkPerspectiveTransform::Shear(double dxdz, double dydz, double zplane)
 // Set the angle to negative for left eye, positive for right eye.
 void vtkPerspectiveTransform::Stereo(double angle, double focaldistance)
 {
-  double dxdz = tan(angle*vtkMath::DoubleDegreesToRadians());
+  double dxdz = tan( vtkMath::RadiansFromDegrees( angle ) );
 
   this->Shear(dxdz, 0.0, focaldistance);
 }

@@ -56,8 +56,11 @@ public:
 
   // Description:
   // Create a light with the focal point at the origin and its position
-  // set to (0,0,1). The light is a SceneLight, its color is white, 
-  // intensity=1, and the light is turned on. 
+  // set to (0,0,1). The light is a SceneLight, its color is white
+  // (black ambient, white diffuse, white specular), 
+  // intensity=1, the light is turned on, positional lighting is off,
+  // ConeAngle=30, AttenuationValues=(1,0,0), Exponent=1 and the
+  // TransformMatrix is NULL.
   static vtkLight *New();
 
   // Description:
@@ -122,11 +125,13 @@ public:
 
   // Description:
   // Set/Get the exponent of the cosine used in positional lighting.
-  vtkSetMacro(Exponent,double);
+  vtkSetClampMacro(Exponent,double,0.0,128.0);
   vtkGetMacro(Exponent,double);
 
   // Description:
   // Set/Get the lighting cone angle of a positional light in degrees.
+  // This is the angle between the axis of the cone and a ray along the edge of
+  // the cone.
   // A value of 180 indicates that you want no spot lighting effects
   // just a positional light.
   vtkSetMacro(ConeAngle,double);

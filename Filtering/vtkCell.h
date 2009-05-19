@@ -22,7 +22,7 @@
 // implicitly composed of cells (e.g., vtkStructuredPoints).
 //
 // .SECTION Caveats
-// The #define VTK_CELL_SIZE is a parameter used to construct cells and provide
+// The \#define VTK_CELL_SIZE is a parameter used to construct cells and provide
 // a general guideline for controlling object execution. This parameter is 
 // not a hard boundary: you can create cells with more points.
 
@@ -103,7 +103,7 @@ public:
 
   // Description:
   // Return the number of points in the cell.
-  int GetNumberOfPoints() {return this->PointIds->GetNumberOfIds();}
+  vtkIdType GetNumberOfPoints() {return this->PointIds->GetNumberOfIds();}
 
   // Description:
   // Return the number of edges in the cell.
@@ -138,7 +138,8 @@ public:
   virtual int CellBoundary(int subId, double pcoords[3], vtkIdList *pts) = 0;
 
   // Description:
-  // Given a point x[3] return inside(=1) or outside(=0) cell; evaluate
+  // Given a point x[3] return inside(=1), outside(=0) cell, or (-1) 
+  // computational problem encountered; evaluate
   // parametric coordinates, sub-cell id (!=0 only if cell is composite),
   // distance squared of point x[3] to cell (in particular, the sub-cell
   // indicated), closest point on cell to x[3] (unless closestPoint is null,

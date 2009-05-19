@@ -34,14 +34,54 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkMySQLDatabase.h"
 #endif // VTK_USE_MYSQL
 
+#ifdef VTK_USE_ODBC
+#include "vtkODBCDatabase.h"
+#endif // VTK_USE_ODBC
+
 #include "vtkObjectFactory.h"
 #include "vtkStdString.h"
 
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkSQLDatabase, "$Revision: 1.43 $");
 
+class vtkSQLDatabase::vtkCallbackVector : 
+  public vtkstd::vector<vtkSQLDatabase::CreateFunction>
+{
+public:
+  vtkSQLDatabase* CreateFromURL(const char* URL)
+    {
+    iterator iter;
+    for (iter = this->begin(); iter != this->end(); ++iter)
+      {
+      vtkSQLDatabase* db =(*(*iter))(URL);
+      if (db)
+        {
+        return db;
+        }
+      }
+    return NULL;
+    }
+};
+vtkSQLDatabase::vtkCallbackVector* vtkSQLDatabase::Callbacks = 0;
+
+// Ensures that there are no leaks when the application exits.
+class vtkSQLDatabaseCleanup
+{
+public:
+  inline void Use()
+    {
+    };
+  ~vtkSQLDatabaseCleanup()
+    {
+    vtkSQLDatabase::UnRegisterAllCreateFromURLCallbacks();
+    }
+};
+
+// Used to clean up the Callbacks 
+static vtkSQLDatabaseCleanup vtkCleanupSQLDatabaseGlobal;
+
+vtkCxxRevisionMacro(vtkSQLDatabase, "$Revision: 1.49 $");
 // ----------------------------------------------------------------------
 vtkSQLDatabase::vtkSQLDatabase()
 {
@@ -50,6 +90,44 @@ vtkSQLDatabase::vtkSQLDatabase()
 // ----------------------------------------------------------------------
 vtkSQLDatabase::~vtkSQLDatabase()
 {
+}
+
+// ----------------------------------------------------------------------
+void vtkSQLDatabase::RegisterCreateFromURLCallback(
+  vtkSQLDatabase::CreateFunction func)
+{
+  if (!vtkSQLDatabase::Callbacks)
+    {
+    vtkCleanupSQLDatabaseGlobal.Use();
+    vtkSQLDatabase::Callbacks = new vtkCallbackVector();
+    }
+  vtkSQLDatabase::Callbacks->push_back(func);
+}
+
+// ----------------------------------------------------------------------
+void vtkSQLDatabase::UnRegisterCreateFromURLCallback(
+  vtkSQLDatabase::CreateFunction func)
+{
+  if (vtkSQLDatabase::Callbacks)
+    {
+    vtkSQLDatabase::vtkCallbackVector::iterator iter;
+    for (iter = vtkSQLDatabase::Callbacks->begin();
+      iter != vtkSQLDatabase::Callbacks->end(); ++iter)
+      {
+      if ((*iter) ==  func)
+        {
+        vtkSQLDatabase::Callbacks->erase(iter);
+        break;
+        }
+      }
+    }
+}
+
+// ----------------------------------------------------------------------
+void vtkSQLDatabase::UnRegisterAllCreateFromURLCallbacks()
+{
+  delete vtkSQLDatabase::Callbacks;
+  vtkSQLDatabase::Callbacks = 0;
 }
 
 // ----------------------------------------------------------------------
@@ -307,7 +385,7 @@ vtkSQLDatabase* vtkSQLDatabase::CreateFromURL( const char* URL )
 {
   vtkstd::string protocol;
   vtkstd::string username; 
-  vtkstd::string password;
+  vtkstd::string unused;
   vtkstd::string hostname; 
   vtkstd::string dataport; 
   vtkstd::string database;
@@ -315,24 +393,23 @@ vtkSQLDatabase* vtkSQLDatabase::CreateFromURL( const char* URL )
   vtkSQLDatabase* db = 0;
   
   // SQLite is a bit special so lets get that out of the way :)
-  if ( ! vtksys::SystemTools::ParseURLProtocol( URL, protocol, dataglom))
+  if ( ! vtksys::SystemTools::ParseURLProtocol( URL, protocol, dataglom ))
     {
-    vtkGenericWarningMacro( "Invalid URL: " << URL );
+    vtkGenericWarningMacro( "Invalid URL (no protocol found): " << URL );
     return 0;
     }
   if ( protocol == "sqlite" )
     {
     db = vtkSQLiteDatabase::New();
-    vtkSQLiteDatabase *sqlite_db = vtkSQLiteDatabase::SafeDownCast(db);
-    sqlite_db->SetDatabaseFileName(dataglom.c_str());
+    db->ParseURL(URL);
     return db;
     }
     
   // Okay now for all the other database types get more detailed info
   if ( ! vtksys::SystemTools::ParseURL( URL, protocol, username,
-                                        password, hostname, dataport, database) )
+                                        unused, hostname, dataport, database) )
     {
-    vtkGenericWarningMacro( "Invalid URL: " << URL );
+    vtkGenericWarningMacro( "Invalid URL (other components missing): " << URL );
     return 0;
     }
   
@@ -340,39 +417,37 @@ vtkSQLDatabase* vtkSQLDatabase::CreateFromURL( const char* URL )
   if ( protocol == "psql" )
     {
     db = vtkPostgreSQLDatabase::New();
-    vtkPostgreSQLDatabase *post_db = vtkPostgreSQLDatabase::SafeDownCast(db);
-    post_db->SetUser(username.c_str());
-    post_db->SetPassword(password.c_str());
-    post_db->SetHostName(hostname.c_str());
-    post_db->SetServerPort(atoi(dataport.c_str()));
-    post_db->SetDatabaseName(database.c_str());
-    return db;
+    db->ParseURL(URL);
     }
 #endif // VTK_USE_POSTGRES
+
 #ifdef VTK_USE_MYSQL
   if ( protocol == "mysql" )
     {
     db = vtkMySQLDatabase::New();
-    vtkMySQLDatabase *mysql_db = vtkMySQLDatabase::SafeDownCast(db);
-    if ( username.size() )
-      {
-      mysql_db->SetUser(username.c_str());
-      }
-    if ( password.size() )
-      {
-      mysql_db->SetPassword(password.c_str());
-      }
-    if ( dataport.size() )
-      {
-      mysql_db->SetServerPort(atoi(dataport.c_str()));
-      }
-    mysql_db->SetHostName(hostname.c_str());
-    mysql_db->SetDatabaseName(database.c_str());
-    return db;
+    db->ParseURL(URL);
     }
 #endif // VTK_USE_MYSQL
 
-  vtkGenericWarningMacro( "Unsupported protocol: " << protocol.c_str() );
+#ifdef VTK_USE_ODBC
+  if ( protocol == "odbc" )
+    {
+    db = vtkODBCDatabase::New();
+    db->ParseURL(URL);
+    }
+#endif // VTK_USE_ODBC
+
+  // Now try to look at registered callback to try and find someone who can
+  // provide us with the required implementation.
+  if (!db && vtkSQLDatabase::Callbacks)
+    {
+    db = vtkSQLDatabase::Callbacks->CreateFromURL(URL);
+    }
+
+  if (!db)
+    {
+    vtkGenericWarningMacro( "Unsupported protocol: " << protocol.c_str() );
+    }
   return db;
 }
 

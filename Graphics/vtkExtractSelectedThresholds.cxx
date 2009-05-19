@@ -22,6 +22,7 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkSelection.h"
+#include "vtkSelectionNode.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkCell.h"
 #include "vtkCellData.h"
@@ -30,7 +31,7 @@
 #include "vtkDoubleArray.h"
 #include "vtkSignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkExtractSelectedThresholds, "$Revision: 1.13 $");
+vtkCxxRevisionMacro(vtkExtractSelectedThresholds, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkExtractSelectedThresholds);
 
 //----------------------------------------------------------------------------
@@ -72,8 +73,18 @@ int vtkExtractSelectedThresholds::RequestData(
 
   vtkSelection *sel = vtkSelection::SafeDownCast(
     selInfo->Get(vtkDataObject::DATA_OBJECT()));
-  if (!sel->GetProperties()->Has(vtkSelection::CONTENT_TYPE()) ||
-      sel->GetProperties()->Get(vtkSelection::CONTENT_TYPE()) != vtkSelection::THRESHOLDS)
+  vtkSelectionNode *node = 0;
+  if (sel->GetNumberOfNodes() == 1)
+    {
+    node = sel->GetNode(0);
+    }
+  if (!node)
+    {
+    vtkErrorMacro("Selection must have a single node.");
+    return 1;
+    }
+  if (!node->GetProperties()->Has(vtkSelectionNode::CONTENT_TYPE()) ||
+      node->GetProperties()->Get(vtkSelectionNode::CONTENT_TYPE()) != vtkSelectionNode::THRESHOLDS)
     {
     vtkErrorMacro("Missing or invalid CONTENT_TYPE.");
     return 1;
@@ -86,27 +97,27 @@ int vtkExtractSelectedThresholds::RequestData(
   vtkDebugMacro(<< "Extracting from dataset");
 
   int thresholdByPointVals = 0;
-  int fieldType = vtkSelection::CELL;
-  if (sel->GetProperties()->Has(vtkSelection::FIELD_TYPE()))
+  int fieldType = vtkSelectionNode::CELL;
+  if (node->GetProperties()->Has(vtkSelectionNode::FIELD_TYPE()))
     {
-    fieldType = sel->GetProperties()->Get(vtkSelection::FIELD_TYPE());
-    if (fieldType == vtkSelection::POINT)
+    fieldType = node->GetProperties()->Get(vtkSelectionNode::FIELD_TYPE());
+    if (fieldType == vtkSelectionNode::POINT)
       {
-      if (sel->GetProperties()->Has(vtkSelection::CONTAINING_CELLS()))
+      if (node->GetProperties()->Has(vtkSelectionNode::CONTAINING_CELLS()))
         {
         thresholdByPointVals = 
-          sel->GetProperties()->Get(vtkSelection::CONTAINING_CELLS());
+          node->GetProperties()->Get(vtkSelectionNode::CONTAINING_CELLS());
         }
       }
     }
 
-  if (thresholdByPointVals || fieldType==vtkSelection::CELL)
+  if (thresholdByPointVals || fieldType == vtkSelectionNode::CELL)
     {
-    return this->ExtractCells(sel, input, output, thresholdByPointVals);
+    return this->ExtractCells(node, input, output, thresholdByPointVals);
     }
-  if (fieldType == vtkSelection::POINT)
+  if (fieldType == vtkSelectionNode::POINT)
     {
-    return this->ExtractPoints(sel, input, output);
+    return this->ExtractPoints(node, input, output);
     }
 
   return 1;
@@ -114,7 +125,7 @@ int vtkExtractSelectedThresholds::RequestData(
 
 //----------------------------------------------------------------------------
 int vtkExtractSelectedThresholds::ExtractCells(
-  vtkSelection *sel, 
+  vtkSelectionNode *sel, 
   vtkDataSet *input, 
   vtkDataSet *output,
   int usePointScalars)
@@ -160,9 +171,9 @@ int vtkExtractSelectedThresholds::ExtractCells(
     }
   
   int inverse = 0;
-  if (sel->GetProperties()->Has(vtkSelection::INVERSE()))
+  if (sel->GetProperties()->Has(vtkSelectionNode::INVERSE()))
     {
-    inverse = sel->GetProperties()->Get(vtkSelection::INVERSE());
+    inverse = sel->GetProperties()->Get(vtkSelectionNode::INVERSE());
     }
 
   int passThrough = 0;
@@ -265,16 +276,31 @@ int vtkExtractSelectedThresholds::ExtractCells(
     cell = input->GetCell(cellId);
     cellPts = cell->GetPointIds();
     numCellPts = cell->GetNumberOfPoints();
-    
+
+    // BUG: This code misses the case where the threshold is contained
+    // completely within the cell but none of its points are inside
+    // the range.  Consider as an example the threshold range [1, 2]
+    // with a cell [0, 3].  
     if ( usePointScalars )
       {
       keepCell = 0;
+      int totalAbove = 0;
+      int totalBelow = 0;
       for ( i=0; 
             (i < numCellPts) && (passThrough || !keepCell); 
             i++)
         {
+        int above = 0; 
+        int below = 0;
         ptId = cellPts->GetId(i);
-        int inside = this->EvaluateValue( inScalars, ptId, lims );
+        int inside = this->EvaluateValue( inScalars, ptId, lims, &above, &below, NULL );
+        totalAbove += above;
+        totalBelow += below;
+        // Have we detected a cell that straddles the threshold?
+        if ((!inside) && (totalAbove && totalBelow))
+          {
+          inside = 1;
+          }
         if (passThrough && (inside ^ inverse))
           {
           pointInArray->SetValue(ptId, flag);
@@ -340,7 +366,7 @@ int vtkExtractSelectedThresholds::ExtractCells(
 
 //----------------------------------------------------------------------------
 int vtkExtractSelectedThresholds::ExtractPoints(
-  vtkSelection *sel, 
+  vtkSelectionNode *sel, 
   vtkDataSet *input, 
   vtkDataSet *output)
 {
@@ -370,9 +396,9 @@ int vtkExtractSelectedThresholds::ExtractPoints(
     }
   
   int inverse = 0;
-  if (sel->GetProperties()->Has(vtkSelection::INVERSE()))
+  if (sel->GetProperties()->Has(vtkSelectionNode::INVERSE()))
     {
-    inverse = sel->GetProperties()->Get(vtkSelection::INVERSE());
+    inverse = sel->GetProperties()->Get(vtkSelectionNode::INVERSE());
     }
 
   int passThrough = 0;
@@ -418,8 +444,8 @@ int vtkExtractSelectedThresholds::ExtractPoints(
     newPts->Allocate(numPts);
     outputUG->SetPoints(newPts);
 
-    outPD->CopyAllocate(inputPD);
     outPD->CopyGlobalIdsOn();
+    outPD->CopyAllocate(inputPD);
 
     originalPointIds = vtkIdTypeArray::New();
     originalPointIds->SetNumberOfComponents(1);
@@ -484,6 +510,43 @@ int vtkExtractSelectedThresholds::EvaluateValue(
       keepCell = 1;
       }
     }
+  return keepCell;
+}
+
+
+//----------------------------------------------------------------------------
+int vtkExtractSelectedThresholds::EvaluateValue(
+  vtkDataArray *scalars, vtkIdType id, vtkDoubleArray *lims,
+  int *AboveCount, int *BelowCount, int *InsideCount)
+{
+  int keepCell = 0;
+  //check the value in the array against all of the thresholds in lims
+  //if it is inside any, return true
+  int above = 0;
+  int below = 0;
+  int inside = 0;
+  for (int i = 0; i < lims->GetNumberOfTuples(); i+=2)
+    {
+    double value = scalars->GetComponent(id, 0);
+    double low = lims->GetValue(i);
+    double high = lims->GetValue(i+1);
+    if (value >= low && value <= high)
+      {
+      keepCell = 1;
+      ++inside;
+      }
+    else if (value < low)
+      {
+      ++below;
+      }
+    else if (value > high)
+      {
+      ++above;
+      }
+    }
+  if (AboveCount) *AboveCount = above;
+  if (BelowCount) *BelowCount = below;
+  if (InsideCount) *InsideCount = inside;
   return keepCell;
 }
 
