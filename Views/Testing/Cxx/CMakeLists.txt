@@ -8,12 +8,22 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   IF (VTK_DATA_ROOT)
     # add tests that require data
     SET(MyTests ${MyTests}
+      TestCoincidentGraphLayoutView.cxx
       TestGraphLayoutView.cxx
+      TestHierarchicalGraphView.cxx
       TestIconGlyphFilter.cxx
       TestTreeLayoutView.cxx
       TestTreeMapView.cxx
+      TestTreeRingView.cxx
+      TestIcicleView.cxx
       )
   ENDIF (VTK_DATA_ROOT)
+  # Add these classes only if vtkTypeUInt64Array exists
+  IF(VTK_HAS_UINT64_ARRAY)
+    SET(MyTests ${MyTests}
+      TestNetworkViews.cxx
+      )
+  ENDIF(VTK_HAS_UINT64_ARRAY)
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                          EXTRA_INCLUDE vtkTestDriver.h)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests})

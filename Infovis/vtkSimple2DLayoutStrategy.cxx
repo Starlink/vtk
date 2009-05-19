@@ -37,7 +37,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkSimple2DLayoutStrategy, "$Revision: 1.24 $");
+vtkCxxRevisionMacro(vtkSimple2DLayoutStrategy, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkSimple2DLayoutStrategy);
 
 #ifndef MIN
@@ -69,7 +69,7 @@ vtkSimple2DLayoutStrategy::vtkSimple2DLayoutStrategy()
   this->RestDistance = 0;
   this->Jitter = true;
   this->MaxNumberOfIterations = 200;
-  this->EdgeArray = NULL;
+  this->EdgeArray = 0;
 }
 
 // ----------------------------------------------------------------------
@@ -79,6 +79,11 @@ vtkSimple2DLayoutStrategy::~vtkSimple2DLayoutStrategy()
   this->SetEdgeWeightField(0);
   this->RepulsionArray->Delete();
   this->AttractionArray->Delete();
+  if (this->EdgeArray)
+    {
+    delete [] this->EdgeArray;
+    this->EdgeArray = NULL;
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -341,6 +346,9 @@ void vtkSimple2DLayoutStrategy::Layout()
     // I'm done
     this->LayoutComplete = 1;
     }
+
+  // Mark the points as modified
+  this->Graph->GetPoints()->Modified();
 }
 
 void vtkSimple2DLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
@@ -351,7 +359,6 @@ void vtkSimple2DLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "MaxNumberOfIterations: " << this->MaxNumberOfIterations << endl;
   os << indent << "IterationsPerLayout: " << this->IterationsPerLayout << endl;
   os << indent << "CoolDownRate: " << this->CoolDownRate << endl;
-  os << indent << "EdgeWeightField: " << (this->EdgeWeightField ? this->EdgeWeightField : "(none)") << endl;
   os << indent << "Jitter: " << (this->Jitter ? "True" : "False") << endl;
   os << indent << "RestDistance: " << this->RestDistance << endl;
 }

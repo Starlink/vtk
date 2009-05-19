@@ -12,14 +12,14 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================
-  Copyright 2007 Sandia Corporation.
+  Copyright 2008 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
   license for use of this work by or on behalf of the
   U.S. Government. Redistribution and use in source and binary forms, with
   or without modification, are permitted provided that this Notice and any
   statement of authorship are reproduced on all copies.
 
-  Contact: pppebay@ca.sandia.gov,dcthomp@sandia.gov
+  Contact: pppebay@sandia.gov,dcthomp@sandia.gov
 
 =========================================================================*/
 // .NAME vtkMath - performs common math operations
@@ -34,6 +34,7 @@
 #define __vtkMath_h
 
 #include "vtkObject.h"
+#include <assert.h> // assert() in inline implementations.
 
 #ifndef DBL_EPSILON
 #  define VTK_DBL_EPSILON    2.2204460492503131e-16
@@ -42,6 +43,7 @@
 #endif  // DBL_EPSILON
 
 class vtkDataArray;
+class vtkPoints;
 
 class VTK_COMMON_EXPORT vtkMath : public vtkObject
 {
@@ -52,27 +54,44 @@ public:
 
   // Description:
   // Useful constants.
-  static float Pi() {return 3.14159265358979f;};
-  static float DegreesToRadians() {return 0.017453292f;};
-  static float RadiansToDegrees() {return 57.2957795131f;};
+  static float Pi() { return 3.14159265358979f; };
 
   // Description:
   // Useful constants. (double-precision version)
-  static double DoubleDegreesToRadians() {return 0.017453292519943295;};
-  static double DoublePi() {return 3.1415926535897932384626;};
-  static double DoubleRadiansToDegrees() {return 57.29577951308232;};
+  static double DoubleTwoPi() { return  6.283185307179586; };
+  static double DoublePi() { return 3.1415926535897932384626; };
+
+  // Description:
+  // Convert degrees into radians
+  static float RadiansFromDegrees( float );
+  static double RadiansFromDegrees( double );
+
+  // Description:
+  // Convert radians into degrees
+  static float DegreesFromRadians( float );
+  static double DegreesFromRadians( double );
+
+  // Description:
+  // @deprecated Replaced by vtkMath::RadiansFromDegrees() as of VTK 5.4.
+  VTK_LEGACY(static float DegreesToRadians());
+  VTK_LEGACY(static double DoubleDegreesToRadians());
+
+  // Description:
+  // @deprecated Replaced by vtkMath::DegreesFromRadians() as of VTK 5.4.
+  VTK_LEGACY(static float RadiansToDegrees());
+  VTK_LEGACY(static double DoubleRadiansToDegrees());
 
   // Description:
   // Rounds a float to the nearest integer.
   static int Round(float f) {
-    return static_cast<int>(f + (f >= 0 ? 0.5 : -0.5)); }
+    return static_cast<int>( f + ( f >= 0 ? 0.5 : -0.5 ) ); }
   static int Round(double f) {
-    return static_cast<int>(f + (f >= 0 ? 0.5 : -0.5)); }
+    return static_cast<int>( f + ( f >= 0 ? 0.5 : -0.5 ) ); }
 
   static int Floor(double x);
   
   // Description:
-  // Compute N factorial, N! = N*(N-1)*(N-2)...*3*2*1.
+  // Compute N factorial, N! = N*(N-1) * (N-2)...*3*2*1.
   // 0! is taken to be 1.
   static vtkTypeInt64 Factorial( int N );
 
@@ -109,28 +128,61 @@ public:
   static void FreeCombination( int* combination);
 
   // Description:
+  // Initialize seed value. NOTE: Random() has the bad property that 
+  // the first random number returned after RandomSeed() is called 
+  // is proportional to the seed value! To help solve this, call 
+  // RandomSeed() a few times inside seed. This doesn't ruin the 
+  // repeatability of Random().
+  static void RandomSeed(long s);  
+
+  // Description:
+  // Return the current seed used by the random number generator.
+  static long GetSeed();
+  
+  // Description:
+  // Generate pseudo-random numbers distributed according to the uniform 
+  // distribution between 0.0 and 1.0.
+  // This is used to provide portability across different systems.
+  static double Random();  
+
+  // Description:
+  // Generate  pseudo-random numbers distributed according to the uniform 
+  // distribution between \a min and \a max.
+  static double Random( double min, double max );
+
+  // Description:
+  // Generate pseudo-random numbers distributed according to the standard
+  // normal distribution.
+  static double Gaussian();  
+
+  // Description:
+  // Generate  pseudo-random numbers distributed according to the Gaussian
+  // distribution with mean \a mean and standard deviation \a std.
+  static double Gaussian( double mean, double std );
+
+  // Description:
   // Dot product of two 3-vectors (float version).
   static float Dot(const float x[3], const float y[3]) {
-    return (x[0]*y[0] + x[1]*y[1] + x[2]*y[2]);};
+    return ( x[0] * y[0] + x[1] * y[1] + x[2] * y[2] );};
 
   // Description:
   // Dot product of two 3-vectors (double-precision version).
   static double Dot(const double x[3], const double y[3]) {
-    return (x[0]*y[0] + x[1]*y[1] + x[2]*y[2]);};
+    return ( x[0] * y[0] + x[1] * y[1] + x[2] * y[2] );};
   
   // Description:
   // Outer product of two 3-vectors (float version).
   static void Outer(const float x[3], const float y[3], float A[3][3]) {
     for (int i=0; i < 3; i++)
       for (int j=0; j < 3; j++)
-        A[i][j] = x[i]*y[j];
+        A[i][j] = x[i] * y[j];
   }
   // Description:
   // Outer product of two 3-vectors (double-precision version).
   static void Outer(const double x[3], const double y[3], double A[3][3]) {
     for (int i=0; i < 3; i++)
       for (int j=0; j < 3; j++)
-        A[i][j] = x[i]*y[j];
+        A[i][j] = x[i] * y[j];
   }
 
   // Description:
@@ -150,12 +202,12 @@ public:
   // Description:
   // Compute the norm of 3-vector.
   static float Norm(const float x[3]) {
-    return static_cast<float> (sqrt(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]));};
+    return static_cast<float> (sqrt( x[0] * x[0] + x[1] * x[1] + x[2] * x[2] ) );};
   
   // Description:
   // Compute the norm of 3-vector (double-precision version).
   static double Norm(const double x[3]) {
-    return sqrt(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]);};
+    return sqrt( x[0] * x[0] + x[1] * x[1] + x[2] * x[2] );};
   
   // Description:
   // Normalize (in place) a 3-vector. Returns norm of vector.
@@ -188,39 +240,49 @@ public:
   // Description:
   // Dot product of two 2-vectors. The third (z) component is ignored.
   static float Dot2D(const float x[3], const float y[3]) {
-    return (x[0]*y[0] + x[1]*y[1]);};
+    return ( x[0] * y[0] + x[1] * y[1] );};
   
   // Description:
   // Dot product of two 2-vectors. The third (z) component is
   // ignored (double-precision version).
   static double Dot2D(const double x[3], const double y[3]) {
-    return (x[0]*y[0] + x[1]*y[1]);};
+    return ( x[0] * y[0] + x[1] * y[1] );};
 
   // Description:
   // Outer product of two 2-vectors (float version). z-comp is ignored
-  static void Outer2D(const float x[3], const float y[3], float A[3][3]) {
+  static void Outer2D(const float x[3], const float y[3], float A[3][3]) 
+    {
     for (int i=0; i < 2; i++)
+      {
       for (int j=0; j < 2; j++)
-        A[i][j] = x[i]*y[j];
-  }
+        {
+        A[i][j] = x[i] * y[j];
+        }
+      }
+    }
   // Description:
   // Outer product of two 2-vectors (float version). z-comp is ignored
-  static void Outer2D(const double x[3], const double y[3], double A[3][3]) {
+  static void Outer2D(const double x[3], const double y[3], double A[3][3]) 
+    {
     for (int i=0; i < 2; i++)
+      {
       for (int j=0; j < 2; j++)
-        A[i][j] = x[i]*y[j];
-  }
+        {
+        A[i][j] = x[i] * y[j];
+        }
+      }
+    }
 
   // Description:
   // Compute the norm of a 2-vector. Ignores z-component.
   static float Norm2D(const float x[3]) {
-    return static_cast<float> (sqrt(x[0]*x[0] + x[1]*x[1]));};
+    return static_cast<float> (sqrt( x[0] * x[0] + x[1] * x[1] ) );};
 
   // Description:
   // Compute the norm of a 2-vector. Ignores z-component
   // (double-precision version).
   static double Norm2D(const double x[3]) {
-    return sqrt(x[0]*x[0] + x[1]*x[1]);};
+    return sqrt( x[0] * x[0] + x[1] * x[1] );};
 
   // Description:
   // Normalize (in place) a 2-vector. Returns norm of vector. Ignores
@@ -235,14 +297,14 @@ public:
   // Description:
   // Compute determinant of 2x2 matrix. Two columns of matrix are input.
   static float Determinant2x2(const float c1[2], const float c2[2]) {
-    return (c1[0]*c2[1] - c2[0]*c1[1]);};
+    return (c1[0] * c2[1] - c2[0] * c1[1] );};
 
   // Description:
   // Calculate the determinant of a 2x2 matrix: | a b | | c d |
   static double Determinant2x2(double a, double b, double c, double d) {
     return (a * d - b * c);};
   static double Determinant2x2(const double c1[2], const double c2[2]) {
-    return (c1[0]*c2[1] - c2[0]*c1[1]);};
+    return (c1[0] * c2[1] - c2[0] * c1[1] );};
 
   // Description:
   // LU Factorization of a 3x3 matrix.  The diagonal elements are the
@@ -429,27 +491,6 @@ public:
   static double EstimateMatrixCondition(double **A, int size);
 
   // Description:
-  // Initialize seed value. NOTE: Random() has the bad property that 
-  // the first random number returned after RandomSeed() is called 
-  // is proportional to the seed value! To help solve this, call 
-  // RandomSeed() a few times inside seed. This doesn't ruin the 
-  // repeatability of Random().
-  static void RandomSeed(long s);  
-
-  // Description:
-  // Return the current seed used by the random number generator.
-  static long GetSeed();
-  
-  // Description:
-  // Generate random numbers between 0.0 and 1.0.
-  // This is used to provide portability across different systems.
-  static double Random();  
-
-  // Description:
-  // Generate random number between (min,max).
-  static double Random(double min, double max);
-
-  // Description:
   // Jacobi iteration for the solution of eigenvectors/eigenvalues of a 3x3
   // real symmetric matrix. Square 3x3 matrix a; output eigenvalues in w;
   // and output eigenvectors in v. Resulting eigenvalues/vectors are sorted
@@ -472,7 +513,7 @@ public:
   // Ed.  Return array contains number of (real) roots (counting multiple
   // roots as one) followed by roots themselves. The value in roots[4] is a
   // integer giving further information about the roots (see return codes for
-  // int SolveCubic()).
+  // int SolveCubic() ).
   static double* SolveCubic(double c0, double c1, double c2, double c3);
 
   // Description:
@@ -653,7 +694,7 @@ public:
   // Description:
   // Are the bounds initialized?
   static int AreBoundsInitialized(double bounds[6]){
-    if (bounds[1]-bounds[0]<0.0)
+    if ( bounds[1]-bounds[0]<0.0 )
       {
       return 0;
       }
@@ -669,6 +710,14 @@ public:
     double *values, int nb_values, const double range[2]);
   static void ClampValues(
     const double *values, int nb_values, const double range[2], double *clamped_values);
+
+  // Description:
+  // Clamp a value against a range and then normalized it between 0 and 1.
+  // If range[0]==range[1], the result is 0.
+  // \pre valid_range: range[0]<=range[1]
+  // \post valid_result: result>=0.0 && result<=1.0
+  static double ClampAndNormalizeValue(double value,
+                                       const double range[2]);
 
   // Description:
   // Return the scalar type that is most likely to have enough precision 
@@ -707,6 +756,12 @@ public:
   // Bounds is x-min, x-max, y-min, y-max, z-min, z-max
   // Delta is the error margin along each axis (usually a small number)
   static int PointIsWithinBounds(double point[3], double bounds[6], double delta[3]);
+
+  // Description:
+  // Calculate \a num points, at a regular interval, along a parametric 
+  // spiral. Note this spiral is only in two dimensions having a constant
+  // z value.
+  static void SpiralPoints(vtkIdType num, vtkPoints * offsets);
   
   // Description:
   // Special IEEE-754 numbers used to represent positive and negative infinity and Not-A-Number (Nan).
@@ -725,6 +780,69 @@ private:
 };
 
 //----------------------------------------------------------------------------
+inline float vtkMath::RadiansFromDegrees( float x )
+{
+  return x * 0.017453292f;
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::RadiansFromDegrees( double x )
+{
+  return x * 0.017453292519943295;
+}
+
+//----------------------------------------------------------------------------
+inline float vtkMath::DegreesFromRadians( float x )
+{
+  return x * 57.2957795131f;
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::DegreesFromRadians( double x )
+{
+  return x * 57.29577951308232;
+}
+
+#ifndef VTK_LEGACY_REMOVE
+//----------------------------------------------------------------------------
+inline float vtkMath::DegreesToRadians()
+{
+  VTK_LEGACY_REPLACED_BODY(vtkMath::DegreesToRadians, "VTK 5.4",
+                           vtkMath::RadiansFromDegrees);
+
+  return vtkMath::RadiansFromDegrees( 1.f );
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::DoubleDegreesToRadians()
+{
+  VTK_LEGACY_REPLACED_BODY(vtkMath::DoubleDegreesToRadians, "VTK 5.4",
+                           vtkMath::RadiansFromDegrees);
+
+
+  return vtkMath::RadiansFromDegrees( 1. );
+}
+
+//----------------------------------------------------------------------------
+inline float vtkMath::RadiansToDegrees()
+{
+  VTK_LEGACY_REPLACED_BODY(vtkMath::RadiansToDegrees, "VTK 5.4",
+                           vtkMath::DegreesFromRadians);
+
+  return vtkMath::DegreesFromRadians( 1.f );
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::DoubleRadiansToDegrees()
+{
+  VTK_LEGACY_REPLACED_BODY(vtkMath::DoubleRadiansToDegrees, "VTK 5.4",
+                           vtkMath::DegreesFromRadians);
+
+  return vtkMath::DegreesFromRadians( 1. );
+}
+#endif // #ifndef VTK_LEGACY_REMOVE
+
+//----------------------------------------------------------------------------
 inline vtkTypeInt64 vtkMath::Factorial( int N )
 {
   vtkTypeInt64 r = 1;
@@ -733,6 +851,27 @@ inline vtkTypeInt64 vtkMath::Factorial( int N )
     r *= N--;
     }
   return r;
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::Random( double min, double max )
+{
+  return ( min + vtkMath::Random() * ( max - min ) );
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::Gaussian()
+{
+  // Use the Box-Mueller transform
+  double x = vtkMath::Random();
+  double y = vtkMath::Random();
+  return sqrt( -2. * log( x ) ) * cos( vtkMath::DoubleTwoPi() * y );
+}
+
+//----------------------------------------------------------------------------
+inline double vtkMath::Gaussian( double mean, double std )
+{
+  return mean + std * vtkMath::Gaussian();
 }
 
 //----------------------------------------------------------------------------
@@ -749,7 +888,7 @@ inline int vtkMath::Floor(double x)
   // round-to-nearest,even mode instead of round-to-nearest,+infinity
   return u.i[0] >> 1;
 #else
-  return static_cast<int>(floor(x));
+  return static_cast<int>(floor( x ) );
 #endif
 }
 
@@ -757,7 +896,7 @@ inline int vtkMath::Floor(double x)
 inline float vtkMath::Normalize(float x[3])
 {
   float den; 
-  if ( (den = vtkMath::Norm(x)) != 0.0 )
+  if ( ( den = vtkMath::Norm( x ) ) != 0.0 )
     {
     for (int i=0; i < 3; i++)
       {
@@ -771,7 +910,7 @@ inline float vtkMath::Normalize(float x[3])
 inline double vtkMath::Normalize(double x[3])
 {
   double den; 
-  if ( (den = vtkMath::Norm(x)) != 0.0 )
+  if ( ( den = vtkMath::Norm( x ) ) != 0.0 )
     {
     for (int i=0; i < 3; i++)
       {
@@ -785,7 +924,7 @@ inline double vtkMath::Normalize(double x[3])
 inline float vtkMath::Normalize2D(float x[3])
 {
   float den; 
-  if ( (den = vtkMath::Norm2D(x)) != 0.0 )
+  if ( ( den = vtkMath::Norm2D( x ) ) != 0.0 )
     {
     for (int i=0; i < 2; i++)
       {
@@ -799,7 +938,7 @@ inline float vtkMath::Normalize2D(float x[3])
 inline double vtkMath::Normalize2D(double x[3])
 {
   double den; 
-  if ( (den = vtkMath::Norm2D(x)) != 0.0 )
+  if ( ( den = vtkMath::Norm2D( x ) ) != 0.0 )
     {
     for (int i=0; i < 2; i++)
       {
@@ -814,8 +953,8 @@ inline float vtkMath::Determinant3x3(const float c1[3],
                                      const float c2[3], 
                                      const float c3[3])
 {
-  return c1[0]*c2[1]*c3[2] + c2[0]*c3[1]*c1[2] + c3[0]*c1[1]*c2[2] -
-         c1[0]*c3[1]*c2[2] - c2[0]*c1[1]*c3[2] - c3[0]*c2[1]*c1[2];
+  return c1[0] * c2[1] * c3[2] + c2[0] * c3[1] * c1[2] + c3[0] * c1[1] * c2[2] -
+         c1[0] * c3[1] * c2[2] - c2[0] * c1[1] * c3[2] - c3[0] * c2[1] * c1[2];
 }
 
 //----------------------------------------------------------------------------
@@ -823,8 +962,8 @@ inline double vtkMath::Determinant3x3(const double c1[3],
                                       const double c2[3], 
                                       const double c3[3])
 {
-  return c1[0]*c2[1]*c3[2] + c2[0]*c3[1]*c1[2] + c3[0]*c1[1]*c2[2] -
-         c1[0]*c3[1]*c2[2] - c2[0]*c1[1]*c3[2] - c3[0]*c2[1]*c1[2];
+  return c1[0] * c2[1] * c3[2] + c2[0] * c3[1] * c1[2] + c3[0] * c1[1] * c2[2] -
+         c1[0] * c3[1] * c2[2] - c2[0] * c1[1] * c3[2] - c3[0] * c2[1] * c1[2];
 }
 
 //----------------------------------------------------------------------------
@@ -841,31 +980,27 @@ inline double vtkMath::Determinant3x3(double a1, double a2, double a3,
 inline float vtkMath::Distance2BetweenPoints(const float x[3], 
                                              const float y[3])
 {
-  return ((x[0]-y[0])*(x[0]-y[0]) + (x[1]-y[1])*(x[1]-y[1]) +
-          (x[2]-y[2])*(x[2]-y[2]));
+  return ( ( x[0] - y[0] ) * ( x[0] - y[0] ) 
+           + ( x[1] - y[1] ) * ( x[1] - y[1] ) 
+           + ( x[2] - y[2] ) * ( x[2] - y[2] ) );
 }
 
 //----------------------------------------------------------------------------
 inline double vtkMath::Distance2BetweenPoints(const double x[3], 
                                               const double y[3])
 {
-  return ((x[0]-y[0])*(x[0]-y[0]) + (x[1]-y[1])*(x[1]-y[1]) +
-          (x[2]-y[2])*(x[2]-y[2]));
-}
-
-//----------------------------------------------------------------------------
-inline double vtkMath::Random(double min, double max)
-{
-  return (min + vtkMath::Random()*(max-min));
+  return ( ( x[0] - y[0] ) * ( x[0] - y[0] ) 
+           + ( x[1] - y[1] ) * ( x[1] - y[1] ) 
+           + ( x[2] - y[2] ) * ( x[2] - y[2] ) );
 }
 
 //----------------------------------------------------------------------------
 // Cross product of two 3-vectors. Result vector in z[3].
 inline void vtkMath::Cross(const float x[3], const float y[3], float z[3])
 {
-  float Zx = x[1]*y[2] - x[2]*y[1]; 
-  float Zy = x[2]*y[0] - x[0]*y[2];
-  float Zz = x[0]*y[1] - x[1]*y[0];
+  float Zx = x[1] * y[2] - x[2] * y[1]; 
+  float Zy = x[2] * y[0] - x[0] * y[2];
+  float Zz = x[0] * y[1] - x[1] * y[0];
   z[0] = Zx; z[1] = Zy; z[2] = Zz; 
 }
 
@@ -873,9 +1008,9 @@ inline void vtkMath::Cross(const float x[3], const float y[3], float z[3])
 // Cross product of two 3-vectors. Result vector in z[3].
 inline void vtkMath::Cross(const double x[3], const double y[3], double z[3])
 {
-  double Zx = x[1]*y[2] - x[2]*y[1]; 
-  double Zy = x[2]*y[0] - x[0]*y[2];
-  double Zz = x[0]*y[1] - x[1]*y[0];
+  double Zx = x[1] * y[2] - x[2] * y[1]; 
+  double Zy = x[2] * y[0] - x[0] * y[2];
+  double Zz = x[0] * y[1] - x[1] * y[0];
   z[0] = Zx; z[1] = Zy; z[2] = Zz; 
 }
 
@@ -884,22 +1019,22 @@ inline void vtkMath::Cross(const double x[3], const double y[3], double z[3])
 template<class T>
 inline double vtkDeterminant3x3(T A[3][3])
 {
-  return A[0][0]*A[1][1]*A[2][2] + A[1][0]*A[2][1]*A[0][2] + 
-         A[2][0]*A[0][1]*A[1][2] - A[0][0]*A[2][1]*A[1][2] - 
-         A[1][0]*A[0][1]*A[2][2] - A[2][0]*A[1][1]*A[0][2];
+  return A[0][0] * A[1][1] * A[2][2] + A[1][0] * A[2][1] * A[0][2] + 
+         A[2][0] * A[0][1] * A[1][2] - A[0][0] * A[2][1] * A[1][2] - 
+         A[1][0] * A[0][1] * A[2][2] - A[2][0] * A[1][1] * A[0][2];
 }
 //ETX
 
 //----------------------------------------------------------------------------
 inline double vtkMath::Determinant3x3(float A[3][3])
 {
-  return vtkDeterminant3x3(A);
+  return vtkDeterminant3x3( A );
 }
 
 //----------------------------------------------------------------------------
 inline double vtkMath::Determinant3x3(double A[3][3])
 {
-  return vtkDeterminant3x3(A);
+  return vtkDeterminant3x3( A );
 }
 
 //----------------------------------------------------------------------------
@@ -937,6 +1072,45 @@ inline void vtkMath::ClampValue(
       *clamped_value = value;
       }
     }
+}
+
+// ---------------------------------------------------------------------------
+inline double vtkMath::ClampAndNormalizeValue(double value,
+                                              const double range[2])
+{
+  assert("pre: valid_range" && range[0]<=range[1]);
+  
+  double result;
+  if(range[0]==range[1])
+    {
+      result=0.0;
+    }
+  else
+    {
+      // clamp
+      if(value<range[0])
+        {
+          result=range[0];
+        }
+      else
+        {
+          if(value>range[1])
+            {
+              result=range[1];
+            }
+          else
+            {
+              result=value;
+            }
+        }
+
+      // normalize
+      result=( result - range[0] ) / ( range[1] - range[0] );
+    }
+
+  assert("post: valid_result" && result>=0.0 && result<=1.0);
+
+  return result;
 }
 
 #endif

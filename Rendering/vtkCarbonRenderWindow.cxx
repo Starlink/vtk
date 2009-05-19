@@ -29,7 +29,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include <math.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCarbonRenderWindow, "$Revision: 1.70 $");
+vtkCxxRevisionMacro(vtkCarbonRenderWindow, "$Revision: 1.77 $");
 vtkStandardNewMacro(vtkCarbonRenderWindow);
 
 //----------------------------------------------------------------------------
@@ -254,6 +254,7 @@ vtkCarbonRenderWindow::vtkCarbonRenderWindow()
   this->WindowId = 0;
   this->ParentId = 0;
   this->RootWindow = 0;
+  this->OwnWindow = 0; // Keep before SetWindowName.
   this->SetWindowName("Visualization Toolkit - Carbon");
   this->CursorHidden = 0;
   this->ForceMakeCurrent = 0;
@@ -387,6 +388,24 @@ void vtkCarbonRenderWindow::MakeCurrent()
     }
 }
 
+// ----------------------------------------------------------------------------
+// Description:
+// Tells if this window is the current OpenGL context for the calling thread.
+bool vtkCarbonRenderWindow::IsCurrent()
+{
+  bool result;
+  
+  if(this->OffScreenRendering && this->Internal->OffScreenContextId)
+    {
+    result=this->Internal->OffScreenContextId==aglGetCurrentContext();
+    }
+  else
+    {
+    result=this->ContextId!=0 && this->ContextId==aglGetCurrentContext();
+    }
+  return result;
+}
+
 // --------------------------------------------------------------------------
 void vtkCarbonRenderWindow::SetForceMakeCurrent()
 {
@@ -428,7 +447,11 @@ void vtkCarbonRenderWindow::UpdateGLRegion()
       }
     
     // Associate the OpenGL context with the control's window, and establish the buffer rect.
+#if 0
+    aglSetWindowRef(this->ContextId, this->GetRootWindow());
+#else
     aglSetDrawable(this->ContextId, GetWindowPort(this->GetRootWindow()));
+#endif
     aglSetInteger(this->ContextId, AGL_BUFFER_RECT, bufferRect);
     aglEnable(this->ContextId, AGL_BUFFER_RECT);
   
@@ -601,6 +624,7 @@ void vtkCarbonRenderWindow::Frame()
   this->MakeCurrent();
   if (!this->AbortRender && this->DoubleBuffer && this->SwapBuffers)
     {
+    glFinish();
     aglSwapBuffers(this->ContextId);
     vtkDebugMacro(<< " aglSwapBuffers\n");
     }
@@ -733,8 +757,13 @@ void vtkCarbonRenderWindow::CreateAWindow()
     return;
     }
 
+#if 0
+  // attach the WindowRef to the context
+  if (!aglSetWindowRef (this->ContextId, this->GetRootWindow()))
+#else
   // attach the CGrafPtr to the context
   if (!aglSetDrawable (this->ContextId, GetWindowPort (this->GetRootWindow())))
+#endif
     {
     aglReportError();
     return;
@@ -1083,6 +1112,9 @@ void vtkCarbonRenderWindow::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "ContextId: " << this->ContextId << "\n";
   os << indent << "MultiSamples: " << this->MultiSamples << "\n";
+  os << indent << "WindowId: " << this->WindowId << "\n";
+  os << indent << "ParentId: " << this->ParentId << "\n";
+  os << indent << "RootWindow: " << this->RootWindow << "\n";
 }
 
 //--------------------------------------------------------------------------

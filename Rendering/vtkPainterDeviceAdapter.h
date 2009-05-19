@@ -76,6 +76,11 @@ public:
   virtual int IsAttributesSupported(int attribute)=0;
 
   // Description:
+  // Calls glMultiTex
+  virtual void SendMultiTextureCoords(int numcomp, int type, const void *attribute, 
+                                      int idx, vtkIdType offset) = 0;
+
+  // Description:
   // Sends a single attribute to the graphics card.  The index parameter
   // identifies the attribute.  Some indices have special meaning (see
   // vtkPainter for details).  The components parameter gives the number of
@@ -88,7 +93,7 @@ public:
   // If offset is specified, it is added to attribute pointer after
   // it has been casted to the proper type.
   virtual void SendAttribute(int index, int components, int type,
-                             const void *attribute, unsigned long offset=0) = 0;
+                             const void *attribute, vtkIdType offset=0) = 0;
 
   // Description:
   // Sets an array of attributes.  This allows you to send all the data for
@@ -178,7 +183,11 @@ public:
 
   // Description:
   // Turns emphasis of vertices on or off for vertex selection.
-  virtual void MakeVertexEmphasis(int mode) = 0;
+  virtual void MakeVertexEmphasis(bool mode) = 0;
+  
+  // Description:
+  // @deprecated
+  VTK_LEGACY(virtual void MakeVertexEmphasisWithStencilCheck(int vtkNotUsed(mode)));
 
   // Description:
   // Control use of the stencil buffer (for vertex selection).

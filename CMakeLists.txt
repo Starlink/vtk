@@ -54,8 +54,8 @@ SET(CMAKE_MODULE_PATH "${VTK_CMAKE_DIR}" ${CMAKE_MODULE_PATH})
 #-----------------------------------------------------------------------------
 # VTK version number.  An even minor number corresponds to releases.
 SET(VTK_MAJOR_VERSION 5)
-SET(VTK_MINOR_VERSION 2)
-SET(VTK_BUILD_VERSION 1)
+SET(VTK_MINOR_VERSION 4)
+SET(VTK_BUILD_VERSION 0)
 SET(VTK_VERSION
     "${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}.${VTK_BUILD_VERSION}")
 
@@ -250,6 +250,10 @@ VTK_DEPENDENT_OPTION(VTK_USE_INFOVIS "Build the vtkInfovis kit.  Needed for perf
 
 VTK_DEPENDENT_OPTION(VTK_USE_VIEWS "Build the vtkViews kit.  Needed for creating packaged and linked views." ON "VTK_USE_INFOVIS" OFF)
 
+VTK_DEPENDENT_OPTION(VTK_USE_GEOVIS "Build the vtkGeovis kit.  Needed for performing geographic visualization." ON "VTK_USE_VIEWS" OFF)
+
+OPTION(VTK_USE_N_WAY_ARRAYS "Add support for arbitrary-dimension sparse and dense arrays." OFF)
+
 # Determine Shading Support
 VTK_DEPENDENT_OPTION(VTK_USE_CG_SHADERS "Build pixel and vertex shader support for Cg." OFF
                      "VTK_USE_RENDERING" OFF)
@@ -308,6 +312,10 @@ ENDIF(VTK_USE_PARALLEL)
 IF(VTK_USE_INFOVIS)
   SET(VTK_KITS ${VTK_KITS} INFOVIS)
 ENDIF(VTK_USE_INFOVIS)
+
+IF(VTK_USE_GEOVIS)
+  SET(VTK_KITS ${VTK_KITS} GEOVIS)
+ENDIF(VTK_USE_GEOVIS)
 
 IF(VTK_USE_VIEWS)
   SET(VTK_KITS ${VTK_KITS} VIEWS)
@@ -499,6 +507,7 @@ SET(KWSYS_USE_SystemTools 1)
 SET(KWSYS_USE_SystemInformation 1)
 SET(KWSYS_USE_FundamentalType 1)
 SET(KWSYS_USE_Glob 1)
+SET(KWSYS_USE_DateStamp 1)
 SET(KWSYS_HEADER_ROOT ${VTK_BINARY_DIR}/Utilities)
 SET(KWSYS_PROPERTIES_CXX ${VTK_LIBRARY_PROPERTIES})
 
@@ -570,6 +579,11 @@ VTK_DEPENDENT_OPTION(VTK_USE_MATROX_IMAGING
                      "VTK_USE_RENDERING;WIN32" OFF)
 VTK_DEPENDENT_OPTION(VTK_USE_GL2PS "Build VTK with gl2ps support." OFF
                      "VTK_USE_RENDERING" ON)
+VTK_DEPENDENT_OPTION(VTK_USE_PARALLEL_BGL
+                     "Use the Parallel Boost Graph Library"
+                     OFF
+                     "VTK_USE_BOOST;VTK_USE_MPI;VTK_USE_PARALLEL;VTK_USE_64BIT_IDS" 
+                     OFF)
 
 SET(VTK_CAN_USE_TK)
 IF(VTK_WRAP_PYTHON OR VTK_WRAP_TCL)
@@ -586,7 +600,8 @@ MARK_AS_ADVANCED(VTK_OPENGL_HAS_OSMESA
                  VTK_USE_GL2PS
                  VTK_USE_MANGLED_MESA
                  VTK_USE_MATROX_IMAGING
-                 VTK_USE_MPI)
+                 VTK_USE_MPI
+                 VTK_USE_PARALLEL_BGL)
 
 #-----------------------------------------------------------------------------
 # Provide options to use system versions of third-party libraries.
@@ -597,6 +612,7 @@ VTK_THIRD_PARTY_OPTION(TIFF tiff)
 VTK_THIRD_PARTY_OPTION(EXPAT expat)
 VTK_THIRD_PARTY_OPTION(FREETYPE freetype)
 VTK_THIRD_PARTY_OPTION(LIBXML2 libxml2)
+VTK_THIRD_PARTY_OPTION(LIBPROJ4 proj4)
 
 #-----------------------------------------------------------------------------
 # Configure OpenGL support.
@@ -670,23 +686,36 @@ ENDIF(VTK_USE_MATROX_IMAGING)
 # Configure MPI testing support.
 # FLAGS used and set for MPI testing
 # VTK_MPIRUN_EXE - full path to mpirun command
+# VTK_MPI_PRENUMPROC_FLAGS - flags used directly before the num. of procs flag
 # VTK_MPI_NUMPROC_FLAG - flag that is used to tell this mpirun how many procs to start
 # VTK_MPI_PREFLAGS - flags used directly before process to be run by mpirun
 # VTK_MPI_POSTFLAGS - flags used after all other flags by mpirun
 # So, tests will be run something like this:
-# ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} executable ${VTK_MPI_POSTFLAGS}
+# ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} executable ${VTK_MPI_POSTFLAGS}
 #
 IF(VTK_USE_MPI AND BUILD_TESTING)
   FIND_PROGRAM(VTK_MPIRUN_EXE NAMES mpirun lamexec PATHS "C:/Program Files/MPICH/mpd/bin")
+  SET(VTK_MPI_PRENUMPROC_FLAGS "" CACHE STRING "These flags will be directly before the number of processess flag (see ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt for more info.)")
   SET(VTK_MPI_NUMPROC_FLAG "-np" CACHE STRING "Flag used by mpi to specify the number of processes, the next option will be the number of processes. (see ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt for more info.)")
   SET(VTK_MPI_PREFLAGS "" CACHE STRING "These flags will be directly before the executable that is being run by VTK_MPIRUN_EXE. (see ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt for more info.)")
   SET(VTK_MPI_POSTFLAGS "" CACHE STRING "These flags will come after all flags given to MPIRun.(see ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt for more info.)")
   SET(VTK_MPI_MAX_NUMPROCS "2" CACHE STRING "Maximum number of processors available to run parallel applications. (see ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt for more info.)")
   MARK_AS_ADVANCED(
-    VTK_MPI_NUMPROC_FLAG VTK_MPIRUN_EXE VTK_MPI_PREFLAGS VTK_MPI_POSTFLAGS VTK_MPI_MAX_NUMPROCS)
+    VTK_MPI_PRENUMPROC_FLAGS VTK_MPI_NUMPROC_FLAG VTK_MPIRUN_EXE VTK_MPI_PREFLAGS VTK_MPI_POSTFLAGS VTK_MPI_MAX_NUMPROCS)
+  SEPARATE_ARGUMENTS(VTK_MPI_PRENUMPROC_FLAGS)
   SEPARATE_ARGUMENTS(VTK_MPI_PREFLAGS)
   SEPARATE_ARGUMENTS(VTK_MPI_POSTFLAGS)
 ENDIF(VTK_USE_MPI AND BUILD_TESTING)
+
+#-----------------------------------------------------------------------------
+# Configure Parallel BGL support.
+IF(VTK_USE_PARALLEL_BGL)
+  CMAKE_MINIMUM_REQUIRED(VERSION 2.6.0)
+  FIND_PACKAGE(PBGL REQUIRED)
+  IF (PBGL_INCLUDE_DIR)
+    INCLUDE_DIRECTORIES(BEFORE ${PBGL_INCLUDE_DIR})
+  ENDIF (PBGL_INCLUDE_DIR)
+ENDIF(VTK_USE_PARALLEL_BGL)
 
 #-----------------------------------------------------------------------------
 # Create STL header wrappers to block warnings in the STL headers.
@@ -783,6 +812,7 @@ ENDIF (VTK_USE_FFMPEG_ENCODER)
 #
 # You are solely responsible for any legal issues associated with using
 # patented code in your software.
+# Ref: http://www.vtk.org/get-software.php#addons
 #
 OPTION (VTK_USE_MPEG2_ENCODER
   "Enable use of the patented mpeg2 library. You are solely responsible for any legal issues associated with using patented code in your software."
@@ -837,6 +867,19 @@ IF(VTK_WRAP_JAVA)
   FIND_PACKAGE(Java)
   FIND_PACKAGE(JNI)
 ENDIF(VTK_WRAP_JAVA)
+
+#------------------------------------------------------------------------------
+# Looking for MPI in the Parallel package happens too late. It has to happen
+# before we run vtkIncludeDirectories.cmake.
+#
+# This is a hack.
+#
+# The real fix is to rewrite vtkIncludeDirectories.cmake to not have global
+# inclusion and instead have inclusion per package (which will also avoid
+# rebuilding the whole build tree each time you switch a package ON or OFF).
+IF(VTK_USE_MPI)
+  INCLUDE(FindMPI)
+ENDIF(VTK_USE_MPI)
 
 #-----------------------------------------------------------------------------
 # The entire VTK tree should use the same include path.
@@ -908,7 +951,16 @@ IF(VTK_WRAP_PYTHON)
     GET_TARGET_PROPERTY(VTK_WRAP_PYTHON_INIT_EXE vtkWrapPythonInit LOCATION)
   ENDIF(CMAKE_CROSSCOMPILING)
 
-  # VTK tcl executables.
+  # Save these in cache as other projects including VTK (such as ParaView) may
+  # want to use these. 
+  SET(VTK_WRAP_PYTHON_EXE 
+    "${VTK_WRAP_PYTHON_EXE}"
+    CACHE INTERNAL "Location of program to do Python wrapping")
+  SET(VTK_WRAP_PYTHON_INIT_EXE 
+    "${VTK_WRAP_PYTHON_INIT_EXE}"
+    CACHE INTERNAL "Location of program to do Python wrapping")
+
+  # VTK python executables.
   SET(VTK_PYTHON_EXE ${EXECUTABLE_OUTPUT_PATH}/vtkpython)
   IF(VTK_USE_PARALLEL AND VTK_USE_MPI)
     SET(PVTK_PYTHON_EXE ${EXECUTABLE_OUTPUT_PATH}/pvtkpython)
@@ -943,7 +995,16 @@ MARK_AS_ADVANCED(VTK_USE_BOOST)
 
 # Look for Boost only if using Boost
 IF(VTK_USE_BOOST)
-  FIND_PACKAGE(Boost REQUIRED)
+  if (VTK_USE_PARALLEL_BGL)
+    if (MSVC)
+      set(Boost_USE_STATIC_LIBS ON)
+    endif (MSVC)
+    FIND_PACKAGE(Boost 1.35.1 REQUIRED
+      COMPONENTS mpi serialization filesystem system)
+  else (VTK_USE_PARALLEL_BGL)
+    FIND_PACKAGE(Boost REQUIRED)
+  endif (VTK_USE_PARALLEL_BGL)
+
   INCLUDE(${VTK_CMAKE_DIR}/ExtractBoostVersion.cmake)
 
 # We need Boost 1.32 or later
@@ -951,6 +1012,24 @@ IF(VTK_USE_BOOST)
     MESSAGE(SEND_ERROR "Incompatible Boost version.  Boost 1.32.0 or later is required.")
   ENDIF(BOOST_VERSION LESS 103200)
 ENDIF(VTK_USE_BOOST)
+
+#-----------------------------------------------------------------------------
+# Some classes require vtkTypeUInt64Array to be defined.
+# Make a flag for it here.
+SET(VTK_HAS_UINT64_ARRAY 0)
+IF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
+  SET(VTK_HAS_UINT64_ARRAY 1)
+ELSE(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
+  IF(VTK_SIZEOF_LONG MATCHES "^8$")
+    SET(VTK_HAS_UINT64_ARRAY 1)
+  ELSE(VTK_SIZEOF_LONG MATCHES "^8$")
+    IF(VTK_SIZEOF___INT64 MATCHES "^8$")
+      IF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
+        SET(VTK_HAS_UINT64_ARRAY 1)
+      ENDIF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
+    ENDIF(VTK_SIZEOF___INT64 MATCHES "^8$")
+  ENDIF(VTK_SIZEOF_LONG MATCHES "^8$")
+ENDIF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
 
 ###################################
 
@@ -976,6 +1055,9 @@ ENDIF(VTK_USE_PARALLEL)
 IF(VTK_USE_INFOVIS)
   ADD_SUBDIRECTORY(Infovis)
 ENDIF(VTK_USE_INFOVIS)
+IF(VTK_USE_GEOVIS)
+  ADD_SUBDIRECTORY(Geovis)
+ENDIF(VTK_USE_GEOVIS)
 IF(VTK_USE_VIEWS)
   ADD_SUBDIRECTORY(Views)
 ENDIF(VTK_USE_VIEWS)
@@ -1017,6 +1099,9 @@ IF(BUILD_TESTING)
   IF(VTK_USE_INFOVIS)
     ADD_SUBDIRECTORY(Infovis/Testing)
   ENDIF(VTK_USE_INFOVIS)
+  IF(VTK_USE_GEOVIS)
+    ADD_SUBDIRECTORY(Geovis/Testing)
+  ENDIF(VTK_USE_GEOVIS)
   IF(VTK_USE_VIEWS)
     ADD_SUBDIRECTORY(Views/Testing)
   ENDIF(VTK_USE_VIEWS)
@@ -1056,6 +1141,9 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   IF(VTK_USE_INFOVIS)
     SET(__inst_files ${__inst_files} ${VTK_BINARY_DIR}/vtkInfovisInstantiator.h)
   ENDIF(VTK_USE_INFOVIS)
+  IF(VTK_USE_GEOVIS)
+    SET(__inst_files ${__inst_files} ${VTK_BINARY_DIR}/vtkGeovisInstantiator.h)
+  ENDIF(VTK_USE_GEOVIS)
   IF(VTK_USE_VIEWS)
     SET(__inst_files ${__inst_files} ${VTK_BINARY_DIR}/vtkViewsInstantiator.h)
   ENDIF(VTK_USE_VIEWS)
@@ -1084,6 +1172,7 @@ EXPORT_LIBRARY_DEPENDENCIES(${VTK_BINARY_DIR}/VTKLibraryDepends.cmake)
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
   INSTALL(FILES
+    ${VTK_CMAKE_DIR}/FindMySQL.cmake
     ${VTK_CMAKE_DIR}/FindTCL.cmake
     ${VTK_CMAKE_DIR}/FindPythonLibs.cmake
     ${VTK_CMAKE_DIR}/FindPackageHandleStandardArgs.cmake

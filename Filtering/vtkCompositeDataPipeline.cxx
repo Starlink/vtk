@@ -81,7 +81,7 @@ PURPOSE.  See the above copyright notice for more information.
         !strcmp(name, "vtkTemporalStreamTracer")) \
       { \
 */
-vtkCxxRevisionMacro(vtkCompositeDataPipeline, "$Revision: 1.70 $");
+vtkCxxRevisionMacro(vtkCompositeDataPipeline, "$Revision: 1.73 $");
 vtkStandardNewMacro(vtkCompositeDataPipeline);
 
 vtkInformationKeyMacro(vtkCompositeDataPipeline,REQUIRES_TIME_DOWNSTREAM, Integer);
@@ -614,7 +614,7 @@ void vtkCompositeDataPipeline::ExecuteSimpleAlgorithm(
     vtkSmartPointer<vtkInformation> r = 
       vtkSmartPointer<vtkInformation>::New();
 
-    r->Set(FROM_OUTPUT_PORT(), PRODUCER()->GetPort(inInfo));
+    r->Set(FROM_OUTPUT_PORT(), PRODUCER()->GetPort(outInfo));
 
     // The request is forwarded upstream through the pipeline.
     r->Set(vtkExecutive::FORWARD_DIRECTION(), vtkExecutive::RequestUpstream);
@@ -1009,6 +1009,12 @@ int vtkCompositeDataPipeline::NeedToExecuteData(
     {
     return 1;
     }
+  int dataGhostLevel = dataInfo->Get(vtkDataObject::DATA_NUMBER_OF_GHOST_LEVELS());
+  int updateGhostLevel = outInfo->Get(UPDATE_NUMBER_OF_GHOST_LEVELS());
+  if(dataGhostLevel < updateGhostLevel)
+    {
+    return 1;
+    }
   if (dataNumberOfPieces != 1)
     {
     int dataPiece = dataInfo->Get(vtkDataObject::DATA_PIECE_NUMBER());
@@ -1020,6 +1026,11 @@ int vtkCompositeDataPipeline::NeedToExecuteData(
     }
 
   if (this->NeedToExecuteBasedOnTime(outInfo, dataObject))
+    {
+    return 1;
+    }
+
+  if (this->NeedToExecuteBasedOnFastPathData(outInfo))
     {
     return 1;
     }

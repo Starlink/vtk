@@ -31,7 +31,7 @@
 #include "vtkTextProperty.h"
 
 //=============================================================================
-vtkCxxRevisionMacro(vtkScalarBarRepresentation, "$Revision: 1.1.2.1 $");
+vtkCxxRevisionMacro(vtkScalarBarRepresentation, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkScalarBarRepresentation);
 //-----------------------------------------------------------------------------
 vtkScalarBarRepresentation::vtkScalarBarRepresentation()

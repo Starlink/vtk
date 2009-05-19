@@ -22,7 +22,7 @@
 #include "vtkPointData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkMapper, "$Revision: 1.122 $");
+vtkCxxRevisionMacro(vtkMapper, "$Revision: 1.127 $");
 
 // Initialize static member that controls global immediate mode rendering
 static int vtkMapperGlobalImmediateModeRendering = 0;
@@ -64,6 +64,8 @@ vtkMapper::vtkMapper()
   this->InterpolateScalarsBeforeMapping = 0;
   this->ColorCoordinates = 0;
   this->ColorTextureMap = 0;
+
+  this->ForceCompileOnly=0;
 }
 
 vtkMapper::~vtkMapper()
@@ -90,12 +92,10 @@ vtkMapper::~vtkMapper()
 // (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
 double *vtkMapper::GetBounds()
 {
-  static double bounds[] = {-1.0,1.0, -1.0,1.0, -1.0,1.0};
-
   vtkDataSet *input = this->GetInput();
   if ( ! input ) 
     {
-    return bounds;
+      vtkMath::UninitializeBounds(this->Bounds);
     }
   else
     {
@@ -104,8 +104,8 @@ double *vtkMapper::GetBounds()
       this->Update();
       }
     input->GetBounds(this->Bounds);
-    return this->Bounds;
     }
+  return this->Bounds;
 }
 
 vtkDataSet *vtkMapper::GetInput()
@@ -116,6 +116,16 @@ vtkDataSet *vtkMapper::GetInput()
     }
   return vtkDataSet::SafeDownCast(
     this->GetExecutive()->GetInputData(0, 0));
+}
+
+void vtkMapper::SetForceCompileOnly(int value)
+{
+  if(this->ForceCompileOnly!=value)
+    {
+      this->ForceCompileOnly=value;
+      // make sure we don't call this->Modified();
+      //      this->Modified();
+    }
 }
 
 void vtkMapper::SetGlobalImmediateModeRendering(int val)
@@ -291,6 +301,7 @@ vtkUnsignedCharArray *vtkMapper::MapScalars(double alpha)
       }
     this->LookupTable->Build();
     }
+
   if ( !this->UseLookupTableScalarRange )
     {
     this->LookupTable->SetRange(this->ScalarRange);
@@ -348,9 +359,11 @@ vtkUnsignedCharArray *vtkMapper::MapScalars(double alpha)
     }
   
   // map scalars
+  double orig_alpha = this->LookupTable->GetAlpha();
   this->LookupTable->SetAlpha(alpha);
   this->Colors = this->LookupTable->
     MapScalars(scalars, this->ColorMode, this->ArrayComponent);
+  this->LookupTable->SetAlpha(orig_alpha);
   // Consistent register and unregisters
   this->Colors->Register(this);
   this->Colors->Delete();
@@ -557,6 +570,7 @@ void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
 void vtkMapper::MapScalarsToTexture(vtkDataArray* scalars, double alpha)
 {
   double* range = this->LookupTable->GetRange();
+  double orig_alpha = this->LookupTable->GetAlpha();
   
   // Get rid of vertex color array.  Only texture or vertex coloring 
   // can be active at one time.  The existence of the array is the 
@@ -599,6 +613,7 @@ void vtkMapper::MapScalarsToTexture(vtkDataArray* scalars, double alpha)
     this->ColorTextureMap->SetScalarTypeToUnsignedChar();
     this->ColorTextureMap->GetPointData()->SetScalars(
          this->LookupTable->MapScalars(tmp, this->ColorMode, 0));
+    this->LookupTable->SetAlpha(orig_alpha);
     // Do we need to delete the scalars?
     this->ColorTextureMap->GetPointData()->GetScalars()->Delete();
     // Consistent register and unregisters
@@ -673,6 +688,10 @@ void vtkMapper::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Immediate Mode Rendering: " 
     << (this->ImmediateModeRendering ? "On\n" : "Off\n");
+
+   os << indent << "Force compile only for display lists: " 
+    << (this->ForceCompileOnly ? "On\n" : "Off\n");
+
   os << indent << "Global Immediate Mode Rendering: " << 
     (vtkMapperGlobalImmediateModeRendering ? "On\n" : "Off\n");
 

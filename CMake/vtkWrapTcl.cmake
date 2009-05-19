@@ -45,9 +45,6 @@ MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
     MESSAGE(SEND_ERROR "VTK_WRAP_TCL_EXE not specified when calling VTK_WRAP_TCL3")
   ENDIF(NOT VTK_WRAP_TCL_EXE)
 
-  # The shell into which nmake.exe executes the custom command has some issues
-  # with mixing quoted and unquoted arguments :( Let's help.
-
   IF(CMAKE_GENERATOR MATCHES "NMake Makefiles")
     SET(verbatim "")
     SET(quote "\"")

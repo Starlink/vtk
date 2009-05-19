@@ -60,20 +60,25 @@ public:
   vtkGetMacro(Resolution,int);
 
   // Description:
-  // Set the center of the cone. The default is 0,0,0.
+  // Set the center of the cone. It is located at the middle of the axis of
+  // the cone. Warning: this is not the center of the base of the cone!
+  // The default is 0,0,0.
   vtkSetVector3Macro(Center,double);
   vtkGetVectorMacro(Center,double,3);
 
   // Description:
   // Set the orientation vector of the cone. The vector does not have
-  // to be normalized. The cone will point in the Direction specified.
-  // The default is (1,0,0).
+  // to be normalized. The direction goes from the center of the base toward
+  // the apex. The default is (1,0,0).
   vtkSetVector3Macro(Direction,double);
   vtkGetVectorMacro(Direction,double,3);
 
   // Description:
-  // Set the angle of the cone. As a side effect, the angle plus height sets 
-  // the base radius of the cone.
+  // Set the angle of the cone. This is the angle between the axis of the cone
+  // and a generatrix. Warning: this is not the aperture! The aperture is
+  // twice this angle.
+  // As a side effect, the angle plus height sets the base radius of the cone.
+  // Angle is expressed in degrees.
   void SetAngle (double angle);
   double GetAngle ();
 

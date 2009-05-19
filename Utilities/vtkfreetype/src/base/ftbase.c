@@ -32,7 +32,6 @@
 #include "ftutil.c"
 
 #if defined( __APPLE__ ) && !defined ( DARWIN_NO_CARBON )
-/* VTK_FREETYPE_CHANGE change <>-style include to ""-style */
 #include "ftmac.c"
 #endif
 

@@ -16,7 +16,10 @@ IF(PYTHON_EXECUTABLE)
     "${VTK_SOURCE_DIR}/Hybrid"
     VTK_HYBRID_EXPORT
     vtk3DS.h
+    vtkExodusIIReaderParser.h
     vtkExodusIIReaderPrivate.h
     vtkVRML.h
+    vtkX3D.h
+    vtkX3DExporterFIWriterHelper.h
     )
 ENDIF(PYTHON_EXECUTABLE)

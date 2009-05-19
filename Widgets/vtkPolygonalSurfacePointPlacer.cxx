@@ -141,7 +141,7 @@ public:
     }
 };
 
-vtkCxxRevisionMacro(vtkPolygonalSurfacePointPlacer, "$Revision: 1.3.6.1 $");
+vtkCxxRevisionMacro(vtkPolygonalSurfacePointPlacer, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkPolygonalSurfacePointPlacer);
 
 //----------------------------------------------------------------------

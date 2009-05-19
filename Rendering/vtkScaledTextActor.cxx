@@ -15,7 +15,7 @@
 #include "vtkScaledTextActor.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkScaledTextActor, "$Revision: 1.28.82.1 $");
+vtkCxxRevisionMacro(vtkScaledTextActor, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkScaledTextActor);
 
 vtkScaledTextActor::vtkScaledTextActor()

@@ -27,7 +27,7 @@
 #include "vtkWidgetEvent.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkContourWidget, "$Revision: 1.22.2.2 $");
+vtkCxxRevisionMacro(vtkContourWidget, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkContourWidget);
 
 //----------------------------------------------------------------------
@@ -55,6 +55,18 @@ vtkContourWidget::vtkContourWidget()
                                           vtkEvent::NoModifier, 127, 1, "Delete",
                                           vtkWidgetEvent::Delete,
                                           this, vtkContourWidget::DeleteAction);
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::MiddleButtonPressEvent,
+                                          vtkWidgetEvent::Translate,
+                                          this, vtkContourWidget::TranslateContourAction);
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::MiddleButtonReleaseEvent,
+                                          vtkWidgetEvent::EndTranslate,
+                                          this, vtkContourWidget::EndSelectAction);
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::RightButtonPressEvent,
+                                          vtkWidgetEvent::Scale,
+                                          this, vtkContourWidget::ScaleContourAction);
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::RightButtonReleaseEvent,
+                                          vtkWidgetEvent::EndScale,
+                                          this, vtkContourWidget::EndSelectAction);
   
   this->CreateDefaultRepresentation();
   
@@ -241,6 +253,117 @@ void vtkContourWidget::AddNode()
 }
 
 //-------------------------------------------------------------------------
+// Note that if you select the contour at a location that is not moused over
+// a control point, the translate action makes the closest contour node 
+// jump to the current mouse location. Perhaps we should either 
+// (a) Disable translations when not moused over a control point
+// (b) Fix the jumping behaviour by calculating motion vectors from the start
+//     of the interaction.
+void vtkContourWidget::TranslateContourAction(vtkAbstractWidget *w )
+{
+  vtkContourWidget *self = reinterpret_cast<vtkContourWidget*>(w);
+
+  if ( self->WidgetState != vtkContourWidget::Manipulate )
+    return;
+
+  vtkContourRepresentation *rep =
+    reinterpret_cast<vtkContourRepresentation*>(self->WidgetRep);
+
+  int X = self->Interactor->GetEventPosition()[0];
+  int Y = self->Interactor->GetEventPosition()[1];
+  double pos[2];
+  pos[0] = X;
+  pos[1] = Y;
+
+  if ( rep->ActivateNode(X,Y) )
+    {
+    self->Superclass::StartInteraction();
+    self->InvokeEvent(vtkCommand::StartInteractionEvent,NULL);
+    self->StartInteraction();
+    rep->SetCurrentOperationToShift(); // Here
+    rep->StartWidgetInteraction(pos);
+    self->EventCallbackCommand->SetAbortFlag(1);
+    }
+  else
+    {
+    double p[3];
+    int idx;
+    if( rep->FindClosestPointOnContour( X, Y, p, &idx ) )
+      {
+      rep->GetNthNodeDisplayPosition( idx, pos );
+      rep->ActivateNode( pos );
+      self->Superclass::StartInteraction();
+      self->InvokeEvent(vtkCommand::StartInteractionEvent,NULL);
+      self->StartInteraction();
+      rep->SetCurrentOperationToShift(); // Here
+      rep->StartWidgetInteraction(pos);
+      self->EventCallbackCommand->SetAbortFlag(1);
+      }
+    }
+
+  if ( rep->GetNeedToRender() )
+    {
+    self->Render();
+    rep->NeedToRenderOff();
+    }
+}
+//-------------------------------------------------------------------------
+// Note that if you select the contour at a location that is not moused over
+// a control point, the scale action makes the closest contour node 
+// jump to the current mouse location. Perhaps we should either 
+// (a) Disable scaling when not moused over a control point
+// (b) Fix the jumping behaviour by calculating motion vectors from the start
+//     of the interaction.
+void vtkContourWidget::ScaleContourAction(vtkAbstractWidget *w )
+{
+  vtkContourWidget *self = reinterpret_cast<vtkContourWidget*>(w);
+
+  if ( self->WidgetState != vtkContourWidget::Manipulate )
+    return;
+
+  vtkContourRepresentation *rep =
+    reinterpret_cast<vtkContourRepresentation*>(self->WidgetRep);
+
+  int X = self->Interactor->GetEventPosition()[0];
+  int Y = self->Interactor->GetEventPosition()[1];
+  double pos[2];
+  pos[0] = X;
+  pos[1] = Y;
+
+  if ( rep->ActivateNode(X,Y) )
+    {
+    self->Superclass::StartInteraction();
+    self->InvokeEvent(vtkCommand::StartInteractionEvent,NULL);
+    self->StartInteraction();
+    rep->SetCurrentOperationToScale(); // Here
+    rep->StartWidgetInteraction(pos);
+    self->EventCallbackCommand->SetAbortFlag(1);
+    }
+  else
+    {
+    double p[3];
+    int idx;
+    if( rep->FindClosestPointOnContour( X, Y, p, &idx ) )
+      {
+      rep->GetNthNodeDisplayPosition( idx, pos );
+      rep->ActivateNode( pos );
+      self->Superclass::StartInteraction();
+      self->InvokeEvent(vtkCommand::StartInteractionEvent,NULL);
+      self->StartInteraction();
+      rep->SetCurrentOperationToScale(); // Here
+      rep->StartWidgetInteraction(pos);
+      self->EventCallbackCommand->SetAbortFlag(1);
+      }
+    }
+
+  if ( rep->GetNeedToRender() )
+    {
+    self->Render();
+    rep->NeedToRenderOff();
+    }
+}
+
+//-------------------------------------------------------------------------
 void vtkContourWidget::DeleteAction(vtkAbstractWidget *w)
 {
   vtkContourWidget *self = reinterpret_cast<vtkContourWidget*>(w);
@@ -249,10 +372,10 @@ void vtkContourWidget::DeleteAction(vtkAbstractWidget *w)
     {
     return;
     }
-  
+
   vtkContourRepresentation *rep = 
     reinterpret_cast<vtkContourRepresentation*>(self->WidgetRep);
-  
+
   if ( self->WidgetState == vtkContourWidget::Define )
     {
     if (rep->DeleteLastNode())
@@ -267,16 +390,20 @@ void vtkContourWidget::DeleteAction(vtkAbstractWidget *w)
     rep->ActivateNode( X, Y );
     if ( rep->DeleteActiveNode() )
       {
-      self->InvokeEvent(vtkCommand::InteractionEvent,NULL);      
+      self->InvokeEvent(vtkCommand::InteractionEvent,NULL);
       }
     rep->ActivateNode( X, Y );
-    if ( rep->GetNumberOfNodes() < 3 )
+    int nnode = rep->GetNumberOfNodes();
+    if ( nnode < 3 )
       {
       rep->ClosedLoopOff();
-      self->WidgetState = vtkContourWidget::Define;
+      if( nnode < 2 )
+        {
+        self->WidgetState = vtkContourWidget::Define;
+        }
       }
     }
-  
+
   if ( rep->GetNeedToRender() )
     {
     self->Render();
@@ -303,10 +430,8 @@ void vtkContourWidget::MoveAction(vtkAbstractWidget *w)
 
   if ( rep->GetCurrentOperation() == vtkContourRepresentation::Inactive )
     {
-    reinterpret_cast<vtkContourRepresentation*>(self->WidgetRep)->
-      ComputeInteractionState( X, Y );
-    reinterpret_cast<vtkContourRepresentation*>(self->WidgetRep)->
-      ActivateNode( X, Y );
+    rep->ComputeInteractionState( X, Y );
+    rep->ActivateNode( X, Y );
     }
   else
     {

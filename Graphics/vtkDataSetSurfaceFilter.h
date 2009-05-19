@@ -33,7 +33,14 @@ class vtkPoints;
 class vtkIdTypeArray;
 
 //BTX
-struct vtkFastGeomQuadStruct;
+// Helper structure for hashing faces.
+struct vtkFastGeomQuadStruct
+{
+  struct vtkFastGeomQuadStruct *Next;
+  vtkIdType SourceId;
+  int numPts;
+  vtkIdType ptArray[4]; // actually a variable length array.  MUST be last
+};
 typedef struct vtkFastGeomQuadStruct vtkFastGeomQuad;
 //ETX
 
@@ -100,18 +107,12 @@ protected:
 
   void InitializeQuadHash(vtkIdType numPoints);
   void DeleteQuadHash();
-  void InsertQuadInHash(vtkIdType a, vtkIdType b, vtkIdType c, vtkIdType d,
+  virtual void InsertQuadInHash(vtkIdType a, vtkIdType b, vtkIdType c, vtkIdType d,
                         vtkIdType sourceId);
-  void InsertTriInHash(vtkIdType a, vtkIdType b, vtkIdType c,
+  virtual void InsertTriInHash(vtkIdType a, vtkIdType b, vtkIdType c,
                        vtkIdType sourceId);
-  void InsertPentaInHash(vtkIdType a, vtkIdType b,
-                       vtkIdType c, vtkIdType d,
-                       vtkIdType e, 
-                       vtkIdType sourceId);
-  void InsertHexInHash(vtkIdType a, vtkIdType b,
-                       vtkIdType c, vtkIdType d,
-                       vtkIdType e, vtkIdType f,
-                       vtkIdType sourceId);
+  virtual void InsertPolygonInHash(vtkIdType* ids, int numpts,
+                           vtkIdType sourceId);
   void InitQuadHashTraversal();
   vtkFastGeomQuad *GetNextVisibleQuadFromHash();
 
@@ -128,12 +129,12 @@ protected:
   
   // Better memory allocation for faces (hash)
   void InitFastGeomQuadAllocation(int numberOfCells);
-  vtkFastGeomQuad* NewFastGeomQuad();
+  vtkFastGeomQuad* NewFastGeomQuad(int numPts);
   void DeleteAllFastGeomQuads();
   // -----
   int FastGeomQuadArrayLength;
   int NumberOfFastGeomQuadArrays;
-  vtkFastGeomQuad** FastGeomQuadArrays;
+  unsigned char** FastGeomQuadArrays;  // store this data as an array of bytes
   // These indexes allow us to find the next available face.
   int NextArrayIndex;
   int NextQuadIndex;

@@ -27,8 +27,18 @@
 #include "vtkRenderer.h"
 #include "vtkStripper.h"
 
-vtkCxxRevisionMacro(vtk3DSImporter, "$Revision: 1.38 $");
+vtkCxxRevisionMacro(vtk3DSImporter, "$Revision: 1.40 $");
 vtkStandardNewMacro(vtk3DSImporter);
+
+// Silent warning like
+// "dereferencing type-punned pointer will break strict-aliasing rules"
+// This file just has to many of them.
+// This is due to the use of (vtk3DSList **)&root in VTK_LIST_* macros
+// defined in vtk3DS.h
+// pragma GCC diagnostic is available since gcc>=4.2
+#if defined(__GNUG__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=2)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
 
 static vtk3DSColour Black = {0.0, 0.0, 0.0};
 static char   obj_name[80] = "";

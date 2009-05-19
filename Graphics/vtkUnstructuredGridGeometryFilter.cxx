@@ -48,7 +48,7 @@
 #include <vtkstd/vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkUnstructuredGridGeometryFilter, "$Revision: 1.5.12.1 $");
+vtkCxxRevisionMacro(vtkUnstructuredGridGeometryFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkUnstructuredGridGeometryFilter);
 
 #if 0

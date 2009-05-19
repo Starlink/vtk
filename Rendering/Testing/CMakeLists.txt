@@ -19,9 +19,13 @@ IF(PYTHON_EXECUTABLE)
     vtkCocoaGLView.h
     vtkFreeTypeUtilities.h
     vtkgluPickMatrix.h
+    vtkLabelHierarchyPrivate.h
     vtkOpenGL.h
     vtkOpenGLStateCache.h
     vtkgl.h
     vtkOpenGLExtensionManagerConfigure.h
+    vtkCocoaMacOSXSDKCompatibility.h
+    vtkPythagoreanQuadruples.h
+    vtkRenderState.h
     )
 ENDIF(PYTHON_EXECUTABLE)

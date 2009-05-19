@@ -43,8 +43,10 @@
 #include "vtkObject.h"
 #include "vtkWeakPointer.h" // needed for vtkWeakPointer.
 
+class vtkAbstractArray;
 class vtkActor;
 class vtkDataObject;
+class vtkDataSet;
 class vtkInformation;
 class vtkInformationIntegerKey;
 class vtkPainterObserver;
@@ -107,8 +109,9 @@ public:
   // of primitives can be requested by or-ring the primitive flags. 
   // Default implementation calls UpdateDelegatePainter() to update the 
   // deletagate painter and then calls RenderInternal().
+  // forceCompileOnly is passed to the display list painters.
   virtual void Render(vtkRenderer* renderer, vtkActor* actor, 
-    unsigned long typeflags);
+                      unsigned long typeflags, bool forceCompileOnly);
   
   // Description:
   // Release any graphics resources that are being consumed by this painter.
@@ -185,7 +188,7 @@ protected:
   // DelegatePainter is in sync with this painter i.e. UpdateDelegatePainter()
   // has been called.
   virtual void RenderInternal(vtkRenderer* renderer, vtkActor* actor, 
-    unsigned long typeflags);
+                              unsigned long typeflags, bool forceCompileOnly);
 
   // Description:
   // Called when the delegate painter reports its progress.
@@ -208,6 +211,16 @@ protected:
   // amount. The parameter amount should range between (0,1).
   // Raises vtkCommand::ProgressEvent.
   void UpdateProgress(double amount);
+
+  // Description:
+  // Helper method to get input array to process.
+  vtkAbstractArray* GetInputArrayToProcess(int fieldAssociation, 
+    int fieldAttributeType,
+    vtkDataSet* ds,
+    bool *use_cell_data=0);
+  vtkAbstractArray* GetInputArrayToProcess(int fieldAssociation, 
+    const char* name, vtkDataSet* dsl, 
+    bool *use_cell_data=0);
  
   // Time of most recent call to ProcessInformation().
   vtkTimeStamp InformationProcessTime;

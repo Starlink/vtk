@@ -44,6 +44,8 @@ int TestIconGlyphFilter( int argc, char *argv[])
   imageReader->SetFileName(fname);
   imageReader->Update();
 
+  delete [] fname;
+
   imageReader->GetOutput()->GetDimensions(imageDims);
 
   vtkMutableUndirectedGraph * graph = vtkMutableUndirectedGraph::New();
@@ -95,7 +97,7 @@ int TestIconGlyphFilter( int argc, char *argv[])
   iconIndex->InsertNextTuple1(29);
 
   vtkGraphLayoutView *view = vtkGraphLayoutView::New();
-  view->AddRepresentationFromInput(graph);
+  view->SetRepresentationFromInput(graph);
   view->SetLayoutStrategyToSimple2D();
   view->GetRenderer()->ResetCamera();
   

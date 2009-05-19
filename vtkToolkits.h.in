@@ -21,7 +21,9 @@
 /* Selected VTK Toolkits                                                    */
 
 #cmakedefine VTK_USE_VIEWS
+#cmakedefine VTK_USE_GEOVIS
 #cmakedefine VTK_USE_INFOVIS
+#cmakedefine VTK_USE_N_WAY_ARRAYS
 #cmakedefine VTK_USE_PARALLEL
 #cmakedefine VTK_USE_RENDERING
 #cmakedefine VTK_USE_GL2PS
@@ -84,6 +86,14 @@
 /* Should VTK use MySQL?  */
 #cmakedefine VTK_USE_MYSQL
 
+/* Should VTK use ODBC?  */
+#cmakedefine VTK_USE_ODBC
+#cmakedefine VTK_ODBC_TEST_DSN
+#ifdef VTK_ODBC_TEST_DSN
+#  undef VTK_ODBC_TEST_DSN
+#  define VTK_ODBC_TEST_DSN "@VTK_ODBC_TEST_DSN@"
+#endif
+
 /* Is a test PostgreSQL database URL defined? */
 #cmakedefine VTK_PSQL_TEST_URL
 #ifdef VTK_PSQL_TEST_URL
@@ -109,6 +119,7 @@
 #cmakedefine VTK_USE_SYSTEM_EXPAT
 #cmakedefine VTK_USE_SYSTEM_FREETYPE
 #cmakedefine VTK_USE_SYSTEM_LIBXML2
+#cmakedefine VTK_USE_SYSTEM_LIBPROJ4
 
 /* Whether VTK is using vfw32 and if it supports video capture */
 #cmakedefine VTK_USE_VIDEO_FOR_WINDOWS

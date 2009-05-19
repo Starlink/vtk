@@ -33,17 +33,41 @@
 #include <QtSql/QtSql>
 #include <QtSql/QSqlError>
 
-vtkCxxRevisionMacro(vtkQtSQLDatabase, "$Revision: 1.3 $");
+#include <vtksys/SystemTools.hxx>
+#include <vtksys/ios/sstream>
+
+vtkCxxRevisionMacro(vtkQtSQLDatabase, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkQtSQLDatabase);
 
 int vtkQtSQLDatabase::id = 0;
 
+vtkSQLDatabase* vtkQtSQLDatabaseCreateFromURLCallback(const char* URL)
+{
+  return vtkQtSQLDatabase::CreateFromURL(URL);
+}
+
+class vtkQtSQLDatabaseInitializer
+{
+public:
+  inline void Use()
+    {
+    }
+
+  vtkQtSQLDatabaseInitializer()
+    {
+    vtkSQLDatabase::RegisterCreateFromURLCallback(
+      vtkQtSQLDatabaseCreateFromURLCallback);
+    }
+};
+
+static vtkQtSQLDatabaseInitializer vtkQtSQLDatabaseInitializerGlobal;
+
 vtkQtSQLDatabase::vtkQtSQLDatabase()
 {
+  vtkQtSQLDatabaseInitializerGlobal.Use();
   this->DatabaseType = NULL;
   this->HostName = NULL;
   this->UserName = NULL;
-  this->Password = NULL;
   this->DatabaseName = NULL;
   this->Port = -1;
   this->ConnectOptions = NULL;
@@ -56,14 +80,13 @@ vtkQtSQLDatabase::~vtkQtSQLDatabase()
   this->SetDatabaseType(NULL);
   this->SetHostName(NULL);
   this->SetUserName(NULL);
-  this->SetPassword(NULL);
   this->SetDatabaseName(NULL);
   this->SetConnectOptions(NULL);
   this->myTables->Delete();
   this->currentRecord->Delete();
 }
 
-bool vtkQtSQLDatabase::Open()
+bool vtkQtSQLDatabase::Open(const char* password)
 {
   if (!QCoreApplication::instance())
     {
@@ -90,14 +113,6 @@ bool vtkQtSQLDatabase::Open()
     {
     this->QtDatabase.setDatabaseName(this->DatabaseName);
     }
-  if (this->UserName != NULL)
-    {
-    this->QtDatabase.setUserName(this->UserName);
-    }
-  if (this->Password != NULL)
-    {
-    this->QtDatabase.setPassword(this->Password);
-    }
   if (this->ConnectOptions != NULL)
     {
     this->QtDatabase.setConnectOptions(this->ConnectOptions);
@@ -106,7 +121,12 @@ bool vtkQtSQLDatabase::Open()
     {
     this->QtDatabase.setPort(this->Port);
     }
-  return this->QtDatabase.open();
+  if (this->QtDatabase.open(this->UserName, password))
+    {
+    return true;
+    }
+
+  return false;
 }
 
 void vtkQtSQLDatabase::Close()
@@ -238,10 +258,67 @@ void vtkQtSQLDatabase::PrintSelf(ostream &os, vtkIndent indent)
   os << indent << "DatabaseType: " << (this->DatabaseType ? this->DatabaseType : "NULL") << endl;
   os << indent << "HostName: " << (this->HostName ? this->HostName : "NULL") << endl;
   os << indent << "UserName: " << (this->UserName ? this->UserName : "NULL") << endl;
-  os << indent << "Password: " << (this->Password ? this->Password : "NULL") << endl;
   os << indent << "DatabaseName: " << (this->DatabaseName ? this->DatabaseName : "NULL") << endl;
   os << indent << "Port: " << this->Port << endl;
   os << indent << "ConnectOptions: " << (this->ConnectOptions ? this->ConnectOptions : "NULL") << endl;
+}
+
+// ----------------------------------------------------------------------
+bool vtkQtSQLDatabase::ParseURL(const char* URL)
+{
+  vtkstd::string protocol;
+  vtkstd::string username; 
+  vtkstd::string unused;
+  vtkstd::string hostname; 
+  vtkstd::string dataport; 
+  vtkstd::string database;
+  vtkstd::string dataglom;
+  
+  // SQLite is a bit special so lets get that out of the way :)
+  if ( ! vtksys::SystemTools::ParseURLProtocol( URL, protocol, dataglom))
+    {
+    vtkGenericWarningMacro( "Invalid URL: " << URL );
+    return false;
+    }
+  
+  if ( protocol == "sqlite" )
+    {
+    this->SetDatabaseType("QSQLITE");
+    this->SetDatabaseName(dataglom.c_str());
+    return true;
+    }
+    
+  // Okay now for all the other database types get more detailed info
+  if ( ! vtksys::SystemTools::ParseURL( URL, protocol, username,
+                                        unused, hostname, dataport, database) )
+    {
+    vtkGenericWarningMacro( "Invalid URL: " << URL );
+    return false;
+    }
+    
+  // Create Qt 'version' of database prototcol type
+  QString qtType;
+  qtType = protocol.c_str();
+  qtType = "Q" + qtType.toUpper();
+  
+  this->SetDatabaseType(qtType.toAscii());
+  this->SetUserName(username.c_str());
+  this->SetHostName(hostname.c_str());
+  this->SetPort(atoi(dataport.c_str()));
+  this->SetDatabaseName(database.c_str());
+  return true;
+}
+
+// ----------------------------------------------------------------------
+vtkSQLDatabase* vtkQtSQLDatabase::CreateFromURL( const char* URL )
+{
+  vtkQtSQLDatabase* qt_db = vtkQtSQLDatabase::New();
+  if (qt_db->ParseURL(URL))
+    {
+    return qt_db;
+    }
+  qt_db->Delete();
+  return NULL;
 }
 
 // ----------------------------------------------------------------------
@@ -251,8 +328,6 @@ vtkStdString vtkQtSQLDatabase::GetURL()
   url = this->GetDatabaseType();
   url += "://";
   url += this->GetUserName();
-  url += ":";
-  url += this->GetPassword();
   url += "@";
   url += this->GetHostName();
   url += ":";

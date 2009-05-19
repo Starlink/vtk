@@ -27,18 +27,22 @@
 #include "vtkAlgorithm.h"
 #include "vtkAlgorithmOutput.h"
 #include "vtkCommand.h"
+#include "vtkConvertSelection.h"
 #include "vtkDataRepresentation.h"
 #include "vtkDataSet.h"
 #include "vtkFieldData.h"
+#include "vtkGraph.h"
 #include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSelection.h"
 #include "vtkSelectionLink.h"
+#include "vtkSelectionNode.h"
+#include "vtkSmartPointer.h"
 #include "vtkVariant.h"
 
-vtkCxxRevisionMacro(vtkQtItemView, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkQtItemView, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkQtItemView);
 
 
@@ -55,10 +59,6 @@ vtkQtItemView::vtkQtItemView()
   this->ItemViewPtr = 0;
   this->ModelAdapterPtr = 0;
   this->SelectionModel = 0;
-  
-  // By defualt use indices in the selection
-  this->UseValueSelection = 0;
-  this->ValueSelectionArrayName = 0;
   
   // Initialize selecting to false
   this->Selecting = false;
@@ -154,7 +154,8 @@ QItemSelectionModel* vtkQtItemView::GetSelectionModel()
 }
 
 //----------------------------------------------------------------------------
-void vtkQtItemView::AddInputConnection(vtkAlgorithmOutput* conn)
+void vtkQtItemView::AddInputConnection( int vtkNotUsed(port), int vtkNotUsed(index),
+  vtkAlgorithmOutput* conn, vtkAlgorithmOutput* vtkNotUsed(selectionConn))
 {
   // Make sure I have a view and a model
   if (CheckViewAndModelError()) return;
@@ -180,7 +181,8 @@ void vtkQtItemView::AddInputConnection(vtkAlgorithmOutput* conn)
 }
 
 //----------------------------------------------------------------------------
-void vtkQtItemView::RemoveInputConnection(vtkAlgorithmOutput* conn)
+void vtkQtItemView::RemoveInputConnection(int vtkNotUsed(port), int vtkNotUsed(index),
+  vtkAlgorithmOutput* conn, vtkAlgorithmOutput* vtkNotUsed(selectionConn))
 {
   // Make sure I have a view and a model
   if (CheckViewAndModelError()) return;
@@ -206,68 +208,37 @@ void vtkQtItemView::QtSelectionChanged(const QItemSelection&, const QItemSelecti
   if (CheckViewAndModelError()) return;
   
   this->Selecting = true;
-  vtkSelection* selection = vtkSelection::New();
   
-  // Do they want the selection to be indices or values?
-  if (this->UseValueSelection && (this->ValueSelectionArrayName != NULL))
+  // Create index selection
+  vtkSmartPointer<vtkSelection> selection =
+    vtkSmartPointer<vtkSelection>::New();
+  vtkSmartPointer<vtkSelectionNode> node =
+    vtkSmartPointer<vtkSelectionNode>::New();
+  node->SetContentType(vtkSelectionNode::INDICES);
+  node->SetFieldType(vtkSelectionNode::VERTEX);
+  vtkSmartPointer<vtkIdTypeArray> idarr =
+    vtkSmartPointer<vtkIdTypeArray>::New();
+  node->SetSelectionList(idarr);
+  selection->AddNode(node);
+  const QModelIndexList list = this->GetSelectionModel()->selectedRows();
+  
+  // For index selection do this odd little dance with two maps :)
+  for (int i = 0; i < list.size(); i++)
     {
-    selection->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::VALUES);
-    vtkDataObject *d = this->ModelAdapterPtr->GetVTKDataObject();
-    vtkAbstractArray *array = 0;
-    if (vtkDataSet::SafeDownCast(d))
-      {
-      selection->GetProperties()->Set(vtkSelection::FIELD_TYPE(), vtkSelection::POINT);
-      array = (vtkDataSet::SafeDownCast(d))->GetPointData()->GetAbstractArray(this->ValueSelectionArrayName);
-      }
-    else
-      {
-      selection->GetProperties()->Set(vtkSelection::FIELD_TYPE(), vtkSelection::FIELD);
-      array = d->GetFieldData()->GetAbstractArray(this->ValueSelectionArrayName);
-      }
-                           
-    // Does the array exist?
-    if (array != 0)
-      {     
-      // Create a new array of the same type
-      vtkAbstractArray *sel_array = vtkAbstractArray::CreateArray(array->GetDataType());
-      sel_array->SetName(this->ValueSelectionArrayName);
-      selection->SetSelectionList(sel_array);
-      sel_array->Delete();
-      const QModelIndexList list = this->GetSelectionModel()->selectedRows();
-      for (int i = 0; i < list.size(); i++)
-        {
-        vtkIdType pid = this->ModelAdapterPtr->QModelIndexToPedigree(list.at(i));
-        sel_array->InsertNextTuple(this->ModelAdapterPtr->PedigreeToId(pid), array);
-        }
-      }
-    else
-      {
-      vtkErrorMacro("Couldn't find array: " << this->ValueSelectionArrayName);
-      }
-    }
-    
-  // Index selection
-  else
-    {
-    selection->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::INDICES);
-    vtkIdTypeArray* idarr = vtkIdTypeArray::New();
-    selection->SetSelectionList(idarr);
-    idarr->Delete();
-    const QModelIndexList list = this->GetSelectionModel()->selectedRows();
-    
-    // For index selection do this odd little dance with two maps :)
-    for (int i = 0; i < list.size(); i++)
-      {
-      vtkIdType pid = this->ModelAdapterPtr->QModelIndexToPedigree(list.at(i));
-      idarr->InsertNextValue(this->ModelAdapterPtr->PedigreeToId(pid));
-      }  
-    }
+    vtkIdType pid = this->ModelAdapterPtr->QModelIndexToPedigree(list.at(i));
+    idarr->InsertNextValue(this->ModelAdapterPtr->PedigreeToId(pid));
+    }  
+
+  // Convert to the correct type of selection
+  vtkDataObject* data = this->ModelAdapterPtr->GetVTKDataObject();
+  vtkSmartPointer<vtkSelection> converted;
+  converted.TakeReference(vtkConvertSelection::ToSelectionType(
+    selection, data, this->SelectionType, this->SelectionArrayNames));
    
   // Call select on the representation
-  this->GetRepresentation()->Select(this, selection);
+  this->GetRepresentation()->Select(this, converted);
   
   // Invoke selection changed event
-  selection->Delete();
   this->Selecting = false;
 }
 
@@ -291,6 +262,12 @@ void vtkQtItemView::Update()
     {
     return;
     }
+
+  // Make the data current
+  vtkAlgorithm* alg = rep->GetInputConnection()->GetProducer();
+  alg->Update();
+  vtkDataObject *d = alg->GetOutputDataObject(0);
+  this->ModelAdapterPtr->SetVTKDataObject(d);
   
   // Make the selection current
   if (this->Selecting)
@@ -298,39 +275,30 @@ void vtkQtItemView::Update()
     // If we initiated the selection, do nothing.
     return;
     }
-  vtkSelection* selection = rep->GetSelectionLink()->GetSelection();
+
+  vtkSelection* s = rep->GetSelectionLink()->GetSelection();
+  vtkSmartPointer<vtkSelection> selection;
+  selection.TakeReference(vtkConvertSelection::ToIndexSelection(s, d));
   QItemSelection list;
-  if (selection->GetProperties()->Get(vtkSelection::CONTENT_TYPE()) == vtkSelection::INDICES)
+  vtkSelectionNode* node = selection->GetNode(0);
+  if (node)
     {
-    vtkIdTypeArray* arr = vtkIdTypeArray::SafeDownCast(selection->GetSelectionList());
-    if (!arr)
+    vtkIdTypeArray* arr = vtkIdTypeArray::SafeDownCast(node->GetSelectionList());
+    if (arr)
       {
-      vtkErrorMacro("INDICES selection should have idtype array.");
-      return;
+      for (vtkIdType i = 0; i < arr->GetNumberOfTuples(); i++)
+        {
+        vtkIdType id = arr->GetValue(i);
+        QModelIndex index = 
+          this->ModelAdapterPtr->PedigreeToQModelIndex(
+          this->ModelAdapterPtr->IdToPedigree(id));
+        list.select(index, index);
+        }
       }
-    for (vtkIdType i = 0; i < arr->GetNumberOfTuples(); i++)
-      {
-      vtkIdType id = arr->GetValue(i);
-      QModelIndex index = 
-        this->ModelAdapterPtr->PedigreeToQModelIndex(
-        this->ModelAdapterPtr->IdToPedigree(id));
-      list.select(index, index);
-      }
-    }
-  else
-    {
-    vtkWarningMacro("vtkQtItemView cannot currently 'consume' a selection type of: " 
-      << selection->GetProperties()->Get(vtkSelection::CONTENT_TYPE()));
-    return;
     }
   this->GetSelectionModel()->select(list, 
     QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);  
   
-  // Make the data current
-  vtkAlgorithm* alg = rep->GetInputConnection()->GetProducer();
-  alg->Update();
-  vtkDataObject *d = alg->GetOutputDataObject(0);
-  this->ModelAdapterPtr->SetVTKDataObject(d);
   // Sub-classes might use their own views, so don't assume the view has been set
   if(this->ItemViewPtr)
     {

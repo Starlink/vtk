@@ -503,7 +503,7 @@ char *get_format_string()
   return result;
 }
 
-static void add_to_sig(char *sig, char *add, int *i)
+static void add_to_sig(char *sig, const char *add, int *i)
 {
   strcpy(&sig[*i],add);
   *i += (int)strlen(add);
@@ -710,7 +710,8 @@ void get_python_signature()
     add_to_sig(result,currentFunction->Signature,&currPos);
     }
 
-  currentFunction->Signature = realloc(currentFunction->Signature,currPos+1);
+  currentFunction->Signature = realloc(currentFunction->Signature,
+                                       (size_t)(currPos+1));
   strcpy(currentFunction->Signature,result);
   /* fprintf(stderr,"%s\n",currentFunction->Signature); */
 }
@@ -730,7 +731,7 @@ static const char *quote_string(const char *comment, int maxlen)
       {
       free(result);
       }
-    result = (char *)malloc(maxlen);
+    result = (char *)malloc((size_t)(maxlen+1));
     oldmaxlen = maxlen;
     }
 
@@ -1342,17 +1343,17 @@ static void create_class_doc(FILE *fp, FileInfo *data)
 
   if (data->SeeAlso)
     {
-    char *dup, *tok;
+    char *sdup, *tok;
     
     fprintf(fp,"  \"See Also:\\n\\n");
-    dup = strdup(data->SeeAlso);
-    tok = strtok(dup," ");
+    sdup = strdup(data->SeeAlso);
+    tok = strtok(sdup," ");
     while (tok)
       {
       fprintf(fp," %s",quote_string(tok,120));
       tok = strtok(NULL," ");
       }
-    free(dup);
+    free(sdup);
     fprintf(fp,"\\n\",\n");
     }
 

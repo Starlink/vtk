@@ -103,6 +103,28 @@ public:
   bool GetColorEdges();
   void ColorEdgesOn();
   void ColorEdgesOff();
+  
+  // Description:
+  // The array to use for coloring edges.  Default is "color".
+  vtkSetStringMacro(EnabledEdgesArrayName);
+  vtkGetStringMacro(EnabledEdgesArrayName);
+  
+  // Description:
+  // Whether to enable/disable edges using array values.  Default is off.
+  vtkSetMacro(EnableEdgesByArray,int);
+  vtkGetMacro(EnableEdgesByArray,int);
+  vtkBooleanMacro(EnableEdgesByArray,int);
+
+  // Description:
+  // The array to use for coloring edges.  Default is "color".
+  vtkSetStringMacro(EnabledVerticesArrayName);
+  vtkGetStringMacro(EnabledVerticesArrayName);
+  
+  // Description:
+  // Whether to enable/disable vertices using array values.  Default is off.
+  vtkSetMacro(EnableVerticesByArray,int);
+  vtkGetMacro(EnableVerticesByArray,int);
+  vtkBooleanMacro(EnableVerticesByArray,int);
 
   // Description:
   // The array to use for assigning icons.
@@ -176,6 +198,11 @@ public:
   virtual void GetBounds(double* bounds)
     { Superclass::GetBounds(bounds); }
 
+  // Description: 
+  // Access to the lookup tables used by the vertex and edge mappers.
+  vtkGetObjectMacro(EdgeLookupTable, vtkLookupTable);
+  vtkGetObjectMacro(VertexLookupTable, vtkLookupTable);
+
 protected:
   vtkGraphMapper();
   ~vtkGraphMapper();
@@ -188,6 +215,11 @@ protected:
   vtkSetStringMacro(EdgeColorArrayNameInternal);
   char* VertexColorArrayNameInternal;
   char* EdgeColorArrayNameInternal;
+
+  char* EnabledEdgesArrayName;
+  char* EnabledVerticesArrayName;
+  int EnableEdgesByArray;
+  int EnableVerticesByArray;
 
   vtkGetStringMacro(IconArrayNameInternal);
   vtkSetStringMacro(IconArrayNameInternal);
@@ -212,11 +244,11 @@ protected:
   vtkSmartPointer<vtkActor>             VertexActor;
   vtkSmartPointer<vtkActor>             OutlineActor;
   vtkSmartPointer<vtkTexturedActor2D>   IconActor;
-  
-  // Color maps
-  vtkSmartPointer<vtkLookupTable>       EdgeLookupTable;
-  vtkSmartPointer<vtkLookupTable>       VertexLookupTable;
   //ETX
+
+  // Color maps
+  vtkLookupTable* EdgeLookupTable;
+  vtkLookupTable* VertexLookupTable;
 
   virtual void ReportReferences(vtkGarbageCollector*);
 

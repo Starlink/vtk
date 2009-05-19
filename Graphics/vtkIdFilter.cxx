@@ -23,7 +23,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkIdFilter, "$Revision: 1.21.66.1 $");
+vtkCxxRevisionMacro(vtkIdFilter, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkIdFilter);
 
 // Construct object with PointIds and CellIds on; and ids being generated

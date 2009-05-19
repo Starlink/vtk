@@ -31,7 +31,7 @@
 #include <vtkstd/string>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkEnSightGoldReader, "$Revision: 1.62 $");
+vtkCxxRevisionMacro(vtkEnSightGoldReader, "$Revision: 1.65 $");
 vtkStandardNewMacro(vtkEnSightGoldReader);
 
 //BTX
@@ -183,10 +183,10 @@ int vtkEnSightGoldReader::ReadGeometryFile(const char* fileName, int timeStep,
 
     this->ReadNextDataLine(line); // part description line
     char *name = strdup(line);
-    if (strncmp(line, "interface", 9) == 0)
-      {
-      return 1; // ignore it and move on
-      }
+    
+    // fix to bug #0008305 --- The original "return 1" operation
+    // upon "strncmp(line, "interface", 9) == 0"
+    // was removed here as 'interface' is NOT a keyword of an EnSight Gold file.
 
     this->ReadNextDataLine(line);
     
@@ -327,8 +327,8 @@ int vtkEnSightGoldReader::ReadMeasuredGeometryFile(
     vtkPolyData* pd = vtkPolyData::New();
     pd->Allocate(this->NumberOfMeasuredPoints);
     this->AddToBlock(output, this->NumberOfGeometryParts, pd);
+    ds = pd;
     pd->Delete();
-    ds = ds;
     }
 
   geom = vtkPolyData::SafeDownCast(ds);
@@ -341,7 +341,15 @@ int vtkEnSightGoldReader::ReadMeasuredGeometryFile(
     this->ReadLine(line);
     sscanf(line, " %8d %12e %12e %12e", &tempId, &coords[0], &coords[1],
            &coords[2]);
-    id = this->ParticleCoordinatesByIndex ? i : tempId;
+    
+    // It seems EnSight always enumerate point indices from 1 to N
+    // (not from 0 to N-1) and therefore there is no need to determine
+    // flag 'ParticleCoordinatesByIndex'. Instead let's just use 'i',
+    // or probably more safely (tempId - 1), as the point index. In this
+    // way the geometry that is defined by the datasets mentioned in
+    // bug #0008236 can be properly constructed. Fix to bug #0008236.
+    id = i;
+    
     newPoints->InsertNextPoint(coords);
     geom->InsertNextCell(VTK_VERTEX, 1, &id);
     }
@@ -1288,16 +1296,8 @@ int vtkEnSightGoldReader::CreateUnstructuredGridOutput(int partId,
     }
   
   vtkUnstructuredGrid* output = vtkUnstructuredGrid::SafeDownCast(ds);
-
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  
+  this->SetBlockName(compositeOutput, partId, name);
 
   // Clear all cell ids from the last execution, if any.
   idx = this->UnstructuredPartIds->IsId(partId);
@@ -2418,15 +2418,7 @@ int vtkEnSightGoldReader::CreateStructuredGridOutput(int partId,
   
   vtkStructuredGrid* output = vtkStructuredGrid::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
 
   if (sscanf(line, " %*s %s", subLine) == 1)
     {
@@ -2511,17 +2503,8 @@ int vtkEnSightGoldReader::CreateRectilinearGridOutput(int partId,
 
   vtkRectilinearGrid* output = vtkRectilinearGrid::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
 
-  
   if (sscanf(line, " %*s %*s %s", subLine) == 1)
     {
     if (strncmp(subLine, "iblanked",8) == 0)
@@ -2611,15 +2594,7 @@ int vtkEnSightGoldReader::CreateImageDataOutput(int partId,
 
   vtkImageData* output = vtkImageData::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
   
   if (sscanf(line, " %*s %*s %s", subLine) == 1)
     {

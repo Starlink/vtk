@@ -20,7 +20,7 @@
 #include "vtkInformation.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkXMLPUnstructuredDataReader, "$Revision: 1.19 $");
+vtkCxxRevisionMacro(vtkXMLPUnstructuredDataReader, "$Revision: 1.22 $");
 
 //----------------------------------------------------------------------------
 vtkXMLPUnstructuredDataReader::vtkXMLPUnstructuredDataReader()
@@ -120,8 +120,7 @@ vtkIdType vtkXMLPUnstructuredDataReader::GetNumberOfCellsInPiece(int piece)
 //----------------------------------------------------------------------------
 void vtkXMLPUnstructuredDataReader::SetupEmptyOutput()
 {
-  // No pieces means no input.
-  this->GetOutputAsDataSet(0)->SetUpdateExtent(0, 0);
+  this->GetCurrentOutput()->Initialize();
 }
 
 //----------------------------------------------------------------------------
@@ -138,11 +137,13 @@ void vtkXMLPUnstructuredDataReader::SetupOutputInformation(vtkInformation *outIn
 
 //----------------------------------------------------------------------------
 void vtkXMLPUnstructuredDataReader::CopyOutputInformation(vtkInformation *outInfo, int port)
-  {
+{
   this->Superclass::CopyOutputInformation(outInfo, port);
-  outInfo->CopyEntry( this->GetExecutive()->GetOutputInformation( port ), 
+  vtkInformation *localInfo = 
+    this->GetExecutive()->GetOutputInformation( port );
+  outInfo->CopyEntry(localInfo,
     vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES() );
-  }
+}
 
 //----------------------------------------------------------------------------
 void vtkXMLPUnstructuredDataReader::SetupOutputData()
@@ -168,7 +169,7 @@ void vtkXMLPUnstructuredDataReader::SetupOutputData()
       this->DataError = 1;
       }
     }
-  this->GetOutputAsPointSet()->SetPoints(points);
+  vtkPointSet::SafeDownCast(this->GetCurrentOutput())->SetPoints(points);
   points->Delete();
 }
 
@@ -253,7 +254,13 @@ void vtkXMLPUnstructuredDataReader::ReadXMLData()
   int piece;
   int numberOfPieces;
   int ghostLevel;
-  this->GetOutputUpdateExtent(piece, numberOfPieces, ghostLevel);
+  vtkInformation* outInfo = this->GetCurrentOutputInformation();
+  piece = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  numberOfPieces = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+  ghostLevel = outInfo->Get(
+      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS());
   
   vtkDebugMacro("Updating piece " << piece << " of " << numberOfPieces
                 << " with ghost level " << ghostLevel);
@@ -326,7 +333,7 @@ int vtkXMLPUnstructuredDataReader::ReadPieceData()
   input->SetUpdateExtent(0, 1, this->UpdateGhostLevel);
   input->Update();
 
-  vtkPointSet* output = this->GetOutputAsPointSet();
+  vtkPointSet* output = vtkPointSet::SafeDownCast(this->GetCurrentOutput());
   
   // If there are some points, but no PPoints element, report the
   // error.

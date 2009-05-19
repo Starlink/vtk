@@ -197,13 +197,13 @@ public:
   // association and name or attribute type (such as SCALARS). The
   // fieldAssociation refers to which field in the data object the array is
   // stored. See vtkDataObject::FieldAssociations for detail.
-  void SetInputArrayToProcess(int idx, int port, int connection, 
+  virtual void SetInputArrayToProcess(int idx, int port, int connection, 
                               int fieldAssociation, 
                               const char *name);
-  void SetInputArrayToProcess(int idx, int port, int connection, 
+  virtual void SetInputArrayToProcess(int idx, int port, int connection, 
                               int fieldAssociation, 
                               int fieldAttributeType);
-  void SetInputArrayToProcess(int idx, vtkInformation *info);
+  virtual void SetInputArrayToProcess(int idx, vtkInformation *info);
 
   // Description:
   // String based versions of SetInputArrayToProcess(). Because
@@ -227,7 +227,7 @@ public:
   // @endverbatim
   // If the last argument is not an attribute type, it is assumed to
   // be an array name.
-  void SetInputArrayToProcess(int idx, int port, int connection, 
+  virtual void SetInputArrayToProcess(int idx, int port, int connection, 
                               const char* fieldAssociation, 
                               const char* attributeTypeorName);
 
@@ -355,6 +355,22 @@ public:
   // If the DefaultExecutivePrototype is set, a copy of it is created
   // in CreateDefaultExecutive() using NewInstance().
   static void SetDefaultExecutivePrototype(vtkExecutive* proto);
+
+  // Description:
+  // Returns the priority of the piece described by the current update 
+  // extent. The priority is a number between 0.0 and 1.0 with 0 meaning 
+  // skippable (REQUEST_DATA not needed) and 1.0 meaning important. 
+  virtual double ComputePriority();
+
+  // Description:
+  // These are flags that can be set that let the pipeline keep accurate 
+  // meta-information for ComputePriority.
+  static vtkInformationIntegerKey* PRESERVES_DATASET();
+  static vtkInformationIntegerKey* PRESERVES_GEOMETRY();
+  static vtkInformationIntegerKey* PRESERVES_BOUNDS();
+  static vtkInformationIntegerKey* PRESERVES_TOPOLOGY();
+  static vtkInformationIntegerKey* PRESERVES_ATTRIBUTES();
+  static vtkInformationIntegerKey* PRESERVES_RANGES();
 
 protected:
   vtkAlgorithm();

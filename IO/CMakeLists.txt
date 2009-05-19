@@ -126,7 +126,6 @@ vtkVolume16Reader.cxx
 vtkVolumeReader.cxx
 vtkWriter.cxx
 vtkXMLCompositeDataReader.cxx
-vtkXMLDataElement.cxx
 vtkXMLDataParser.cxx
 vtkXMLDataReader.cxx
 vtkXMLDataSetWriter.cxx
@@ -265,7 +264,7 @@ ENDIF (VTK_USE_MPEG2_ENCODER)
 OPTION( VTK_USE_POSTGRES "Build the PostgreSQL driver for vtkSQLDatabase." OFF)
 MARK_AS_ADVANCED(VTK_USE_POSTGRES)
 IF ( VTK_USE_POSTGRES )
-  FIND_PACKAGE( PQXX REQUIRED )
+  FIND_PACKAGE( POSTGRES REQUIRED )
   IF ( BUILD_TESTING )
     SET ( VTK_PSQL_TEST_URL "" CACHE STRING "A URL for a PostgreSQL server of the form psql://[[username[:password]@]hostname[:port]]/[dbname]" ) 
   ENDIF ( BUILD_TESTING )
@@ -274,15 +273,15 @@ ENDIF ( VTK_USE_POSTGRES )
 # Only include the Postgres backend if the user has explicitly turned on
 # VTK_USE_POSTGRES. If so, user must also have set POSTGRES_LIBRARIES
 # and POSTGRES_INCLUDE_DIRECTORIES to valid values.
-IF ( VTK_USE_POSTGRES AND PQXX_FOUND )
-  INCLUDE_DIRECTORIES( ${PQXX_INCLUDE_DIRECTORIES} )
+IF ( VTK_USE_POSTGRES AND POSTGRES_FOUND )
+  INCLUDE_DIRECTORIES( ${POSTGRES_INCLUDE_DIRECTORIES} )
   SET( Kit_SRCS
     ${Kit_SRCS}
     vtkPostgreSQLDatabase.cxx
     vtkPostgreSQLQuery.cxx
   )
-  LINK_LIBRARIES( ${PQXX_LIBRARIES} )
-ENDIF ( VTK_USE_POSTGRES AND PQXX_FOUND )
+  LINK_LIBRARIES( ${POSTGRES_LIBRARIES} )
+ENDIF ( VTK_USE_POSTGRES AND POSTGRES_FOUND )
 
 #-----------------------------------------------------------------------------
 # MySQL
@@ -311,21 +310,39 @@ IF ( VTK_USE_MYSQL AND MYSQL_FOUND )
 ENDIF ( VTK_USE_MYSQL AND MYSQL_FOUND )
 
 #-----------------------------------------------------------------------------
+# ODBC
+# Build the ODBC database backend only if ODBC driver manager is available
+#
+OPTION (VTK_USE_ODBC "Build the ODBC database interface" OFF)
+MARK_AS_ADVANCED(VTK_USE_ODBC)
+IF ( VTK_USE_ODBC )
+  FIND_PACKAGE( ODBC REQUIRED )
+  IF ( BUILD_TESTING )
+    SET ( VTK_ODBC_TEST_DSN "" CACHE STRING "A data source name (DSN) for an ODBC database connection to use for testing." )
+  ENDIF ( BUILD_TESTING )
+ENDIF ( VTK_USE_ODBC )
+
+IF ( VTK_USE_ODBC AND ODBC_FOUND )
+  INCLUDE_DIRECTORIES( ${ODBC_INCLUDE_DIRECTORIES} )
+  SET( Kit_SRCS
+    ${Kit_SRCS}
+    vtkODBCDatabase.cxx
+    vtkODBCQuery.cxx
+    )
+  LINK_LIBRARIES( ${ODBC_LIBRARIES} )
+  # Note: Strange things happen on 64-bit machines.  We must compile
+  # ODBC code with -DBUILD_REAL_64_BIT_MODE in order to have the driver
+  # work properly.
+  INCLUDE(CheckTypeSize)
+  CHECK_TYPE_SIZE("unsigned long" CMAKE_SIZEOF_LONG)
+  IF ( "${CMAKE_SIZEOF_LONG}" STREQUAL "8" )
+#    MESSAGE( STATUS "Building ODBC driver with 64-bit flag." )
+    ADD_DEFINITIONS( -DBUILD_REAL_64_BIT_MODE )
+  ENDIF ( "${CMAKE_SIZEOF_LONG}"  STREQUAL "8" )
+ENDIF ( VTK_USE_ODBC AND ODBC_FOUND )
+
+#-----------------------------------------------------------------------------
 # Add these classes only if vtkTypeUInt64Array exists
-SET(VTK_HAS_UINT64_ARRAY 0)
-IF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
-  SET(VTK_HAS_UINT64_ARRAY 1)
-ELSE(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
-  IF(VTK_SIZEOF_LONG MATCHES "^8$")
-    SET(VTK_HAS_UINT64_ARRAY 1)
-  ELSE(VTK_SIZEOF_LONG MATCHES "^8$")
-    IF(VTK_SIZEOF___INT64 MATCHES "^8$")
-      IF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-        SET(VTK_HAS_UINT64_ARRAY 1)
-      ENDIF(VTK_TYPE_CONVERT_UI64_TO_DOUBLE)
-    ENDIF(VTK_SIZEOF___INT64 MATCHES "^8$")
-  ENDIF(VTK_SIZEOF_LONG MATCHES "^8$")
-ENDIF(VTK_SIZEOF_LONG_LONG MATCHES "^8$")
 IF(VTK_HAS_UINT64_ARRAY)
   SET(Kit_SRCS
     ${Kit_SRCS}

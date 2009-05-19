@@ -2562,7 +2562,7 @@ class vtkTestTessellatorSubdivision
 
 };
 
-vtkCxxRevisionMacro(vtkTestTessellatorSubdivision,"$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkTestTessellatorSubdivision,"$Revision: 1.7 $");
 vtkStandardNewMacro(vtkTestTessellatorSubdivision);
 
 static int test_list[] =
@@ -3309,7 +3309,7 @@ int TestTessellator( int argc, char* argv[] )
     ri->AddObserver( vtkCommand::UserEvent, ss );
     }
 
-  at->SetPrivateData( (void*) ug );
+  at->SetPrivateData(ug);
   at->SetSubdivisionAlgorithm( tt );
   at->SetEmbeddingDimension( -1, 3 );
   at->SetEdgeCallback( TessellatorEdgeProcessorFunction );
@@ -3641,7 +3641,7 @@ int TestTessellator( int argc, char* argv[] )
 
 #ifdef VTK_DATA_ROOT
   // Test vtkTessellatorFilter and vtkDataSetEdgeSubdivisionCriterion if we have a dataset to use
-  char* fname = vtkTestUtilities::ExpandDataFileName( argc, argv, "quadraticTetra01.vtu" );
+  char* fname = vtkTestUtilities::ExpandDataFileName( argc, argv, "Data/quadraticTetra01.vtu" );
   if ( fname )
     {
     vtkXMLUnstructuredGridReader* rdr = vtkXMLUnstructuredGridReader::New();

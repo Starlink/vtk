@@ -17,6 +17,8 @@ vtkRenderWindow-GetEventPending
 vtkSQLiteDatabase-GetQueryInstance
 vtkMySQLDatabase-GetQueryInstance
 vtkPostgreSQLDatabase-GetQueryInstance
+vtkODBCDatabase-GetQueryInstance
+vtkUniformVariables-GetCurrentName
 vtkXOpenGLRenderWindow-GetEventPending
 vtkXMesaRenderWindow-GetEventPending
 vtkMPICommunicator-GetWorldCommunicator

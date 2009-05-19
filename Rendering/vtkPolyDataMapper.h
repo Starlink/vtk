@@ -23,9 +23,11 @@
 #define __vtkPolyDataMapper_h
 
 #include "vtkMapper.h"
+#include "vtkTexture.h" // used to include texture unit enum.
 
 class vtkPolyData;
 class vtkRenderer;
+class vtkRenderWindow;
 
 class VTK_RENDERING_EXPORT vtkPolyDataMapper : public vtkMapper 
 {
@@ -75,6 +77,32 @@ public:
   // Description:
   // Make a shallow copy of this mapper.
   void ShallowCopy(vtkAbstractMapper *m);
+
+  // Description:
+  // Select a data array from the point/cell data
+  // and map it to a generic vertex attribute. 
+  // vertexAttributeName is the name of the vertex attribute.
+  // dataArrayName is the name of the data array.
+  // fieldAssociation indicates when the data array is a point data array or
+  // cell data array (vtkDataObject::FIELD_ASSOCIATION_POINTS or
+  // (vtkDataObject::FIELD_ASSOCIATION_CELLS).
+  // componentno indicates which component from the data array must be passed as
+  // the attribute. If -1, then all components are passed.
+  virtual void MapDataArrayToVertexAttribute(
+    const char* vertexAttributeName,
+    const char* dataArrayName, int fieldAssociation, int componentno=-1);
+
+  virtual void MapDataArrayToMultiTextureAttribute(
+    int unit,
+    const char* dataArrayName, int fieldAssociation, int componentno=-1);
+
+  // Description:
+  // Remove a vertex attribute mapping.
+  virtual void RemoveVertexAttributeMapping(const char* vertexAttributeName);
+
+  // Description:
+  // Remove all vertex attributes.
+  virtual void RemoveAllVertexAttributeMappings();
 
 protected:  
   vtkPolyDataMapper();

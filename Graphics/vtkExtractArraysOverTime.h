@@ -19,11 +19,10 @@
 // vtkSelection::Locations, then each output block corresponds to each probed
 // location. Otherwise, each output block corresponds to an extracted cell/point
 // depending on whether the selection field type is CELL or POINT.
-// Each block is a 1D rectilinear grid where the 
-// XCoordinates correspond to time (the same array is also copied to
-// a point array named Time or TimeData (if Time exists in the input).
+// Each block is a vtkTable with a column named Time (or TimeData if Time exists
+// in the input).
 // When extracting point data, the input point coordinates are copied
-// to a point array named Point Coordinates or Points (if Point Coordinates
+// to a column named Point Coordinates or Points (if Point Coordinates
 // exists in the input).
 // This algorithm does not produce a TIME_STEPS or TIME_RANGE information
 // because it works across time. 
@@ -38,7 +37,7 @@
 
 class vtkSelection;
 class vtkDataSet;
-class vtkRectilinearGrid;
+class vtkTable;
 class vtkExtractArraysOverTimeInternal;
 class vtkDataSetAttributes;
 
@@ -92,13 +91,13 @@ protected:
   // Description:
   // This method doesn't care about the content type of the selection, 
   // just grabs the value. 
-  vtkIdType GetSelectedId( vtkInformationVector** inputV, 
-                         vtkInformation* outInfo);
+  bool UpdateFastPathIDs(
+    vtkInformationVector** inputV, vtkInformation* outInfo);
 
   // Description:
   // This looks at the arrays in the vtkFieldData of input and copies those
   // whose names are in the form "XXXOverTime" to the output point data.
-  void CopyFastPathDataToOutput(vtkDataSet *input, vtkRectilinearGrid *output);
+  void CopyFastPathDataToOutput(vtkDataSet *input, vtkTable *output);
 
 
   void ExecuteAtTimeStep(vtkInformationVector** inputV, 
@@ -113,7 +112,6 @@ protected:
   bool WaitingForFastPathData;
   bool IsExecuting;
   bool UseFastPath;
-  vtkIdType SelectedId;
 
   int Error;
 

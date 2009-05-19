@@ -34,8 +34,10 @@
 #include "vtkShaderProgram.h"
 #include "vtkTimerLog.h"
 #include "vtkUnsignedCharArray.h"
+#include "vtkGLSLShaderDeviceAdapter2.h"
+#include "vtkOpenGLProperty.h"
 
-vtkCxxRevisionMacro(vtkPrimitivePainter, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkPrimitivePainter, "$Revision: 1.11 $");
 //---------------------------------------------------------------------------
 vtkPrimitivePainter::vtkPrimitivePainter()
 {
@@ -44,6 +46,7 @@ vtkPrimitivePainter::vtkPrimitivePainter()
   this->DisableScalarColor = 0;
   this->OutputData = vtkPolyData::New();
   this->GenericVertexAttributes = false;
+  this->MultiTextureAttributes = false;
 }
 
 //---------------------------------------------------------------------------
@@ -80,6 +83,18 @@ void vtkPrimitivePainter::ProcessInformation(vtkInformation *info)
       info->Get(DATA_ARRAY_TO_VERTEX_ATTRIBUTE()));
     this->GenericVertexAttributes = mappings && 
       (mappings->GetNumberOfMappings() > 0);
+    this->MultiTextureAttributes = false;
+    if (mappings)
+      {
+      for (unsigned int i = 0; i < mappings->GetNumberOfMappings(); ++i)
+        {
+        if (mappings->GetTextureUnit(i) >= 0)
+          {
+          this->MultiTextureAttributes = true;
+          break;
+          }
+        }
+      }
     }
 
   if (info->Has(DISABLE_SCALAR_COLOR()) &&
@@ -117,13 +132,16 @@ void vtkPrimitivePainter::PrepareForRendering(vtkRenderer* renderer,
 
 //---------------------------------------------------------------------------
 void vtkPrimitivePainter::RenderInternal(vtkRenderer* renderer,
-    vtkActor* act, unsigned long typeflags)
+                                         vtkActor* act,
+                                         unsigned long typeflags,
+                                         bool forceCompileOnly)
 {
   unsigned long supported_typeflags = this->SupportedPrimitive & typeflags;
   if (!supported_typeflags)
     {
     // no supported primitive requested to be rendered.
-    this->Superclass::RenderInternal(renderer, act, typeflags);
+      this->Superclass::RenderInternal(renderer, act, typeflags,
+                                       forceCompileOnly);
     return;
     }
 
@@ -257,13 +275,32 @@ void vtkPrimitivePainter::RenderInternal(vtkRenderer* renderer,
     }
 
   vtkShaderDeviceAdapter *shaderDevice = NULL;
+  vtkGLSLShaderDeviceAdapter2 *shaderDevice2 = NULL;
 
-  if (prop->GetShading() && prop->GetShaderProgram())
+  if (prop->GetShading())
     {
-    shaderDevice = prop->GetShaderProgram()->GetShaderDeviceAdapter();
+    if ( prop->GetShaderProgram())
+      {
+      shaderDevice = prop->GetShaderProgram()->GetShaderDeviceAdapter();
+      }
+    vtkOpenGLProperty *oglProp=vtkOpenGLProperty::SafeDownCast(prop);
+    if (oglProp->GetCurrentShaderProgram2()!=0)
+      {
+      shaderDevice2=oglProp->GetShaderDeviceAdapter2();
+      }
     }
 
   if (shaderDevice && this->GenericVertexAttributes)
+    {
+    idx |= VTK_PDM_GENERIC_VERTEX_ATTRIBUTES;
+    }
+  
+  if (shaderDevice2 && this->GenericVertexAttributes)
+    {
+    idx |= VTK_PDM_GENERIC_VERTEX_ATTRIBUTES;
+    }
+
+  if (this->MultiTextureAttributes)
     {
     idx |= VTK_PDM_GENERIC_VERTEX_ATTRIBUTES;
     }
@@ -278,7 +315,7 @@ void vtkPrimitivePainter::RenderInternal(vtkRenderer* renderer,
   this->Timer->StopTimer();
   this->TimeToDraw = this->Timer->GetElapsedTime();
 
-  this->Superclass::RenderInternal(renderer, act, typeflags);
+  this->Superclass::RenderInternal(renderer, act, typeflags,forceCompileOnly);
 }
 
 //---------------------------------------------------------------------------

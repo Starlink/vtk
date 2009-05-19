@@ -26,7 +26,7 @@
 #include "vtkMatrix4x4.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkTextActor3D, "$Revision: 1.7.2.1 $");
+vtkCxxRevisionMacro(vtkTextActor3D, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkTextActor3D);
 
 vtkCxxSetObjectMacro(vtkTextActor3D, TextProperty, vtkTextProperty);

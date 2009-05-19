@@ -72,6 +72,9 @@ IF(BORLAND)
   IF (VTK_USE_PARALLEL)
     SET(KITS ${KITS} Parallel)
   ENDIF(VTK_USE_PARALLEL)
+  IF (VTK_USE_GEOVIS)
+    SET(KITS ${KITS} Geovis)
+  ENDIF(VTK_USE_GEOVIS)
   IF (VTK_USE_INFOVIS)
     SET(KITS ${KITS} Infovis)
   ENDIF(VTK_USE_INFOVIS)
@@ -116,6 +119,14 @@ IF (VTK_USE_PARALLEL)
       vtkParallelPython
       )
 ENDIF (VTK_USE_PARALLEL)
+
+IF (VTK_USE_GEOVIS)
+  SET(VTKPYTHON_LINK_LIBS ${VTKPYTHON_LINK_LIBS} vtkGeovis)
+  SET(vtkpython_pyc_depends
+      ${vtkpython_pyc_depends}
+      vtkGeovisPython
+      )
+ENDIF (VTK_USE_GEOVIS)
 
 IF (VTK_USE_INFOVIS)
   SET(VTKPYTHON_LINK_LIBS ${VTKPYTHON_LINK_LIBS} vtkInfovis)
@@ -170,13 +181,13 @@ IF (VTK_USE_PARALLEL AND VTK_USE_MPI)
   ENDIF(VTK_USE_CARBON AND VTK_APPLE_RESOURCE)
 ENDIF (VTK_USE_PARALLEL AND VTK_USE_MPI)
 
-IF(NOT VTK_INSTALL_NO_RUNTIME)
+IF(NOT VTK_INSTALL_NO_RUNTIME AND NOT VTK_INSTALL_NO_VTKPYTHON)
   INSTALL(TARGETS vtkpython ${PVTKPYTHON_EXECUTABLE}
     RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeExecutables # .exe, .dll
     LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries # .so, mod.dll
     ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development      # .a, .lib
     )
-ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
+ENDIF(NOT VTK_INSTALL_NO_RUNTIME AND NOT VTK_INSTALL_NO_VTKPYTHON)
 
 # Handle out-of-source builds correctly.
 #
@@ -205,6 +216,7 @@ IF(PYTHON_EXECUTABLE)
     vtk/common
     vtk/filtering
     vtk/genericfiltering
+    vtk/geovis
     vtk/graphics
     vtk/hybrid
     vtk/imaging
@@ -342,6 +354,14 @@ IF(PYTHON_EXECUTABLE)
     SET(VTK_INSTALL_NO_PYTHON 1)
   ENDIF(VTK_INSTALL_NO_RUNTIME)
 
+  # If set (generally by projects that include VTK), we install the 
+  # vtk{*}Python libraries using CMake rather than setup.py. Which implies that
+  # they will be put will all other libraries. This is done in
+  # KitCommonPythonWrapBlock.cmake
+  IF (VTK_INSTALL_PYTHON_USING_CMAKE)
+    SET(VTK_INSTALL_NO_PYTHON 1)
+  ENDIF (VTK_INSTALL_PYTHON_USING_CMAKE)
+
   # Add a rule to use python distutils to install the python wrappers.
   IF(NOT VTK_INSTALL_NO_PYTHON)
     SET(DOLLAR "$")
@@ -434,6 +454,11 @@ IF(VTK_USE_PARALLEL)
 ELSE(VTK_USE_PARALLEL)
   SET(VTK_PYTHON_USE_PARALLEL 0)
 ENDIF(VTK_USE_PARALLEL)
+IF(VTK_USE_GEOVIS)
+  SET(VTK_PYTHON_USE_GEOVIS 1)
+ELSE(VTK_USE_GEOVIS)
+  SET(VTK_PYTHON_USE_GEOVIS 0)
+ENDIF(VTK_USE_GEOVIS)
 IF(VTK_USE_INFOVIS)
   SET(VTK_PYTHON_USE_INFOVIS 1)
 ELSE(VTK_USE_INFOVIS)

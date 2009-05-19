@@ -20,7 +20,7 @@
 #include "vtkImageActor.h"
 #include "vtkImageData.h"
 
-vtkCxxRevisionMacro(vtkImageActorPointPlacer, "$Revision: 1.3.2.1 $");
+vtkCxxRevisionMacro(vtkImageActorPointPlacer, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkImageActorPointPlacer);
 
 vtkCxxSetObjectMacro(vtkImageActorPointPlacer, ImageActor, vtkImageActor);

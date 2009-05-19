@@ -1,10 +1,18 @@
 SET(KIT Widgets)
+
+
+# Most (all?) Widgets tests require access to the display:
+#
+IF(VTK_USE_DISPLAY)
+
+
 # add tests that do not require data
 SET(MyTests     
   BoxWidget.cxx
   BoxWidget2.cxx
 #  TestAffineWidget.cxx
-#  TestAngleWidget.cxx
+  TestAngleWidget2D.cxx
+  TestAngleWidget3D.cxx
 #  TestBalloonWidget.cxx
 #  TestBorderWidget.cxx
 #  TestCameraWidget.cxx
@@ -21,16 +29,20 @@ SET(MyTests
 #  TestPlaybackWidget.cxx
 #  TestRectilinearWipeWidget.cxx
 #  TestSeedWidget.cxx
-#  TestSliderWidget.cxx
+  TestSliderWidget.cxx
+  TestSliderWidget2D.cxx
 #  TestTextWidget.cxx
   TerrainPolylineEditor.cxx
   TestDijkstraGraphGeodesicPath.cxx
   TestParallelopipedWidget.cxx
   )
+
 IF (VTK_DATA_ROOT)
   # add tests that require data
   SET(MyTests ${MyTests}
     ImagePlaneWidget.cxx
+    TestDijkstraImageGeodesicPath.cxx
+    TestImageActorContourWidget.cxx
 #    TestConstrainedHandleWidget.cxx
     TestSurfaceConstrainedHandleWidget.cxx
     TestPolygonalRepresentationHandleWidget.cxx
@@ -39,7 +51,7 @@ IF (VTK_DATA_ROOT)
 #    TestOrientedGlyphContour.cxx
     TestImageTracerWidget.cxx
     TestLineWidget.cxx
-#    TestLineWidget2.cxx
+    TestLineWidget2.cxx
     TestLogoWidgetAlphaBlending.cxx
     TestLogoWidgetDepthPeeling.cxx
     TestOrthoPlanes.cxx
@@ -52,29 +64,6 @@ IF (VTK_DATA_ROOT)
     )
 ENDIF (VTK_DATA_ROOT)
 
-# remove some tests if there is no display
-IF(NOT VTK_USE_DISPLAY)
-  REMOVE(MyTests     
-    BoxWidget.cxx
-    BoxWidget2.cxx
-    ImagePlaneWidget.cxx
-    TestContourWidget2.cxx
-    TestImageTracerWidget.cxx
-    TestImplicitPlaneWidget.cxx
-    TestLineWidget.cxx
-    TestLogoWidgetAlphaBlending.cxx
-    TestLogoWidgetDepthPeeling.cxx
-    TestOrientationMarkerWidget.cxx
-    TestOrthoPlanes.cxx
-    TestParallelopipedWidget.cxx
-    TestPlaneWidget.cxx
-    TestPointWidget.cxx
-    TestScalarBarWidget.cxx
-    TestSplineWidget.cxx
-    TestHandleWidget.cxx
-    TerrainPolylineEditor.cxx
-    )
-ENDIF(NOT VTK_USE_DISPLAY)
 
 CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                        EXTRA_INCLUDE vtkTestDriver.h)
@@ -82,15 +71,15 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkWidgets)
 SET (TestsToRun ${Tests})
-REMOVE( TestsToRun 
-   ${KIT}CxxTests.cxx 
+REMOVE( TestsToRun
+   ${KIT}CxxTests.cxx
    TestHandleWidget.cxx
    TerrainPolylineEditor.cxx
    TestDijkstraGraphGeodesicPath.cxx
    )
 
+# Add all the tests
 #
-# Add all the executables 
 FOREACH (test ${TestsToRun})
   GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
   IF (VTK_DATA_ROOT)
@@ -103,6 +92,7 @@ FOREACH (test ${TestsToRun})
 ENDFOREACH (test) 
 
 # Add any tests with special arguments here.. 
+#
 IF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
   ADD_TEST( TerrainPolylineEditor ${CXX_TEST_PATH}/${KIT}CxxTests 
          TerrainPolylineEditor 
@@ -124,3 +114,6 @@ IF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
          -D ${VTK_DATA_ROOT}
          -V Baseline/${KIT}/TestDijkstraGraphGeodesicPath.png)
 ENDIF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
+
+
+ENDIF(VTK_USE_DISPLAY)

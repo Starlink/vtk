@@ -14,6 +14,7 @@ vtkAffineRepresentation2D.cxx
 vtkAffineWidget.cxx
 vtkAngleRepresentation.cxx
 vtkAngleRepresentation2D.cxx
+vtkAngleRepresentation3D.cxx
 vtkAngleWidget.cxx
 vtkBalloonRepresentation.cxx
 vtkBalloonWidget.cxx
@@ -41,6 +42,7 @@ vtkContourWidget.cxx
 vtkCheckerboardRepresentation.cxx
 vtkCheckerboardWidget.cxx
 vtkConstrainedPointHandleRepresentation.cxx
+vtkDijkstraImageContourLineInterpolator.cxx
 vtkDistanceWidget.cxx
 vtkDistanceRepresentation.cxx
 vtkDistanceRepresentation2D.cxx

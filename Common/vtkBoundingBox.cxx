@@ -13,7 +13,10 @@
 
 =========================================================================*/
 #include "vtkBoundingBox.h"
+#include <assert.h>
+#include <math.h>
 
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::AddPoint(double px, double py, double pz)
 {
   double p[3];
@@ -23,6 +26,7 @@ void vtkBoundingBox::AddPoint(double px, double py, double pz)
   this->AddPoint(p);
 }
 
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::AddPoint(double p[3])
 {
   int i;
@@ -40,6 +44,7 @@ void vtkBoundingBox::AddPoint(double p[3])
     }
 }
 
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::AddBox(const vtkBoundingBox &bbox)
 {
   int i;
@@ -57,7 +62,7 @@ void vtkBoundingBox::AddBox(const vtkBoundingBox &bbox)
     }
 }
 
-
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::AddBounds(double bounds[6])
 {
   if (bounds[0] < this->MinPnt[0])
@@ -90,7 +95,8 @@ void vtkBoundingBox::AddBounds(double bounds[6])
     this->MaxPnt[2] = bounds[5];
     }
 }
-    
+
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::SetBounds(double xMin, double xMax,
                               double yMin, double yMax,
                               double zMin, double zMax)
@@ -112,6 +118,7 @@ void vtkBoundingBox::SetBounds(double xMin, double xMax,
     }
 }
 
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::SetMinPoint(double x, double y, double z)
 {
   this->MinPnt[0] = x;
@@ -134,6 +141,7 @@ void vtkBoundingBox::SetMinPoint(double x, double y, double z)
   
 }
 
+// ---------------------------------------------------------------------------
 void vtkBoundingBox::SetMaxPoint(double x, double y, double z)
 {
   this->MaxPnt[0] = x;
@@ -152,9 +160,10 @@ void vtkBoundingBox::SetMaxPoint(double x, double y, double z)
   if (z < this->MinPnt[2])
     {
     this->MinPnt[2] = z;
-    }  
+    }
 }
 
+// ---------------------------------------------------------------------------
 int vtkBoundingBox::IntersectBox(const vtkBoundingBox &bbox)
 {
   // if either box is not valid don't do the opperation
@@ -178,7 +187,7 @@ int vtkBoundingBox::IntersectBox(const vtkBoundingBox &bbox)
              (this->MinPnt[i] <= bbox.MaxPnt[i]))
       {
       intersects = 1;
-      pMin[i] = this->MinPnt[i];      
+      pMin[i] = this->MinPnt[i];
       }
     if ((bbox.MaxPnt[i] >= this->MinPnt[i]) &&
         (bbox.MaxPnt[i] <= this->MaxPnt[i]))
@@ -207,6 +216,7 @@ int vtkBoundingBox::IntersectBox(const vtkBoundingBox &bbox)
   return 1;
 }
 
+// ---------------------------------------------------------------------------
 int vtkBoundingBox::Intersects(const vtkBoundingBox &bbox) const
 {
   // if either box is not valid they don't intersect
@@ -242,7 +252,28 @@ int vtkBoundingBox::Intersects(const vtkBoundingBox &bbox) const
   return 1;
 }
 
+// ---------------------------------------------------------------------------
+int vtkBoundingBox::Contains(const vtkBoundingBox &bbox) const
+{
+  // if either box is not valid or they don't intersect
+  if (!this->Intersects(bbox))
+    {
+    return 0;
+    }
+  const double* pt = bbox.GetMinPoint();
+  if (!this->ContainsPoint(pt[0],pt[1],pt[2]))
+    {
+    return 0;
+    }
+  pt = bbox.GetMaxPoint();
+  if (!this->ContainsPoint(pt[0],pt[1],pt[2]))
+    {
+    return 0;
+    }
+  return 1;
+}
 
+// ---------------------------------------------------------------------------
 double vtkBoundingBox::GetMaxLength() const
 {
   double l[3];
@@ -260,4 +291,69 @@ double vtkBoundingBox::GetMaxLength() const
     return l[1];
     }
   return l[2];
+}
+
+// ---------------------------------------------------------------------------
+double vtkBoundingBox::GetDiagonalLength() const
+{
+  assert("pre: not_empty" && this->IsValid());
+
+  double l[3];
+  this->GetLengths(l);
+
+  return sqrt(l[0]*l[0]+l[1]*l[1]+l[2]*l[2]);
+}
+
+// ---------------------------------------------------------------------------
+// Description:
+// Scale each dimension of the box by some given factor.
+// If the box is not valid, it stays unchanged.
+// If the scalar factor is negative, bounds are flipped: for example,
+// if (xMin,xMax)=(-2,4) and sx=-3, (xMin,xMax) becomes (-12,6).
+void vtkBoundingBox::Scale(double sx,
+                           double sy,
+                           double sz)
+{
+  if(this->IsValid())
+    {
+      if(sx>=0.0)
+        {
+          this->MinPnt[0]*=sx;
+          this->MaxPnt[0]*=sx;
+        }
+      else
+        {
+          double tmp=this->MinPnt[0];
+          this->MinPnt[0]=sx*this->MaxPnt[0];
+          this->MaxPnt[0]=sx*tmp;
+        }
+      if(sy>=0.0)
+        {
+          this->MinPnt[1]*=sy;
+          this->MaxPnt[1]*=sy;
+        }
+      else
+        {
+          double tmp=this->MinPnt[1];
+          this->MinPnt[1]=sy*this->MaxPnt[1];
+          this->MaxPnt[1]=sy*tmp;
+        }
+      if(sz>=0.0)
+        {
+          this->MinPnt[2]*=sz;
+          this->MaxPnt[2]*=sz;
+        }
+      else
+        {
+          double tmp=this->MinPnt[2];
+          this->MinPnt[2]=sz*this->MaxPnt[2];
+          this->MaxPnt[2]=sz*tmp;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+void vtkBoundingBox::Scale(double s[3])
+{
+  this->Scale(s[0],s[1],s[2]);
 }

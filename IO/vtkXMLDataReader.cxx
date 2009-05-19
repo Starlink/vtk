@@ -29,7 +29,7 @@
 
 #include "assert.h"
 
-vtkCxxRevisionMacro(vtkXMLDataReader, "$Revision: 1.35 $");
+vtkCxxRevisionMacro(vtkXMLDataReader, "$Revision: 1.40 $");
 
 //----------------------------------------------------------------------------
 vtkXMLDataReader::vtkXMLDataReader()
@@ -156,12 +156,14 @@ void vtkXMLDataReader::SetupUpdateExtentInformation(vtkInformation *outInfo)
   // get the current piece being requested
   int piece = 
     outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  int npieces = 
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
   
   // Setup the Field Information for PointData. 
   vtkInformationVector *infoVector = 
     outInfo->Get(vtkDataObject::POINT_DATA_VECTOR());
   if (!this->SetUpdateExtentInfo(this->PointDataElements[piece],
-                                 infoVector))
+                                 infoVector, piece, npieces))
     {
     return;
     }
@@ -169,7 +171,7 @@ void vtkXMLDataReader::SetupUpdateExtentInformation(vtkInformation *outInfo)
   // now the Cell data
   infoVector = outInfo->Get(vtkDataObject::CELL_DATA_VECTOR());
   if (!this->SetUpdateExtentInfo(this->CellDataElements[piece],
-                                 infoVector))
+                                 infoVector, piece, npieces))
     {
     return;
     }
@@ -177,7 +179,8 @@ void vtkXMLDataReader::SetupUpdateExtentInformation(vtkInformation *outInfo)
 
 //----------------------------------------------------------------------------
 int vtkXMLDataReader::SetUpdateExtentInfo(vtkXMLDataElement *eDSA, 
-                                          vtkInformationVector *infoVector)
+                                          vtkInformationVector *infoVector,
+                                          int piece, int numPieces)
 {
   if (!eDSA)
     {
@@ -196,7 +199,11 @@ int vtkXMLDataReader::SetUpdateExtentInfo(vtkXMLDataElement *eDSA,
     if (eNested->GetScalarAttribute("RangeMin", range[0]) &&
         eNested->GetScalarAttribute("RangeMax", range[1]))
       {
-      info->Set(vtkDataObject::FIELD_RANGE(), range, 2);
+      info->Set(vtkDataObject::PIECE_FIELD_RANGE(), range, 2);
+      if (piece == 0 && numPieces == 1)
+        {
+        info->Set(vtkDataObject::FIELD_RANGE(), range, 2);
+        }
       }
     }
   
@@ -204,10 +211,12 @@ int vtkXMLDataReader::SetUpdateExtentInfo(vtkXMLDataElement *eDSA,
 }
 
 //----------------------------------------------------------------------------
-void vtkXMLDataReader::CopyOutputInformation(vtkInformation *outInfo, int port)
-  {
+void vtkXMLDataReader::CopyOutputInformation(vtkInformation *outInfo,
+                                             int port)
+{
   vtkInformation *localInfo = 
     this->GetExecutive()->GetOutputInformation( port );
+
   if ( localInfo->Has(vtkDataObject::POINT_DATA_VECTOR()) )
     {
     outInfo->CopyEntry( localInfo, vtkDataObject::POINT_DATA_VECTOR() );
@@ -216,7 +225,7 @@ void vtkXMLDataReader::CopyOutputInformation(vtkInformation *outInfo, int port)
     {
     outInfo->CopyEntry( localInfo, vtkDataObject::CELL_DATA_VECTOR() );
     }
-  }
+}
 
 
 //----------------------------------------------------------------------------
@@ -306,8 +315,9 @@ void vtkXMLDataReader::SetupOutputData()
 {
   this->Superclass::SetupOutputData();
   
-  vtkPointData* pointData = this->GetOutputAsDataSet(0)->GetPointData();
-  vtkCellData* cellData = this->GetOutputAsDataSet(0)->GetCellData();
+  vtkDataSet* output = vtkDataSet::SafeDownCast(this->GetCurrentOutput());
+  vtkPointData* pointData = output->GetPointData();
+  vtkCellData* cellData = output->GetCellData();
   
   // Get the size of the output arrays.
   unsigned long pointTuples = this->GetNumberOfPoints();
@@ -391,7 +401,7 @@ void vtkXMLDataReader::SetupOutputData()
     for(int i=0; i<this->NumberOfPointArrays;i++)
       {
       this->PointDataTimeStep[i] = -1;
-      this->PointDataOffset[i] = (unsigned long)-1;
+      this->PointDataOffset[i] = static_cast<unsigned long>(-1);
       }
     }
   if( this->NumberOfCellArrays )
@@ -409,7 +419,7 @@ void vtkXMLDataReader::SetupOutputData()
     for(int i=0; i<this->NumberOfCellArrays;i++)
       {
       this->CellDataTimeStep[i] = -1;
-      this->CellDataOffset[i]   = (unsigned long)-1;
+      this->CellDataOffset[i]   = static_cast<unsigned long>(-1);
       }
     }
 }
@@ -451,8 +461,10 @@ int vtkXMLDataReader::ReadPieceData(int piece)
 //----------------------------------------------------------------------------
 int vtkXMLDataReader::ReadPieceData()
 {
-  vtkPointData* pointData = this->GetOutputAsDataSet(0)->GetPointData();
-  vtkCellData* cellData = this->GetOutputAsDataSet(0)->GetCellData();
+  vtkDataSet* output = vtkDataSet::SafeDownCast(this->GetCurrentOutput());
+
+  vtkPointData* pointData = output->GetPointData();
+  vtkCellData* cellData = output->GetCellData();
   vtkXMLDataElement* ePointData = this->PointDataElements[this->Piece];
   vtkXMLDataElement* eCellData = this->CellDataElements[this->Piece];
   
@@ -554,7 +566,7 @@ void vtkXMLDataReader::ReadXMLData()
   if (this->FieldDataElement) // read the field data information
     {
     int i, numTuples;
-    vtkFieldData *fieldData = this->GetOutputDataObject(0)->GetFieldData();
+    vtkFieldData *fieldData = this->GetCurrentOutput()->GetFieldData();
     for(i=0; i < this->FieldDataElement->GetNumberOfNestedElements() &&
              !this->AbortExecute; i++)
       {
@@ -658,7 +670,7 @@ int vtkXMLDataReaderReadArrayValues(
   int inline_data = (da->GetAttribute("offset") == NULL);
   
   unsigned long offset = 0;
-  if (inline_data)
+  if (inline_data == 0)
     {
     da->GetScalarAttribute("offset", offset);
     }

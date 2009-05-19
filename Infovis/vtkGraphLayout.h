@@ -33,8 +33,8 @@
 
 #include "vtkGraphAlgorithm.h"
 
-class vtkGraphLayoutStrategy;
 class vtkEventForwarderCommand;
+class vtkGraphLayoutStrategy;
 
 class VTK_INFOVIS_EXPORT vtkGraphLayout : public vtkGraphAlgorithm 
 {
@@ -72,9 +72,9 @@ protected:
   
 private:
 
-  vtkGraph *LastInput;
+  vtkGraph* LastInput;
+  vtkGraph* InternalGraph;
   unsigned long LastInputMTime;
-  vtkGraph *InternalGraph;
   bool StrategyChanged;
 
   vtkGraphLayout(const vtkGraphLayout&);  // Not implemented.

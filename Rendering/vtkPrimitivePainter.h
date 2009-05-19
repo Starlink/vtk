@@ -99,7 +99,8 @@ protected:
   // is with typeflags = (typeflags & ~this->SupportedPrimitive) i.e.
   // the request is to render everything other than what the subclass rendered.
   virtual void RenderInternal(vtkRenderer* renderer, vtkActor* actor, 
-    unsigned long typeflags);
+                              unsigned long typeflags,
+                              bool forceCompileOnly);
 
   // Description:
   // Take part in garbage collection.
@@ -113,6 +114,7 @@ protected:
   vtkPolyData* OutputData;
   vtkTimeStamp OutputUpdateTime;
   bool GenericVertexAttributes;
+  bool MultiTextureAttributes;
 
 private:
   vtkPrimitivePainter(const vtkPrimitivePainter&); // Not implemented.

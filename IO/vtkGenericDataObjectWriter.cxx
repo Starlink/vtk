@@ -36,11 +36,11 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkUnstructuredGridWriter.h"
 
-vtkCxxRevisionMacro(vtkGenericDataObjectWriter, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkGenericDataObjectWriter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGenericDataObjectWriter);
 
 template<typename WriterT, typename DataT>
-static vtkDataWriter* CreateWriter(vtkDataObject* Data)
+vtkDataWriter* CreateWriter(vtkDataObject* Data)
 {
   WriterT* const writer = WriterT::New();
   writer->SetInput(static_cast<DataT*>(Data));
@@ -163,8 +163,6 @@ void vtkGenericDataObjectWriter::WriteData()
       delete [] this->OutputString;
       }
     this->OutputStringLength = writer->GetOutputStringLength();
-    // should fill something here.
-    this->OutputStringAllocatedLength = this->OutputStringLength;
     this->OutputString = writer->RegisterAndGetOutputString();
     }
   writer->Delete();

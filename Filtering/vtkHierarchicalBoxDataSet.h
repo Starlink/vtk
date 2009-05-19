@@ -13,11 +13,13 @@
 
 =========================================================================*/
 // .NAME vtkHierarchicalBoxDataSet - hierarchical dataset of vtkUniformGrids
+//
 // .SECTION Description
 // vtkHierarchicalBoxDataSet is a concrete implementation of
 // vtkCompositeDataSet. The dataset type is restricted to
 // vtkUniformGrid. Each dataset has an associated vtkAMRBox that represents
 // it's region (similar to extent) in space.
+//
 // .SECTION Warning
 // To compute the cellId of a cell within a vtkUniformGrid with AMRBox=box, 
 // you should not use vtkUniformGrid::ComputeCellId( {x,y,z} ) but instead
@@ -30,6 +32,9 @@
 //   (z-box.LoCorner[2])*cellDims[0]*cellDims[1] +
 //   (y-box.LoCorner[1])*cellDims[0] +
 //   (x-box.LoCorner[0]);
+//
+// NOTE vtkAMRBox is used to compute cell visibility, therefor it 
+// should be dimensioned according to the visible region.
 
 
 #ifndef __vtkHierarchicalBoxDataSet_h
@@ -85,6 +90,11 @@ public:
   virtual void SetDataSet(vtkCompositeDataIterator* iter, vtkDataObject* dataObj)
     { this->Superclass::SetDataSet(iter, dataObj); }
 
+  // Description:
+  // Set the dataset pointer for a given node. This will resize the number of
+  // levels and the number of datasets in the level to fit level, id requested. 
+  void SetDataSet(unsigned int level, unsigned int id, 
+                  int LoCorner[3], int HiCorner[3], vtkUniformGrid* dataSet);
 //BTX
   // Description:
   // Set the dataset pointer for a given node. This will resize the number of
@@ -187,7 +197,12 @@ public:
   // Unhiding superclass method.
   virtual int HasMetaData(vtkCompositeDataIterator* iter)
     { return this->Superclass::HasMetaData(iter); }
-  
+ 
+  // Description:
+  // Given the level and dataset index, returns the flat index provided level
+  // and dataset index are valid.
+  unsigned int GetFlatIndex(unsigned int level, unsigned int index);
+
 protected:
   vtkHierarchicalBoxDataSet();
   ~vtkHierarchicalBoxDataSet();

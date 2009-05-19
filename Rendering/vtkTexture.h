@@ -49,6 +49,7 @@ class vtkRenderer;
 class vtkUnsignedCharArray;
 class vtkWindow;
 class vtkDataArray;
+class vtkTransform;
 
 #define VTK_TEXTURE_QUALITY_DEFAULT 0
 #define VTK_TEXTURE_QUALITY_16BIT   16
@@ -85,6 +86,15 @@ public:
   vtkGetMacro(Repeat,int);
   vtkSetMacro(Repeat,int);
   vtkBooleanMacro(Repeat,int);
+
+  // Description:
+  // Turn on/off the clamping of the texture map when the texture
+  // coords extend beyond the [0,1] range.
+  // Only used when Repeat is off, and edge clamping is supported by
+  // the graphics card.
+  vtkGetMacro(EdgeClamp,int);
+  vtkSetMacro(EdgeClamp,int);
+  vtkBooleanMacro(EdgeClamp,int);
 
   // Description:
   // Turn on/off linear interpolation of the texture map when rendering.
@@ -132,17 +142,58 @@ public:
   // Map scalar values into color scalars.
   unsigned char *MapScalarsToColors (vtkDataArray *scalars);
 
+  // Description:
+  // Set a transform on the texture which allows one to scale,
+  // rotate and translate the texture.
+  void SetTransform(vtkTransform *transform);
+  vtkGetObjectMacro(Transform, vtkTransform);
+
+  // Description:
+  // Used to specify how the texture will blend its RGB and Alpha values
+  // with other textures and the fragment the texture is rendered upon.
+  //BTX
+  enum VTKTextureBlendingMode
+  {
+    VTK_TEXTURE_BLENDING_MODE_NONE = 0,
+    VTK_TEXTURE_BLENDING_MODE_REPLACE,
+    VTK_TEXTURE_BLENDING_MODE_MODULATE,
+    VTK_TEXTURE_BLENDING_MODE_ADD,
+    VTK_TEXTURE_BLENDING_MODE_ADD_SIGNED,
+    VTK_TEXTURE_BLENDING_MODE_INTERPOLATE,
+    VTK_TEXTURE_BLENDING_MODE_SUBTRACT
+  };
+  //ETX
+
+  // Description:
+  // Used to specify how the texture will blend its RGB and Alpha values
+  // with other textures and the fragment the texture is rendered upon.
+  vtkGetMacro(BlendingMode, int);
+  vtkSetMacro(BlendingMode, int);
+
+  // Description:
+  // When the texture is forced to be a power of 2, the default behavior is
+  // for the "new" image's dimensions  to be greater than or equal to with 
+  // respects to the original.  Setting RestrictPowerOf2ImageSmaller to be
+  // 1 (or ON) with force the new image's dimensions to be less than or equal 
+  // to with respects to the original.
+  vtkGetMacro(RestrictPowerOf2ImageSmaller,int);
+  vtkSetMacro(RestrictPowerOf2ImageSmaller,int);
+  vtkBooleanMacro(RestrictPowerOf2ImageSmaller,int);
 protected:
   vtkTexture();
   ~vtkTexture();
 
   int   Repeat;
+  int   EdgeClamp;
   int   Interpolate;
   int   Quality;
   int   MapColorScalarsThroughLookupTable;
   vtkScalarsToColors *LookupTable;
   vtkUnsignedCharArray *MappedScalars;
-  
+  vtkTransform  *Transform;
+
+  int BlendingMode;
+  int RestrictPowerOf2ImageSmaller;
   // this is to duplicated the previous behavior of SelfCreatedLookUpTable
   int SelfAdjustingTableRange;
 private:

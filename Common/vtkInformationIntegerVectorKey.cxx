@@ -19,7 +19,7 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkInformationIntegerVectorKey, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkInformationIntegerVectorKey, "$Revision: 1.9 $");
 
 //----------------------------------------------------------------------------
 vtkInformationIntegerVectorKey
@@ -93,7 +93,7 @@ void vtkInformationIntegerVectorKey::Set(vtkInformation* info, int* value,
       // Since this sets a value without call SetAsObjectBase(),
       // the info has to be modified here (instead of 
       // vtkInformation::SetAsObjectBase()
-      info->Modified();
+      info->Modified(this);
       }
     else
       {
@@ -159,12 +159,6 @@ int vtkInformationIntegerVectorKey::Length(vtkInformation* info)
     static_cast<vtkInformationIntegerVectorValue *>
     (this->GetAsObjectBase(info));
   return v?static_cast<int>(v->Value.size()):0;
-}
-
-//----------------------------------------------------------------------------
-int vtkInformationIntegerVectorKey::Has(vtkInformation* info)
-{
-  return this->GetAsObjectBase(info)?1:0;
 }
 
 //----------------------------------------------------------------------------

@@ -21,6 +21,7 @@
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkDirectedGraph.h"
 #include "vtkDoubleArray.h"
 #include "vtkEdgeListIterator.h"
 #include "vtkGlyph3D.h"
@@ -36,7 +37,11 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkGraphToPolyData, "$Revision: 1.9 $");
+#include <vtksys/stl/map>
+#include <vtksys/stl/utility>
+#include <vtksys/stl/vector>
+
+vtkCxxRevisionMacro(vtkGraphToPolyData, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkGraphToPolyData);
 
 vtkGraphToPolyData::vtkGraphToPolyData()
@@ -77,27 +82,51 @@ int vtkGraphToPolyData::RequestData(
     {
     vtkSmartPointer<vtkIdTypeArray> cells = 
       vtkSmartPointer<vtkIdTypeArray>::New();
-    cells->SetNumberOfTuples(3*input->GetNumberOfEdges());
     vtkSmartPointer<vtkEdgeListIterator> it = 
       vtkSmartPointer<vtkEdgeListIterator>::New();
     input->GetEdges(it);
-    while (it->HasNext())
+    vtkSmartPointer<vtkPoints> newPoints =
+      vtkSmartPointer<vtkPoints>::New();
+    newPoints->DeepCopy(input->GetPoints());
+    output->SetPoints(newPoints);
+    vtkIdType numEdges = input->GetNumberOfEdges();
+    bool noExtraPoints = true;
+    for (vtkIdType e = 0; e < numEdges; ++e)
       {
-      vtkEdgeType e = it->Next();
-      cells->SetValue(3*e.Id + 0, 2);
-      cells->SetValue(3*e.Id + 1, e.Source);
-      cells->SetValue(3*e.Id + 2, e.Target);
+      vtkIdType npts;
+      double* pts;
+      input->GetEdgePoints(e, npts, pts);
+      if (npts == 0)
+        {
+        vtkIdType source = input->GetSourceVertex(e);
+        vtkIdType target = input->GetTargetVertex(e);
+        cells->InsertNextValue(2);
+        cells->InsertNextValue(source);
+        cells->InsertNextValue(target);
+        }
+      else
+        {
+        cells->InsertNextValue(npts);
+        for (vtkIdType i = 0; i < npts; ++i, pts += 3)
+          {
+          noExtraPoints = false;
+          vtkIdType pt = output->GetPoints()->InsertNextPoint(pts);
+          cells->InsertNextValue(pt);
+          }
+        }
       }
     vtkSmartPointer<vtkCellArray> newLines = 
       vtkSmartPointer<vtkCellArray>::New();
-    newLines->SetCells(input->GetNumberOfEdges(), cells);
+    newLines->SetCells(numEdges, cells);
 
     // Send the data to output.
-    output->SetPoints(input->GetPoints());
     output->SetLines(newLines);
 
-    // Points correspond to vertices, so pass the data along.
-    output->GetPointData()->PassData(input->GetVertexData());
+    // Points only correspond to vertices if we didn't add extra points.
+    if (noExtraPoints)
+      {
+      output->GetPointData()->PassData(input->GetVertexData());
+      }
 
     // Cells correspond to edges, so pass the cell data along.
     output->GetCellData()->PassData(input->GetEdgeData());
@@ -191,6 +220,7 @@ int vtkGraphToPolyData::RequestData(
 void vtkGraphToPolyData::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-  os << indent << "EdgeGlyphOutput: " << (this->EdgeGlyphOutput ? "on" : "off") << endl;
+  os << indent << "EdgeGlyphOutput: "
+    << (this->EdgeGlyphOutput ? "on" : "off") << endl;
   os << indent << "EdgeGlyphPosition: " << this->EdgeGlyphPosition << endl;
 }

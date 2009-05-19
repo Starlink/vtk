@@ -20,9 +20,8 @@
 #include "vtkMath.h"
 #include "vtkPolyData.h"
 #include "vtkRenderWindow.h"
-#include "vtkPainterPolyDataMapper.h"
 
-vtkCxxRevisionMacro(vtkPolyDataMapper, "$Revision: 1.45 $");
+vtkCxxRevisionMacro(vtkPolyDataMapper, "$Revision: 1.50 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -123,12 +122,11 @@ void vtkPolyDataMapper::Update()
 // (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
 double *vtkPolyDataMapper::GetBounds()
 {
-  static double bounds[] = {-1.0,1.0, -1.0,1.0, -1.0,1.0};
-
   // do we have an input
   if ( ! this->GetNumberOfInputConnections(0)) 
     {
-    return bounds;
+      vtkMath::UninitializeBounds(this->Bounds);
+      return this->Bounds;
     }
   else
     {
@@ -144,22 +142,9 @@ double *vtkPolyDataMapper::GetBounds()
       //this->GetInput()->Update();
 
       this->Update();
-
-      // get the default painter in the chain of painters if any
-      vtkPainterPolyDataMapper *painterMapper =
-        vtkPainterPolyDataMapper::SafeDownCast(this);
-
-      // if the mapper has a painter, update the bounds in the painter
-      if( painterMapper )
-        {
-        painterMapper->GetBounds();
-        }
-      else
-        {
-        // the mapper has no painter, get the bounds from the input
-        this->GetInput()->GetBounds(this->Bounds);
-        }
       }
+    this->GetInput()->GetBounds(this->Bounds);
+
     // if the bounds indicate NAN and subpieces are being used then 
     // return NULL
     if (!vtkMath::AreBoundsInitialized(this->Bounds)
@@ -185,6 +170,39 @@ void vtkPolyDataMapper::ShallowCopy(vtkAbstractMapper *mapper)
   // Now do superclass
   this->vtkMapper::ShallowCopy(mapper);
 }
+
+void vtkPolyDataMapper::MapDataArrayToVertexAttribute(
+    const char* vtkNotUsed(vertexAttributeName),
+    const char* vtkNotUsed(dataArrayName),
+    int vtkNotUsed(fieldAssociation),
+    int vtkNotUsed(componentno)
+    )
+{
+  vtkErrorMacro("Not impmlemented at this level...");
+}
+
+void vtkPolyDataMapper::MapDataArrayToMultiTextureAttribute(
+    int vtkNotUsed(unit),
+    const char* vtkNotUsed(dataArrayName), 
+    int vtkNotUsed(fieldAssociation), 
+    int vtkNotUsed(componentno)
+    )
+{
+  vtkErrorMacro("Not impmlemented at this level...");
+}
+
+
+void vtkPolyDataMapper::RemoveVertexAttributeMapping(const char* vtkNotUsed(vertexAttributeName))
+{
+  vtkErrorMacro("Not impmlemented at this level...");
+}
+
+
+void vtkPolyDataMapper::RemoveAllVertexAttributeMappings()
+{
+  vtkErrorMacro("Not impmlemented at this level...");
+}
+
 
 void vtkPolyDataMapper::PrintSelf(ostream& os, vtkIndent indent)
 {

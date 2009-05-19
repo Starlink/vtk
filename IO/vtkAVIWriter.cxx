@@ -42,7 +42,7 @@ public:
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkAVIWriter);
-vtkCxxRevisionMacro(vtkAVIWriter, "$Revision: 1.8.48.2 $");
+vtkCxxRevisionMacro(vtkAVIWriter, "$Revision: 1.10 $");
 
 //---------------------------------------------------------------------------
 vtkAVIWriter::vtkAVIWriter()

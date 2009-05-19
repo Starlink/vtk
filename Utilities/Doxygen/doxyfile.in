@@ -33,7 +33,8 @@ GRAPHICAL_HIERARCHY  = NO        # would be too large for vtkObject
 
 ALLEXTERNALS         = NO
 
-IMAGE_PATH           = "@VTK_SOURCE_DIR@/Utilities/Doxygen" "@VTK_BINARY_DIR@/Utilities/Doxygen/contrib"
+IMAGE_PATH           = "@VTK_SOURCE_DIR@/Utilities/Doxygen" "@VTK_BINARY_DIR@/Utilities/Doxygen/contrib" \
+                       "@VTK_SOURCE_DIR@/Rendering"
 
 OUTPUT_DIRECTORY     = "@VTK_BINARY_DIR@/Utilities/Doxygen/doc"
 
@@ -42,10 +43,12 @@ INPUT                = \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Filtering" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GenericFiltering" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GenericFiltering/Testing/Cxx" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Geovis" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Graphics" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport/MFC" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport/Qt" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GUISupport/Qt/Chart" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Hybrid" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Imaging" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Infovis" \

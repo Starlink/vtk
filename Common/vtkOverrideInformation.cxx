@@ -16,7 +16,7 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkOverrideInformation, "$Revision: 1.8.82.1 $");
+vtkCxxRevisionMacro(vtkOverrideInformation, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkOverrideInformation);
 vtkCxxSetObjectMacro(vtkOverrideInformation,ObjectFactory,vtkObjectFactory);
 

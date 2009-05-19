@@ -17,6 +17,24 @@
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
+#ifdef VTK_VARIANT_IMPL
+/*
+All code in this source file is conditionally compiled to work-around
+a build problem on the SGI with MIPSpro 7.4.4.  The prelinker loads
+vtkVariant.cxx while looking for the template definition of
+vtkVariant::ToNumeric<> declared in the vtkVariant.h header.  It wants
+the definition in order to instantiate it in vtkCharArray.o or some
+other object to which the instantiation has been assigned.  For some
+reason providing the explicit instantiation in vtkVariant.o is not
+enough to prevent the prelinker from assigning the instantiation to
+another object.  When vtkVariant.cxx is included in the translation
+unit by the prelinker, it causes additional instantiations of other
+templates, like vtkVariantStringToNumeric.  This sends the prelinker
+into an infinite loop of instantiation requests.  By placing all the
+code in this preprocessing condition, we hide it from the prelinker.
+The CMakeLists.txt file defines the macro to compile this code when
+really building the vtkVariant.o object.
+*/
 #include "vtkVariant.h"
 
 #include "vtkStdString.h"
@@ -32,18 +50,202 @@
 #include "vtksys/ios/sstream"
 
 //----------------------------------------------------------------------------
-vtkVariantLessThan::vtkVariantLessThan()
+
+// Implementation of vtkVariant's
+// fast-but-potentially-counterintuitive < operation
+bool vtkVariantStrictWeakOrder::operator()(const vtkVariant& s1, const vtkVariant& s2) const
 {
+  // First sort on type if they are different
+  if (s1.Type != s2.Type)
+    {
+    return s1.Type < s2.Type;
+    }
+ 
+  // Next check for nulls
+  if (!(s1.Valid && s2.Valid))
+    {
+    if (!(s1.Valid || s2.Valid))
+      {
+      return false; // nulls are equal to one another
+      }
+    else if (!s1.Valid)
+      {
+      return true; // null is less than any valid value
+      }
+    else
+      {
+      return false;
+      }
+    }
+
+  switch (s1.Type)
+    {
+    case VTK_STRING:
+      return (*(s1.Data.String) < *(s2.Data.String));
+
+    case VTK_OBJECT:
+      return (s1.Data.VTKObject < s2.Data.VTKObject);
+
+    case VTK_CHAR:
+      return (s1.Data.Char < s2.Data.Char);
+
+    case VTK_SIGNED_CHAR:
+      return (s1.Data.SignedChar < s2.Data.SignedChar);
+
+    case VTK_UNSIGNED_CHAR:
+      return (s1.Data.UnsignedChar < s2.Data.UnsignedChar);
+      
+    case VTK_SHORT:
+      return (s1.Data.Short < s2.Data.Short);
+      
+    case VTK_UNSIGNED_SHORT:
+      return (s1.Data.UnsignedShort < s2.Data.UnsignedShort);
+
+    case VTK_INT:
+      return (s1.Data.Int < s2.Data.Int);
+
+    case VTK_UNSIGNED_INT:
+      return (s1.Data.UnsignedInt < s2.Data.UnsignedInt);
+
+    case VTK_LONG:
+      return (s1.Data.Long < s2.Data.Long);
+
+    case VTK_UNSIGNED_LONG:
+      return (s1.Data.UnsignedLong < s2.Data.UnsignedLong);
+
+#if defined(VTK_TYPE_USE___INT64)
+    case VTK___INT64:
+      return (s1.Data.__Int64 < s2.Data.__Int64);
+
+    case VTK_UNSIGNED___INT64:
+      return (s1.Data.Unsigned__Int64 < s2.Data.Unsigned__Int64);
+#endif
+
+#if defined(VTK_TYPE_USE_LONG_LONG)
+    case VTK_LONG_LONG:
+      return (s1.Data.LongLong < s2.Data.LongLong);
+
+    case VTK_UNSIGNED_LONG_LONG:
+      return (s1.Data.UnsignedLongLong < s2.Data.UnsignedLongLong);
+#endif
+
+    case VTK_FLOAT:
+      return (s1.Data.Float < s2.Data.Float);
+      
+    case VTK_DOUBLE:
+      return (s1.Data.Double < s2.Data.Double);
+
+    default:
+      cerr << "ERROR: Unhandled type " << s1.Type << " in vtkVariantStrictWeakOrder\n";
+      return false;
+    }
 }
 
-// Implementation of vtkVariant's less than operation
-bool vtkVariantLessThan::operator()(const vtkVariant& s1, const vtkVariant& s2) const
+// ----------------------------------------------------------------------
+
+bool
+vtkVariantStrictEquality::operator()(const vtkVariant &s1, const vtkVariant &s2) const
 {
-  if (s1.IsString() && s2.IsString())
+  // First sort on type if they are different
+  if (s1.Type != s2.Type)
     {
-    return s1.ToString() < s2.ToString();
+    cerr << "Types differ: " << s1.Type << " and " << s2.Type << "\n";
+    return false;
     }
-  return s1.ToDouble() < s2.ToDouble();
+  
+  // Next check for nulls
+  if (!(s1.Valid && s2.Valid))
+    {
+    cerr << "Validity may differ: " << s1.Valid << " and " << s2.Valid << "\n";
+    return (s1.Valid == s2.Valid);
+    }
+
+  // At this point we know that both variants contain a valid value.
+  switch (s1.Type)
+    {
+    case VTK_STRING:
+    {
+    if (*(s1.Data.String) != *(s2.Data.String))
+      {
+      cerr << "Strings differ: '"
+           << *(s1.Data.String) << "' and '"
+           << *(s2.Data.String) << "'\n";
+      }
+      return (*(s1.Data.String) == *(s2.Data.String));
+    };
+
+    case VTK_OBJECT:
+      return (s1.Data.VTKObject == s2.Data.VTKObject);
+
+    case VTK_CHAR:
+      return (s1.Data.Char == s2.Data.Char);
+
+    case VTK_SIGNED_CHAR:
+      return (s1.Data.SignedChar == s2.Data.SignedChar);
+
+    case VTK_UNSIGNED_CHAR:
+      return (s1.Data.UnsignedChar == s2.Data.UnsignedChar);
+      
+    case VTK_SHORT:
+      return (s1.Data.Short == s2.Data.Short);
+      
+    case VTK_UNSIGNED_SHORT:
+      return (s1.Data.UnsignedShort == s2.Data.UnsignedShort);
+
+    case VTK_INT:
+      return (s1.Data.Int == s2.Data.Int);
+
+    case VTK_UNSIGNED_INT:
+      return (s1.Data.UnsignedInt == s2.Data.UnsignedInt);
+
+    case VTK_LONG:
+      return (s1.Data.Long == s2.Data.Long);
+
+    case VTK_UNSIGNED_LONG:
+      return (s1.Data.UnsignedLong == s2.Data.UnsignedLong);
+
+#if defined(VTK_TYPE_USE___INT64)
+    case VTK___INT64:
+      return (s1.Data.__Int64 == s2.Data.__Int64);
+
+    case VTK_UNSIGNED___INT64:
+      return (s1.Data.Unsigned__Int64 == s2.Data.Unsigned__Int64);
+#endif
+
+#if defined(VTK_TYPE_USE_LONG_LONG)
+    case VTK_LONG_LONG:
+      return (s1.Data.LongLong == s2.Data.LongLong);
+
+    case VTK_UNSIGNED_LONG_LONG:
+      return (s1.Data.UnsignedLongLong == s2.Data.UnsignedLongLong);
+#endif
+
+    case VTK_FLOAT:
+      return (s1.Data.Float == s2.Data.Float);
+      
+    case VTK_DOUBLE:
+      return (s1.Data.Double == s2.Data.Double);
+
+    default:
+      cerr << "ERROR: Unhandled type " << s1.Type << " in vtkVariantStrictEquality\n";
+      return false;
+    }
+}
+
+// ----------------------------------------------------------------------
+
+bool
+vtkVariantLessThan::operator()(const vtkVariant &v1, const vtkVariant &v2) const
+{
+  return v1.operator<(v2);
+}
+
+// ----------------------------------------------------------------------
+
+bool
+vtkVariantEqual::operator()(const vtkVariant &v1, const vtkVariant &v2) const
+{
+  return v1.operator==(v2);
 }
 
 //----------------------------------------------------------------------------
@@ -711,10 +913,16 @@ vtkTypeUInt64 vtkVariant::ToTypeUInt64(bool* valid) const
   return this->ToNumeric(valid, static_cast<vtkTypeUInt64 *>(0));
 }
 
+bool vtkVariant::IsEqual(const vtkVariant& other) const
+{
+  return this->operator==(other);
+}
+
 //----------------------------------------------------------------------------
 // Definition of ToNumeric if not already included above:
 
 #if !defined(VTK_VARIANT_TO_NUMERIC_CXX_INCLUDED)
 # define VTK_VARIANT_TO_NUMERIC_CXX_INCLUDED
 # include "vtkVariantToNumeric.cxx"
+#endif
 #endif

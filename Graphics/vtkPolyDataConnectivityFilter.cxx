@@ -27,7 +27,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPolyDataConnectivityFilter, "$Revision: 1.41.2.1 $");
+vtkCxxRevisionMacro(vtkPolyDataConnectivityFilter, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkPolyDataConnectivityFilter);
 
 // Construct with default extraction mode to extract largest regions.

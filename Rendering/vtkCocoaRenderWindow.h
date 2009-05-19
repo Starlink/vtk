@@ -125,10 +125,13 @@ public:
       vtkWarningMacro("Method not implemented.");
       return 0;
     }
-  virtual void SetWindowInfo(char*)
-    {
-      vtkWarningMacro("Method not implemented.");
-    }
+
+  // Description:
+  // Set this RenderWindow's window id to a pre-existing window.
+  // The paramater is an ASCII string of a decimal number representing
+  // a pointer to the window.
+  virtual void SetWindowInfo(char*);
+
   virtual void SetParentInfo(char*)
     {
       vtkWarningMacro("Method not implemented.");
@@ -153,6 +156,10 @@ public:
   // Description:
   // Make this windows OpenGL context the current context.
   virtual void MakeCurrent();
+  
+  // Description:
+  // Tells if this window is the current OpenGL context for the calling thread.
+  virtual bool IsCurrent();
   
   // Description:
   // Update this window's OpenGL context, e.g. when the window is resized.
@@ -202,8 +209,15 @@ public:
   // Description:
   // Hide or Show the mouse cursor, it is nice to be able to hide the
   // default cursor if you want VTK to display a 3D cursor instead.
+  // Set cursor position in window (note that (0,0) is the lower left 
+  // corner).
   virtual void HideCursor();
   virtual void ShowCursor();
+  virtual void SetCursorPosition(int x, int y);
+
+  // Description:
+  // Change the shape of the cursor.
+  virtual void SetCurrentCursor(int);
   
   // Description:
   // Get the WindowCreated flag. It is 1 if this object created an instance
@@ -250,6 +264,11 @@ public:
   // Returns the scaling factor for 'resolution independence', to convert
   // between points and pixels.
   vtkGetMacro(ScaleFactor, double);
+  
+  // Description:
+  // Accessors for the pixel format object (Really an NSOpenGLPixelFormat*).
+  void SetPixelFormat(void *pixelFormat);
+  void *GetPixelFormat();
 
 protected:
   vtkCocoaRenderWindow();
@@ -264,13 +283,14 @@ protected:
   int OffScreenInitialized;
   int OnScreenInitialized;
   
+  // Using CGFloat would be better, but doing it this way avoids pulling in
+  // Apple headers, which cause problems with the 10.3 SDK and python wrappings.
+#if defined(__LP64__) && __LP64__
   double ScaleFactor;
-  
-  // Description:
-  // Accessors for the pixel format object (Really an NSOpenGLPixelFormat*).
-  void SetPixelFormat(void *pixelFormat);
-  void *GetPixelFormat();
-  
+#else
+  float ScaleFactor;
+#endif
+
   // Description:
   // Accessors for the cocoa manager (Really an NSMutableDictionary*).
   // It manages all Cocoa objects in this C++ class.
@@ -285,7 +305,7 @@ private:
   // Important: this class cannot contain Objective-C instance
   // variables for 2 reasons:
   // 1) C++ files include this header
-  // 2) because of garbage collection
+  // 2) because of garbage collection (the GC scanner does not scan objects create by C++'s new)
   // Instead, use the CocoaManager dictionary to keep a collection
   // of what would otherwise be Objective-C instance variables.
   void     *CocoaManager; // Really an NSMutableDictionary*

@@ -65,7 +65,7 @@ public:
   // Open a new connection to the database.  You need to set the
   // filename before calling this function.  Returns true if the
   // database was opened successfully; false otherwise.
-  bool Open();
+  bool Open(const char* password);
 
   // Description:
   // Close the connection to the database.
@@ -124,6 +124,12 @@ public:
 protected:
   vtkSQLiteDatabase();
   ~vtkSQLiteDatabase();
+
+  // Description:
+  // Overridden to determine connection paramters given the URL. 
+  // This is called by CreateFromURL() to initialize the instance.
+  // Look at CreateFromURL() for details about the URL format.
+  virtual bool ParseURL(const char* url);
 
 private:
   vtk_sqlite3 *SQLiteInstance;

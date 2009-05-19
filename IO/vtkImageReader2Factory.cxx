@@ -35,7 +35,7 @@
 // until after the AvailableReaders singleton has been destroyed.
 #include "vtkFilteringInformationKeyManager.h"
 
-vtkCxxRevisionMacro(vtkImageReader2Factory, "$Revision: 1.20.38.1 $");
+vtkCxxRevisionMacro(vtkImageReader2Factory, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkImageReader2Factory);
 
 class vtkImageReader2FactoryCleanup

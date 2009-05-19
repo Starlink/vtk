@@ -32,17 +32,17 @@
 #ifndef __vtkExtractTemporalFieldData_h
 #define __vtkExtractTemporalFieldData_h
 
-#include "vtkRectilinearGridAlgorithm.h"
+#include "vtkTableAlgorithm.h"
 
 class vtkDataSet;
-class vtkRectilinearGrid;
+class vtkTable;
 class vtkDataSetAttributes;
 
-class VTK_GRAPHICS_EXPORT vtkExtractTemporalFieldData : public vtkRectilinearGridAlgorithm
+class VTK_GRAPHICS_EXPORT vtkExtractTemporalFieldData : public vtkTableAlgorithm
 {
 public:
   static vtkExtractTemporalFieldData *New();
-  vtkTypeRevisionMacro(vtkExtractTemporalFieldData,vtkRectilinearGridAlgorithm);
+  vtkTypeRevisionMacro(vtkExtractTemporalFieldData,vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -60,9 +60,6 @@ protected:
   virtual int RequestInformation(vtkInformation* request,
                                  vtkInformationVector** inputVector, 
                                  vtkInformationVector* outputVector);
-  virtual int RequestUpdateExtent(vtkInformation* request,
-                                  vtkInformationVector** inputVector,
-                                  vtkInformationVector* outputVector);
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector);
@@ -73,7 +70,7 @@ protected:
   // Description:
   // This looks at the arrays in the vtkFieldData of input and copies them 
   // to the output point data.
-  void CopyDataToOutput(vtkDataSet *input, vtkRectilinearGrid *output);
+  void CopyDataToOutput(vtkDataSet *input, vtkTable *output);
 
   int NumberOfTimeSteps;
 

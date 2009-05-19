@@ -44,8 +44,10 @@
 # endif
 #endif
 
-vtkCxxRevisionMacro(vtkAbstractArray, "$Revision: 1.11 $");
+vtkCxxRevisionMacro(vtkAbstractArray, "$Revision: 1.15 $");
 
+//----------------------------------------------------------------------------
+// vtkAbstractArray::SetInformation(vtkInformation *info)
 vtkCxxSetObjectMacro(vtkAbstractArray,Information,vtkInformation);
 
 //----------------------------------------------------------------------------
@@ -105,11 +107,23 @@ void vtkAbstractArray::GetTuples(vtkIdType p1, vtkIdType p2,
 //----------------------------------------------------------------------------
 void vtkAbstractArray::DeepCopy( vtkAbstractArray* da )
 {
-  if ( da && da->Information && da != this )
+  if (da && da->HasInformation() && da!=this)
     {
-    vtkInformation* info = this->GetInformation(); // may create new instance
-    info->Copy( da->Information, 1 /* deep */ );
+    this->CopyInformation(da->GetInformation(),/*deep=*/1);
     }
+}
+
+//----------------------------------------------------------------------------
+int vtkAbstractArray::CopyInformation(vtkInformation *infoFrom, int deep)
+{
+  // Copy all keys. NOTE: subclasses rely on this.
+  vtkInformation *myInfo=this->GetInformation();
+  myInfo->Copy(infoFrom,deep);
+
+  // remove any keys we own that are not to be coppied
+  // here.
+
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -231,6 +245,25 @@ vtkAbstractArray* vtkAbstractArray::CreateArray(int dataType)
   vtkGenericWarningMacro("Unsupported data type: " << dataType
                          << "! Setting to VTK_DOUBLE");
   return vtkDoubleArray::New();
+}
+
+//---------------------------------------------------------------------------
+template <typename T>
+vtkVariant vtkAbstractArrayGetVariantValue(T* arr, vtkIdType index)
+{
+  return vtkVariant(arr[index]);
+}
+
+//----------------------------------------------------------------------------
+vtkVariant vtkAbstractArray::GetVariantValue(vtkIdType i)
+{
+  vtkVariant val;
+  switch(this->GetDataType())
+    {
+    vtkExtraExtendedTemplateMacro(val = vtkAbstractArrayGetVariantValue(
+      static_cast<VTK_TT*>(this->GetVoidPointer(0)), i));
+    }
+  return val;
 }
 
 //----------------------------------------------------------------------------

@@ -28,7 +28,7 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLRepresentationPainter);
-vtkCxxRevisionMacro(vtkOpenGLRepresentationPainter, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkOpenGLRepresentationPainter, "$Revision: 1.10 $");
 #endif
 
 //-----------------------------------------------------------------------------
@@ -42,8 +42,10 @@ vtkOpenGLRepresentationPainter::~vtkOpenGLRepresentationPainter()
 }
 
 //-----------------------------------------------------------------------------
-void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer* renderer, 
-  vtkActor* actor, unsigned long typeflags)
+void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer *renderer, 
+                                                    vtkActor *actor,
+                                                    unsigned long typeflags,
+                                                    bool forceCompileOnly)
 {
   vtkProperty* prop = actor->GetProperty();
   int rep = prop->GetRepresentation();
@@ -74,7 +76,20 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer* renderer,
     break;
     }
 
-  this->Superclass::RenderInternal(renderer, actor, typeflags);
+  bool draw_surface_with_edges = 
+    (prop->GetEdgeVisibility() && prop->GetRepresentation() == VTK_SURFACE);
+  if (draw_surface_with_edges)
+    {
+    glPolygonOffset(0.7, 1.0);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    }
+
+  this->Superclass::RenderInternal(renderer, actor, typeflags,
+                                   forceCompileOnly);
+  if (draw_surface_with_edges)
+    {
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    }
   this->TimeToDraw += this->DelegatePainter? 
     this->DelegatePainter->GetTimeToDraw() : 0;
   if (reset_needed)
@@ -83,10 +98,9 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer* renderer,
     glPolygonMode(face, GL_FILL);
     }
 
-  if (prop->GetEdgeVisibility() && prop->GetRepresentation() == VTK_SURFACE)
+  if (draw_surface_with_edges)
     {
-    glPushAttrib(GL_CURRENT_BIT);
-    glPushAttrib(GL_LIGHTING_BIT);
+    glPushAttrib(GL_CURRENT_BIT|GL_LIGHTING_BIT);
     double color[4];
     prop->GetEdgeColor(color);
     color[0] *= prop->GetOpacity();
@@ -103,7 +117,8 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer* renderer,
     glDisable(GL_TEXTURE_2D);
 
     this->Information->Set(vtkPolyDataPainter::DISABLE_SCALAR_COLOR(), 1);
-    this->Superclass::RenderInternal(renderer, actor, typeflags);
+    this->Superclass::RenderInternal(renderer, actor, typeflags,
+                                     forceCompileOnly);
     this->TimeToDraw += this->DelegatePainter? 
       this->DelegatePainter->GetTimeToDraw() : 0;
     this->Information->Remove(vtkPolyDataPainter::DISABLE_SCALAR_COLOR());
@@ -111,8 +126,7 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer* renderer,
     // reset the default.
     glPolygonMode(face, GL_FILL);
 
-    glPopAttrib(); //GL_LIGHTING
-    glPopAttrib(); //GL_CURRENT_BIT
+    glPopAttrib(); //(GL_CURRENT_BIT|GL_LIGHTING)
     }
 }
 //-----------------------------------------------------------------------------

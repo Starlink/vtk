@@ -43,7 +43,7 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkContourFilter, "$Revision: 1.127 $");
+vtkCxxRevisionMacro(vtkContourFilter, "$Revision: 1.131 $");
 vtkStandardNewMacro(vtkContourFilter);
 vtkCxxSetObjectMacro(vtkContourFilter,ScalarTree,vtkScalarTree);
 
@@ -70,6 +70,9 @@ vtkContourFilter::vtkContourFilter()
   // by default process active point scalars
   this->SetInputArrayToProcess(0,0,0,vtkDataObject::FIELD_ASSOCIATION_POINTS,
                                vtkDataSetAttributes::SCALARS);
+
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_RANGES(), 1);
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_BOUNDS(), 1);
 }
 
 vtkContourFilter::~vtkContourFilter()
@@ -630,8 +633,18 @@ int vtkContourFilter::ProcessRequest(vtkInformation* request,
       {
       return 1;
       }
-    double *range = fInfo->Get(vtkDataObject::FIELD_RANGE());
+    double *range = fInfo->Get(vtkDataObject::PIECE_FIELD_RANGE());
     if (range)
+      {
+      //cerr << "CF(" << this << ") Found " << range[0] << ".." << range[1] << endl;
+      }
+    else
+      {
+      //cerr << "CF(" << this << ") Missed " << endl;
+      }
+
+    int numContours = this->ContourValues->GetNumberOfContours();
+    if (range && numContours)
       {
       // compute the priority
       // get the incoming priority if any
@@ -641,7 +654,6 @@ int vtkContourFilter::ProcessRequest(vtkInformation* request,
         inPrior = inInfo->Get(vtkStreamingDemandDrivenPipeline::PRIORITY());
         }
       // do any contours intersect the range?
-      int numContours=this->ContourValues->GetNumberOfContours();
       double *values=this->ContourValues->GetValues();
       double prior = 0;
       int i;

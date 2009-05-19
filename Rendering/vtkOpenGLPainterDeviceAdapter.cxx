@@ -26,6 +26,7 @@
 #include "vtkDataArray.h"
 #include "vtkDataSetAttributes.h"
 #include "vtkObjectFactory.h"
+#include "vtkOpenGLExtensionManager.h"
 #include "vtkRenderer.h"
 #include "vtkgl.h"
 
@@ -36,7 +37,7 @@
 #endif
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPainterDeviceAdapter, "$Revision: 1.20 $");
+vtkCxxRevisionMacro(vtkOpenGLPainterDeviceAdapter, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkOpenGLPainterDeviceAdapter);
 #endif
 //-----------------------------------------------------------------------------
@@ -46,6 +47,7 @@ vtkOpenGLPainterDeviceAdapter::vtkOpenGLPainterDeviceAdapter()
   this->RangeNear = 0.0;
   this->RangeFar = 1.0;
   this->MaxStencil = 0;
+  this->Initialized = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -264,7 +266,7 @@ int vtkOpenGLPainterDeviceAdapter::IsAttributesSupported(int attribute)
 
 //-----------------------------------------------------------------------------
 void vtkOpenGLPainterDeviceAdapter::SendAttribute(int index, int numcomp,
-  int type, const void *attribute, unsigned long offset/*=0*/)
+  int type, const void *attribute, vtkIdType offset/*=0*/)
 {
   switch (index)
     {
@@ -450,6 +452,7 @@ void vtkOpenGLPainterDeviceAdapter::SendAttribute(int index, int numcomp,
           return;
         }
       break;
+  
   case vtkDataSetAttributes::TCOORDS:     // Texture Coordinate
       if ((numcomp < 1) || (numcomp > 4))
         {
@@ -535,6 +538,100 @@ void vtkOpenGLPainterDeviceAdapter::SendAttribute(int index, int numcomp,
       vtkErrorMacro("Unsupported attribute index: " << index);
       return;
     };
+}
+
+//-----------------------------------------------------------------------------
+void vtkOpenGLPainterDeviceAdapter::SendMultiTextureCoords(int numcomp,
+  int type, const void *attribute, int idx, vtkIdType offset)
+{
+  if(! vtkgl::MultiTexCoord2d)
+    {
+    vtkErrorMacro("MultiTexturing not supported.");
+    return;
+    }
+
+  if ((numcomp < 1) || (numcomp > 4))
+    {
+    vtkErrorMacro("Bad number of components.");
+    return;
+    }
+
+  int textureIndex = vtkgl::TEXTURE0 + idx;
+  switch (VTK2SignedOpenGLType(type))
+    {
+    case GL_SHORT:
+      switch (numcomp)
+        {
+        case 1:
+          vtkgl::MultiTexCoord1sv(textureIndex, static_cast<const GLshort *>(attribute) + offset);
+          break;
+        case 2:
+          vtkgl::MultiTexCoord2sv(textureIndex, static_cast<const GLshort *>(attribute) + offset);
+          break;
+        case 3:
+          vtkgl::MultiTexCoord3sv(textureIndex, static_cast<const GLshort *>(attribute) + offset);
+          break;
+        case 4:
+          vtkgl::MultiTexCoord4sv(textureIndex, static_cast<const GLshort *>(attribute) + offset);
+          break;
+        }
+      break;
+    case GL_INT:
+      switch (numcomp)
+        {
+        case 1:
+          vtkgl::MultiTexCoord1iv(textureIndex, static_cast<const GLint *>(attribute) + offset);
+          break;
+        case 2:
+          vtkgl::MultiTexCoord2iv(textureIndex, static_cast<const GLint *>(attribute) + offset);
+          break;
+        case 3:
+          vtkgl::MultiTexCoord3iv(textureIndex, static_cast<const GLint *>(attribute) + offset);
+          break;
+        case 4:
+          vtkgl::MultiTexCoord4iv(textureIndex, static_cast<const GLint *>(attribute) + offset);
+          break;
+        }
+      break;
+    case GL_FLOAT:
+      switch (numcomp)
+        {
+        case 1:
+          vtkgl::MultiTexCoord1fv(textureIndex, static_cast<const GLfloat *>(attribute) + offset);
+          break;
+        case 2:
+          vtkgl::MultiTexCoord2fv(textureIndex, static_cast<const GLfloat *>(attribute) + offset);
+          break;
+        case 3:
+          vtkgl::MultiTexCoord3fv(textureIndex, static_cast<const GLfloat *>(attribute) + offset);
+          break;
+        case 4:
+          vtkgl::MultiTexCoord4fv(textureIndex, static_cast<const GLfloat *>(attribute) + offset);
+          break;
+        }
+      break;
+    case GL_DOUBLE:
+      switch (numcomp)
+        {
+        case 1:
+          vtkgl::MultiTexCoord1dv(textureIndex, static_cast<const GLdouble *>(attribute) + offset);
+          break;
+        case 2:
+          vtkgl::MultiTexCoord2dv(textureIndex, static_cast<const GLdouble *>(attribute) + offset);
+          break;
+        case 3:
+          vtkgl::MultiTexCoord3dv(textureIndex, static_cast<const GLdouble *>(attribute) + offset);
+          break;
+        case 4:
+          vtkgl::MultiTexCoord4dv(textureIndex, static_cast<const GLdouble *>(attribute) + offset);
+          break;
+        }
+      break;
+    default:
+      vtkErrorMacro("Unsupported type for texture coordinates: " << type);
+      return;
+    }
+  
 }
 
 //-----------------------------------------------------------------------------
@@ -791,7 +888,7 @@ int vtkOpenGLPainterDeviceAdapter::QueryBlending()
 }
 
 //-----------------------------------------------------------------------------
-void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasis(int mode)
+void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasis(bool mode)
 {
   if (mode)
     {
@@ -805,9 +902,23 @@ void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasis(int mode)
     this->RangeNear = nf[0];
     this->RangeFar = nf[1];
     glDepthRange(0.0, nf[1]*0.98);
-
     glDepthMask(GL_FALSE); //prevent verts from interfering with each other
+    }
+  else
+    {
+    glPointSize(static_cast<GLfloat>(this->PointSize));
+    glDepthRange(this->RangeNear, this->RangeFar);
+    glDepthMask(GL_TRUE);
+    }
+}
 
+#if !defined(VTK_LEGACY_REMOVE)
+//-----------------------------------------------------------------------------
+void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasisWithStencilCheck(int mode)
+{
+  this->MakeVertexEmphasis(mode!=0);
+  if (mode)
+    {
     if (this->MaxStencil == 0)
       {
       //if we don't have the stencil buffer, act as if everything fails
@@ -817,15 +928,14 @@ void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasis(int mode)
     }
   else
     {
-    glPointSize(this->PointSize);
-    glDepthRange(this->RangeNear, this->RangeFar);
-    glDepthMask(GL_TRUE);
     if (this->MaxStencil == 0)
       {
-      glColorMask(1,1,1,1);
+      glColorMask(1, 1, 1, 1);
       }
     }
+
 }
+#endif
 
 //-----------------------------------------------------------------------------
 void vtkOpenGLPainterDeviceAdapter::WriteStencil(vtkIdType value)
@@ -837,7 +947,7 @@ void vtkOpenGLPainterDeviceAdapter::WriteStencil(vtkIdType value)
       {
       glClearStencil(0); //start over so don't write into some previous area
       }
-    glStencilFunc(GL_ALWAYS, value, this->MaxStencil);
+    glStencilFunc(GL_ALWAYS, static_cast<GLint>(value), this->MaxStencil);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
     }
 }
@@ -848,7 +958,7 @@ void vtkOpenGLPainterDeviceAdapter::TestStencil(vtkIdType value)
   if (this->MaxStencil)
     {
     value = value % this->MaxStencil + 1;
-    glStencilFunc(GL_EQUAL, value, this->MaxStencil);
+    glStencilFunc(GL_EQUAL, static_cast<GLint>(value), this->MaxStencil);
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
     }
 }

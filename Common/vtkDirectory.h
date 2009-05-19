@@ -52,11 +52,11 @@ public:
 
   // Description:
   // Return the number of files in the current directory.
-  int GetNumberOfFiles();
+  vtkIdType GetNumberOfFiles();
 
   // Description:
   // Return the file at the given index, the indexing is 0 based
-  const char* GetFile(int index);
+  const char* GetFile(vtkIdType index);
 
   // Description:
   // Return true if the file is a directory.  If the file is not an

@@ -13,7 +13,16 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
       #TestExodusTime.cxx
       TestTemporalFractal.cxx
       )
-  ENDIF (VTK_DATA_ROOT)    
+
+    # VS6 builds do not handle out-of-range double assignment to float
+    # properly. Do not run TestMultiBlockExodusWrite on VS6 builds.
+    #
+    IF(NOT CMAKE_GENERATOR MATCHES "Visual Studio 6")
+      SET(MyTests ${MyTests}
+        TestMultiBlockExodusWrite.cxx
+        )
+    ENDIF(NOT CMAKE_GENERATOR MATCHES "Visual Studio 6")
+  ENDIF (VTK_DATA_ROOT)
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                          EXTRA_INCLUDE vtkTestDriver.h)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests} ExerciseMultiProcessController.cxx)
@@ -74,7 +83,7 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
 
     IF (VTK_MPIRUN_EXE)
       ADD_TEST(MPIController
-        ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
         ${VTK_MPI_PREFLAGS}
         ${CXX_TEST_PATH}/TestMPIController
         ${VTK_MPI_POSTFLAGS}
@@ -90,9 +99,99 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
     # Since the functionality and more is tested by the MPIController test,
     # I vote we just get rid of it altogether.
     ADD_TEST(GenericCommunicator-image 
-      ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
+      ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
       ${CXX_TEST_PATH}/GenericCommunicator
       ${VTK_MPI_POSTFLAGS})
+
+    IF (VTK_USE_PARALLEL_BGL)
+      # Add tests using the Parallel BGL
+      ADD_EXECUTABLE(PBGLRandomGraph PBGLRandomGraph.cxx)
+      TARGET_LINK_LIBRARIES(PBGLRandomGraph vtkParallel ${Boost_LIBRARIES})
+
+      ADD_EXECUTABLE(PBGLNamedVertexGraph PBGLNamedVertexGraph.cxx)
+      TARGET_LINK_LIBRARIES(PBGLNamedVertexGraph vtkParallel ${Boost_LIBRARIES})
+
+      ADD_EXECUTABLE(TestPBGLGraphSQLReader TestPBGLGraphSQLReader.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLGraphSQLReader vtkParallel ${Boost_LIBRARIES})
+
+      ADD_TEST(PBGLRandomGraph
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS} 
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/PBGLRandomGraph
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_TEST(PBGLNamedVertexGraph
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS} 
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/PBGLNamedVertexGraph
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_TEST(TestPBGLGraphSQLReader
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLGraphSQLReader
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_EXECUTABLE(TestPRandomGraphSource TestPRandomGraphSource.cxx)
+      TARGET_LINK_LIBRARIES(TestPRandomGraphSource
+        vtkParallel ${Boost_LIBRARIES})
+
+      ADD_TEST(TestPRandomGraphSource
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPRandomGraphSource
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_EXECUTABLE(TestPRMATGraphSource TestPRMATGraphSource.cxx)
+      TARGET_LINK_LIBRARIES(TestPRMATGraphSource
+        vtkParallel ${Boost_LIBRARIES})
+      
+      ADD_TEST(TestPRMATGraphSource
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPRMATGraphSource
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_EXECUTABLE(TestPBGLCollapseGraph TestPBGLCollapseGraph.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLCollapseGraph
+        vtkParallel ${Boost_LIBRARIES})
+      
+      ADD_TEST(TestPBGLCollapseGraph
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLCollapseGraph
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_EXECUTABLE(TestPBGLCollectGraph TestPBGLCollectGraph.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLCollectGraph
+        vtkParallel ${Boost_LIBRARIES})
+      
+      ADD_TEST(TestPBGLCollectGraph
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLCollectGraph
+        ${VTK_MPI_POSTFLAGS})
+
+      ADD_EXECUTABLE(TestPBGLPipeline TestPBGLPipeline.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLPipeline
+        vtkParallel vtkViews ${Boost_LIBRARIES})
+      
+      ADD_TEST(TestPBGLPipeline
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLPipeline
+        ${VTK_MPI_POSTFLAGS})
+        
+      ADD_EXECUTABLE(TestPBGLPedigrees TestPBGLPedigrees.cxx)
+      TARGET_LINK_LIBRARIES(TestPBGLPedigrees
+        vtkParallel vtkViews ${Boost_LIBRARIES})
+        
+      ADD_TEST(TestPBGLPedigrees
+        ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} ${VTK_MPI_MAX_NUMPROCS}
+        ${VTK_MPI_PREFLAGS} 
+        ${CXX_TEST_PATH}/TestPBGLPedigrees
+        ${VTK_MPI_POSTFLAGS})
+    ENDIF (VTK_USE_PARALLEL_BGL)
 
     #
     # Add tests, with the data
@@ -102,42 +201,42 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
       IF (VTK_MPIRUN_EXE)
         IF(VTK_MPI_MAX_NUMPROCS GREATER 1)
           ADD_TEST(ParallelIso-image 
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
             ${CXX_TEST_PATH}/ParallelIsoTest
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Temporary
             -V Baseline/Parallel/ParallelIso.cxx.png
             ${VTK_MPI_POSTFLAGS})
           ADD_TEST(TestPStream-image 
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
             ${CXX_TEST_PATH}/TestPStream
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Temporary
             -V Baseline/Parallel/TestPStream.cxx.png
             ${VTK_MPI_POSTFLAGS})
           ADD_TEST(DistributedData-image
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
             ${CXX_TEST_PATH}/DistributedData
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Temporary
             -V Baseline/Parallel/DistributedData.cxx.png
             ${VTK_MPI_POSTFLAGS})
           ADD_TEST(TransmitImageData-image
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
             ${CXX_TEST_PATH}/TransmitImageData
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Temporary
             -V Baseline/Parallel/TransmitImageData.cxx.png
             ${VTK_MPI_POSTFLAGS})
           ADD_TEST(TransmitRectilinearGrid-image
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
             ${CXX_TEST_PATH}/TransmitRectilinearGrid
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Temporary
             -V Baseline/Parallel/TransmitRectilinearGrid.cxx.png
             ${VTK_MPI_POSTFLAGS})
           ADD_TEST(TransmitStructuredGrid-image
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS}
             ${CXX_TEST_PATH}/TransmitStructuredGrid
             -D ${VTK_DATA_ROOT}
             -T ${VTK_BINARY_DIR}/Testing/Tempor2ary
@@ -152,7 +251,7 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
     ELSE (VTK_DATA_ROOT)
         IF (VTK_MPIRUN_EXE)
           ADD_TEST(TestCommunicator 
-            ${VTK_MPIRUN_EXE} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
+            ${VTK_MPIRUN_EXE} ${VTK_MPI_PRENUMPROC_FLAGS} ${VTK_MPI_NUMPROC_FLAG} 2 ${VTK_MPI_PREFLAGS} 
             ${CXX_TEST_PATH}/GenericCommunicator ${VTK_MPI_POSTFLAGS})
         ENDIF(VTK_MPIRUN_EXE)
     ENDIF (VTK_DATA_ROOT)
@@ -161,10 +260,22 @@ IF(VTK_USE_DISPLAY AND VTK_USE_RENDERING)
   # For now this test is only available on Unix because
   # on Windows, python does not support forking/killing processes
   IF (UNIX  AND  PYTHON_EXECUTABLE  AND  VTK_DATA_ROOT  AND  HAVE_SOCKETS)
+    SET(dir "${EXECUTABLE_OUTPUT_PATH}")
+
+    # Allow this test to work from Xcode dashboards driven with ctest -C:
+    #
+    IF(CMAKE_CONFIGURATION_TYPES)
+      IF(NOT "$ENV{CMAKE_CONFIG_TYPE}" STREQUAL "")
+        SET(dir "${dir}/$ENV{CMAKE_CONFIG_TYPE}")
+      ELSE(NOT "$ENV{CMAKE_CONFIG_TYPE}" STREQUAL "")
+        SET(dir "${dir}/Release")
+      ENDIF(NOT "$ENV{CMAKE_CONFIG_TYPE}" STREQUAL "")
+    ENDIF(CMAKE_CONFIGURATION_TYPES)
+
     ADD_TEST(Sockets-image ${PYTHON_EXECUTABLE}
       ${VTK_SOURCE_DIR}/Parallel/Testing/Cxx/TestSockets.py 
-      ${VTK_EXECUTABLE_DIR}/SocketServer
-      ${VTK_EXECUTABLE_DIR}/SocketClient
+      ${dir}/SocketServer
+      ${dir}/SocketClient
       ${VTK_DATA_ROOT}
       Baseline/Parallel/SocketClient.cxx.png
       ${VTK_BINARY_DIR}/Testing/Temporary)

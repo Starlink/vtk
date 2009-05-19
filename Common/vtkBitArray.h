@@ -136,6 +136,13 @@ public:
   // Description:
   // Insets values and checks to make sure there is enough memory
   void InsertValue(vtkIdType id, int i);
+
+  //BTX
+  // Description:
+  // Insert a value into the array from a variant.
+  void InsertVariantValue(vtkIdType idx, vtkVariant value);
+  //ETX
+
   vtkIdType InsertNextValue(int i);
 
   // Description:
@@ -245,11 +252,13 @@ inline void vtkBitArray::SetValue(vtkIdType id, int value)
 {
   if (value)
     {
-    this->Array[id/8] |= (0x80 >> id%8);
+    this->Array[id/8] = static_cast<unsigned char>(
+      this->Array[id/8] | (0x80 >> id%8));
     }
   else
     {
-    this->Array[id/8] &= (~(0x80 >> id%8));
+    this->Array[id/8] = static_cast<unsigned char>(
+      this->Array[id/8] & (~(0x80 >> id%8)));
     }
   this->DataChanged();
 }
@@ -262,17 +271,24 @@ inline void vtkBitArray::InsertValue(vtkIdType id, int i)
     }
   if (i)
     {
-    this->Array[id/8] |= (0x80 >> id%8);
+    this->Array[id/8] = static_cast<unsigned char>(
+      this->Array[id/8] | (0x80 >> id%8));
     }
   else
     {
-    this->Array[id/8] &= (~(0x80 >> id%8));
+    this->Array[id/8] = static_cast<unsigned char>(
+      this->Array[id/8] & (~(0x80 >> id%8)));
     }
   if ( id > this->MaxId )
     {
     this->MaxId = id;
     }
   this->DataChanged();
+}
+
+inline void vtkBitArray::InsertVariantValue(vtkIdType id, vtkVariant value)
+{
+  this->InsertValue(id, value.ToInt());
 }
 
 inline vtkIdType vtkBitArray::InsertNextValue(int i)

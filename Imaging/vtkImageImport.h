@@ -21,7 +21,8 @@
 // the upper-left corner.  You can use vtkImageFlip to correct the 
 // orientation after the image has been loaded into VTK.
 // Note that is also possible to import the raw data from a Python string
-// instead of from a C array.
+// instead of from a C array. The array applies on scalar point data only, not
+// on cell data.
 // .SECTION See Also
 // vtkImageExport
 
@@ -29,7 +30,6 @@
 #define __vtkImageImport_h
 
 #include "vtkImageAlgorithm.h"
-//#include "vtkTransform.h"
 
 class VTK_IMAGING_EXPORT vtkImageImport : public vtkImageAlgorithm
 {
@@ -117,10 +117,16 @@ public:
                                     vtkInformationVector** inputVector,
                                     vtkInformationVector* outputVector);
 
+  // Description:
+  // Set/get the scalar array name for this data set. Initial value is
+  // "scalars".
+  vtkSetStringMacro(ScalarArrayName);
+  vtkGetStringMacro(ScalarArrayName);
+
   //BTX
   // Description:
   // These are function pointer types for the pipeline connection
-  // callbacks.  See furhter documentation on each individual callback.
+  // callbacks.  See further documentation on each individual callback.
   typedef void (*UpdateInformationCallbackType)(void*);
   typedef int (*PipelineModifiedCallbackType)(void*);
   typedef int* (*WholeExtentCallbackType)(void*);
@@ -252,6 +258,7 @@ protected:
   double DataSpacing[3];
   double DataOrigin[3];
 
+  char *ScalarArrayName;
   void* CallbackUserData;
   
   //BTX
@@ -261,8 +268,8 @@ protected:
   SpacingCallbackType               SpacingCallback;
   OriginCallbackType                OriginCallback;
   ScalarTypeCallbackType            ScalarTypeCallback;
-  NumberOfComponentsCallbackType    NumberOfComponentsCallback;  
-  PropagateUpdateExtentCallbackType PropagateUpdateExtentCallback;  
+  NumberOfComponentsCallbackType    NumberOfComponentsCallback;
+  PropagateUpdateExtentCallbackType PropagateUpdateExtentCallback;
   UpdateDataCallbackType            UpdateDataCallback;
   DataExtentCallbackType            DataExtentCallback;
   BufferPointerCallbackType         BufferPointerCallback;

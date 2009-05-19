@@ -56,8 +56,8 @@
 #include "vtkWidgetRepresentation.h"
 #include <vtkstd/vector> // Required for vector
 
-class vtkPointPlacer;
 class vtkContourLineInterpolator;
+class vtkPointPlacer;
 class vtkPolyData;
 
 //----------------------------------------------------------------------
@@ -268,7 +268,9 @@ public:
   
   enum {
     Inactive = 0,
-    Translate
+    Translate,
+    Shift,
+    Scale
   };
 //ETX
 
@@ -278,11 +280,15 @@ public:
   vtkGetMacro( CurrentOperation, int );
   vtkSetClampMacro( CurrentOperation, int, 
                     vtkContourRepresentation::Inactive,
-                    vtkContourRepresentation::Translate );
+                    vtkContourRepresentation::Scale );
   void SetCurrentOperationToInactive()
     { this->SetCurrentOperation( vtkContourRepresentation::Inactive ); }
   void SetCurrentOperationToTranslate()
     { this->SetCurrentOperation( vtkContourRepresentation::Translate ); }
+  void SetCurrentOperationToShift()
+    {this->SetCurrentOperation( vtkContourRepresentation::Shift ); }
+  void SetCurrentOperationToScale()
+    {this->SetCurrentOperation( vtkContourRepresentation::Scale ); }
 
   // Descirption:
   // Set / get the Point Placer. The point placer is
@@ -324,8 +330,13 @@ public:
   // Description:
   // Get the points in this contour as a vtkPolyData. 
   //BTX
-  virtual vtkPolyData * GetContourRepresentationAsPolyData() = 0;
+  virtual vtkPolyData* GetContourRepresentationAsPolyData() = 0;
   //ETX
+
+  // Description:
+  // Get the nodes and not the intermediate points in this 
+  // contour as a vtkPolyData.
+  void GetNodePolyData( vtkPolyData* poly );
 
 protected:
   vtkContourRepresentation();

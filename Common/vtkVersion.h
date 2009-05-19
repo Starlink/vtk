@@ -16,10 +16,12 @@
 // .SECTION Description
 // Holds methods for defining/determining the current vtk version
 // (major, minor, build).
-//
+
 // .SECTION Caveats
 // This file will change frequently to update the VTKSourceVersion which
 // timestamps a particular source release.
+//
+
 
 #ifndef __vtkVersion_h
 #define __vtkVersion_h
@@ -27,7 +29,12 @@
 
 #include "vtkObject.h"
 
-#define VTK_SOURCE_VERSION "vtk version " VTK_VERSION ", vtk source $Revision: 1.3093.2.5 $, $Date: 2008-12-27 16:16:54 $ (GMT)"
+#if VTK_MINOR_VERSION & 1
+# include <vtksys/DateStamp.h> // For date stamp
+# define VTK_SOURCE_VERSION "vtk version " VTK_VERSION ", Date: " vtksys_DATE_STAMP_STRING
+#else
+# define VTK_SOURCE_VERSION "vtk version " VTK_VERSION
+#endif
 
 
 class VTK_COMMON_EXPORT vtkVersion : public vtkObject

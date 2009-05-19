@@ -26,7 +26,7 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkClosedSurfacePointPlacer, "$Revision: 1.4.2.1 $");
+vtkCxxRevisionMacro(vtkClosedSurfacePointPlacer, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkClosedSurfacePointPlacer);
 vtkCxxSetObjectMacro(vtkClosedSurfacePointPlacer, BoundingPlanes,vtkPlaneCollection);
 

@@ -22,7 +22,7 @@
 #include <vtkstd/iterator>
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkColorTransferFunction, "$Revision: 1.76.2.2 $");
+vtkCxxRevisionMacro(vtkColorTransferFunction, "$Revision: 1.80 $");
 vtkStandardNewMacro(vtkColorTransferFunction);
 
 //=============================================================================

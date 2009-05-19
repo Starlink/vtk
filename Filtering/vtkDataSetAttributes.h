@@ -421,9 +421,6 @@ public:
   // ext is no longer used.
   // If shallowCopyArrays is true, input arrays are copied to the output
   // instead of new ones being allocated.
-  // 
-  // Warning: This does not copy the Information object associated with
-  // each data array. This behavior may change in the future.
   void CopyAllocate(vtkDataSetAttributes* pd, vtkIdType sze=0,
                     vtkIdType ext=1000)
     {
@@ -435,9 +432,6 @@ public:
   // Description:
   // This method is used to copy data arrays in images.
   // You should call "CopyAllocate" before calling this method.
-  // 
-  // Warning: This does not copy the Information object associated with
-  // each data array. This behavior may change in the future.
   void CopyStructuredData(vtkDataSetAttributes *inDsa,
                           const int *inExt, const int *outExt);
 
@@ -450,9 +444,6 @@ public:
   // for that attribute, ignore (2) and (3), 2) if there is a copy field for
   // that field (on or off), obey the flag, ignore (3) 3) obey
   // CopyAllOn/Off
-  // 
-  // Warning: This does not copy the Information object associated with
-  // each data array. This behavior may change in the future.
   void CopyData(vtkDataSetAttributes *fromPd, vtkIdType fromId, vtkIdType toId);
 
 
@@ -525,9 +516,6 @@ public:
   // Description:
   // A special form of CopyAllocate() to be used with FieldLists. Use it 
   // when you are copying data from a set of vtkDataSetAttributes.
-  // 
-  // Warning: This does not copy the Information object associated with
-  // each data array. This behavior may change in the future.
   void CopyAllocate(vtkDataSetAttributes::FieldList& list, vtkIdType sze=0, 
                     vtkIdType ext=1000);
 
@@ -536,16 +524,33 @@ public:
   // you are copying data from a set of vtkDataSetAttributes. Make sure 
   // that you have called the special form of CopyAllocate that accepts 
   // FieldLists.
-  // 
-  // Warning: This does not copy the Information object associated with
-  // each data array. This behavior may change in the future.
   void CopyData(vtkDataSetAttributes::FieldList& list, 
                 vtkDataSetAttributes* dsa, int idx, vtkIdType fromId,
                 vtkIdType toId);
 
+  // Description:
+  // A special form of InterpolateAllocate() to be used with FieldLists. Use it 
+  // when you are interpolating data from a set of vtkDataSetAttributes.
+  // \c Warning: This does not copy the Information object associated with
+  // each data array. This behavior may change in the future.
+  void InterpolateAllocate(vtkDataSetAttributes::FieldList& list, vtkIdType sze=0, 
+                    vtkIdType ext=1000);
+
+  // Description:
+  // Interpolate data set attributes from other data set attributes
+  // given cell or point ids and associated interpolation weights.
+  // Make sure that special form of InterpolateAllocate() that accepts
+  // FieldList has been used. 
+  void InterpolatePoint(
+    vtkDataSetAttributes::FieldList& list,
+    vtkDataSetAttributes *fromPd,
+    int idx, vtkIdType toId, 
+    vtkIdList *ids, double *weights);
+
   friend class vtkDataSetAttributes::FieldList;
 //ETX
 
+//BTX
 protected:
   vtkDataSetAttributes();
   ~vtkDataSetAttributes();
@@ -556,6 +561,11 @@ protected:
                             vtkIdType ext=1000,
                             int shallowCopyArrays=0);
 
+  void InternalCopyAllocate(
+    vtkDataSetAttributes::FieldList& list,
+    int ctype,
+    vtkIdType sze, vtkIdType ext);
+
   // Description:
   // Initialize all of the object's data to NULL
   virtual void InitializeFields();
@@ -563,9 +573,7 @@ protected:
   int AttributeIndices[NUM_ATTRIBUTES]; //index to attribute array in field data
   int CopyAttributeFlags[ALLCOPY][NUM_ATTRIBUTES]; //copy flag for attribute data
 
-//BTX
   vtkFieldData::BasicIterator RequiredArrays;
-//ETX
 
   int* TargetIndices;
 
@@ -580,7 +588,6 @@ private:
   int SetAttribute(vtkAbstractArray* da, int attributeType);
   static int CheckNumberOfComponents(vtkAbstractArray* da, int attributeType);
 
-//BTX
   vtkFieldData::BasicIterator  ComputeRequiredArrays(vtkDataSetAttributes* pd, int ctype);
 
 private:
@@ -596,6 +603,7 @@ public:
   public:
     FieldList(int numInputs);
     ~FieldList();
+    void PrintSelf(ostream &os, vtkIndent indent);
 
     void InitializeFieldList(vtkDataSetAttributes* dsa);
     void IntersectFieldList(vtkDataSetAttributes* dsa);
@@ -618,19 +626,19 @@ public:
     void SetField(int index, vtkAbstractArray *da);
     void RemoveField(const char *name);
     void ClearFields();
-    
-    //These keep track of what is common across datasets
-    char** Fields; //the names of the fields (first five are named attributes)
-    int *FieldTypes; //the types of the fields (first five are named 
-                     //attributes)
-    int *FieldComponents; //the number of components in each  fields 
-                          // (first five are named attributes)
-    int *FieldIndices; //output data array index 
-                       // (first five are named attributes)
-    vtkLookupTable **LUT; //luts associated with each array
-    vtkIdType NumberOfTuples; //a running total of values
-    int NumberOfFields; //the number of fields
-    
+
+    int NumberOfFields; //the number of fields (including five named attributes)
+    // These keep track of what is common across datasets. The first
+    // five items are always named attributes.
+    char** Fields;                     // the names of the fields
+    int *FieldTypes;                   // the types of the fields
+    int *FieldComponents;              // the number of components in field
+    int *FieldIndices;                 // output data array index
+    vtkLookupTable **LUT;              // luts associated with each array
+    vtkInformation **FieldInformation; // Information map associated with each array
+
+    vtkIdType NumberOfTuples; // a running total of values
+
     //For every vtkDataSetAttributes that are processed, keep track of the 
     //indices into various things. The indices are organized so that the
     //first NUM_ATTRIBUTES refer to attributes, the next refer to the 

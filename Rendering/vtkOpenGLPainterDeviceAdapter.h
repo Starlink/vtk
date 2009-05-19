@@ -42,6 +42,13 @@
 
 #include "vtkPainterDeviceAdapter.h"
 
+// To switch off deprecated warning about
+// vtkPainterDeviceAdapter::MakeVertexEmphasisWithStencilCheck
+#if defined(_MSC_VER) && _MSC_VER >= 1300
+#pragma warning(push)
+#pragma warning(disable:4996)
+#endif
+
 class VTK_RENDERING_EXPORT vtkOpenGLPainterDeviceAdapter : 
   public vtkPainterDeviceAdapter
 {
@@ -66,7 +73,12 @@ public:
   // Description:
   // Calls one of glVertex*, glNormal*, glColor*, or glTexCoord*.
   virtual void SendAttribute(int index, int components, int type,
-                             const void *attribute, unsigned long offset=0);
+                             const void *attribute, vtkIdType offset=0);
+
+  // Description:
+  // Calls glMultiTex
+  virtual void SendMultiTextureCoords(int numcomp, int type, const void *attribute, 
+                                      int idx, vtkIdType offset);
 
   // Description:
   // Calls one of glVertexPointer, glNormalPointer, glColorPointer, or
@@ -119,8 +131,12 @@ public:
   // Turns emphasis of vertices on or off for vertex selection.
   // When emphasized verts are drawn nearer to the camera and are drawn 
   // larger than normal to make selection of them more reliable.
-  virtual void MakeVertexEmphasis(int mode);
-
+  virtual void MakeVertexEmphasis(bool mode);
+  
+  // Description:
+  // @deprecated
+  VTK_LEGACY(virtual void MakeVertexEmphasisWithStencilCheck(int mode));
+  
   // Description:
   // Control use of the stencil buffer (for vertex selection).
   virtual void Stencil(int on);
@@ -135,9 +151,14 @@ protected:
   double RangeNear;
   double RangeFar;
   int MaxStencil;
+  bool Initialized;
 private:
   vtkOpenGLPainterDeviceAdapter(const vtkOpenGLPainterDeviceAdapter &);  // Not implemented.
   void operator=(const vtkOpenGLPainterDeviceAdapter &);  // Not implemented.
 };
 
+#if defined(_MSC_VER) && _MSC_VER >= 1300
+#pragma warning(pop)
+#endif
+ 
 #endif //_vtkOpenGLPainterDeviceAdapter_h

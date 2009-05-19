@@ -14,7 +14,12 @@
 =========================================================================*/
 // This will be the default.
 #include "vtkMultiProcessController.h"
+
+#include "vtkByteSwap.h"
+#include "vtkCollection.h"
 #include "vtkDummyController.h"
+#include "vtkObjectFactory.h"
+#include "vtkOutputWindow.h"
 #include "vtkProcessGroup.h"
 #include "vtkSubCommunicator.h"
 #include "vtkToolkits.h"
@@ -23,16 +28,11 @@
 #include "vtkMPIController.h"
 #endif
 
-#include "vtkCollection.h"
-#include "vtkObjectFactory.h"
-#include "vtkOutputWindow.h"
-
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkMultiProcessController);
 
 //----------------------------------------------------------------------------
-
 // Helper class to contain the RMI information.  
 // A subclass of vtkObject so that I can keep them in a collection.
 class VTK_PARALLEL_EXPORT vtkMultiProcessControllerRMI : public vtkObject
@@ -53,10 +53,10 @@ protected:
   void operator=(const vtkMultiProcessControllerRMI&);
 };
 
-vtkCxxRevisionMacro(vtkMultiProcessControllerRMI, "$Revision: 1.29 $");
+vtkCxxRevisionMacro(vtkMultiProcessControllerRMI, "$Revision: 1.36 $");
 vtkStandardNewMacro(vtkMultiProcessControllerRMI);
 
-vtkCxxRevisionMacro(vtkMultiProcessController, "$Revision: 1.29 $");
+vtkCxxRevisionMacro(vtkMultiProcessController, "$Revision: 1.36 $");
 
 //----------------------------------------------------------------------------
 // An RMI function that will break the "ProcessRMIs" loop.
@@ -332,19 +332,43 @@ unsigned long vtkMultiProcessController::AddRMI(vtkRMIFunctionType f,
 }
 
 //----------------------------------------------------------------------------
+void vtkMultiProcessController::TriggerRMIOnAllChildren(
+  void *arg, int argLength, int rmiTag)
+{
+  int myid = this->GetLocalProcessId();
+  int childid = 2 * myid + 1; 
+  int numProcs = this->GetNumberOfProcesses();
+  if (numProcs > childid)
+    {
+    this->TriggerRMIInternal(childid, arg, argLength, rmiTag, true);
+    }
+  childid++;
+  if (numProcs > childid)
+    {
+    this->TriggerRMIInternal(childid, arg, argLength, rmiTag, true);
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkMultiProcessController::TriggerRMI(int remoteProcessId, 
                                            void *arg, int argLength,
                                            int rmiTag)
 {
-  int triggerMessage[3];
-
   // Deal with sending RMI to ourself here for now.
   if (remoteProcessId == this->GetLocalProcessId())
     {
     this->ProcessRMI(remoteProcessId, arg, argLength, rmiTag);
     return;
     }
-  
+
+  this->TriggerRMIInternal(remoteProcessId, arg, argLength, rmiTag, false);
+}
+
+//----------------------------------------------------------------------------
+void vtkMultiProcessController::TriggerRMIInternal(int remoteProcessId, 
+    void* arg, int argLength, int rmiTag, bool propagate)
+{
+  int triggerMessage[128];
   triggerMessage[0] = rmiTag;
   triggerMessage[1] = argLength;
   
@@ -352,13 +376,38 @@ void vtkMultiProcessController::TriggerRMI(int remoteProcessId,
   // Multiple processes might try to invoke the method at the same time.
   // The remote method will know where to get additional args.
   triggerMessage[2] = this->GetLocalProcessId();
+  
+  // Pass the propagate flag.
+  triggerMessage[3] = propagate? 1 : 0;
 
-  this->RMICommunicator->Send(triggerMessage, 3, remoteProcessId, RMI_TAG);
-  if (argLength > 0)
+  // We send the header in Little Endian order.
+  vtkByteSwap::SwapLERange(triggerMessage, 4);
+
+  // If the message is small, we will try to get the message sent over using a
+  // single Send(), rather than two. This helps speed up communication
+  // significantly, since sending multiple small messages is generally slower
+  // than sending a single large message.
+  if (argLength >= 0 && static_cast<unsigned int>(argLength) < sizeof(int)*(128-4))
     {
-    this->RMICommunicator->Send((char*)arg, argLength, remoteProcessId,  
-                                 RMI_ARG_TAG);
-    } 
+    if (argLength > 0)
+      {
+      memcpy(&triggerMessage[4], arg, argLength);
+      }
+    int num_bytes = static_cast<int>(4*sizeof(int)) + argLength;
+    this->RMICommunicator->Send(reinterpret_cast<unsigned char*>(triggerMessage),
+      num_bytes, remoteProcessId, RMI_TAG);
+    }
+  else
+    {
+    this->RMICommunicator->Send(
+      reinterpret_cast<unsigned char*>(triggerMessage), 
+      static_cast<int>(4*sizeof(int)), remoteProcessId, RMI_TAG);
+    if (argLength > 0)
+      {
+      this->RMICommunicator->Send((char*)arg, argLength, remoteProcessId,  
+        RMI_ARG_TAG);
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -388,13 +437,16 @@ int vtkMultiProcessController::ProcessRMIs()
 //----------------------------------------------------------------------------
 int vtkMultiProcessController::ProcessRMIs(int reportErrors, int dont_loop)
 {
-  int triggerMessage[3];
+  int triggerMessage[128];
   unsigned char *arg = NULL;
   int error = RMI_NO_ERROR;
   
   do 
     {
-    if (!this->RMICommunicator->Receive(triggerMessage, 3, ANY_SOURCE, RMI_TAG))
+    if (!this->RMICommunicator->Receive(
+        reinterpret_cast<unsigned char*>(triggerMessage), 
+        static_cast<vtkIdType>(128*sizeof(int)), ANY_SOURCE, RMI_TAG) ||
+      this->RMICommunicator->GetCount() < static_cast<int>(4*sizeof(int)))
       {
       if (reportErrors)
         {
@@ -403,19 +455,50 @@ int vtkMultiProcessController::ProcessRMIs(int reportErrors, int dont_loop)
       error = RMI_TAG_ERROR;
       break;
       }
+#ifdef VTK_WORDS_BIGENDIAN
+    // Header is sent in little-endian form. We need to convert it to  big
+    // endian.
+    vtkByteSwap::SwapLERange(triggerMessage, 4);
+#endif
+
     if (triggerMessage[1] > 0)
       {
       arg = new unsigned char[triggerMessage[1]];
-      if (!this->RMICommunicator->Receive((char*)(arg), triggerMessage[1], 
-          triggerMessage[2], RMI_ARG_TAG))
+      // If the message length is small enough, the TriggerRMIInternal() call
+      // packs the message data inline. So depending on the message length we
+      // use the inline data or make a second receive to fetch the data.
+      if (static_cast<unsigned int>(triggerMessage[1]) < sizeof(int)*(128-4))
         {
-        if (reportErrors)
+        int num_bytes = static_cast<int>(4 *sizeof(int)) + triggerMessage[1];
+        if (this->RMICommunicator->GetCount() != num_bytes)
           {
-          vtkErrorMacro("Could not receive RMI argument.");
+          if (reportErrors)
+            {
+            vtkErrorMacro("Could not receive the RMI argument in its entirety.");
+            }
+          error= RMI_ARG_ERROR;
+          break;
           }
-        error = RMI_ARG_ERROR;
-        break;
+        memcpy(arg, &triggerMessage[4], triggerMessage[1]);
         }
+      else
+        {
+        if (!this->RMICommunicator->Receive((char*)(arg), triggerMessage[1], 
+            triggerMessage[2], RMI_ARG_TAG) ||
+          this->RMICommunicator->GetCount() != triggerMessage[1])
+          {
+          if (reportErrors)
+            {
+            vtkErrorMacro("Could not receive RMI argument.");
+            }
+          error = RMI_ARG_ERROR;
+          break;
+          }
+        }
+      }
+    if (triggerMessage[3] == 1 && this->GetNumberOfProcesses() > 3)//propagate==true
+      {
+      this->TriggerRMIOnAllChildren(arg, triggerMessage[1], triggerMessage[0]);
       }
     this->ProcessRMI(triggerMessage[2], arg, triggerMessage[1], 
       triggerMessage[0]);
@@ -469,7 +552,6 @@ void vtkMultiProcessController::ProcessRMI(int remoteProcessId,
       }     
     }
 }
-
 
 //============================================================================
 // The intent is to give access to a processes controller from a static method.

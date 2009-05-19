@@ -46,6 +46,7 @@ class VTK_GRAPHICS_EXPORT vtkProgrammableFilter : public vtkPassInputTypeAlgorit
 public:
   static vtkProgrammableFilter *New();
   vtkTypeRevisionMacro(vtkProgrammableFilter,vtkPassInputTypeAlgorithm);
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Specify the function to use to operate on the point attribute data. Note
@@ -83,6 +84,13 @@ public:
   // Get the input as a concrete type.
   vtkGraph *GetGraphInput();
 
+  // Description:
+  // When CopyArrays is true, all arrays are copied to the output
+  // iff input and output are of the same type. False by default.
+  vtkSetMacro(CopyArrays, bool);
+  vtkGetMacro(CopyArrays, bool);
+  vtkBooleanMacro(CopyArrays, bool);
+  
 protected:
   vtkProgrammableFilter();
   ~vtkProgrammableFilter();
@@ -93,6 +101,8 @@ protected:
   void (*ExecuteMethod)(void *); //function to invoke
   void (*ExecuteMethodArgDelete)(void *);
   void *ExecuteMethodArg;
+  
+  bool CopyArrays;
   
 private:
   vtkProgrammableFilter(const vtkProgrammableFilter&);  // Not implemented.

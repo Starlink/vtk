@@ -33,9 +33,10 @@
 
 #include "vtkExtractSelectionBase.h"
 
-class vtkSelection;
 class vtkDataArray;
 class vtkDoubleArray;
+class vtkSelection;
+class vtkSelectionNode;
 
 class VTK_GRAPHICS_EXPORT vtkExtractSelectedThresholds : public vtkExtractSelectionBase
 {
@@ -49,8 +50,17 @@ public:
 
   // Description:
   // Function for determining whether a value in a data array passes
-  // the threshold test(s) provided in lims.
+  // the threshold test(s) provided in lims.  Returns 1 if the value
+  // passes at least one of the threshold tests.
   static int EvaluateValue(vtkDataArray *scalars, vtkIdType id, vtkDoubleArray *lims);
+
+  // Description:
+  // Function for determining whether a value in a data array passes
+  // the threshold test(s) provided in lims.  Returns 1 if the value
+  // passes at least one of the threshold tests.  Also returns in
+  // AboveCount, BelowCount and InsideCount the number of tests where
+  // the value was above, below or inside the interval.
+  static int EvaluateValue(vtkDataArray *scalars, vtkIdType id, vtkDoubleArray *lims, int *AboveCount, int *BelowCount, int *InsideCount);
 
 protected:
   vtkExtractSelectedThresholds();
@@ -61,10 +71,10 @@ protected:
                   vtkInformationVector **, 
                   vtkInformationVector *);
 
-  int ExtractCells(vtkSelection *sel, vtkDataSet *input, 
+  int ExtractCells(vtkSelectionNode *sel, vtkDataSet *input, 
                    vtkDataSet *output,
                    int usePointScalars);
-  int ExtractPoints(vtkSelection *sel, vtkDataSet *input, 
+  int ExtractPoints(vtkSelectionNode *sel, vtkDataSet *input, 
                     vtkDataSet *output);
 
 private:

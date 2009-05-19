@@ -25,7 +25,7 @@
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkWedge, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkWedge, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkWedge);
 
 static const double VTK_DIVERGED = 1.e6;
@@ -612,11 +612,34 @@ int vtkWedge::Triangulate(int vtkNotUsed(index), vtkIdList *ptIds,
 {
   ptIds->Reset();
   pts->Reset();
-    
-  for ( int i=0; i < 4; i++ )
+
+  // one wedge (or prism) is decomposed into 3 tetrahedrons and four
+  // pairs of (pointId, pointCoordinates) are provided for each tetrahedron
+
+  int i, p[4];
+
+  // Tetra #0 info (orginal point Ids): { 0, 2, 1, 3 }
+  p[0] = 0; p[1] = 2; p[2] = 1; p[3] = 3;
+  for ( i=0; i < 4; i++ )
     {
-    ptIds->InsertId(i,this->PointIds->GetId(i));
-    pts->InsertPoint(i,this->Points->GetPoint(i));
+    ptIds->InsertNextId(this->PointIds->GetId(p[i]));
+    pts->InsertNextPoint(this->Points->GetPoint(p[i]));
+    }
+
+  // Tetra #1 info (orginal point Ids): { 1, 3, 5, 4 }
+  p[0] = 1; p[1] = 3; p[2] = 5; p[3] = 4;
+  for ( i=0; i < 4; i++ )
+    {
+    ptIds->InsertNextId(this->PointIds->GetId(p[i]));
+    pts->InsertNextPoint(this->Points->GetPoint(p[i]));
+    }
+
+  // Tetra #2 info (orginal point Ids): { 1, 2, 5, 3 }
+  p[0] = 1; p[1] = 2; p[2] = 5; p[3] = 3;
+  for ( i=0; i < 4; i++ )
+    {
+    ptIds->InsertNextId(this->PointIds->GetId(p[i]));
+    pts->InsertNextPoint(this->Points->GetPoint(p[i]));
     }
 
   return 1;

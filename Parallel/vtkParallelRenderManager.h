@@ -26,9 +26,6 @@
 // rendering correctly.  It can also attach itself to render windows and
 // propagate rendering events and camera views.
 //
-// This class is based on the vtkCompositeManager class, except that it can
-// handle any type of parallel rendering.
-//
 // .SECTION Note:
 // Many parallel rendering schemes do not correctly handle transparency.
 // Unless otherwise documented, assume a sub class does not.
@@ -47,6 +44,7 @@
 
 class vtkDoubleArray;
 class vtkMultiProcessController;
+class vtkMultiProcessStream;
 class vtkRenderer;
 class vtkRendererCollection;
 class vtkRenderWindow;
@@ -124,7 +122,7 @@ public:
   virtual void RenderRMI();
   virtual void ResetCamera(vtkRenderer *ren);
   virtual void ResetCameraClippingRange(vtkRenderer *ren);
-  virtual void ComputeVisiblePropBoundsRMI();
+  virtual void ComputeVisiblePropBoundsRMI(int renderId);
 
   virtual void InitializeRMIs();
 
@@ -155,6 +153,15 @@ public:
   vtkSetMacro(RenderEventPropagation, int);
   vtkGetMacro(RenderEventPropagation, int);
   vtkBooleanMacro(RenderEventPropagation, int);
+
+  // Description:
+  // Get/Set the default value used for RenderEventPropagation when a new
+  // instance of vtkParallelRenderManager is created.
+  // Set to true by default.
+  static void SetDefaultRenderEventPropagation(bool val)
+    { vtkParallelRenderManager::DefaultRenderEventPropagation = val; }
+  static bool GetDefaultRenderEventPropagation()
+    { return vtkParallelRenderManager::DefaultRenderEventPropagation; }
 
   // Description:
   // This is used for tiled display rendering.  When data has been
@@ -329,11 +336,9 @@ public:
   enum Tags {
     RENDER_RMI_TAG=34532,
     COMPUTE_VISIBLE_PROP_BOUNDS_RMI_TAG=54636,
-    WIN_INFO_INT_TAG=87834,
-    WIN_INFO_DOUBLE_TAG=87835,
-    REN_INFO_INT_TAG=87836,
-    REN_INFO_DOUBLE_TAG=87837,
-    LIGHT_INFO_DOUBLE_TAG=87838,
+    WIN_INFO_TAG=87834,
+    REN_INFO_TAG=87836,
+    LIGHT_INFO_TAG=87838,
     REN_ID_TAG=58794,
     BOUNDS_TAG=23543
   };
@@ -394,9 +399,24 @@ public:
   vtkSetMacro(SynchronizeTileProperties, int);
   vtkGetMacro(SynchronizeTileProperties, int);
   vtkBooleanMacro(SynchronizeTileProperties, int);
+
+  // Description:
+  // INTERNAL METHODS (DON NOT USE).
+  // There are internal methods made public so that they can be called from
+  // callback functions.
+  virtual void GenericStartRenderCallback();
+  virtual void GenericEndRenderCallback();
+
+//BTX
 protected:
   vtkParallelRenderManager();
   ~vtkParallelRenderManager();
+
+
+  // Description:
+  // Add/Remove event handlers for the render window.
+  void AddRenderWindowEventHandlers();
+  void RemoveRenderWindowEventHandlers();
 
   vtkRenderWindow *RenderWindow;
   vtkMultiProcessController *Controller;
@@ -465,10 +485,28 @@ protected:
 
   // Description:
   // Used to synchronize rendering information per frame.
+  // These are old methods provided for backwords compatibility. One should look
+  // at using CollectWindowInformation(), ProcessWindowInformation() etc. for
+  // bufferred sending of information over.
   virtual void SendWindowInformation() {}
   virtual void ReceiveWindowInformation() {}
   virtual void SendRendererInformation(vtkRenderer *) {};
   virtual void ReceiveRendererInformation(vtkRenderer *) {};
+
+  // Description:
+  // Subclass should override these methods (instead of
+  // SendWindowInformation/ReceiveWindowInformation or
+  // SendRendererInformation/ReceiveRendererInformation) to collect or process
+  // meta-data to synchronize rendering information per frame.
+  // Subclass should not use the Controller directly to send receive messages
+  // in any of these methods otherwise deadlocks may ensue.
+  virtual void CollectWindowInformation(vtkMultiProcessStream&) {}
+  virtual bool ProcessWindowInformation(vtkMultiProcessStream&) 
+    { return true; }
+  virtual void CollectRendererInformation(vtkRenderer*,
+    vtkMultiProcessStream&) {}
+  virtual bool ProcessRendererInformation(vtkRenderer*,
+    vtkMultiProcessStream&) { return true; }
 
   // Description:
   // Here is a good place to handle processing of data before and after
@@ -520,31 +558,26 @@ protected:
   // then render the other renderers at full resolution.
   virtual int ImageReduceRenderer(vtkRenderer *) { return 1; }
 
-//BTX
-  struct RenderWindowInfoInt
+  struct RenderWindowInfo
   {
     int FullSize[2];
     int ReducedSize[2];
     int NumberOfRenderers;
     int UseCompositing;
     int TileScale[2];
-  };
-
-  struct RenderWindowInfoDouble
-  {
     double ImageReductionFactor;
     double DesiredUpdateRate;
     double TileViewport[4];
+
+    // Save/restore the struct to/from a stream.
+    void Save(vtkMultiProcessStream& stream);
+    bool Restore(vtkMultiProcessStream& stream);
   };
-  
-  struct RendererInfoInt
+
+  struct RendererInfo
   {
     int Draw;
     int NumberOfLights;
-  };
-
-  struct RendererInfoDouble
-  {
     double Viewport[4];
     double CameraPosition[3];
     double CameraFocalPoint[3];
@@ -554,29 +587,33 @@ protected:
     double CameraViewAngle;
     double Background[3];
     double ParallelScale;
+
+    // Save/restore the struct to/from a stream.
+    void Save(vtkMultiProcessStream& stream);
+    bool Restore(vtkMultiProcessStream& stream);
   };
   
-  struct LightInfoDouble
+  struct LightInfo
   {
     double Position[3];
     double FocalPoint[3];
     double Type;
+    // Save/restore the struct to/from a stream.
+    void Save(vtkMultiProcessStream& stream);
+    bool Restore(vtkMultiProcessStream& stream);
   };
-
-  static const int WIN_INFO_INT_SIZE;
-  static const int WIN_INFO_DOUBLE_SIZE;
-  static const int REN_INFO_INT_SIZE;
-  static const int REN_INFO_DOUBLE_SIZE;
-  static const int LIGHT_INFO_DOUBLE_SIZE;
-//ETX
 
   int AddedRMIs;
   unsigned long RenderRMIId;
   unsigned long BoundsRMIId;
   int UseBackBuffer;
+
+  static bool DefaultRenderEventPropagation;
+
 private:
   vtkParallelRenderManager(const vtkParallelRenderManager &); //Not implemented
   void operator=(const vtkParallelRenderManager &);  //Not implemented
+//ETX
 };
 
 #endif //__vtkParalleRenderManager_h

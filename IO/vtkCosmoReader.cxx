@@ -77,7 +77,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkStdString.h"
 
-vtkCxxRevisionMacro(vtkCosmoReader, "$Revision: 1.8.2.1 $");
+vtkCxxRevisionMacro(vtkCosmoReader, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkCosmoReader);
 
 namespace

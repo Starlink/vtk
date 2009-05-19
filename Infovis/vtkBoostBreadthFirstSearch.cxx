@@ -17,10 +17,16 @@
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
+/* 
+ * Copyright (C) 2008 The Trustees of Indiana University.
+ * Use, modification and distribution is subject to the Boost Software
+ * License, Version 1.0. (See http://www.boost.org/LICENSE_1_0.txt)
+ */
 #include "vtkBoostBreadthFirstSearch.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkConvertSelection.h"
 #include "vtkMath.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -29,24 +35,27 @@
 #include "vtkFloatArray.h"
 #include "vtkDataArray.h"
 #include "vtkSelection.h"
+#include "vtkSelectionNode.h"
+#include "vtkSmartPointer.h"
 #include "vtkStringArray.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
 #include "vtkBoostGraphAdapter.h"
 #include "vtkDirectedGraph.h"
 #include "vtkUndirectedGraph.h"
 
-#include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/property_map.hpp>
 #include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
+#include <vtksys/stl/utility> // for pair
+
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostBreadthFirstSearch, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkBoostBreadthFirstSearch, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkBoostBreadthFirstSearch);
-
 
 // Redefine the bfs visitor, the only visitor we
 // are using is the tree_edge visitor.
@@ -59,13 +68,12 @@ public:
     : d(dist), far_vertex(far), far_dist(-1) { *far_vertex = -1; }
 
   template <typename Vertex, typename Graph>
-  void discover_vertex(Vertex v, const Graph& vtkNotUsed(g))
+  void examine_vertex(Vertex v, const Graph& vtkNotUsed(g))
   {
-    // If this is the start vertex, initialize far vertex and distance
-    if (*far_vertex < 0)
+    if (get(d, v) > far_dist)
       {
       *far_vertex = v;
-      far_dist = 0;
+      far_dist = get(d, v);
       }
   }
 
@@ -75,11 +83,6 @@ public:
     typename graph_traits<Graph>::vertex_descriptor
     u = source(e, g), v = target(e, g);
     put(d, v, get(d, u) + 1);
-    if (get(d, v) > far_dist)
-      {
-      *far_vertex = v;
-      far_dist = get(d, v);
-      }
   }
 
 private:
@@ -87,7 +90,7 @@ private:
   vtkIdType* far_vertex;
   vtkIdType far_dist;
 };
-  
+
 // Constructor/Destructor
 vtkBoostBreadthFirstSearch::vtkBoostBreadthFirstSearch()
 {
@@ -198,7 +201,7 @@ int vtkBoostBreadthFirstSearch::RequestData(
 
   // Send the data to output.
   output->ShallowCopy(input);
-    
+
   // Sanity check
   // The Boost BFS likes to crash on empty datasets
   if (input->GetNumberOfVertices() == 0)
@@ -215,27 +218,12 @@ int vtkBoostBreadthFirstSearch::RequestData(
       vtkErrorMacro("OriginFromSelection set but selection input undefined.");
       return 0;
       }
-    if (selection->GetProperties()->Get(vtkSelection::CONTENT_TYPE()) != vtkSelection::INDICES ||
-        selection->GetProperties()->Get(vtkSelection::FIELD_TYPE()) != vtkSelection::POINT)
-      {
-      vtkErrorMacro("Selection must be point ids.");
-      return 0;
-      }
-    vtkAbstractArray* arr = selection->GetSelectionList();
-    if (arr == NULL)
-      {
-      vtkErrorMacro("Selection array is null");
-      return 0;
-      }
-    vtkIdTypeArray* idArr = vtkIdTypeArray::SafeDownCast(arr);
-    if (idArr == NULL)
-      {
-      vtkErrorMacro("Selection array is not a vtkIdTypeArray");
-      return 0;
-      }
+    vtkSmartPointer<vtkIdTypeArray> idArr =
+      vtkSmartPointer<vtkIdTypeArray>::New();
+    vtkConvertSelection::GetSelectedVertices(selection, input, idArr);
     if (idArr->GetNumberOfTuples() == 0)
       {
-      vtkErrorMacro("Selection array has no elements");
+      vtkErrorMacro("Origin selection is empty.");
       return 0;
       }
     this->OriginVertexIndex = idArr->GetValue(0);
@@ -274,16 +262,20 @@ int vtkBoostBreadthFirstSearch::RequestData(
   // Initialize the BFS array to all 0's
   for(int i=0;i< BFSArray->GetNumberOfTuples(); ++i)
     {
-    BFSArray->SetValue(i,0);
+      BFSArray->SetValue(i, VTK_INT_MAX);
     }
-  
+
+  vtkIdType maxFromRootVertex = this->OriginVertexIndex;
+
   // Create a color map (used for marking visited nodes)
-  vector_property_map<default_color_type> color;
- 
+  vector_property_map<default_color_type> color(output->GetNumberOfVertices());
+
+  // Set the distance to the source vertex to zero
+  BFSArray->SetValue(this->OriginVertexIndex, 0);
+
   // Create a queue to hand off to the BFS
   boost::queue<int> Q;
 
-  vtkIdType maxFromRootVertex = 0;
   my_distance_recorder<vtkIntArray*> bfsVisitor(BFSArray, &maxFromRootVertex);
   
   // Is the graph directed or undirected
@@ -313,9 +305,11 @@ int vtkBoostBreadthFirstSearch::RequestData(
       ids->InsertNextValue(maxFromRootVertex);
       }
     
-    sel->SetSelectionList(ids);
-    sel->GetProperties()->Set(vtkSelection::CONTENT_TYPE(), vtkSelection::INDICES);
-    sel->GetProperties()->Set(vtkSelection::FIELD_TYPE(), vtkSelection::POINT);
+    vtkSmartPointer<vtkSelectionNode> node = vtkSmartPointer<vtkSelectionNode>::New();
+    sel->AddNode(node);
+    node->SetSelectionList(ids);
+    node->GetProperties()->Set(vtkSelectionNode::CONTENT_TYPE(), vtkSelectionNode::INDICES);
+    node->GetProperties()->Set(vtkSelectionNode::FIELD_TYPE(), vtkSelectionNode::POINT);
     ids->Delete();
     }
 

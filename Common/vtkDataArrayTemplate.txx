@@ -24,9 +24,11 @@
 #include "vtkInformationInformationVectorKey.h"
 #include "vtkInformationVector.h"
 #include "vtkSortDataArray.h"
+#include <vtkstd/new>
 #include <vtkstd/exception>
 #include <vtkstd/utility>
 #include <vtkstd/algorithm>
+#include <vtkstd/map>
 
 // We do not provide a definition for the copy constructor or
 // operator=.  Block the warning.
@@ -59,6 +61,7 @@ public:
     }
   vtkAbstractArray* SortedArray;
   vtkIdList* IndexArray;
+  vtkstd::multimap<T, vtkIdType> CachedUpdates;
   bool Rebuild;
 };
 
@@ -129,13 +132,23 @@ int vtkDataArrayTemplate<T>::Allocate(vtkIdType sz, vtkIdType)
     this->Size = 0;
 
     vtkIdType newSize = (sz > 0 ? sz : 1);
-    this->Array = static_cast<T*>(malloc(newSize * sizeof(T)));
-    if(!this->Array)
+    this->Array = static_cast<T*>(malloc(static_cast<size_t>(newSize)
+                                         * sizeof(T)));
+    if(this->Array==0)
       {
       vtkErrorMacro("Unable to allocate " << newSize
                     << " elements of size " << sizeof(T)
                     << " bytes. ");
+      #if !defined NDEBUG
+      // We're debugging, crash here preserving the stack
+      abort();
+      #elif !defined VTK_DONT_THROW_BAD_ALLOC
+      // We can throw something that has universal meaning
+      throw vtkstd::bad_alloc();
+      #else
+      // We indicate that malloc failed by return
       return 0;
+      #endif
       }
     this->Size = newSize;
     }
@@ -190,20 +203,32 @@ void vtkDataArrayTemplate<T>::DeepCopy(vtkDataArray* fa)
   this->Size = fa->GetSize();
 
   this->Size = (this->Size > 0 ? this->Size : 1);
-  this->Array = static_cast<T*>(malloc(this->Size * sizeof(T)));
-  if(!this->Array)
+  this->Array = static_cast<T* >(
+    malloc(static_cast<size_t>(this->Size) * sizeof(T)));
+  if(this->Array==0)
     {
     vtkErrorMacro("Unable to allocate " << this->Size
                   << " elements of size " << sizeof(T)
                   << " bytes. ");
+
+    #if !defined NDEBUG
+    // We're debugging, crash here preserving the stack
+    abort();
+    #elif !defined VTK_DONT_THROW_BAD_ALLOC
+    // We can throw something that has universal meaning
+    throw vtkstd::bad_alloc();
+    #else
+    // We indicate that malloc failed by return
     this->Size = 0;
     this->NumberOfComponents = 0;
     this->MaxId = -1;
     return;
+    #endif
     }
   if (fa->GetSize() > 0)
     {
-    memcpy(this->Array, fa->GetVoidPointer(0), this->Size*sizeof(T));
+    memcpy(this->Array, fa->GetVoidPointer(0),
+           static_cast<size_t>(this->Size)*sizeof(T));
     }
   this->vtkAbstractArray::DeepCopy( fa );
   this->DataChanged();
@@ -226,7 +251,6 @@ void vtkDataArrayTemplate<T>::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-// Protected function does "reallocate"
 template <class T>
 void vtkDataArrayTemplate<T>::DeleteArray()
 {
@@ -246,32 +270,7 @@ void vtkDataArrayTemplate<T>::DeleteArray()
   this->Array = 0;
 }
 
-template <class T>
-T* vtkDataArrayTemplate<T>::Realloc(vtkIdType sz)
-{
-  // OS X's realloc does not free memory if the new block is smaller.  This
-  // is a very serious problem and causes huge amount of memory to be
-  // wasted. Do not use realloc on the Mac.
-#if defined(__APPLE__)
-  T* newArray = static_cast<T*>(malloc(sz*sizeof(T)));
-  if(!newArray)
-    {
-    return 0;
-    }
-  
-  // Copy the data from the old array.
-  memcpy(newArray, this->Array,
-         (sz < this->Size ? sz : this->Size) * sizeof(T));
-
-  free(this->Array);
-  return newArray;
-#else
-  return static_cast<T*>(realloc(this->Array, sz*sizeof(T)));
-#endif
-}
-
 //----------------------------------------------------------------------------
-// Protected function does "reallocate"
 template <class T>
 T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
 {
@@ -295,6 +294,7 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
     // Requested size is smaller than current size.  Squeeze the
     // memory.
     newSize = sz;
+    this->DataChanged();
     }
 
   // Wipe out the array completely if new size is zero.
@@ -303,43 +303,69 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
     this->Initialize();
     return 0;
     }
-  
+
+  // OS X's realloc does not free memory if the new block is smaller.  This
+  // is a very serious problem and causes huge amount of memory to be
+  // wasted. Do not use realloc on the Mac.
+  bool dontUseRealloc=false;
+  #if defined __APPLE__
+  dontUseRealloc=true;
+  #endif
+
   // Allocate the new array or reallocate the old.
-  if(this->Array && (this->SaveUserArray || 
-                     this->DeleteMethod == VTK_DATA_ARRAY_DELETE))
+  if (this->Array
+      && 
+      (this->SaveUserArray 
+       || this->DeleteMethod==VTK_DATA_ARRAY_DELETE
+       || dontUseRealloc ))
     {
-    // The old array is owned by the user so we cannot try to
-    // reallocate it.  Just allocate new memory that we will own.
-    newArray = static_cast<T*>(malloc(newSize*sizeof(T)));
+    newArray = static_cast<T*>(malloc(static_cast<size_t>(newSize)*sizeof(T)));
     if(!newArray)
       {
       vtkErrorMacro("Unable to allocate " << newSize
                     << " elements of size " << sizeof(T)
                     << " bytes. ");
+      #if !defined NDEBUG
+      // We're debugging, crash here preserving the stack
+      abort();
+      #elif !defined VTK_DONT_THROW_BAD_ALLOC
+      // We can throw something that has universal meaning
+      throw vtkstd::bad_alloc();
+      #else
+      // We indicate that malloc failed by return
       return 0;
+      #endif
       }
 
     // Copy the data from the old array.
     memcpy(newArray, this->Array,
-           (newSize < this->Size ? newSize : this->Size) * sizeof(T));
-    if (!this->SaveUserArray)
-      {
-      delete[] this->Array;
-      this->Array = 0;
-      }
-    this->DeleteMethod = VTK_DATA_ARRAY_FREE;
+           static_cast<size_t>(newSize < this->Size ? newSize : this->Size)
+           * sizeof(T));
+
+    // Realease old array if we own
+    this->DeleteArray();
     }
   else
     {
     // Try to reallocate with minimal memory usage and possibly avoid
     // copying.
-    newArray = this->Realloc(newSize);
+    newArray = static_cast<T*>(
+      realloc(this->Array,static_cast<size_t>(newSize)*sizeof(T)));
     if(!newArray)
       {
       vtkErrorMacro("Unable to allocate " << newSize
                     << " elements of size " << sizeof(T)
                     << " bytes. ");
+      #if !defined NDEBUG
+      // We're debugging, crash here preserving the stack
+      abort();
+      #elif !defined VTK_DONT_THROW_BAD_ALLOC
+      // We can throw something that has universal meaning
+      throw vtkstd::bad_alloc();
+      #else
+      // We indicate that malloc failed by return
       return 0;
+      #endif
       }
     }
 
@@ -351,9 +377,6 @@ T* vtkDataArrayTemplate<T>::ResizeAndExtend(vtkIdType sz)
   this->Size = newSize;
   this->Array = newArray;
 
-  // This object has now allocated its memory and owns it.
-  this->SaveUserArray = 0;
-
   return this->Array;
 }
 
@@ -362,7 +385,8 @@ template <class T>
 int vtkDataArrayTemplate<T>::Resize(vtkIdType sz)
 {
   this->DataChanged();
-  if(this->ResizeAndExtend(sz*this->NumberOfComponents) || sz <= 0)
+  T *newArray = this->ResizeAndExtend(sz*this->NumberOfComponents);
+  if( newArray!=0 || sz <= 0)
     {
     return 1;
     }
@@ -436,7 +460,10 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, vtkIdType j,
   vtkIdType maxSize = locOut + inNumComp;
   if (maxSize > this->Size)
     {
-    this->ResizeAndExtend(maxSize);
+    if (this->ResizeAndExtend(maxSize)==0)
+      {
+      return;
+      }
     }
 
   vtkIdType locIn = j * inNumComp;
@@ -444,7 +471,8 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, vtkIdType j,
   T* outPtr = this->GetPointer(locOut);
   T* inPtr = static_cast<T*>(source->GetVoidPointer(locIn));
 
-  memcpy(outPtr, inPtr, sizeof(T)*inNumComp);
+  size_t s=static_cast<size_t>(inNumComp);
+  memcpy(outPtr, inPtr, s*sizeof(T));
 
   vtkIdType maxId = maxSize-1;
   if ( maxId > this->MaxId )
@@ -478,7 +506,10 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(vtkIdType j,
   // after getting the pointer may make it invalid.
   if (this == source)
     {
-    this->ResizeAndExtend(this->Size+1);
+    if (this->ResizeAndExtend(this->Size+1)==0)
+      {
+      return -1;
+      }
     }
 
   T* data = static_cast<T*>(source->GetVoidPointer(0));
@@ -497,17 +528,14 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(vtkIdType j,
 template <class T>
 double* vtkDataArrayTemplate<T>::GetTuple(vtkIdType i)
 {
-  // If the small Tuple array fails to allocate we need something to
-  // return.  This will avoid an immediate crash for arrays that do
-  // not have too many components.
-  static double sentryTuple[6] = {0,0,0,0,0,0};
 #if 1
   // Allocate a larger tuple buffer if needed.
   if(this->TupleSize < this->NumberOfComponents)
     {
     this->TupleSize = this->NumberOfComponents;
     free(this->Tuple);
-    this->Tuple = static_cast<double*>(malloc(this->TupleSize*sizeof(double)));
+    size_t s=static_cast<size_t>(this->TupleSize);
+    this->Tuple = static_cast<double *>(malloc(s*sizeof(double)));
     }
 
   // Make sure tuple allocation succeeded.
@@ -516,7 +544,16 @@ double* vtkDataArrayTemplate<T>::GetTuple(vtkIdType i)
     vtkErrorMacro("Unable to allocate " << this->TupleSize
                   << " elements of size " << sizeof(double)
                   << " bytes. ");
-    return sentryTuple;
+    #if !defined NDEBUG
+    // We're debugging, crash here preserving the stack
+    abort();
+    #elif !defined VTK_DONT_THROW_BAD_ALLOC
+    // We can throw something that has universal meaning
+    throw vtkstd::bad_alloc();
+    #else
+    // We indicate that malloc failed by return
+    return 0;
+    #endif
     }
 
   // Copy the data into the tuple.
@@ -538,7 +575,16 @@ double* vtkDataArrayTemplate<T>::GetTuple(vtkIdType i)
     vtkErrorMacro("Unable to allocate " << this->NumberOfComponents
                   << " elements of size " << sizeof(double)
                   << " bytes. ");
-    return sentryTuple;
+    #if !defined NDEBUG
+    // We're debugging, crash here preserving the stack
+    abort();
+    #elif !defined VTK_DONT_THROW_BAD_ALLOC
+    // We can throw something that has universal meaning
+    throw vtkstd::bad_alloc();
+    #else
+    // We indicate that malloc failed by return
+    return 0;
+    #endif
     }
 
   // Copy the data into the new tuple.
@@ -621,6 +667,10 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, const float* tuple)
 {
   T* t = this->WritePointer(i*this->NumberOfComponents,
                             this->NumberOfComponents);
+  if (t==0)
+    {
+    return;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -634,6 +684,10 @@ void vtkDataArrayTemplate<T>::InsertTuple(vtkIdType i, const double* tuple)
 {
   T* t = this->WritePointer(i*this->NumberOfComponents,
                             this->NumberOfComponents);
+  if (t==0)
+    {
+    return;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -647,6 +701,10 @@ void vtkDataArrayTemplate<T>::InsertTupleValue(vtkIdType i, const T* tuple)
 {
   T* t = this->WritePointer(i*this->NumberOfComponents,
                             this->NumberOfComponents);
+  if (t==0)
+    {
+    return;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -661,6 +719,10 @@ template <class T>
 vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(const float* tuple)
 {
   T* t = this->WritePointer(this->MaxId + 1, this->NumberOfComponents);
+  if (t==0)
+    {
+    return -1;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -675,6 +737,10 @@ template <class T>
 vtkIdType vtkDataArrayTemplate<T>::InsertNextTuple(const double* tuple)
 {
   T* t = this->WritePointer(this->MaxId + 1,this->NumberOfComponents);
+  if (t==0)
+    {
+    return -1;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -689,6 +755,10 @@ template <class T>
 vtkIdType vtkDataArrayTemplate<T>::InsertNextTupleValue(const T* tuple)
 {
   T* t = this->WritePointer(this->MaxId + 1,this->NumberOfComponents);
+  if (t==0)
+    {
+    return -1;
+    }
 
   for(int j=0; j < this->NumberOfComponents; ++j)
     {
@@ -720,7 +790,8 @@ void vtkDataArrayTemplate<T>::RemoveTuple(vtkIdType id)
   len *= this->GetNumberOfComponents();
   vtkIdType from = (id+1) * this->GetNumberOfComponents();
   vtkIdType to = id * this->GetNumberOfComponents();
-  memmove(this->Array + to, this->Array + from, len * sizeof(T));
+  memmove(this->Array + to, this->Array + from,
+          static_cast<size_t>(len) * sizeof(T));
   this->Resize(this->GetNumberOfTuples() - 1);
   this->DataChanged();
 }
@@ -789,7 +860,10 @@ T* vtkDataArrayTemplate<T>::WritePointer(vtkIdType id,
   vtkIdType newSize=id+number;
   if ( newSize > this->Size )
     {
-    this->ResizeAndExtend(newSize);
+    if (this->ResizeAndExtend(newSize)==0)
+      {
+      return 0;
+      }
     }
   if ( (--newSize) > this->MaxId )
     {
@@ -805,14 +879,34 @@ void vtkDataArrayTemplate<T>::InsertValue(vtkIdType id, T f)
 {
   if ( id >= this->Size )
     {
-    this->ResizeAndExtend(id+1);
+    if (this->ResizeAndExtend(id+1)==0)
+      {
+      return;
+      }
     }
   this->Array[id] = f;
   if ( id > this->MaxId )
     {
     this->MaxId = id;
     }
-  this->DataChanged();
+  this->DataElementChanged(id);
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::InsertVariantValue(vtkIdType id, vtkVariant value)
+{
+  T* dummyPtr = 0;
+  bool valid;
+  T toInsert = value.ToNumeric(&valid, dummyPtr);
+  if (valid)
+    {
+    this->InsertValue(id, toInsert);
+    }
+  else
+    {
+    vtkErrorMacro("unable to insert value of type " << value.GetType());
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -821,87 +915,6 @@ vtkIdType vtkDataArrayTemplate<T>::InsertNextValue(T f)
 {
   this->InsertValue (++this->MaxId,f);
   return this->MaxId;
-}
-
-//----------------------------------------------------------------------------
-template <class T>
-void vtkDataArrayTemplate<T>::ComputeRange(int comp)
-{
-  if ( comp >= this->NumberOfComponents )
-    { // Ignore requests for nonexistent components.
-    return;
-    }
-
-  // If we got component -1 on a vector array, compute vector magnitude.
-  if ( comp < 0 && this->NumberOfComponents == 1 )
-    {
-    comp = 0;
-    }
-
-  vtkInformation* info = this->GetInformation();
-  vtkInformationDoubleVectorKey* rkey;
-  if ( comp < 0 )
-    {
-    rkey = L2_NORM_RANGE();
-    }
-  else
-    {
-    vtkInformationVector* infoVec;
-    if ( ! info->Has( PER_COMPONENT() ) )
-      {
-      infoVec = vtkInformationVector::New();
-      info->Set( PER_COMPONENT(), infoVec );
-      infoVec->FastDelete();
-      }
-    else
-      {
-      infoVec = info->Get( PER_COMPONENT() );
-      }
-    int vlen = infoVec->GetNumberOfInformationObjects();
-    if ( vlen < this->NumberOfComponents )
-      {
-      infoVec->SetNumberOfInformationObjects( this->NumberOfComponents );
-      double rtmp[2];
-      rtmp[0] = VTK_DOUBLE_MAX;
-      rtmp[1] = VTK_DOUBLE_MIN;
-      // Since the MTime() of these new keys will be newer than this->MTime(), we must
-      // be sure that their ranges are marked "invalid" so that we know they must be
-      // computed.
-      for ( int i = vlen; i < this->NumberOfComponents; ++i )
-        {
-        infoVec->GetInformationObject( i )->Set( COMPONENT_RANGE(), rtmp, 2 );
-        }
-      }
-    info = infoVec->GetInformationObject( comp );
-    rkey = COMPONENT_RANGE();
-    }
-
-  if ( info->Has( rkey ) )
-    {
-    if ( this->GetMTime() <= info->GetMTime() )
-      {
-      info->Get( rkey, this->Range );
-      if ( this->Range[0] != VTK_DOUBLE_MAX && this->Range[1] != VTK_DOUBLE_MIN )
-        {
-        // Only accept these values if they are reasonable. Otherwise, it is an
-        // indication that they've never been computed before.
-        return;
-        }
-      }
-    }
-
-  this->Range[0] = VTK_DOUBLE_MAX;
-  this->Range[1] = VTK_DOUBLE_MIN;
-  if ( comp < 0 )
-    {
-    this->ComputeVectorRange();
-    }
-  else
-    {
-    this->ComputeScalarRange( comp );
-    }
-
-  info->Set( rkey, this->Range, 2 );
 }
 
 //----------------------------------------------------------------------------
@@ -933,8 +946,8 @@ void vtkDataArrayTemplate<T>::ComputeScalarRange(int comp)
     }
 
   // Store the range.
-  this->Range[0] = range[0];
-  this->Range[1] = range[1];
+  this->Range[0] = static_cast<double>(range[0]);
+  this->Range[1] = static_cast<double>(range[1]);
 }
 
 //----------------------------------------------------------------------------
@@ -957,7 +970,7 @@ void vtkDataArrayTemplate<T>::ComputeVectorRange()
     double s = 0.0;
     for(int j=0; j < numComp; ++j)
       {
-      double t = i[j];
+      double t = static_cast<double>(i[j]);
       s += t*t;
       }
     if(s < range[0])
@@ -984,7 +997,7 @@ void vtkDataArrayTemplate<T>::ExportToVoidPointer(void *out_ptr)
   if(out_ptr && this->Array) 
     {
     memcpy(static_cast<T*>(out_ptr), this->Array, 
-           (this->MaxId + 1)*sizeof(T));
+           static_cast<size_t>(this->MaxId + 1)*sizeof(T));
     }
 }
 
@@ -1006,6 +1019,7 @@ void vtkDataArrayTemplate<T>::UpdateLookup()
     this->Lookup = new vtkDataArrayTemplateLookup<T>();
     this->Lookup->SortedArray = vtkAbstractArray::CreateArray(this->GetDataType());
     this->Lookup->IndexArray = vtkIdList::New();
+    this->Lookup->Rebuild = true;
     }
   if (this->Lookup->Rebuild)
     {
@@ -1019,6 +1033,7 @@ void vtkDataArrayTemplate<T>::UpdateLookup()
       }
     vtkSortDataArray::Sort(this->Lookup->SortedArray, this->Lookup->IndexArray);
     this->Lookup->Rebuild = false;
+    this->Lookup->CachedUpdates.clear();
     }
 }
 
@@ -1055,15 +1070,77 @@ template <class T>
 vtkIdType vtkDataArrayTemplate<T>::LookupValue(T value)
 {
   this->UpdateLookup();
-  int numComps = this->GetNumberOfComponents();
-  vtkIdType numTuples = this->GetNumberOfTuples();
+ 
+  // First look into the cached updates, to see if there were any
+  // cached changes. Find an equivalent element in the set of cached
+  // indices for this value. Some of the indices may have changed
+  // values since the cache was built, so we need to do this equality
+  // check.
+  typedef typename vtkstd::multimap<T, vtkIdType>::iterator CacheIterator;
+  CacheIterator cached    = this->Lookup->CachedUpdates.lower_bound(value),
+                cachedEnd = this->Lookup->CachedUpdates.end();
+  while (cached != cachedEnd)
+    {
+    // Check that we are still in the same equivalence class as the
+    // value.
+    if (value == cached->first)
+      {
+      // Check that the value in the original array hasn't changed.
+      T currentValue = this->GetValue(cached->second);
+      if (value == currentValue)
+        {
+        return cached->second;
+        }
+      }
+    else
+      {
+      break;
+      }
+
+    ++cached;
+    }
+
+  // The index array can have size zero even when the
+  // sorted array is of size 1, due to vtkDataArrayTemplate::DeepCopy's
+  // refusal to allocate a 0-length array.
+  if (this->Lookup->IndexArray->GetNumberOfIds() == 0)
+    {
+    return -1;
+    }
+
+  int numComps = this->Lookup->SortedArray->GetNumberOfComponents();
+  vtkIdType numTuples = this->Lookup->SortedArray->GetNumberOfTuples();
   T* ptr = static_cast<T*>(this->Lookup->SortedArray->GetVoidPointer(0));
   T* ptrEnd = ptr + numComps*numTuples;
   T* found = vtkstd::lower_bound(ptr, ptrEnd, value);
-  if (found != ptrEnd && *found == value)
+
+  // Find an index with a matching value. Non-matching values might
+  // show up here when the underlying value at that index has been
+  // changed (so the sorted array is out-of-date).
+  vtkIdType offset = static_cast<vtkIdType>(found - ptr);
+  while (found != ptrEnd)
     {
-    return this->Lookup->IndexArray->GetId(static_cast<vtkIdType>(found - ptr));
+    // Check whether we still have a value equivalent to what we're
+    // looking for.
+      if (value == *found)
+      {
+      // Check that the value in the original array hasn't changed.
+      vtkIdType index = this->Lookup->IndexArray->GetId(offset);
+      T currentValue = this->GetValue(index);
+      if (value == currentValue)
+        {
+        return index;
+        }
+      }
+    else
+      {
+      break;
+      }
+
+    ++found; 
+    ++offset;
     }
+
   return -1;
 }
 
@@ -1073,16 +1150,56 @@ void vtkDataArrayTemplate<T>::LookupValue(T value, vtkIdList* ids)
 {
   this->UpdateLookup();
   ids->Reset();
+
+  // First look into the cached updates, to see if there were any
+  // cached changes. Find an equivalent element in the set of cached
+  // indices for this value. Some of the indices may have changed
+  // values since the cache was built, so we need to do this equality
+  // check.
+  typedef typename vtkstd::multimap<T, vtkIdType>::iterator CacheIterator;
+  vtkstd::pair<CacheIterator, CacheIterator> cached    
+    = this->Lookup->CachedUpdates.equal_range(value);
+  while (cached.first != cached.second) 
+    {
+    // Check that the value in the original array hasn't changed.
+    T currentValue = this->GetValue(cached.first->second);
+    if (cached.first->first == currentValue)
+      {
+      ids->InsertNextId(cached.first->second);
+      }
+
+    ++cached.first;
+    }
+  
+  // The index array can have size zero even when the
+  // sorted array is of size 1, due to vtkDataArrayTemplate::DeepCopy's
+  // refusal to allocate a 0-length array.
+  if (this->Lookup->IndexArray->GetNumberOfIds() == 0)
+    {
+    return;
+    }
+    
+  // Perform a binary search of the sorted array using STL equal_range.
   int numComps = this->GetNumberOfComponents();
   vtkIdType numTuples = this->GetNumberOfTuples();
   T* ptr = static_cast<T*>(this->Lookup->SortedArray->GetVoidPointer(0));
   vtkstd::pair<T*,T*> found = 
     vtkstd::equal_range(ptr, ptr + numComps*numTuples, value);
-  vtkIdType ind = static_cast<vtkIdType>(found.first - ptr);
-  vtkIdType endInd = static_cast<vtkIdType>(found.second - ptr);
-  for (; ind != endInd; ++ind)
+  
+  // Add the indices of the found items to the ID list.
+  vtkIdType offset = static_cast<vtkIdType>(found.first - ptr);
+  while (found.first != found.second)
     {
-    ids->InsertNextId(this->Lookup->IndexArray->GetId(ind));
+    // Check that the value in the original array hasn't changed.
+    vtkIdType index = this->Lookup->IndexArray->GetId(offset); 
+    T currentValue = this->GetValue(index);
+    if (*found.first == currentValue)
+      {
+      ids->InsertNextId(index);
+      }
+
+    ++found.first;
+    ++offset;
     }
 }
 
@@ -1093,6 +1210,34 @@ void vtkDataArrayTemplate<T>::DataChanged()
   if (this->Lookup)
     {
     this->Lookup->Rebuild = true;
+    }
+}
+
+//----------------------------------------------------------------------------
+template <class T>
+void vtkDataArrayTemplate<T>::DataElementChanged(vtkIdType id)
+{
+  if (this->Lookup)
+    {
+      if (this->Lookup->Rebuild)
+        {
+        // We're already going to rebuild the lookup table. Do nothing.
+        return;
+        }
+
+      if (this->Lookup->CachedUpdates.size() >
+          static_cast<size_t>(this->GetNumberOfTuples()/10))
+        {
+        // At this point, just rebuild the full table.
+        this->Lookup->Rebuild = true;
+        }
+      else
+        {
+        // Insert this change into the set of cached updates
+        vtkstd::pair<const T, vtkIdType> 
+          value(this->GetValue(id), id);
+        this->Lookup->CachedUpdates.insert(value);
+        }
     }
 }
 

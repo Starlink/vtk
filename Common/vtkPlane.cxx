@@ -16,7 +16,7 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPlane, "$Revision: 1.41 $");
+vtkCxxRevisionMacro(vtkPlane, "$Revision: 1.43 $");
 vtkStandardNewMacro(vtkPlane);
 
 // Construct plane passing through origin and normal to z-axis.
@@ -108,7 +108,7 @@ void vtkPlane::EvaluateGradient(double vtkNotUsed(x)[3], double n[3])
     n[i] = this->Normal[i];
     }
 }
-
+ 
 #define VTK_PLANE_TOL 1.0e-06
 
 // Given a line defined by the two points p1,p2; and a plane defined by the

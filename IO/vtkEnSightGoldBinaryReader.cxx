@@ -32,7 +32,7 @@
 #include <ctype.h>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkEnSightGoldBinaryReader, "$Revision: 1.76 $");
+vtkCxxRevisionMacro(vtkEnSightGoldBinaryReader, "$Revision: 1.78 $");
 vtkStandardNewMacro(vtkEnSightGoldBinaryReader);
 
 // This is half the precision of an int.
@@ -250,10 +250,10 @@ int vtkEnSightGoldBinaryReader::ReadGeometryFile(const char* fileName, int timeS
     nameline[79] = '\0'; // Ensure NULL character at end of part name
     char *name = strdup(nameline);
 
-    if (strncmp(line, "interface", 9) == 0)
-      {
-      return 1; // ignore it and move on
-      }
+    // fix to bug #0008237
+    // The original "return 1" operation upon "strncmp(line, "interface", 9) == 0"
+    // was removed here as 'interface' is NOT a keyword of an EnSight Gold file.
+    
     this->ReadLine(line);
     
     if (strncmp(line, "block", 5) == 0)
@@ -2432,16 +2432,7 @@ int vtkEnSightGoldBinaryReader::CreateUnstructuredGridOutput(
 
   vtkUnstructuredGrid* output = vtkUnstructuredGrid::SafeDownCast(
     this->GetDataSetFromBlock(compositeOutput, partId));
-
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
   
   // Clear all cell ids from the last execution, if any.
   idx = this->UnstructuredPartIds->IsId(partId);
@@ -3491,17 +3482,9 @@ int vtkEnSightGoldBinaryReader::CreateStructuredGridOutput(
     ds = sgrid;
     }
   
-  vtkStructuredGrid* output = vtkStructuredGrid::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  vtkStructuredGrid* output = vtkStructuredGrid::SafeDownCast(ds);
+  this->SetBlockName(compositeOutput, partId, name);
 
   if (sscanf(line, " %*s %s", subLine) == 1)
     {
@@ -3623,15 +3606,7 @@ int vtkEnSightGoldBinaryReader::CreateRectilinearGridOutput(
 
   vtkRectilinearGrid* output = vtkRectilinearGrid::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
   
   if (sscanf(line, " %*s %*s %s", subLine) == 1)
     {
@@ -3735,15 +3710,7 @@ int vtkEnSightGoldBinaryReader::CreateImageDataOutput(
 
   vtkImageData* output = vtkImageData::SafeDownCast(ds);
 
-  vtkCharArray* nmArray =  vtkCharArray::New();
-  nmArray->SetName("Name");
-  size_t len = strlen(name);
-  nmArray->SetNumberOfTuples(static_cast<vtkIdType>(len)+1);
-  char* copy = nmArray->GetPointer(0);
-  memcpy(copy, name, len);
-  copy[len] = '\0';
-  output->GetFieldData()->AddArray(nmArray);
-  nmArray->Delete();
+  this->SetBlockName(compositeOutput, partId, name);
   
   if (sscanf(line, " %*s %*s %s", subLine) == 1)
     {

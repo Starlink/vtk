@@ -426,6 +426,7 @@ public:
     FIELD_ASSOCIATION_POINTS_THEN_CELLS,
     FIELD_ASSOCIATION_VERTICES,
     FIELD_ASSOCIATION_EDGES,
+    FIELD_ASSOCIATION_ROWS,
     NUMBER_OF_ASSOCIATIONS
   };
   //ETX
@@ -467,10 +468,15 @@ public:
   static vtkInformationIntegerKey* FIELD_NUMBER_OF_TUPLES();
   static vtkInformationIntegerKey* FIELD_OPERATION();
   static vtkInformationDoubleVectorKey* FIELD_RANGE();
+  static vtkInformationDoubleVectorKey* PIECE_FIELD_RANGE();
+  static vtkInformationIntegerVectorKey* PIECE_EXTENT();
   static vtkInformationStringKey* FIELD_NAME();
   static vtkInformationDoubleVectorKey* ORIGIN();
   static vtkInformationDoubleVectorKey* SPACING();
   static vtkInformationIntegerKey* DATA_GEOMETRY_UNMODIFIED();
+
+  // Key used to put SIL information in the output information by readers.
+  static vtkInformationDataObjectKey* SIL();
 
   //BTX
   // Description:

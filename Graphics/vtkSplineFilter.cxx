@@ -26,7 +26,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkSplineFilter, "$Revision: 1.17 $");
+vtkCxxRevisionMacro(vtkSplineFilter, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkSplineFilter);
 vtkCxxSetObjectMacro(vtkSplineFilter,Spline,vtkSpline);
 
@@ -99,7 +99,6 @@ int vtkSplineFilter::RequestData(
       !(inLines = input->GetLines()) || 
        (numLines = inLines->GetNumberOfCells()) < 1 )
     {
-    vtkWarningMacro(<< " No input data!");
     return 1;
     }
 
@@ -149,7 +148,7 @@ int vtkSplineFilter::RequestData(
   for (inCellId=0, inLines->InitTraversal(); 
        inLines->GetNextCell(npts,pts) && !abort; inCellId++)
     {
-    this->UpdateProgress((double)inCellId/numLines);
+      this->UpdateProgress(static_cast<double>(inCellId)/numLines);
     abort = this->GetAbortExecute();
 
     if (npts < 2)
@@ -166,7 +165,7 @@ int vtkSplineFilter::RequestData(
                                      pd, outPD, genTCoords, newTCoords);
     if ( ! numGenPts )
       {
-      vtkWarningMacro(<< "Could not generate points!");
+      //vtkWarningMacro(<< "Could not generate points!");
       continue; //skip splining 
       }
       
@@ -262,7 +261,7 @@ int vtkSplineFilter::GeneratePoints(vtkIdType offset, vtkIdType npts,
     }
   else
     {
-    numDivs = (int) (length / this->Length);
+    numDivs = static_cast<int>(length / this->Length);
     }
   numDivs = ( numDivs < 1 ? 1 : (numDivs > this->MaximumNumberOfSubdivisions ? 
                                  this->MaximumNumberOfSubdivisions : numDivs));
@@ -279,7 +278,7 @@ int vtkSplineFilter::GeneratePoints(vtkIdType offset, vtkIdType npts,
   double tHi = this->TCoordMap->GetValue(1);
   for (idx=0, i=0; i < numNewPts; i++)
     {
-    t = (double) i / numDivs;
+      t = static_cast<double>(i) / numDivs;
     x[0] = this->XSpline->Evaluate(t);
     x[1] = this->YSpline->Evaluate(t);
     x[2] = this->ZSpline->Evaluate(t);

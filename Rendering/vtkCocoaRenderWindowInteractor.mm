@@ -21,7 +21,7 @@
 #import <OpenGL/gl.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCocoaRenderWindowInteractor, "$Revision: 1.24 $");
+vtkCxxRevisionMacro(vtkCocoaRenderWindowInteractor, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkCocoaRenderWindowInteractor);
 
 //----------------------------------------------------------------------------
@@ -55,9 +55,11 @@ void (*vtkCocoaRenderWindowInteractor::ClassExitMethodArgDelete)(void *) = (void
 // that we know a pool is always in place.
 // See: <http://lists.apple.com/archives/cocoa-dev/2006/Sep/msg00222.html>
 //
-// However, with garbage collection, autorelease pools are a thing of the
-// past, and so this hack is not needed.
-#ifndef __OBJC_GC__
+// With garbage collection (GC), autorelease pools are a thing of the past,
+// and this hack is not needed.  However, Obj-C code can be compiled in
+// 1 of 3 memory management modes: GC unsupported (classic retain/release),
+// GC supported, or GC required.  Library code like VTK should work with all 3.
+// Until VTK can require 'GC required' this hack is still needed.
 class vtkEarlyCocoaSetup
   {
     public:
@@ -71,13 +73,18 @@ class vtkEarlyCocoaSetup
       this->DestroyPoolOfLastResort();
     }
     
+    protected:
     void DestroyPoolOfLastResort()
     {
+    // See Apple docs for drain vs release.  Alas, to support 10.3, we need this #if.
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1040
+      [Pool drain];
+#else
       [Pool release];
+#endif
       Pool = nil;
     }
     
-    protected:
     void CreatePoolOfLastResort()
     {
       Pool = [[NSAutoreleasePool alloc] init];
@@ -88,9 +95,10 @@ class vtkEarlyCocoaSetup
   };
 
 // We create a global/static instance of this class to ensure that we have an
-// autorelease pool before main() starts.
-vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
-#endif
+// autorelease pool before main() starts (the C++ constructor for a global
+// object runs before main).  Note: I am unable to find a place to delete this
+// object safely.
+static vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
 
 //----------------------------------------------------------------------------
 // This is a private class and an implementation detail, do not use it.
@@ -112,6 +120,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
 //----------------------------------------------------------------------------
 @implementation vtkCocoaTimer
 
+//----------------------------------------------------------------------------
 - (id)initWithInteractor:(vtkCocoaRenderWindowInteractor *)myInteractor timerId:(int)myTimerId
 {
   self = [super init]; 
@@ -123,12 +132,14 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   return self;
 }
 
+//----------------------------------------------------------------------------
 - (void)timerFired:(NSTimer *)myTimer
 {
   (void)myTimer;
   interactor->InvokeEvent(vtkCommand::TimerEvent, &timerId);
 }
 
+//----------------------------------------------------------------------------
 - (void)startTimerWithInterval:(NSTimeInterval)interval repeating:(BOOL)repeating
 {
   timer = [[NSTimer timerWithTimeInterval:interval
@@ -140,6 +151,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSEventTrackingRunLoopMode];
 }
 
+//----------------------------------------------------------------------------
 - (void)stopTimer
 {
   [timer invalidate];
@@ -168,6 +180,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
 //----------------------------------------------------------------------------
 @implementation vtkCocoaServer
 
+//----------------------------------------------------------------------------
 - (id)initWithRenderWindow:(vtkCocoaRenderWindow *)inRenderWindow
 {
   self = [super init];
@@ -178,6 +191,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   return self;
 }
 
+//----------------------------------------------------------------------------
 + (id)cocoaServerWithRenderWindow:(vtkCocoaRenderWindow *)inRenderWindow
 {
   vtkCocoaServer *server = [[[vtkCocoaServer alloc] 
@@ -186,6 +200,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   return server;
 }
 
+//----------------------------------------------------------------------------
 - (void)start
 {
   // Retrieve the NSWindow.
@@ -193,14 +208,18 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   if (renWin != NULL)
     {
     win = reinterpret_cast<NSWindow *>(renWin->GetWindowId());
-    }
   
-  // Register for the windowWillClose notification in order to stop
-  // the run loop if the window closes.
-  NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-  [nc addObserver:self selector:@selector(windowWillClose:) 
-                           name:@"NSWindowWillCloseNotification" 
-                         object:win];
+  // We don't want to be informed of every window closing, so check for nil.
+    if (win != nil)
+    {
+      // Register for the windowWillClose notification in order to stop
+      // the run loop if the window closes.
+      NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+      [nc addObserver:self selector:@selector(windowWillClose:) 
+                               name:@"NSWindowWillCloseNotification" 
+                             object:win];
+    }
+    }
 
   // Now that we are about to begin the standard Cocoa event loop, we can get
   // rid of the 'pool of last resort' because [NSApp run] will create a new
@@ -214,6 +233,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   [NSApp run];
 }
 
+//----------------------------------------------------------------------------
 - (void)stop
 {
   // Retrieve the NSWindow.
@@ -227,6 +247,7 @@ vtkEarlyCocoaSetup * gEarlyCocoaSetup = new vtkEarlyCocoaSetup();
   [win close];
 }
 
+//----------------------------------------------------------------------------
 - (void)windowWillClose:(NSNotification*)aNotification
 {
   (void)aNotification;
@@ -268,8 +289,15 @@ vtkCocoaRenderWindowInteractor::vtkCocoaRenderWindowInteractor()
 {
   this->InstallMessageProc = 1;
   
-  // Create the cocoa objects manager. They are all NULL by default.
-  this->SetCocoaManager(reinterpret_cast<void *>([NSMutableDictionary dictionary]));
+  // First, create the cocoa objects manager. The dictionary is empty so
+  // essentially all objects are initialized to NULL.
+  NSMutableDictionary * cocoaManager = [NSMutableDictionary dictionary];
+
+  // SetCocoaManager works like an Obj-C setter, so do like Obj-C and 
+  // init the ivar to null first.
+  this->CocoaManager = NULL;
+  this->SetCocoaManager(reinterpret_cast<void *>(cocoaManager));
+  
   this->SetTimerDictionary(reinterpret_cast<void *>([NSMutableDictionary dictionary]));
 }
 
@@ -562,27 +590,32 @@ void *vtkCocoaRenderWindowInteractor::GetCocoaServer()
 //----------------------------------------------------------------------------
 void vtkCocoaRenderWindowInteractor::SetCocoaManager(void *manager)
 {
-  if (manager == NULL)
+  NSMutableDictionary* currentCocoaManager = 
+    reinterpret_cast<NSMutableDictionary *>(this->CocoaManager);
+  NSMutableDictionary* newCocoaManager = 
+    reinterpret_cast<NSMutableDictionary *>(manager);
+
+  if (currentCocoaManager != newCocoaManager)
     {
-    NSMutableDictionary* cocoaManager = 
-      reinterpret_cast<NSMutableDictionary *>(manager);
-    #ifdef __OBJC_GC__
-      [[NSGarbageCollector defaultCollector] enableCollectorForPointer:cocoaManager];
-    #else
-      [cocoaManager release];
-    #endif
+    // Why not use Cocoa's retain and release?  Without garbage collection
+    // (GC), the two are equivalent anyway because of 'toll free bridging',
+    // so no problem there.  With GC, retain and release do nothing, but
+    // CFRetain and CFRelease still manipulate the internal reference count.
+    // We need that, since we are not using strong references (we don't want
+    // it collected out from under us!).
+    if (currentCocoaManager)
+      {
+      CFRelease(currentCocoaManager);
+      }
+    if (newCocoaManager)
+      {
+      this->CocoaManager = const_cast<void*>(CFRetain (newCocoaManager));
+      }
+    else
+      {
+      this->CocoaManager = NULL;
+      }
     }
-  else
-    {
-    NSMutableDictionary* cocoaManager = 
-      reinterpret_cast<NSMutableDictionary *>(manager);
-    #ifdef __OBJC_GC__
-      [[NSGarbageCollector defaultCollector] disableCollectorForPointer:cocoaManager];
-    #else
-      [cocoaManager retain];
-    #endif
-    }
-  this->CocoaManager = manager;
 }
   
 //----------------------------------------------------------------------------

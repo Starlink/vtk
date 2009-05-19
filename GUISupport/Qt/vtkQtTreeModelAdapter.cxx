@@ -24,7 +24,6 @@
 #include "vtkIdList.h"
 #include "vtkIdTypeArray.h"
 #include "vtkPointData.h"
-#include "vtkSmartPointer.h"
 #include "vtkStdString.h"
 #include "vtkStringArray.h"
 #include "vtkTree.h"
@@ -33,15 +32,13 @@
 #include <QIcon>
 #include <QPixmap>
 
-#define VTK_CREATE(type, name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
-
 vtkQtTreeModelAdapter::vtkQtTreeModelAdapter(QObject* p, vtkTree* t)
   : vtkQtAbstractModelAdapter(p)
 {
   this->TreeMTime = 0;
   this->Tree = 0;
   this->setTree(t);
+  this->ChildIterator = vtkAdjacentVertexIterator::New();
 }
 
 vtkQtTreeModelAdapter::~vtkQtTreeModelAdapter()
@@ -50,6 +47,7 @@ vtkQtTreeModelAdapter::~vtkQtTreeModelAdapter()
     {
     this->Tree->Delete();
     }
+  this->ChildIterator->Delete();
 }
 
 void vtkQtTreeModelAdapter::SetKeyColumnName(const char* name)
@@ -75,9 +73,9 @@ void vtkQtTreeModelAdapter::SetKeyColumnName(const char* name)
 void vtkQtTreeModelAdapter::SetVTKDataObject(vtkDataObject *obj)
 {
   vtkTree *t = vtkTree::SafeDownCast(obj);
-  if (!t)
+  if (obj && !t)
     {
-    cerr << "vtkQtTreeModelAdapter needs a vtkTree for SetVTKDataObject";
+    cerr << "vtkQtTreeModelAdapter needs a vtkTree for SetVTKDataObject" << endl;
     return;
     }
     
@@ -129,24 +127,32 @@ void vtkQtTreeModelAdapter::setTree(vtkTree* t)
 
 void vtkQtTreeModelAdapter::treeModified()
 {
-  vtkIdType root = this->Tree->GetRoot();
   this->IdToPedigreeHash.clear();
   this->PedigreeToIndexHash.clear();
   this->IndexToIdHash.clear();
   this->RowToPedigreeHash.clear();
-  vtkIdType row = 0;
-  this->GenerateHashMap(row, root, this->createIndex(0, 0, static_cast<int>(root)));
+  if (this->Tree->GetNumberOfVertices() > 0)
+    {
+    vtkIdType root = this->Tree->GetRoot();
+    vtkIdType row = 0;
+    this->GenerateHashMap(row, root, this->createIndex(0, 0, static_cast<int>(root)));
+    }
   this->TreeMTime = this->Tree->GetMTime();
   emit reset();
 }
 
 void vtkQtTreeModelAdapter::GenerateHashMap(vtkIdType & row, vtkIdType id, QModelIndex idx)
 {
-  vtkIdTypeArray* arr = vtkIdTypeArray::SafeDownCast(this->Tree->GetVertexData()->GetArray("PedigreeVertexId"));
+  vtkAbstractArray *pedigreeIds = this->Tree->GetVertexData()->GetPedigreeIds();
   vtkIdType pedigree = -1;
-  if (arr != NULL)
+  if (pedigreeIds != NULL)
     {
-    pedigree = arr->GetValue(id);
+      vtkVariant v(0);
+      switch (pedigreeIds->GetDataType())
+        {
+        vtkExtraExtendedTemplateMacro(v = *static_cast<VTK_TT*>(pedigreeIds->GetVoidPointer(id)));
+        }
+      pedigree = v.ToInt();
     }
   else
     {
@@ -156,7 +162,7 @@ void vtkQtTreeModelAdapter::GenerateHashMap(vtkIdType & row, vtkIdType id, QMode
   this->PedigreeToIndexHash[pedigree] = idx;
   this->IndexToIdHash[idx] = id;
   this->RowToPedigreeHash[row] = pedigree;
-  VTK_CREATE(vtkAdjacentVertexIterator, it);
+  vtkAdjacentVertexIterator* it = vtkAdjacentVertexIterator::New();
   this->Tree->GetChildren(id, it);
   int i = 0;
   while (it->HasNext())
@@ -166,6 +172,7 @@ void vtkQtTreeModelAdapter::GenerateHashMap(vtkIdType & row, vtkIdType id, QMode
     this->GenerateHashMap(row, v, this->createIndex(i, 0, static_cast<int>(v)));
     ++i;
     }
+  it->Delete();
 }
 
 //----------------------------------------------------------------------------
@@ -346,14 +353,13 @@ QModelIndex vtkQtTreeModelAdapter::index(int row, int column,
     parentItem = static_cast<vtkIdType>(parentIdx.internalId());
     }
 
-  VTK_CREATE(vtkAdjacentVertexIterator, it);
-  this->Tree->GetChildren(parentItem, it);
+  this->Tree->GetChildren(parentItem, this->ChildIterator);
   if (row < this->Tree->GetNumberOfChildren(parentItem))
     {
-    vtkIdType child = it->Next();
+    vtkIdType child = this->ChildIterator->Next();
     for (int i = 0; i < row; ++i)
       {
-      child = it->Next();
+      child = this->ChildIterator->Next();
       }
     return createIndex(row, column, static_cast<int>(child));
     }
@@ -397,12 +403,11 @@ QModelIndex vtkQtTreeModelAdapter::parent(const QModelIndex &idx) const
   vtkIdType grandparentId = this->Tree->GetParent(parentId);
 
   vtkIdType row = -1;
-  VTK_CREATE(vtkAdjacentVertexIterator, it);
-  this->Tree->GetChildren(grandparentId, it);
+  this->Tree->GetChildren(grandparentId, this->ChildIterator);
   int i = 0;
-  while (it->HasNext())
+  while (this->ChildIterator->HasNext())
     {
-    if (it->Next() == parentId)
+    if (this->ChildIterator->Next() == parentId)
       {
       row = i;
       break;

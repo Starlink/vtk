@@ -34,6 +34,7 @@ class vtkDataSet;
 class vtkFieldData;
 class vtkGraph;
 class vtkPoints;
+class vtkTable;
 
 class VTK_IO_EXPORT vtkDataWriter : public vtkWriter
 {
@@ -181,6 +182,11 @@ public:
   int WriteVertexData(ostream *fp, vtkGraph *g);
 
   // Description:
+  // Write the row data (e.g., scalars, vectors, ...) of a vtk table.
+  // Returns 0 if error.
+  int WriteRowData(ostream *fp, vtkTable *g);
+
+  // Description:
   // Write out the field data.
   int WriteFieldData(ostream *fp, vtkFieldData *f);
 
@@ -201,7 +207,6 @@ protected:
   int WriteToOutputString;
   char *OutputString;
   int OutputStringLength;
-  int OutputStringAllocatedLength;
   
   void WriteData(); //dummy method to allow this class to be instantiated and delegated to
 

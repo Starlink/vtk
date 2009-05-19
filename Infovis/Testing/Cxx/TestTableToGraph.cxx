@@ -158,7 +158,7 @@ int TestTableToGraph(int argc, char* argv[])
     {
     if (!strcmp(argv[a], "-L"))
       {
-      label = "value";
+      label = "label";
       }
     if (!strcmp(argv[a], "-F"))
       {
@@ -172,6 +172,7 @@ int TestTableToGraph(int argc, char* argv[])
   
   VTK_CREATE(vtkDelimitedTextReader, reader);
   reader->SetFileName(file);
+  delete[] file;
   reader->SetHaveHeaders(true);
   
   //VTK_CREATE(vtkBoostSplitTableField, split);
@@ -327,8 +328,8 @@ int TestTableToGraph(int argc, char* argv[])
   
 //  VTK_CREATE(vtkGraphLayoutView, view);
 //  view->SetupRenderWindow(win);
-//  view->AddRepresentationFromInputConnection(tableToGraph->GetOutputPort());
-//  view->SetVertexLabelArrayName("value");
+//  view->SetRepresentationFromInputConnection(tableToGraph->GetOutputPort());
+//  view->SetVertexLabelArrayName("label");
 //  view->VertexLabelVisibilityOn();
 //  view->SetLayoutStrategyToCircular();
 //  view->Update();
@@ -337,14 +338,14 @@ int TestTableToGraph(int argc, char* argv[])
   
 #if SHOW_QT_DATA_TABLES
   VTK_CREATE(vtkQtTableView, mergeView);
-  mergeView->AddRepresentationFromInputConnection(merge->GetOutputPort());
+  mergeView->SetRepresentationFromInputConnection(merge->GetOutputPort());
   mergeView->GetItemView()->show();
   
   VTK_CREATE(vtkDataObjectToTable, vertToTable);
   vertToTable->SetInputConnection(tableToGraph->GetOutputPort());
   vertToTable->SetFieldType(vtkDataObjectToTable::POINT_DATA);
   VTK_CREATE(vtkQtTableView, vertView);
-  vertView->AddRepresentationFromInputConnection(vertToTable->GetOutputPort());
+  vertView->SetRepresentationFromInputConnection(vertToTable->GetOutputPort());
   vertView->GetItemView()->show();
   vertView->Update();
   
@@ -352,7 +353,7 @@ int TestTableToGraph(int argc, char* argv[])
   edgeToTable->SetInputConnection(tableToGraph->GetOutputPort());
   edgeToTable->SetFieldType(vtkDataObjectToTable::CELL_DATA);
   VTK_CREATE(vtkQtTableView, edgeView);
-  edgeView->AddRepresentationFromInputConnection(edgeToTable->GetOutputPort());
+  edgeView->SetRepresentationFromInputConnection(edgeToTable->GetOutputPort());
   edgeView->GetItemView()->show();
 #endif
   

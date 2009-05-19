@@ -1,4 +1,4 @@
-This directory contains a subset of the Freetype2 library (2.3.5) and
+This directory contains a subset of the Freetype2 library (2.3.7) and
 some custom changes that VTK needs.
 
 We only include enough of the distribution to provide the functionalities
@@ -11,9 +11,6 @@ Modifications
 -------------
 You can search for code for "VTK_FREETYPE_CHANGE" to find modifications
 vs the original freetype code
-
-There are two fixes to compiler warnings. These changes come from
-freetype's CVS (post-2.3.5)
 
 Added Files
 -----------
@@ -45,13 +42,11 @@ include/ft2build.h:
 
 include/freetype/config/ftoption.h:
   -comment out FT_CONFIG_OPTION_USE_ZLIB and FT_CONFIG_OPTION_USE_LZW
+  
+src/pshinter/pshalgo.c:
+  -commented out piece of code to workaround a bug, see bug 7199.
 
 src/base/ftmac.c
-  - applied several changes from freetype CVS to fix compilation issues
-  
-other files have changes too, search for "VTK_FREETYPE_CHANGE"
+  -removed code to fix a warning (change from freetype CVS)
 
-Renamed Files
--------------
-docs/FTL.TXT -> FTL.txt
-docs/LICENSE.TXT -> license.txt
+other files have changes too, search for "VTK_FREETYPE_CHANGE"

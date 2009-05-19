@@ -41,7 +41,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkCommunity2DLayoutStrategy, "$Revision: 1.14 $");
+vtkCxxRevisionMacro(vtkCommunity2DLayoutStrategy, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkCommunity2DLayoutStrategy);
 
 // This is just a convenient macro for smart pointers
@@ -82,6 +82,7 @@ vtkCommunity2DLayoutStrategy::vtkCommunity2DLayoutStrategy()
   this->EdgeArray = 0;
   this->CommunityArrayName = 0;
   this->SetCommunityArrayName("community");
+  this->CommunityStrength = 1.0;
 }
 
 // ----------------------------------------------------------------------
@@ -89,6 +90,7 @@ vtkCommunity2DLayoutStrategy::vtkCommunity2DLayoutStrategy()
 vtkCommunity2DLayoutStrategy::~vtkCommunity2DLayoutStrategy()
 {
   this->SetEdgeWeightField(0);
+  this->SetCommunityArrayName(0);
 }
 
 
@@ -305,8 +307,8 @@ void vtkCommunity2DLayoutStrategy::Layout()
     this->Graph->GetVertexData()->GetArray(this->CommunityArrayName);
   if (community == NULL)
     {
-    vtkErrorMacro("vtkCommunity2DLayoutStrategy did not find a \"community\" array." <<
-                  "\n so the layout will not pull communities together like it should");
+    vtkWarningMacro("vtkCommunity2DLayoutStrategy did not find a \"community\" array." <<
+                    "\n so the layout will not pull communities together like it should");
     }
   
   // Get a quick pointer to the point data
@@ -431,14 +433,14 @@ void vtkCommunity2DLayoutStrategy::Layout()
         // then increase the weight between them
         if (sourceComm == targetComm)
           {
-          communityWeight = 10;
+          communityWeight = 1 + 10 * this->CommunityStrength;
           }
           
         // If source and target are different
         // then decrease the weight between them
         else 
           {
-          communityWeight = .1;
+          communityWeight = 1.1 - this->CommunityStrength;
           }     
         } // if community
       
@@ -502,6 +504,9 @@ void vtkCommunity2DLayoutStrategy::Layout()
     // I'm done
     this->LayoutComplete = 1;
     }
+
+  // Mark points as modified
+  this->Graph->GetPoints()->Modified();
 }
 
 void vtkCommunity2DLayoutStrategy::ResolveCoincidentVertices()
@@ -622,4 +627,6 @@ void vtkCommunity2DLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "RestDistance: " << this->RestDistance << endl;
   os << indent << "EdgeWeightField: " << (this->EdgeWeightField ? this->EdgeWeightField : "(none)") << endl;
   os << indent << "CommunityArrayName: " << (this->CommunityArrayName ? this->CommunityArrayName : "(none)") << endl;
+  os << indent << "CommunityStrength: " << this->CommunityStrength << endl;
+
 }

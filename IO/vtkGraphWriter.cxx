@@ -28,7 +28,7 @@
 # include <io.h> /* unlink */
 #endif
 
-vtkCxxRevisionMacro(vtkGraphWriter, "$Revision: 1.5.2.1 $");
+vtkCxxRevisionMacro(vtkGraphWriter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkGraphWriter);
 
 void vtkGraphWriter::WriteData()

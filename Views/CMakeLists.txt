@@ -6,12 +6,17 @@ SET(KIT_JAVA_LIBS vtkInfovisJava)
 SET(KIT_LIBS vtkInfovis)
 
 SET( Kit_SRCS
+vtkConvertSelectionDomain.cxx
 vtkDataRepresentation.cxx
 vtkGraphLayoutView.cxx
+vtkHierarchicalGraphView.cxx
 vtkRenderView.cxx
 vtkSurfaceRepresentation.cxx
+vtkTreeAreaView.cxx
 vtkTreeLayoutView.cxx
 vtkTreeMapView.cxx
+vtkTreeRingView.cxx
+vtkIcicleView.cxx
 vtkView.cxx
 )
 

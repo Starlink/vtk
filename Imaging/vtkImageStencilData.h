@@ -110,6 +110,10 @@ public:
   void AllocateExtents();
 
   // Description:
+  // Fill the sub-extents.
+  void Fill();
+
+  // Description:
   // Override these to handle origin, spacing, scalar type, and scalar
   // number of components.  See vtkDataObject for details.
   virtual void CopyInformationToPipeline(vtkInformation* request,
@@ -135,6 +139,11 @@ public:
   virtual void Subtract( vtkImageStencilData * ); 
 
   // Description:
+  // Replaces the portion of the stencil, supplied as argument, 
+  // that lies within Self from Self.   
+  virtual void Replace( vtkImageStencilData * ); 
+
+  // Description:
   // Clip the stencil with the supplied extents. In other words, discard data
   // outside the specified extents. Return 1 if something changed.
   virtual int Clip( int extent[6] );
@@ -152,6 +161,9 @@ protected:
   // itself. 
   virtual void InternalAdd( vtkImageStencilData * );
   
+  void CollapseAdditionalIntersections(int r2, int idx, int *clist, 
+    int &clistlen);
+
   // Description:
   // The Spacing and Origin of the data.
   double Spacing[3];

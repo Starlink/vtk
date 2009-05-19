@@ -38,31 +38,6 @@
 #include <vtksys/stl/map>
 using vtksys_stl::map;
 
-
-//---------------------------------------------------------------------------
-class vtkVariantCompare
-{
-public:
-  bool operator()(
-    const vtkVariant& a,
-    const vtkVariant& b) const
-  {
-    if (a.GetType() == VTK_STRING)
-      {
-      return a.ToString() < b.ToString();
-      }
-    else if (a.IsNumeric())
-      {
-      return a.ToDouble() < b.ToDouble();
-      }
-    else
-      {
-      // Punt, just do pointer difference.
-      return &a < &b;
-      }
-  }
-};
-
 //---------------------------------------------------------------------------
 template <typename T>
 vtkVariant vtkGetValue(T* arr, vtkIdType index)
@@ -71,7 +46,7 @@ vtkVariant vtkGetValue(T* arr, vtkIdType index)
 }
 
 //---------------------------------------------------------------------------
-vtkVariant vtkGetVariantValue(vtkAbstractArray* arr, vtkIdType i)
+static vtkVariant vtkGetVariantValue(vtkAbstractArray* arr, vtkIdType i)
 {
   vtkVariant val;
   switch(arr->GetDataType())
@@ -83,7 +58,7 @@ vtkVariant vtkGetVariantValue(vtkAbstractArray* arr, vtkIdType i)
 }
 
 
-vtkCxxRevisionMacro(vtkGraphHierarchicalBundle, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkGraphHierarchicalBundle, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkGraphHierarchicalBundle);
 
 vtkGraphHierarchicalBundle::vtkGraphHierarchicalBundle()
@@ -108,28 +83,6 @@ int vtkGraphHierarchicalBundle::FillInputPortInformation(int port, vtkInformatio
   return 0;
 }
 
-template <typename T>
-void mappingMadness(T *graphIds, T *treeIds, map<vtkIdType,vtkIdType> *idMap,
-                    int numGraphVertices, int numTreeVertices)
-{
-  map<T,vtkIdType> graphIdMap;
-  
-  // Now create the two maps
-  for (int i=0; i<numGraphVertices; ++i)
-    {
-    graphIdMap[graphIds[i]] = i;
-    }
-    
-  // Now create the output map
-  for (int i=0; i<numTreeVertices; ++i)
-    {
-    if (graphIdMap.count(treeIds[i]) > 0)
-      {
-      (*idMap)[graphIdMap[treeIds[i]]] = i;
-      }
-    }
-} 
-
 int vtkGraphHierarchicalBundle::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -147,7 +100,13 @@ int vtkGraphHierarchicalBundle::RequestData(
     treeInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
-    
+
+  // If graph or tree is empty, we're done.
+  if (graph->GetNumberOfVertices() == 0 ||
+      tree->GetNumberOfVertices() == 0)
+    {
+    return 1;
+    }
 
   // Create a map from graph indices to tree indices
   // If we are using DirectMapping this is trivial
@@ -174,38 +133,21 @@ int vtkGraphHierarchicalBundle::RequestData(
     {
     // Check for valid pedigree id arrays.
     vtkAbstractArray* graphIdArray = 
-      graph->GetVertexData()->GetAbstractArray("PedigreeId");
-    if (graphIdArray == NULL)
+      graph->GetVertexData()->GetPedigreeIds();
+    if (!graphIdArray)
       {
-      // Check for any id array.
-      graphIdArray = graph->GetVertexData()->GetAbstractArray("id");
-      if (graphIdArray == NULL)
-        {
-        vtkErrorMacro("Graph pedigree id array not found.");
-        return 0;
-        }
-      }
-    vtkAbstractArray* treeIdArray = 
-      tree->GetVertexData()->GetAbstractArray("PedigreeId");
-    if (treeIdArray == NULL)
-      {
-      // Check for any id array.
-      treeIdArray = tree->GetVertexData()->GetAbstractArray("id");
-      if (treeIdArray == NULL)
-        {
-        vtkErrorMacro("Tree pedigree id array not found.");
-        return 0;
-        }
-      }
-#if 0
-    if (graphIdArray->GetDataType() != treeIdArray->GetDataType())
-      {
-      vtkErrorMacro("Pedigree id types not not match.");
+      vtkErrorMacro("Graph pedigree id array not found.");
       return 0;
       }
-#endif
+    vtkAbstractArray* treeIdArray = 
+      tree->GetVertexData()->GetPedigreeIds();
+    if (!treeIdArray)
+      {
+      vtkErrorMacro("Tree pedigree id array not found.");
+      return 0;
+      }
 
-    map<vtkVariant,vtkIdType,vtkVariantCompare> graphIdMap;
+    map<vtkVariant,vtkIdType,vtkVariantLessThan> graphIdMap;
     
     // Create a map from graph id to graph index
     for (int i=0; i<graph->GetNumberOfVertices(); ++i)
@@ -217,31 +159,12 @@ int vtkGraphHierarchicalBundle::RequestData(
     for (int i=0; i<tree->GetNumberOfVertices(); ++i)
       {
       vtkVariant id = vtkGetVariantValue(treeIdArray,i);
-      if (graphIdMap.count(id) > 0)
+      if (graphIdMap.count(id))
         {
         graphIndexToTreeIndex[graphIdMap[id]] = i;
         }
       }
-      
-#if 0
-    // Create void pointers that will be recast within
-    // the template macro
-    void *graphVoid = graphIdArray->GetVoidPointer(0);
-    void *treeVoid = treeIdArray->GetVoidPointer(0);
-    switch(graphIdArray->GetDataType())
-      {
-      vtkExtendedTemplateMacro(mappingMadness(static_cast<VTK_TT*>(graphVoid),
-                                      static_cast<VTK_TT*>(treeVoid),
-                                      &graphIndexToTreeIndex,
-                                      graph->GetNumberOfVertices(),
-                                      tree->GetNumberOfVertices()));
-      }
-#endif
     }
-  
-
-    
-
 
   // Make a point array holding the fraction of the distance
   // source to target.
@@ -289,8 +212,8 @@ int vtkGraphHierarchicalBundle::RequestData(
 
     vtkIdType source = 0;
     vtkIdType target = 0;
-    if (graphSourceIndex < graphIndexToTreeIndex.size()&& 
-        graphTargetIndex < graphIndexToTreeIndex.size())
+    if (graphIndexToTreeIndex.count(graphSourceIndex) > 0 && 
+        graphIndexToTreeIndex.count(graphTargetIndex) > 0)
       {
       source = graphIndexToTreeIndex[graphSourceIndex];
       target = graphIndexToTreeIndex[graphTargetIndex];

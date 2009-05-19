@@ -16,8 +16,13 @@
 #include "vtkObjectFactory.h"
 #include "vtkAssemblyPaths.h"
 #include "vtkCommand.h"
+#include "vtkInformation.h"
+#include "vtkInformationIterator.h"
+#include "vtkInformationKey.h"
+#include <assert.h>
 
-vtkCxxRevisionMacro(vtkProp, "$Revision: 1.26 $");
+vtkCxxRevisionMacro(vtkProp, "$Revision: 1.29 $");
+vtkCxxSetObjectMacro(vtkProp,PropertyKeys,vtkInformation);
 
 //----------------------------------------------------------------------------
 // Creates an Prop with the following defaults: visibility on.
@@ -28,6 +33,8 @@ vtkProp::vtkProp()
   this->Pickable   = 1;
   this->Dragable   = 1;
   
+  this->UseBounds=true;
+  
   this->AllocatedRenderTime = 10.0;
   this->EstimatedRenderTime = 0.0;
   this->RenderTimeMultiplier = 1.0;
@@ -36,6 +43,8 @@ vtkProp::vtkProp()
 
   this->NumberOfConsumers = 0;
   this->Consumers = 0;
+  
+  this->PropertyKeys=0;
 }
 
 //----------------------------------------------------------------------------
@@ -48,6 +57,11 @@ vtkProp::~vtkProp()
   if (this->Consumers)
     {
     delete [] this->Consumers;
+    }
+  
+  if(this->PropertyKeys!=0)
+    {
+    this->PropertyKeys->Delete();
     }
 }
 
@@ -123,6 +137,19 @@ void vtkProp::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "RenderTimeMultiplier: " 
      << this->RenderTimeMultiplier << endl;
   os << indent << "Visibility: " << (this->Visibility ? "On\n" : "Off\n");
+  
+  os << indent << "PropertyKeys: ";
+  if(this->PropertyKeys!=0)
+    {
+    this->PropertyKeys->PrintSelf(os,indent);
+    os << endl;
+    }
+  else
+    {
+    os << "none." << endl;
+    }
+  
+  os << indent << "useBounds: " << this->UseBounds <<endl;
 }
 
 
@@ -195,4 +222,132 @@ vtkObject *vtkProp::GetConsumer(int i)
     return 0;
     }
   return this->Consumers[i];
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Tells if the prop has all the required keys.
+// \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+bool vtkProp::HasKeys(vtkInformation *requiredKeys)
+{
+  bool result=requiredKeys==0;
+  if(!result)
+    {
+    vtkInformationIterator *it=vtkInformationIterator::New();
+    it->SetInformation(requiredKeys);
+    it->GoToFirstItem();
+    result=true;
+    while(result && !it->IsDoneWithTraversal())
+      {
+      vtkInformationKey *k=it->GetCurrentKey();
+      result=this->PropertyKeys!=0 && this->PropertyKeys->Has(k);
+      it->GoToNextItem();
+      }
+    it->Delete();
+    }
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Render the opaque geometry only if the prop has all the requiredKeys.
+// This is recursive for composite props like vtkAssembly.
+// An implementation is provided in vtkProp but each composite prop
+// must override it.
+// It returns if the rendering was performed.
+// \pre v_exists: v!=0
+// \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+bool vtkProp::RenderFilteredOpaqueGeometry(vtkViewport *v,
+                                           vtkInformation *requiredKeys)
+{
+  assert("pre: v_exists" && v!=0);
+  bool result;
+  if(this->HasKeys(requiredKeys))
+    {
+    result=this->RenderOpaqueGeometry(v)==1;
+    }
+  else
+    {
+    result=false;
+    }
+  return result;
+}
+  
+// ----------------------------------------------------------------------------
+// Description:
+// Render the translucent polygonal geometry only if the prop has all the
+// requiredKeys.
+// This is recursive for composite props like vtkAssembly.
+// An implementation is provided in vtkProp but each composite prop
+// must override it.
+// It returns if the rendering was performed.
+// \pre v_exists: v!=0
+// \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+bool vtkProp::RenderFilteredTranslucentPolygonalGeometry(
+  vtkViewport *v,
+  vtkInformation *requiredKeys)
+{
+  assert("pre: v_exists" && v!=0);
+  bool result;
+  if(this->HasKeys(requiredKeys))
+    {
+    result=this->RenderTranslucentPolygonalGeometry(v)==1;
+    }
+  else
+    {
+    result=false;
+    }
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Render the volumetric geometry only if the prop has all the
+// requiredKeys.
+// This is recursive for composite props like vtkAssembly.
+// An implementation is provided in vtkProp but each composite prop
+// must override it.
+// It returns if the rendering was performed.
+// \pre v_exists: v!=0
+// \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+bool vtkProp::RenderFilteredVolumetricGeometry(vtkViewport *v,
+                                               vtkInformation *requiredKeys)
+{
+  assert("pre: v_exists" && v!=0);
+  bool result;
+  if(this->HasKeys(requiredKeys))
+    {
+    result=this->RenderVolumetricGeometry(v)==1;
+    }
+  else
+    {
+    result=false;
+    }
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Render in the overlay of the viewport only if the prop has all the
+// requiredKeys.
+// This is recursive for composite props like vtkAssembly.
+// An implementation is provided in vtkProp but each composite prop
+// must override it.
+// It returns if the rendering was performed.
+// \pre v_exists: v!=0
+// \pre keys_can_be_null: requiredKeys==0 || requiredKeys!=0
+bool vtkProp::RenderFilteredOverlay(vtkViewport *v,
+                                    vtkInformation *requiredKeys)
+{
+  assert("pre: v_exists" && v!=0);
+  bool result;
+  if(this->HasKeys(requiredKeys))
+    {
+    result=this->RenderOverlay(v)==1;
+    }
+  else
+    {
+    result=false;
+    }
+  return result;
 }

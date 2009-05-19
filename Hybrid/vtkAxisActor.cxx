@@ -33,7 +33,7 @@
 // ****************************************************************
 
 vtkStandardNewMacro(vtkAxisActor);
-vtkCxxRevisionMacro(vtkAxisActor, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkAxisActor, "$Revision: 1.7 $");
 vtkCxxSetObjectMacro(vtkAxisActor, Camera, vtkCamera); 
 
 // ****************************************************************
@@ -557,10 +557,11 @@ void vtkAxisActor::SetLabelPositions(vtkViewport *viewport, bool force)
   double xadjust = (displayBounds[0] > displayBounds[1] ? -1 : 1);
   double yadjust = (displayBounds[2] > displayBounds[3] ? -1 : 1);
 
-  for (i=0; i < this->NumberOfLabelsBuilt; i++)
+  for (i=0; i < this->NumberOfLabelsBuilt && 
+    i < this->MajorTickPts->GetNumberOfPoints(); i++)
     {
     ptIdx = 4*i + 1;
-    MajorTickPts->GetPoint(ptIdx, tick);
+    this->MajorTickPts->GetPoint(ptIdx, tick);
 
     this->LabelActors[i]->GetBounds(bounds);
 
@@ -1109,7 +1110,7 @@ bool vtkAxisActor::BuildTickPointsForYType(double p1[3], double p2[3],
 
   y = this->MajorStart;
   numTicks = 0;
-  while (y < p2[1] && numTicks < VTK_MAX_TICKS)
+  while (y <= p2[1] && numTicks < VTK_MAX_TICKS)
     {
     yPoint1[1] = xPoint[1] = yPoint2[1] = zPoint[1] = y;
     // yx portion
@@ -1150,7 +1151,7 @@ bool vtkAxisActor::BuildTickPointsForYType(double p1[3], double p2[3],
     }
   y = this->MajorStart;
   numTicks = 0;
-  while (y < p2[1] && numTicks < VTK_MAX_TICKS)
+  while (y <= p2[1] && numTicks < VTK_MAX_TICKS)
     {
     yPoint1[1] = xPoint[1] = yPoint2[1] = zPoint[1] = y;
     // yx portion
@@ -1265,7 +1266,7 @@ bool vtkAxisActor::BuildTickPointsForZType(double p1[3], double p2[3],
 
   z = this->MajorStart;
   numTicks = 0;
-  while (z < p2[2] && numTicks < VTK_MAX_TICKS)
+  while (z <= p2[2] && numTicks < VTK_MAX_TICKS)
     {
     zPoint1[2] = zPoint2[2] = xPoint[2] = yPoint[2] = z;
     // zx-portion
@@ -1307,7 +1308,7 @@ bool vtkAxisActor::BuildTickPointsForZType(double p1[3], double p2[3],
     }
   z = this->MajorStart;
   numTicks = 0;
-  while (z < p2[2] && numTicks < VTK_MAX_TICKS)
+  while (z <= p2[2] && numTicks < VTK_MAX_TICKS)
     {
     zPoint1[2] = zPoint2[2] = xPoint[2] = yPoint[2] = z;
     // zx-portion

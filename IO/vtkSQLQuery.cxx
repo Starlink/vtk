@@ -25,7 +25,7 @@
 
 #include "vtksys/SystemTools.hxx"
 
-vtkCxxRevisionMacro(vtkSQLQuery, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkSQLQuery, "$Revision: 1.11 $");
 
 vtkSQLQuery::vtkSQLQuery()
 {
@@ -85,4 +85,198 @@ char* vtkSQLQuery::EscapeString( const char* src, bool addSurroundingQuotes )
   vtkStdString dstr = this->EscapeString( sstr, addSurroundingQuotes );
   return vtksys::SystemTools::DuplicateString( dstr.c_str() );
 }
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), unsigned char vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), signed char vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), unsigned short vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), short vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), unsigned int vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), int vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), unsigned long vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), long vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), vtkTypeUInt64 vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), vtkTypeInt64 vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), float vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), double vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), const char *vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), const char *vtkNotUsed(value), size_t vtkNotUsed(length))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), const vtkStdString &vtkNotUsed(value))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int vtkNotUsed(index), const void *vtkNotUsed(value), size_t vtkNotUsed(length))
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::ClearParameterBindings()
+{
+  vtkErrorMacro(<<"This database driver does not support bound parameters.");
+  return false;
+}
+
+bool vtkSQLQuery::BindParameter(int index, vtkVariant data)
+{
+  if (!data.IsValid())
+    {
+    return true; // binding nulls is a no-op
+    }
+
+#define VTK_VARIANT_BIND_PARAMETER(Type,Function) \
+  case Type: return this->BindParameter(index, data.Function())
+
+  switch (data.GetType())
+    {
+    VTK_VARIANT_BIND_PARAMETER(VTK_STRING,ToString);
+    VTK_VARIANT_BIND_PARAMETER(VTK_FLOAT,ToFloat);
+    VTK_VARIANT_BIND_PARAMETER(VTK_DOUBLE,ToDouble);
+    VTK_VARIANT_BIND_PARAMETER(VTK_CHAR,ToChar);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED_CHAR,ToUnsignedChar);
+    VTK_VARIANT_BIND_PARAMETER(VTK_SIGNED_CHAR,ToSignedChar);
+    VTK_VARIANT_BIND_PARAMETER(VTK_SHORT,ToShort);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED_SHORT,ToUnsignedShort);
+    VTK_VARIANT_BIND_PARAMETER(VTK_INT,ToInt);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED_INT,ToUnsignedInt);
+    VTK_VARIANT_BIND_PARAMETER(VTK_LONG,ToLong);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED_LONG,ToUnsignedLong);
+#if defined(VTK_TYPE_USE___INT64)
+    VTK_VARIANT_BIND_PARAMETER(VTK___INT64,To__Int64);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED___INT64,ToUnsigned__Int64);
+#endif
+#if defined(VTK_TYPE_USE_LONG_LONG)
+    VTK_VARIANT_BIND_PARAMETER(VTK_LONG_LONG,ToLongLong);
+    VTK_VARIANT_BIND_PARAMETER(VTK_UNSIGNED_LONG_LONG,ToUnsignedLongLong);
+#endif
+    case VTK_OBJECT:
+      vtkErrorMacro(<<"Variants of type VTK_OBJECT cannot be inserted into a database.");
+      return false;
+    default:
+      vtkErrorMacro(<<"Variants of type "
+                    << data.GetType() << " are not currently supported by BindParameter.");
+      return false;
+    }
+}
+
+// ----------------------------------------------------------------------
+
+bool vtkSQLQuery::SetQuery(const char *queryString)
+{
+  // This is just vtkSetStringMacro from vtkSetGet.h
+
+  vtkDebugMacro(<< this->GetClassName() 
+                << " (" << this << "): setting Query to "  
+                << (queryString?queryString:"(null)") ); 
+
+  if ( this->Query == NULL && queryString == NULL) 
+    { 
+    return true; 
+    }
+  if ( this->Query && queryString && (!strcmp(this->Query,queryString))) 
+    { 
+    return true; // query string isn't changing
+    }
+  if (this->Query)
+    { 
+    delete [] this->Query; 
+    }
+  if (queryString)
+    { 
+    size_t n = strlen(queryString) + 1; 
+    char *cp1 =  new char[n]; 
+    const char *cp2 = (queryString);
+    this->Query = cp1; 
+    do { *cp1++ = *cp2++; } while ( --n ); \
+    }
+   else
+    { 
+    this->Query = NULL;
+    } 
+  this->Modified(); 
+  return true;
+} 
+
+// As above, this is a copy of vtkGetStringMacro from vtkGetSet.h.
+
+const char* vtkSQLQuery::GetQuery()
+{
+  vtkDebugMacro(<< this->GetClassName() 
+                << " (" << this << "): returning Query of " 
+                << (this->Query?this->Query:"(null)"));
+  return this->Query;
+} 
 

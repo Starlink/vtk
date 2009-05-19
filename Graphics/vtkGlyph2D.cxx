@@ -25,7 +25,7 @@
 #include "vtkTransform.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkGlyph2D, "$Revision: 1.25 $");
+vtkCxxRevisionMacro(vtkGlyph2D, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkGlyph2D);
 
 int vtkGlyph2D::RequestData(
@@ -88,7 +88,7 @@ int vtkGlyph2D::RequestData(
     }
   else
     {
-    inGhostLevels = ((vtkUnsignedCharArray*)temp)->GetPointer(0);
+    inGhostLevels =static_cast<vtkUnsignedCharArray *>(temp)->GetPointer(0);
     }
 
   numPts = input->GetNumberOfPoints();
@@ -237,7 +237,7 @@ int vtkGlyph2D::RequestData(
     scalex = scaley = 1.0;
     if ( ! (inPtId % 10000) )
       {
-      this->UpdateProgress ((double)inPtId/numPts);
+      this->UpdateProgress(static_cast<double>(inPtId)/numPts);
       if (this->GetAbortExecute())
         {
         break;
@@ -304,7 +304,7 @@ int vtkGlyph2D::RequestData(
         value = vMag;
         }
       
-      index = (int) ((double)(value - this->Range[0]) * numberOfSources / den);
+      index = static_cast<int>((value-this->Range[0])*numberOfSources/den);
       index = (index < 0 ? 0 :
               (index >= numberOfSources ? (numberOfSources-1) : index));
 
@@ -359,8 +359,8 @@ int vtkGlyph2D::RequestData(
         }
       if (this->Orient && (vMag > 0.0))
         {
-        theta = atan2(v[1],v[0])/vtkMath::DegreesToRadians();
-        trans->RotateWXYZ(theta, 0.0, 0.0, 1.0);
+        theta = vtkMath::DegreesFromRadians( atan2( v[1], v[0] ) );
+        trans->RotateWXYZ( theta, 0.0, 0.0, 1.0 );
         }
       }
     

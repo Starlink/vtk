@@ -1,10 +1,11 @@
 package require vtk
 package require vtkinteraction
 
-# Create the RenderWindow and Renderer 
+# Create the RenderWindow and Renderer
 vtkRenderer ren1
 vtkRenderWindow renWin
     renWin AddRenderer ren1
+    renWin SetAlphaBitPlanes 1
 vtkRenderWindowInteractor iren
     iren SetRenderWindow renWin
 
@@ -24,6 +25,13 @@ renWin SetSize 256 256
 # render first image
 renWin Render
 
+if {0 == [renWin GetAlphaBitPlanes]} {
+  puts "Failed to find a visual with alpha bit planes."
+  exit 0
+} {
+  puts [concat "GetAlphaBitPlanes: " [renWin GetAlphaBitPlanes]]
+}
+
 # create window to image filter, grabbing RGB and alpha
 vtkWindowToImageFilter w2i
    w2i SetInput renWin
@@ -32,11 +40,15 @@ vtkWindowToImageFilter w2i
 # grab window
 w2i Update
 
+# copy the output
+set outputData [[w2i GetOutput] NewInstance]
+$outputData DeepCopy [w2i GetOutput]
+
 # set up mappers and actors to display the image
 vtkImageMapper im
    im SetColorWindow 255
    im SetColorLevel 127.5
-   im SetInputConnection [w2i GetOutputPort]
+   im SetInput $outputData
 vtkActor2D ia2
    ia2 SetMapper im
 
@@ -55,9 +67,8 @@ ren1 SetViewport 0 0 1 1
 renWin Render
 
 iren AddObserver UserEvent {wm deiconify .vtkInteract}
+
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
 
-
-
-
+$outputData UnRegister {}

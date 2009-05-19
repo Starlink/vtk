@@ -30,11 +30,13 @@ SET( Kit_SRCS
   vtkAssembly.cxx
   vtkAxisActor2D.cxx
   vtkCamera.cxx
+  vtkCameraActor.cxx
   vtkCameraInterpolator.cxx
   vtkCellCenterDepthSort.cxx
   vtkCellPicker.cxx
   vtkChooserPainter.cxx
   vtkClipPlanesPainter.cxx
+  vtkCoincidentPoints.cxx
   vtkCoincidentTopologyResolutionPainter.cxx
   vtkCompositePainter.cxx
   vtkCompositePolyDataMapper2.cxx
@@ -47,12 +49,14 @@ SET( Kit_SRCS
   vtkDynamic2DLabelMapper.cxx
   vtkExporter.cxx
   vtkFollower.cxx
+  vtkFrameBufferObject.cxx
   vtkFrustumCoverageCuller.cxx
   vtkGenericRenderWindowInteractor.cxx
   vtkGenericVertexAttributeMapping.cxx
   vtkGraphicsFactory.cxx
+  vtkHardwareSelector.cxx
+  vtkHardwareSelectionPolyDataPainter.cxx
   vtkHierarchicalPolyDataMapper.cxx
-  vtkIdentColoredPainter.cxx
   vtkImageActor.cxx
   vtkImageMapper.cxx
   vtkImageViewer2.cxx
@@ -79,7 +83,13 @@ SET( Kit_SRCS
   vtkInteractorStyleUser.cxx
   vtkIVExporter.cxx
   vtkLabeledDataMapper.cxx
+  vtkLabelHierarchy.cxx
+  vtkLabelHierarchyAlgorithm.cxx
+  vtkLabelHierarchyIterator.cxx
+  vtkLabelPlacer.cxx
+  vtkLabelSizeCalculator.cxx
   vtkLeaderActor2D.cxx
+  vtkLightActor.cxx
   vtkLightCollection.cxx
   vtkLight.cxx
   vtkLightingPainter.cxx
@@ -97,7 +107,9 @@ SET( Kit_SRCS
   vtkPainterPolyDataMapper.cxx
   vtkParallelCoordinatesActor.cxx
   vtkPicker.cxx
+  vtkPixelBufferObject.cxx
   vtkPointPicker.cxx
+  vtkPointSetToLabelHierarchy.cxx
   vtkPointsPainter.cxx
   vtkPOVExporter.cxx
   vtkPolyDataMapper2D.cxx
@@ -114,7 +126,10 @@ SET( Kit_SRCS
   vtkRenderedAreaPicker.cxx
   vtkRendererCollection.cxx
   vtkRenderer.cxx
+  vtkRendererDelegate.cxx
   vtkRendererSource.cxx
+  vtkRenderPass.cxx
+  vtkRenderState.cxx
   vtkRenderWindowCollection.cxx
   vtkRenderWindow.cxx
   vtkRenderWindowInteractor.cxx
@@ -136,11 +151,11 @@ SET( Kit_SRCS
   vtkTextProperty.cxx
   vtkTexture.cxx
   vtkTexturedActor2D.cxx
+  vtkTextureObject.cxx
   vtkTransformInterpolator.cxx
   vtkTStripsPainter.cxx
   vtkTupleInterpolator.cxx
   vtkVisibilitySort.cxx
-  vtkVisibleCellSelector.cxx
   vtkVolumeCollection.cxx
   vtkVolume.cxx
   vtkVolumeProperty.cxx
@@ -148,6 +163,14 @@ SET( Kit_SRCS
   vtkWindowToImageFilter.cxx
   vtkWorldPointPicker.cxx
   )
+
+IF (NOT VTK_LEGACY_REMOVE)
+  SET (Kit_Deprecated_SRCS
+    vtkVisibleCellSelector.cxx
+    vtkIdentColoredPainter.cxx)
+
+  SET (Kit_SRCS ${Kit_SRCS} ${Kit_Deprecated_SRCS})
+ENDIF (NOT VTK_LEGACY_REMOVE)
 
 IF(VTK_USE_GL2PS)
   SET(Kit_SRCS ${Kit_SRCS} vtkGL2PSExporter.cxx)
@@ -168,12 +191,20 @@ ENDIF(VTK_USE_CG_SHADERS)
 
 
 SET( KitOpenGL_SRCS
+  vtkCameraPass.cxx
+  vtkDefaultPass.cxx
+  vtkDepthPeelingPass.cxx
+  vtkGaussianBlurPass.cxx
+  vtkLightsPass.cxx
+  vtkGLSLShaderDeviceAdapter2.cxx
+  vtkOpaquePass.cxx
   vtkOpenGLActor.cxx
   vtkOpenGLCamera.cxx
   vtkOpenGLClipPlanesPainter.cxx
   vtkOpenGLCoincidentTopologyResolutionPainter.cxx
   vtkOpenGLDisplayListPainter.cxx
   vtkOpenGLExtensionManager.cxx
+  vtkOpenGLHardwareSupport.cxx
   vtkOpenGLImageActor.cxx
   vtkOpenGLImageMapper.cxx
   vtkOpenGLLight.cxx
@@ -187,6 +218,18 @@ SET( KitOpenGL_SRCS
   vtkOpenGLRepresentationPainter.cxx
   vtkOpenGLScalarsToColorsPainter.cxx
   vtkOpenGLTexture.cxx
+  vtkOverlayPass.cxx
+  vtkRenderPassCollection.cxx
+  vtkSequencePass.cxx
+  vtkShader2.cxx
+  vtkShader2Collection.cxx
+  vtkShaderProgram2.cxx
+  vtkShadowMapPass.cxx
+  vtkSobelGradientMagnitudePass.cxx
+  vtkTextureUnitManager.cxx
+  vtkTranslucentPass.cxx
+  vtkUniformVariables.cxx
+  vtkVolumetricPass.cxx
   )
 
 IF(VTK_USE_GLSL_SHADERS)
@@ -212,11 +255,37 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkPolyDataPainter
   vtkPrimitivePainter
   vtkProp3D
+  vtkRendererDelegate
+  vtkRenderPass
+  vtkRenderState # not abstract just not using instantiator
   vtkShader
   vtkShaderDeviceAdapter
   vtkShaderProgram
   vtkVisibilitySort.cxx
   ABSTRACT
+  )
+
+SET_SOURCE_FILES_PROPERTIES(
+  vtkCameraPass
+  vtkDefaultPass
+  vtkDepthPeelingPass
+  vtkGaussianBlurPass
+  vtkLightsPass
+  vtkOpaquePass
+  vtkRenderPass
+  vtkRenderState
+  vtkOverlayPass
+  vtkRenderPassCollection
+  vtkSequencePass
+  vtkShader2
+  vtkShader2Collection
+  vtkShaderProgram2
+  vtkShadowMapPass
+  vtkSobelGradientMagnitudePass
+  vtkTextureUnitManager
+  vtkTranslucentPass
+  vtkVolumetricPass
+  WRAP_EXCLUDE
   )
 
 # Freetype stuff
@@ -245,6 +314,40 @@ IF(VTK_USE_X)
   SET( Kit_SRCS ${Kit_SRCS} vtkXRenderWindowInteractor.cxx)
 ENDIF(VTK_USE_X)
 
+# The set of source files to be encoded.
+SET(glsl_files
+  vtkDepthPeeling_fs
+  vtkGaussianBlurPassShader_fs
+  vtkLighting_s # s not vs or fs because it can be used in both.
+  vtkOpenGLRenderer_PeelingFS
+  vtkOpenGLPropertyDefaultPropFunc_fs
+  vtkOpenGLPropertyDefaultPropFunc_vs
+  vtkOpenGLPropertyDefaultMain_fs
+  vtkOpenGLPropertyDefaultMain_vs
+  vtkSobelGradientMagnitudePassShader1_fs
+  vtkSobelGradientMagnitudePassShader2_fs
+  vtkShadowMapPassShader_fs
+  vtkShadowMapPassShader_vs
+  )
+
+# Create custom commands to encode each assembly file into a C string
+# literal in a header file.
+
+SET(glsl_h_files)
+FOREACH(file ${glsl_files})
+  SET(src ${VTK_SOURCE_DIR}/Rendering/${file}.glsl)
+  SET(res ${VTK_BINARY_DIR}/Rendering/${file}.cxx)
+  SET(resh ${VTK_BINARY_DIR}/Rendering/${file}.h)
+  SET(glsl_h_files ${glsl_h_files} "${resh}")
+  ADD_CUSTOM_COMMAND(
+    OUTPUT ${res} ${resh}
+    DEPENDS ${src} vtkEncodeString
+    COMMAND ${VTK_ENCODESTRING_EXE}
+    ARGS ${res} ${src} ${file} --build-header VTK_RENDERING_EXPORT vtkSystemIncludes.h
+    )
+  SET(Kit_EXTRA_SRCS ${Kit_EXTRA_SRCS} ${res})
+ENDFOREACH(file)
+
 # OpenGL extensions stuff.
 
 # Parse the extensions into vtkgl.h/vtkgl.cxx.
@@ -266,6 +369,7 @@ SET_SOURCE_FILES_PROPERTIES(
   # OK, so it's not abstract, but this stops the instantiator
   # from trying to call vtkRenderingInstantiatorvtkglNew():
   ${VTK_BINARY_DIR}/Rendering/vtkgl.cxx
+  vtkLabelHierarchyIterator.cxx
   ABSTRACT
   )
 
@@ -444,7 +548,7 @@ ELSE (VTK_USE_MANGLED_MESA)
   ENDIF(VTK_OPENGL_HAS_OSMESA  AND  OSMESA_LIBRARY)
 ENDIF(VTK_USE_MANGLED_MESA)
 SET(Kit_SRCS ${Kit_SRCS} ${KitOpenGL_SRCS})
-SET(Kit_EXTRA_SRCS ${Kit_FT_SRCS})
+SET(Kit_EXTRA_SRCS ${Kit_EXTRA_SRCS} ${Kit_FT_SRCS})
 
 IF(VTK_USE_GL2PS)
   SET(Kit_EXTRA_SRCS ${Kit_EXTRA_SRCS} ${Kit_GL2PS_SRCS})
@@ -586,3 +690,9 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     COMPONENT Development
     )
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+
+IF(NOT CMAKE_CROSSCOMPILING)
+  # Add target dependency to ensure the vtkEncodeString is built before
+  # Rendering is.
+  ADD_DEPENDENCIES(vtk${KIT} vtkEncodeString)
+ENDIF(NOT CMAKE_CROSSCOMPILING)

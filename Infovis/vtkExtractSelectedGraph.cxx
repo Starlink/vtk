@@ -20,6 +20,7 @@
 
 #include "vtkExtractSelectedGraph.h"
 
+#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCommand.h"
 #include "vtkConvertSelection.h"
@@ -37,6 +38,7 @@
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSelection.h"
+#include "vtkSelectionNode.h"
 #include "vtkSignedCharArray.h"
 #include "vtkSmartPointer.h"
 #include "vtkStringArray.h"
@@ -46,7 +48,7 @@
 #include <vtksys/stl/map>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkExtractSelectedGraph, "$Revision: 1.21 $");
+vtkCxxRevisionMacro(vtkExtractSelectedGraph, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkExtractSelectedGraph);
 //----------------------------------------------------------------------------
 vtkExtractSelectedGraph::vtkExtractSelectedGraph()
@@ -134,386 +136,254 @@ int vtkExtractSelectedGraph::RequestData(
   vtkGraph* input = vtkGraph::GetData(inputVector[0]);
   vtkSelection* selection = vtkSelection::GetData(inputVector[1]);
 
-  // If there is nothing in the list, there is nothing to select.
-  vtkAbstractArray* list = selection->GetSelectionList();
-  if (!list || list->GetNumberOfTuples() == 0)
-    {
-    return 1;
-    }
-
-  int inverse = 0;
-  if(selection->GetProperties()->Has(vtkSelection::INVERSE()))
-    {
-    inverse = selection->GetProperties()->Get(vtkSelection::INVERSE());
-    }
-  
-  // If it is a selection with multiple parts, find a point or cell
-  // child selection, with preference to points.
-  if (selection->GetContentType() == vtkSelection::SELECTIONS)
-    {
-    vtkSelection* child = 0;
-    for (unsigned int i = 0; i < selection->GetNumberOfChildren(); i++)
-      {
-      vtkSelection* cur = selection->GetChild(i);
-      if (cur->GetFieldType() == vtkSelection::VERTEX)
-        {
-        child = cur;
-        break;
-        }
-      else if (cur->GetFieldType() == vtkSelection::EDGE)
-        {
-        child = cur;
-        }
-      }
-    selection = child;
-    }
-    
   // Convert the selection to an INDICES selection
-  vtkSmartPointer<vtkSelection> indexSelection;
-  indexSelection.TakeReference(
-    vtkConvertSelection::ToIndexSelection(selection, input));
-  if (!indexSelection)
+  vtkSmartPointer<vtkSelection> converted;
+  converted.TakeReference(vtkConvertSelection::ToIndexSelection(selection, input));
+  if (!converted.GetPointer())
     {
     vtkErrorMacro("Selection conversion to INDICES failed.");
-    indexSelection->Delete();
     return 0;
     }
+
+  // Collect vertex and edge selections.
+  vtkSmartPointer<vtkIdTypeArray> edgeList = vtkSmartPointer<vtkIdTypeArray>::New();
+  bool hasEdges = false;
+  vtkSmartPointer<vtkIdTypeArray> vertexList = vtkSmartPointer<vtkIdTypeArray>::New();
+  bool hasVertices = false;
+  for (unsigned int i = 0; i < converted->GetNumberOfNodes(); ++i)
+    {
+    vtkSelectionNode* node = converted->GetNode(i);
+    vtkIdTypeArray* list = 0;
+    if (node->GetFieldType() == vtkSelectionNode::VERTEX)
+      {
+      list = vertexList;
+      hasVertices = true;
+      }
+    else if (node->GetFieldType() == vtkSelectionNode::EDGE)
+      {
+      list = edgeList;
+      hasEdges = true;
+      }
+
+    if (list)
+      {
+      // Append the selection list to the selection
+      vtkIdTypeArray* curList = vtkIdTypeArray::SafeDownCast(node->GetSelectionList());
+      if (curList)
+        {
+        int inverse = node->GetProperties()->Get(vtkSelectionNode::INVERSE());
+        if (inverse)
+          {
+          vtkIdType num =
+            (node->GetFieldType() == vtkSelectionNode::VERTEX) ?
+            input->GetNumberOfVertices() : input->GetNumberOfEdges();
+          for (vtkIdType j = 0; j < num; ++j)
+            {
+            if (curList->LookupValue(j) < 0 && list->LookupValue(j) < 0)
+              {
+              list->InsertNextValue(j);
+              }
+            }
+          }
+        else
+          {
+          vtkIdType numTuples = curList->GetNumberOfTuples();
+          for (vtkIdType j = 0; j < numTuples; ++j)
+            {
+            vtkIdType curValue = curList->GetValue(j);
+            if (list->LookupValue(curValue) < 0)
+              {
+              list->InsertNextValue(curValue);
+              }
+            }
+          }
+        } // end if (curList)
+      } // end if (list)
+    } // end for each child
   
-  vtkAbstractArray* arr = indexSelection->GetSelectionList();
-  if (arr == NULL)
+  // If there is no selection list, return an empty graph
+  if (vertexList->GetNumberOfTuples() == 0 && edgeList->GetNumberOfTuples() == 0)
     {
-    vtkErrorMacro("Selection list not found.");
-    return 0;
-    }
-  vtkIdTypeArray* selectArr = vtkIdTypeArray::SafeDownCast(arr);
-  if (selectArr == NULL)
-    {
-    vtkErrorMacro("Selection list must be of type vtkIdTypeArray.");
-    return 0;
-    }
-  vtkIdType selectSize = selectArr->GetNumberOfTuples();
-  
-  bool directed = false;
-  if (vtkDirectedGraph::SafeDownCast(input))
-    {
-    directed = true;
+    return 1;
     }
 
   vtkSmartPointer<vtkMutableDirectedGraph> dirBuilder = 
     vtkSmartPointer<vtkMutableDirectedGraph>::New();
   vtkSmartPointer<vtkMutableUndirectedGraph> undirBuilder = 
     vtkSmartPointer<vtkMutableUndirectedGraph>::New();
-
-  if (selection->GetProperties()->Has(vtkSelection::FIELD_TYPE()) && 
-      selection->GetProperties()->Get(vtkSelection::FIELD_TYPE()) == vtkSelection::EDGE)
+  bool directed;
+  vtkGraph* builder = 0;
+  if (vtkDirectedGraph::SafeDownCast(input))
     {
-    //
-    // Edge selection
-    //
+    directed = true;
+    builder = dirBuilder;
+    }
+  else
+    {
+    directed = false;
+    builder = undirBuilder;
+    }
 
-    vtkDataSetAttributes *inputEdgeData = input->GetEdgeData();
-    vtkDataSetAttributes *builderEdgeData = 0;
-    if (directed)
+  // There are three cases to handle:
+  // 1. Selecting vertices only: Select the vertices along with any edges
+  //    connecting two selected vertices.
+  // 2. Selecting edges only: Select the edges along with all vertices
+  //    adjacent to a selected edge.
+  // 3. Selecting vertices and edges: Select the edges along with all vertices
+  //    adjacent to a selected edge, plus any additional vertex specified
+  //    in the vertex selection.
+
+  vtkDataSetAttributes* vdIn = input->GetVertexData();
+  vtkDataSetAttributes* edIn = input->GetEdgeData();
+  vtkDataSetAttributes* vdOut = builder->GetVertexData();
+  vtkDataSetAttributes* edOut = builder->GetEdgeData();
+  vtkPoints* ptsIn = input->GetPoints();
+  vtkPoints* ptsOut = builder->GetPoints();
+  vdOut->CopyAllocate(vdIn);
+  edOut->CopyAllocate(edIn);
+  vtksys_stl::map<vtkIdType, vtkIdType> vertexMap;
+
+  // Step 1: Add the vertices.
+  // If the user has specified a vertex selection, add them.
+  // Else if only an edge selection and RemoveIsolatedVertices is off,
+  //   add all vertices to the output.
+  // Otherwise, let the edge selection determine the vertices to add.
+  if (hasVertices)
+    {
+    // Add selected vertices
+    vtkIdType numSelectedVerts = vertexList->GetNumberOfTuples();
+    for (vtkIdType i = 0; i < numSelectedVerts; ++i)
       {
-      builderEdgeData = dirBuilder->GetEdgeData();
-      }
-    else
-      {
-      builderEdgeData = undirBuilder->GetEdgeData();
-      }
-
-    builderEdgeData->CopyAllocate(inputEdgeData);
-
-
-    // Handle the case where we are not outputing isolated vertices separately:
-    if(this->RemoveIsolatedVertices)
-      {
-      // Create and initialize vector that keeps track of which
-      // vertices are connected by an edge (1) and which aren't (0).
-      
-      unsigned int idx;
-      vtkstd::vector<int> connectedVertices;
-      for(int j=0; j<input->GetNumberOfVertices(); ++j)
-        {
-        connectedVertices.push_back(0);
-        }
-
-      vtkSmartPointer<vtkEdgeListIterator> edgeIter =
-        vtkSmartPointer<vtkEdgeListIterator>::New();
-      input->GetEdges(edgeIter);
-      while (edgeIter->HasNext())
-        {
-        vtkEdgeType e = edgeIter->Next();
-
-        if ((inverse && selectArr->LookupValue(e.Id) < 0) ||
-            (!inverse && selectArr->LookupValue(e.Id) >= 0))
-          {
-          connectedVertices[e.Source] = 1;
-          connectedVertices[e.Target] = 1;
-          }
-        }
-
-      // Create a mapping between the input vertex id and the output vertex id.
-      // Right now we rely on the fact that the input vertex ids are consecutive 
-      // integers from 0 to NUMBER_OF_VERTICES -1. So the index into the 
-      // vertexMap vector below actually represents the input vertex id.
-
-      int numConnected = 0;
-      vtkstd::vector<int> vertexMap;
-      for(idx=0; idx<connectedVertices.size(); ++idx)
-        {
-        vertexMap.push_back(numConnected);
-
-        if(connectedVertices[idx] == 1)
-          {
-          numConnected++;
-          }
-        }
-    
-      // Copy only the connected vertices
-      for (int j = 0; j < numConnected; ++j)
-        {
-        if (directed)
-          {
-          dirBuilder->AddVertex();
-          }
-        else
-          {
-          undirBuilder->AddVertex();
-          }
-        }
-
-      // Construct the output vertex data and vtkPoints using the new vertex ids
-
-      vtkPoints* newPoints = vtkPoints::New();
-      newPoints->SetNumberOfPoints(numConnected);
-      vtkDataSetAttributes *newVertexData = vtkDataSetAttributes::New();
-      newVertexData->CopyStructure(input->GetVertexData());
-
+      vtkIdType inVert = vertexList->GetValue(i);
+      vtkIdType outVert = 0;
       if (directed)
         {
-        for (idx = 0; idx<connectedVertices.size(); idx++)
-          {
-          if(connectedVertices[idx]==1)
-            {
-            newVertexData->InsertTuple(vertexMap[idx], idx, input->GetVertexData());
-            newPoints->SetPoint(vertexMap[idx], input->GetPoints()->GetPoint(idx));
-            }
-          }
-        dirBuilder->GetVertexData()->PassData(newVertexData);
-        dirBuilder->SetPoints(newPoints);
+        outVert = dirBuilder->AddVertex();
         }
       else
         {
-        for (idx = 0; idx<connectedVertices.size(); idx++)
-          {
-          if(connectedVertices[idx]==1)
-            {
-            newVertexData->InsertTuple(vertexMap[idx], idx, input->GetVertexData());
-            newPoints->SetPoint(vertexMap[idx], input->GetPoints()->GetPoint(idx));
-            }
-          }
-        undirBuilder->GetVertexData()->PassData(newVertexData);
-        undirBuilder->SetPoints(newPoints);
+        outVert = undirBuilder->AddVertex();
         }
-
-      newPoints->Delete();
-      newVertexData->Delete();
-
-      // Now actually copy the edges (only the selected ones) 
-      // using the new vertex ids.
-
-      vtkSmartPointer<vtkEdgeListIterator> edges =
-        vtkSmartPointer<vtkEdgeListIterator>::New();
-      input->GetEdges(edges);
-      while (edges->HasNext())
-        {
-        vtkEdgeType e = edges->Next();
-
-        if ((inverse && selectArr->LookupValue(e.Id) < 0) ||
-            (!inverse && selectArr->LookupValue(e.Id) >= 0))
-          {
-          vtkEdgeType outputEdge;
-          if (directed)
-            {
-            outputEdge = dirBuilder->AddEdge(vertexMap[e.Source], vertexMap[e.Target]);
-            }
-          else
-            {
-            outputEdge = undirBuilder->AddEdge(vertexMap[e.Source], vertexMap[e.Target]);
-            }
-          builderEdgeData->CopyData(inputEdgeData, e.Id, outputEdge.Id);
-          }
-        }
+      vdOut->CopyData(vdIn, inVert, outVert);
+      ptsOut->InsertNextPoint(ptsIn->GetPoint(inVert));
+      vertexMap[inVert] = outVert;
       }
-    else  // !this->RemoveIsolatedVertices
+    }
+  else if (!this->RemoveIsolatedVertices)
+    {
+    // In the special case where there is only an edge selection, the user may
+    // specify that they want all vertices in the output.
+    vtkIdType numVert = input->GetNumberOfVertices();
+    for (vtkIdType inVert = 0; inVert < numVert; ++inVert)
       {
-
-      // Copy all vertices
-      for (vtkIdType v = 0; v < input->GetNumberOfVertices(); ++v)
-        {
-        if (directed)
-          {
-          dirBuilder->AddVertex();
-          }
-        else
-          {
-          undirBuilder->AddVertex();
-          }
-        }
-
-      // Copy unselected edges
-      vtkSmartPointer<vtkEdgeListIterator> edges =
-        vtkSmartPointer<vtkEdgeListIterator>::New();
-      input->GetEdges(edges);
-      while (edges->HasNext())
-        {
-        vtkEdgeType e = edges->Next();
-
-        if ((inverse && selectArr->LookupValue(e.Id) < 0) ||
-            (!inverse && selectArr->LookupValue(e.Id) >= 0))
-          {
-          vtkEdgeType outputEdge;
-          if (directed)
-            {
-            outputEdge = dirBuilder->AddEdge(e.Source, e.Target);
-            }
-          else
-            {
-            outputEdge = undirBuilder->AddEdge(e.Source, e.Target);
-            }
-          builderEdgeData->CopyData(inputEdgeData, e.Id, outputEdge.Id);
-          }
-        }
-
+      vtkIdType outVert = 0;
       if (directed)
         {
-        dirBuilder->GetVertexData()->PassData(input->GetVertexData());
-        dirBuilder->GetPoints()->ShallowCopy(input->GetPoints());
+        outVert = dirBuilder->AddVertex();
         }
       else
         {
-        undirBuilder->GetVertexData()->PassData(input->GetVertexData());
-        undirBuilder->GetPoints()->ShallowCopy(input->GetPoints());
+        outVert = undirBuilder->AddVertex();
         }
+      vdOut->CopyData(vdIn, inVert, outVert);
+      ptsOut->InsertNextPoint(ptsIn->GetPoint(inVert));
+      vertexMap[inVert] = outVert;
+      }
+    }
+
+  // Step 2: Add the edges
+  // If there is an edge selection, add those edges.
+  // Otherwise, add all edges connecting selected vertices.
+  if (hasEdges)
+    {
+    // Add selected edges
+    vtkIdType numSelectedEdges = edgeList->GetNumberOfTuples();
+    for (vtkIdType i = 0; i < numSelectedEdges; ++i)
+      {
+      vtkEdgeType e;
+      e.Id = edgeList->GetValue(i);
+      e.Source = input->GetSourceVertex(e.Id);
+      e.Target = input->GetTargetVertex(e.Id);
+
+      // Add source and target vertices if they are not yet in output
+      vtkIdType addVert[2];
+      int numAddVert = 0;
+      if (vertexMap.find(e.Source) == vertexMap.end())
+        {
+        addVert[numAddVert] = e.Source;
+        ++numAddVert;
+        }
+      if (vertexMap.find(e.Target) == vertexMap.end())
+        {
+        addVert[numAddVert] = e.Target;
+        ++numAddVert;
+        }
+      for (int j = 0; j < numAddVert; ++j)
+        {
+        vtkIdType outVert = 0;
+        if (directed)
+          {
+          outVert = dirBuilder->AddVertex();
+          }
+        else
+          {
+          outVert = undirBuilder->AddVertex();
+          }
+        vdOut->CopyData(vdIn, addVert[j], outVert);
+        ptsOut->InsertNextPoint(ptsIn->GetPoint(addVert[j]));
+        vertexMap[addVert[j]] = outVert;
+        }
+
+      // Add the selected edge
+      vtkIdType source = vertexMap[e.Source];
+      vtkIdType target = vertexMap[e.Target];
+      vtkEdgeType f;
+      if (directed)
+        {
+        f = dirBuilder->AddEdge(source, target);
+        }
+      else
+        {
+        f = undirBuilder->AddEdge(source, target);
+        }
+      edOut->CopyData(edIn, e.Id, f.Id);
+      // Copy edge layout to the output.
+      vtkIdType npts;
+      double* pts;
+      input->GetEdgePoints(e.Id, npts, pts);
+      builder->SetEdgePoints(f.Id, npts, pts);
       }
     }
   else
     {
-    //
-    // Vertex selection
-    //
-   
-    double pt[3];
-    vtkPoints *inputPoints = input->GetPoints();
-    vtkSmartPointer<vtkPoints> outputPoints = 
-      vtkSmartPointer<vtkPoints>::New();
-    vtkDataSetAttributes *inputVertexData = input->GetVertexData();
-    vtkDataSetAttributes *builderVertexData = 0;
-    if (directed)
-      {
-      builderVertexData = dirBuilder->GetVertexData();
-      }
-    else
-      {
-      builderVertexData = undirBuilder->GetVertexData();
-      }
-    builderVertexData->CopyAllocate(inputVertexData);
-    vtksys_stl::map<vtkIdType, vtkIdType> idMap;
-
-    // Copy unselected vertices
-    if(inverse)
-      {
-      vtkSmartPointer<vtkVertexListIterator> vertices = 
-        vtkSmartPointer<vtkVertexListIterator>::New();
-      input->GetVertices(vertices);
-      while (vertices->HasNext())
-        {
-        vtkIdType i = vertices->Next();
-        if(selectArr->LookupValue(i) < 0)
-          {
-          vtkIdType outputVertex = -1;
-          if (directed)
-            {
-            outputVertex = dirBuilder->AddVertex();
-            }
-          else
-            {
-            outputVertex = undirBuilder->AddVertex();
-            }
-          builderVertexData->CopyData(inputVertexData, i, outputVertex);
-          idMap[i] = outputVertex;
-          inputPoints->GetPoint(i, pt);
-          outputPoints->InsertNextPoint(pt);
-          }
-        }
-      }
-    // Copy selected vertices
-    else
-      {
-      for (vtkIdType i = 0; i < selectSize; i++)
-        {
-        vtkIdType inputVertex = selectArr->GetValue(i);
-        if (inputVertex < input->GetNumberOfVertices())
-          {
-          vtkIdType outputVertex = -1;
-          if (directed)
-            {
-            outputVertex = dirBuilder->AddVertex();
-            }
-          else
-            {
-            outputVertex = undirBuilder->AddVertex();
-            }
-          builderVertexData->CopyData(inputVertexData, inputVertex, outputVertex);
-          idMap[inputVertex] = outputVertex;
-          inputPoints->GetPoint(inputVertex, pt);
-          outputPoints->InsertNextPoint(pt);
-          }
-        }
-      }
-    if (directed)
-      {
-      dirBuilder->SetPoints(outputPoints);
-      }
-    else
-      {
-      undirBuilder->SetPoints(outputPoints);
-      }
-
-    // Copy edges whose source and target are selected.
-    vtkDataSetAttributes *inputEdgeData = input->GetEdgeData();
-    vtkDataSetAttributes *builderEdgeData = 0;
-    if (directed)
-      {
-      builderEdgeData = dirBuilder->GetEdgeData();
-      }
-    else
-      {
-      builderEdgeData = undirBuilder->GetEdgeData();
-      }
-    builderEdgeData->CopyAllocate(inputEdgeData);
-
-    vtkSmartPointer<vtkEdgeListIterator> edges = 
-      vtkSmartPointer<vtkEdgeListIterator>::New();
+    // Add edges between selected vertices
+    vtkSmartPointer<vtkEdgeListIterator> edges = vtkSmartPointer<vtkEdgeListIterator>::New();
     input->GetEdges(edges);
     while (edges->HasNext())
       {
       vtkEdgeType e = edges->Next();
-      if (idMap.count(e.Source) > 0 && idMap.count(e.Target) > 0)
+      if (vertexMap.find(e.Source) != vertexMap.end() &&
+          vertexMap.find(e.Target) != vertexMap.end())
         {
-        vtkEdgeType outputEdge;
+        vtkIdType source = vertexMap[e.Source];
+        vtkIdType target = vertexMap[e.Target];
+        vtkEdgeType f;
         if (directed)
           {
-          outputEdge = dirBuilder->AddEdge(idMap[e.Source], idMap[e.Target]);
+          f = dirBuilder->AddEdge(source, target);
           }
         else
           {
-          outputEdge = undirBuilder->AddEdge(idMap[e.Source], idMap[e.Target]);
+          f = undirBuilder->AddEdge(source, target);
           }
-        builderEdgeData->CopyData(inputEdgeData, e.Id, outputEdge.Id);
+        edOut->CopyData(edIn, e.Id, f.Id);
+        // Copy edge layout to the output.
+        vtkIdType npts;
+        double* pts;
+        input->GetEdgePoints(e.Id, npts, pts);
+        builder->SetEdgePoints(f.Id, npts, pts);
         }
-      }    
+      }
     }
 
   // Pass constructed graph to output.

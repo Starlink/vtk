@@ -23,6 +23,7 @@
 #include "vtkExecutive.h"
 #include "vtkFloatArray.h"
 #include "vtkGraph.h"
+#include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkMath.h"
 #include "vtkMutableDirectedGraph.h"
@@ -34,7 +35,7 @@
 #include <vtksys/stl/set>
 #include <vtksys/stl/algorithm>
 
-vtkCxxRevisionMacro(vtkRandomGraphSource, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkRandomGraphSource, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkRandomGraphSource);
 
 // ----------------------------------------------------------------------
@@ -43,12 +44,21 @@ vtkRandomGraphSource::vtkRandomGraphSource()
 {
   this->NumberOfVertices = 10;
   this->NumberOfEdges = 10;
+  this->EdgeProbability = 0.5;
+  this->IncludeEdgeWeights = false;
   this->Directed = 0;
   this->UseEdgeProbability = 0;
-  this->IncludeEdgeWeights = false;
-  this->AllowSelfLoops = false;
-  this->EdgeProbability = 0.5;
   this->StartWithTree = 0;
+  this->AllowSelfLoops = false;
+  this->AllowParallelEdges = false;
+  this->GeneratePedigreeIds = true;
+  this->VertexPedigreeIdArrayName = 0;
+  this->SetVertexPedigreeIdArrayName("vertex id");
+  this->EdgePedigreeIdArrayName = 0;
+  this->SetEdgePedigreeIdArrayName("edge id");
+  this->EdgeWeightArrayName = 0;
+  this->SetEdgeWeightArrayName("edge weight");
+  this->Seed = 1177;
   this->SetNumberOfInputPorts(0);
   this->SetNumberOfOutputPorts(1);
 }
@@ -57,6 +67,9 @@ vtkRandomGraphSource::vtkRandomGraphSource()
 
 vtkRandomGraphSource::~vtkRandomGraphSource()
 {
+  this->SetVertexPedigreeIdArrayName(0);
+  this->SetEdgePedigreeIdArrayName(0);
+  this->SetEdgeWeightArrayName(0);
 }
 
 // ----------------------------------------------------------------------
@@ -66,14 +79,22 @@ vtkRandomGraphSource::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   os << indent << "NumberOfVertices: " << this->NumberOfVertices << endl;
-  os << indent << "UseEdgeProbability: " << this->UseEdgeProbability << endl;
   os << indent << "NumberOfEdges: " << this->NumberOfEdges << endl;
   os << indent << "EdgeProbability: " << this->EdgeProbability << endl;
-  os << indent << "Directed: " << this->Directed << endl;
-  os << indent << "StartWithTree: " << this->StartWithTree << endl;
   os << indent << "IncludeEdgeWeights: " << this->IncludeEdgeWeights << endl;
+  os << indent << "Directed: " << this->Directed << endl;
+  os << indent << "UseEdgeProbability: " << this->UseEdgeProbability << endl;
+  os << indent << "StartWithTree: " << this->StartWithTree << endl;
   os << indent << "AllowSelfLoops: " << this->AllowSelfLoops << endl;
   os << indent << "AllowParallelEdges: " << this->AllowParallelEdges << endl;
+  os << indent << "GeneratePedigreeIds: " << this->GeneratePedigreeIds << endl;
+  os << indent << "VertexPedigreeIdArrayName: "
+    << (this->VertexPedigreeIdArrayName ? this->VertexPedigreeIdArrayName : "(null)") << endl;
+  os << indent << "EdgePedigreeIdArrayName: "
+    << (this->EdgePedigreeIdArrayName ? this->EdgePedigreeIdArrayName : "(null)") << endl;
+  os << indent << "EdgeWeightArrayName: "
+    << (this->EdgeWeightArrayName ? this->EdgeWeightArrayName : "(null)") << endl;
+  os << indent << "Seed: " << this->Seed << endl;
 }
 
 // ----------------------------------------------------------------------
@@ -84,6 +105,9 @@ vtkRandomGraphSource::RequestData(
   vtkInformationVector**, 
   vtkInformationVector *outputVector)
 {
+  // Seed the random number generator so we can produce repeatable results
+  vtkMath::RandomSeed(this->Seed);
+  
   // Create a mutable graph of the appropriate type.
   vtkSmartPointer<vtkMutableDirectedGraph> dirBuilder =
     vtkSmartPointer<vtkMutableDirectedGraph>::New();
@@ -230,14 +254,51 @@ vtkRandomGraphSource::RequestData(
 
   if (this->IncludeEdgeWeights)
     {
+    if (!this->EdgeWeightArrayName)
+      {
+      vtkErrorMacro("When generating edge weights, "
+        << "edge weights array name must be defined.");
+      return 0;
+      }
     vtkFloatArray *weights = vtkFloatArray::New();
-    weights->SetName("edge_weights");
+    weights->SetName(this->EdgeWeightArrayName);
     for (vtkIdType i = 0; i < output->GetNumberOfEdges(); ++i)
       {
       weights->InsertNextValue(vtkMath::Random());
       }
     output->GetEdgeData()->AddArray(weights);
     weights->Delete();
+    }
+
+  if (this->GeneratePedigreeIds)
+    {
+    if (!this->VertexPedigreeIdArrayName || !this->EdgePedigreeIdArrayName)
+      {
+      vtkErrorMacro("When generating pedigree ids, "
+        << "vertex and edge pedigree id array names must be defined.");
+      return 0;
+      }
+    vtkIdType numVert = output->GetNumberOfVertices();
+    vtkSmartPointer<vtkIdTypeArray> vertIds =
+      vtkSmartPointer<vtkIdTypeArray>::New();
+    vertIds->SetName(this->VertexPedigreeIdArrayName);
+    vertIds->SetNumberOfTuples(numVert);
+    for (vtkIdType i = 0; i < numVert; ++i)
+      {
+      vertIds->SetValue(i, i);
+      }
+    output->GetVertexData()->SetPedigreeIds(vertIds);
+
+    vtkIdType numEdge = output->GetNumberOfEdges();
+    vtkSmartPointer<vtkIdTypeArray> edgeIds =
+      vtkSmartPointer<vtkIdTypeArray>::New();
+    edgeIds->SetName(this->EdgePedigreeIdArrayName);
+    edgeIds->SetNumberOfTuples(numEdge);
+    for (vtkIdType i = 0; i < numEdge; ++i)
+      {
+      edgeIds->SetValue(i, i);
+      }
+    output->GetEdgeData()->SetPedigreeIds(edgeIds);
     }
 
   return 1;

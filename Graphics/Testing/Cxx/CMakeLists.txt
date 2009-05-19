@@ -33,20 +33,35 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       BoxClipPolyData.cxx
       BoxClipTetrahedra.cxx
       BoxClipTriangulateAndInterpolate.cxx
-      MeshQuality.cxx
       TestActor2DTextures.cxx
       TestHierarchicalBoxPipeline.cxx
       TestIconGlyphFilterGravity.cxx
       TestMultiBlock.cxx
+      TestQuadraturePoints.cxx
+      TestQuadraturePointStatistics.cxx
       TestUnstructuredGridGeometryFilter.cxx
       UnstructuredGridGradients.cxx
       UnstructuredGridCellGradients.cxx
+      UnstructuredGridFastGradients.cxx
       )
+    IF (VTK_USE_VERDICT)
+      SET(MyTests ${MyTests}
+        MeshQuality.cxx
+        )
+    ENDIF (VTK_USE_VERDICT)
+    IF (VTK_USE_PARALLEL)
+      SET(MyTests ${MyTests}
+        TemporalStatistics.cxx
+        )
+    ENDIF (VTK_USE_PARALLEL)
   ENDIF (VTK_DATA_ROOT)
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                          EXTRA_INCLUDE vtkTestDriver.h)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
+  IF (VTK_USE_PARALLEL)
+    TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkParallel)
+  ENDIF (VTK_USE_PARALLEL)
   SET (TestsToRun ${Tests})
   REMOVE (TestsToRun ${KIT}CxxTests.cxx)
 

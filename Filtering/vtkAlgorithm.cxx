@@ -36,11 +36,12 @@
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkTable.h"
 
 #include <vtkstd/set>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkAlgorithm, "$Revision: 1.42 $");
+vtkCxxRevisionMacro(vtkAlgorithm, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkAlgorithm);
 
 vtkCxxSetObjectMacro(vtkAlgorithm,Information,vtkInformation);
@@ -53,6 +54,12 @@ vtkInformationKeyMacro(vtkAlgorithm, PORT_REQUIREMENTS_FILLED, Integer);
 vtkInformationKeyMacro(vtkAlgorithm, INPUT_PORT, Integer);
 vtkInformationKeyMacro(vtkAlgorithm, INPUT_CONNECTION, Integer);
 vtkInformationKeyMacro(vtkAlgorithm, INPUT_ARRAYS_TO_PROCESS, InformationVector);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_DATASET, Integer);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_GEOMETRY, Integer);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_BOUNDS, Integer);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_TOPOLOGY, Integer);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_ATTRIBUTES, Integer);
+vtkInformationKeyMacro(vtkAlgorithm, PRESERVES_RANGES, Integer);
 
 vtkExecutive* vtkAlgorithm::DefaultExecutivePrototype = 0;
   
@@ -382,6 +389,18 @@ vtkAbstractArray* vtkAlgorithm::GetInputAbstractArrayToProcess(
       return fd->GetAbstractArray(name);
       }
     
+    if (fieldAssoc == vtkDataObject::FIELD_ASSOCIATION_ROWS)
+      {
+      vtkTable *inputT = vtkTable::SafeDownCast(input);
+      if (!inputT)
+        {
+        vtkErrorMacro("Attempt to get row data from a non-table");
+        return NULL;
+        }
+      vtkFieldData *fd = inputT->GetRowData();
+      return fd->GetAbstractArray(name);
+      }
+
     if (fieldAssoc == vtkDataObject::FIELD_ASSOCIATION_VERTICES ||
         fieldAssoc == vtkDataObject::FIELD_ASSOCIATION_EDGES)
       {
@@ -1317,3 +1336,17 @@ void vtkAlgorithm::SetProgressText(const char* ptext)
     do { *cp1++ = *cp2++; } while ( --n );
     }
 }
+
+//-------------------------------------------------------------
+double vtkAlgorithm::ComputePriority()
+{
+  vtkStreamingDemandDrivenPipeline *sddp =
+    vtkStreamingDemandDrivenPipeline::SafeDownCast
+      (this->GetExecutive());
+  if (!sddp)
+    {
+    return 1.0;
+    }
+  return sddp->ComputePriority(0);
+}
+

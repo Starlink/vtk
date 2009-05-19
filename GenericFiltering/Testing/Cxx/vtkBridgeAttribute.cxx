@@ -34,7 +34,7 @@
 
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkBridgeAttribute, "$Revision: 1.6.50.1 $");
+vtkCxxRevisionMacro(vtkBridgeAttribute, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkBridgeAttribute);
 
 void vtkBridgeAttribute::PrintSelf(ostream& os, vtkIndent indent)

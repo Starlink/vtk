@@ -58,7 +58,7 @@
 #define VTK_IOS_NOCREATE | ios::nocreate
 #endif
 
-vtkCxxRevisionMacro(vtkOpenFOAMReader, "$Revision: 1.12.2.1 $");
+vtkCxxRevisionMacro(vtkOpenFOAMReader, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkOpenFOAMReader);
 
 struct stdString

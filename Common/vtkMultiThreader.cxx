@@ -18,7 +18,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkWindows.h"
 
-vtkCxxRevisionMacro(vtkMultiThreader, "$Revision: 1.51 $");
+vtkCxxRevisionMacro(vtkMultiThreader, "$Revision: 1.53 $");
 vtkStandardNewMacro(vtkMultiThreader);
 
 // These are the includes necessary for multithreaded rendering on an SGI
@@ -100,12 +100,13 @@ int vtkMultiThreader::GetGlobalDefaultNumberOfThreads()
 #endif
 
 #ifdef __APPLE__
-    // Use sysctl() to determine the number of CPUs.  This is prefered
+    // Determine the number of CPU cores. Prefer sysctlbyname()
     // over MPProcessors() because it doesn't require CoreServices
-    // (which is only available in 32bit on Mac OS X 10.4)
-    int mib[2] = {CTL_HW, HW_NCPU};
+    // (which is only available in 32bit on Mac OS X 10.4).
+    // hw.logicalcpu takes into account cores/CPUs that are
+    // disabled because of power management.
     size_t dataLen = sizeof(int); // 'num' is an 'int'
-    int result = sysctl(mib, 2, &num, &dataLen, NULL, 0);
+    int result = sysctlbyname ("hw.logicalcpu", &num, &dataLen, NULL, 0);
     if (result == -1)
       {
       num = 1;
@@ -170,6 +171,20 @@ vtkMultiThreader::vtkMultiThreader()
 // Destructor. Nothing allocated so nothing needs to be done here.
 vtkMultiThreader::~vtkMultiThreader()
 {
+  int i;
+  
+  for ( i = 0; i < VTK_MAX_THREADS; i++ )
+    {
+    if ( this->ThreadInfoArray[i].ActiveFlagLock )
+      {
+      this->ThreadInfoArray[i].ActiveFlagLock->Delete();
+      }
+    
+    if ( this->SpawnedThreadActiveFlagLock[i] )
+      {
+      this->SpawnedThreadActiveFlagLock[i]->Delete();
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -689,12 +704,32 @@ int vtkMultiThreader::SpawnThread( vtkThreadFunctionType f, void *userdata )
 
 void vtkMultiThreader::TerminateThread( int threadID )
 {
-
+  // check if the threadID argument is in range
+  if ( threadID >= VTK_MAX_THREADS )
+    {
+    vtkErrorMacro("ThreadID is out of range. Must be less that " << VTK_MAX_THREADS );
+    return;
+    }
+  
+  // If we don't have a lock, then this thread is definitely not active
   if ( !this->SpawnedThreadActiveFlag[threadID] )
     {
     return;
     }
-
+  
+  // If we do have a lock, use it and find out the status of the active flag
+  this->SpawnedThreadActiveFlagLock[threadID]->Lock();
+  int val = this->SpawnedThreadActiveFlag[threadID];
+  this->SpawnedThreadActiveFlagLock[threadID]->Unlock();
+  
+  // If the active flag is 0, return since this thread is not active
+  if ( val == 0 )
+    {
+    return;
+    }
+  
+  // OK - now we know we have an active thread - set the active flag to 0
+  // to indicate to the thread that it should terminate itself
   this->SpawnedThreadActiveFlagLock[threadID]->Lock();
   this->SpawnedThreadActiveFlag[threadID] = 0;
   this->SpawnedThreadActiveFlagLock[threadID]->Unlock();
@@ -744,6 +779,30 @@ vtkMultiThreaderIDType vtkMultiThreader::GetCurrentThreadID()
   // thread.
   return 0;
 #endif
+}
+
+int vtkMultiThreader::IsThreadActive( int threadID )
+{
+  // check if the threadID argument is in range
+  if ( threadID >= VTK_MAX_THREADS )
+    {
+    vtkErrorMacro("ThreadID is out of range. Must be less that " << VTK_MAX_THREADS );
+    return 0;
+    }
+  
+  // If we don't have a lock, then this thread is not active
+  if ( this->SpawnedThreadActiveFlagLock[threadID] == NULL )
+    {
+    return 0;
+    }
+  
+  // We have a lock - use it to get the active flag value
+  this->SpawnedThreadActiveFlagLock[threadID]->Lock();
+  int val = this->SpawnedThreadActiveFlag[threadID];
+  this->SpawnedThreadActiveFlagLock[threadID]->Unlock();
+  
+  // now return that value
+  return val;
 }
 
 //----------------------------------------------------------------------------

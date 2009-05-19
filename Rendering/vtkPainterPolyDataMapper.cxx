@@ -22,20 +22,24 @@
 #include "vtkDisplayListPainter.h"
 #include "vtkGarbageCollector.h"
 #include "vtkGenericVertexAttributeMapping.h"
+#include "vtkHardwareSelectionPolyDataPainter.h"
 #include "vtkInformation.h"
 #include "vtkInformationObjectBaseKey.h"
+#include "vtkInformationVector.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkOpenGLExtensionManager.h"
 #include "vtkPlaneCollection.h"
 #include "vtkPolyData.h"
 #include "vtkPrimitivePainter.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkScalarsToColorsPainter.h"
+#include "vtkStandardPolyDataPainter.h"
+#include "vtkgl.h"
 
 vtkStandardNewMacro(vtkPainterPolyDataMapper);
-vtkCxxRevisionMacro(vtkPainterPolyDataMapper, "$Revision: 1.12 $")
-
+vtkCxxRevisionMacro(vtkPainterPolyDataMapper, "$Revision: 1.22 $")
 //-----------------------------------------------------------------------------
 class vtkPainterPolyDataMapperObserver : public vtkCommand
 {
@@ -77,12 +81,17 @@ vtkPainterPolyDataMapper::vtkPainterPolyDataMapper()
   this->Painter->SetDelegatePainter(cp);
   cp->Delete();
 
+  this->SelectionPainter = 0;
+  vtkPainter* selPainter = vtkHardwareSelectionPolyDataPainter::New();
+  this->SetSelectionPainter(selPainter);
+  selPainter->Delete();
 }
 
 //-----------------------------------------------------------------------------
 vtkPainterPolyDataMapper::~vtkPainterPolyDataMapper()
 {
   this->SetPainter(NULL);
+  this->SetSelectionPainter(0);
   this->Observer->Target = NULL;
   this->Observer->Delete();
   this->PainterInformation->Delete();
@@ -114,6 +123,34 @@ void vtkPainterPolyDataMapper::MapDataArrayToVertexAttribute(
 
   mappings->AddMapping(
     vertexAttributeName, dataArrayName, field, componentno);
+}
+
+//---------------------------------------------------------------------------
+void vtkPainterPolyDataMapper::MapDataArrayToMultiTextureAttribute(
+  int unit,
+  const char* dataArrayName, 
+  int field,
+  int componentno)
+{
+  vtkGenericVertexAttributeMapping* mappings = 0;
+  if( this->PainterInformation->Has(
+      vtkPrimitivePainter::DATA_ARRAY_TO_VERTEX_ATTRIBUTE()) )
+    {
+    mappings = vtkGenericVertexAttributeMapping::SafeDownCast(
+      this->PainterInformation->Get(
+        vtkPolyDataPainter::DATA_ARRAY_TO_VERTEX_ATTRIBUTE()));
+    }
+
+  if (mappings==NULL)
+    {
+    mappings = vtkGenericVertexAttributeMapping::New();
+    this->PainterInformation->Set(
+      vtkPolyDataPainter::DATA_ARRAY_TO_VERTEX_ATTRIBUTE(), mappings);
+    mappings->Delete();
+    }
+
+  mappings->AddMapping(
+    unit, dataArrayName, field, componentno);
 }
 
 //-----------------------------------------------------------------------------
@@ -152,6 +189,7 @@ void vtkPainterPolyDataMapper::SetPainter(vtkPainter* p)
   if (this->Painter)
     {
     this->Painter->RemoveObservers(vtkCommand::ProgressEvent, this->Observer);
+    this->Painter->SetInformation(0);
     }
   vtkSetObjectBodyMacro(Painter, vtkPainter, p);
 
@@ -163,10 +201,27 @@ void vtkPainterPolyDataMapper::SetPainter(vtkPainter* p)
 }
 
 //-----------------------------------------------------------------------------
+void vtkPainterPolyDataMapper::SetSelectionPainter(vtkPainter* p)
+{
+  if (this->SelectionPainter)
+    {
+    this->SelectionPainter->SetInformation(0);
+    this->SelectionPainter->RemoveObservers(vtkCommand::ProgressEvent, this->Observer);
+    }
+  vtkSetObjectBodyMacro(SelectionPainter, vtkPainter, p);
+   if (this->SelectionPainter)
+    {
+    this->SelectionPainter->AddObserver(vtkCommand::ProgressEvent, this->Observer);
+    this->SelectionPainter->SetInformation(this->PainterInformation);
+    }
+}
+
+//-----------------------------------------------------------------------------
 void vtkPainterPolyDataMapper::ReportReferences(vtkGarbageCollector *collector)
 {
   this->Superclass::ReportReferences(collector);
   vtkGarbageCollectorReport(collector, this->Painter, "Painter");
+  vtkGarbageCollectorReport(collector, this->SelectionPainter, "SelectionPainter");
 }
 
 //-----------------------------------------------------------------------------
@@ -226,6 +281,22 @@ void vtkPainterPolyDataMapper::UpdatePainterInformation()
 void vtkPainterPolyDataMapper::RenderPiece(vtkRenderer* ren, vtkActor* act)
 {
   vtkPolyData *input= this->GetInput();
+  
+   vtkStandardPolyDataPainter * painter = 
+    vtkStandardPolyDataPainter::SafeDownCast(this->Painter);
+  if(painter != NULL)
+    {
+    vtkInformationVector *inArrayVec = 
+      this->Information->Get(INPUT_ARRAYS_TO_PROCESS());
+    int numArrays = inArrayVec->GetNumberOfInformationObjects();
+
+    for(int i = 0; i < numArrays; i++)
+      {
+      painter->AddMultiTextureCoordsArray(this->GetInputArrayToProcess(i,input));
+      }
+    }
+  
+
   //
   // make sure that we've been properly initialized
   //
@@ -254,23 +325,37 @@ void vtkPainterPolyDataMapper::RenderPiece(vtkRenderer* ren, vtkActor* act)
       return;
       }
     }
+
+  // Update Painter information if obsolete.
+  if (this->PainterUpdateTime < this->GetMTime())
+    {
+    this->UpdatePainterInformation();
+    this->PainterUpdateTime.Modified();
+    }
+
   // make sure our window is current
   ren->GetRenderWindow()->MakeCurrent();
   this->TimeToDraw = 0.0;
-  if (this->Painter)
+
+  // If we are rendering in selection mode, then we use the selection painter
+  // instead of the standard painter.
+  if (this->SelectionPainter && ren->GetSelector())
     {
-    // Update Painter information if obsolete.
-    if (this->PainterUpdateTime < this->GetMTime())
-      {
-      this->UpdatePainterInformation();
-      this->PainterUpdateTime.Modified();
-      }
-    // Pass polydata if changed.
-    if (this->Painter->GetInput() != input)
-      {
-      this->Painter->SetInput(input);
-      }
-    this->Painter->Render(ren, act, 0xff);
+    this->SelectionPainter->SetInput(input);
+    this->SelectionPainter->Render(ren, act, 0xff,
+      (this->ForceCompileOnly==1));
+    this->TimeToDraw = this->SelectionPainter->GetTimeToDraw();
+    }
+  else if (this->SelectionPainter && this->SelectionPainter != this->Painter)
+    {
+    this->SelectionPainter->ReleaseGraphicsResources(ren->GetRenderWindow());
+    }
+
+  if (this->Painter && ren->GetSelector() == 0)
+    {
+    // Pass polydata.
+    this->Painter->SetInput(input);
+    this->Painter->Render(ren, act, 0xff,this->ForceCompileOnly==1);
     this->TimeToDraw = this->Painter->GetTimeToDraw();
     }
 
@@ -285,21 +370,13 @@ void vtkPainterPolyDataMapper::RenderPiece(vtkRenderer* ren, vtkActor* act)
 }
 
 //-------------------------------------------------------------------------
-void vtkPainterPolyDataMapper::GetBounds(double bounds[6])
-{
-  this->GetBounds();
-  memcpy(bounds,this->Bounds,6*sizeof(double));
-}
-
-//-------------------------------------------------------------------------
 double* vtkPainterPolyDataMapper::GetBounds()
 {
-  static double bounds[] = {-1.0,1.0, -1.0,1.0, -1.0,1.0};
-
   // do we have an input
   if ( ! this->GetNumberOfInputConnections(0) )
     {
-    return bounds;
+    vtkMath::UninitializeBounds(this->Bounds);
+    return this->Bounds;
     }
   else
     {
@@ -317,20 +394,22 @@ double* vtkPainterPolyDataMapper::GetBounds()
 
       // first get the bounds from the input
       this->Update();
-      this->GetInput()->GetBounds(this->Bounds);
-
-      // if the mapper has a painter, update the bounds in the painter
-      vtkPainter *painter = this->GetPainter();
-
-      if( painter )
-        {
-        painter->UpdateBounds(this->Bounds);
-        }
       }
+
+    this->GetInput()->GetBounds(this->Bounds);
+
+    // if the mapper has a painter, update the bounds in the painter
+    vtkPainter *painter = this->GetPainter();
+
+    if (painter)
+      {
+      painter->UpdateBounds(this->Bounds);
+      }
+
     // if the bounds indicate NAN and subpieces are being used then
     // return NULL
     if (!vtkMath::AreBoundsInitialized(this->Bounds)
-        && this->NumberOfSubPieces > 1)
+      && this->NumberOfSubPieces > 1)
       {
       return NULL;
       }
@@ -352,4 +431,5 @@ void vtkPainterPolyDataMapper::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << indent << "(none)" << endl;
     }
+  os << indent << "SelectionPainter: " << this->SelectionPainter << endl;
 }

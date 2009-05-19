@@ -29,7 +29,7 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleRubberBand3D, "$Revision: 1.4.2.1 $");
+vtkCxxRevisionMacro(vtkInteractorStyleRubberBand3D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkInteractorStyleRubberBand3D);
 
 //--------------------------------------------------------------------------

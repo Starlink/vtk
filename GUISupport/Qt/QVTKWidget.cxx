@@ -42,19 +42,20 @@
 #include "vtkstd/map"
 #include "vtkInteractorStyleTrackballCamera.h"
 #include "vtkRenderWindow.h"
-#if defined(Q_WS_MAC)
+#if defined(QVTK_USE_CARBON)
 #  include "vtkCarbonRenderWindow.h"
+#endif
+#if defined(QVTK_USE_COCOA)
+#  include "vtkCocoaRenderWindow.h"
 #endif
 #include "vtkCommand.h"
 #include "vtkOStrStreamWrapper.h"
 #include "vtkObjectFactory.h"
 #include "vtkCallbackCommand.h"
 #include "vtkConfigure.h"
-#include "vtkToolkits.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkImageData.h"
 #include "vtkPointData.h"
-
 
 // function to get VTK keysyms from ascii characters
 static const char* ascii_to_key_sym(int);
@@ -131,7 +132,7 @@ QVTKWidget::QVTKWidget(QWidget* p, Qt::WFlags f)
   this->mCachedImage->SetOrigin(0,0,0);
   this->mCachedImage->SetSpacing(1,1,1);
 
-#if defined(Q_WS_MAC)
+#if defined(QVTK_USE_CARBON)
   this->DirtyRegionHandler = 0;
   this->DirtyRegionHandlerUPP = 0;
 #endif
@@ -188,7 +189,6 @@ void QVTKWidget::SetRenderWindow(vtkRenderWindow* w)
       this->mRenWin->Finalize();
       }
     this->mRenWin->SetDisplayId(NULL);
-    this->mRenWin->SetParentId(NULL);
     this->mRenWin->SetWindowId(NULL);
     this->mRenWin->UnRegister(NULL);
     }
@@ -220,10 +220,14 @@ void QVTKWidget::SetRenderWindow(vtkRenderWindow* w)
     x11_setup_window();
     
     // give the qt window id to the vtk window
+#if defined(QVTK_USE_COCOA)
+    this->mRenWin->SetDisplayId( reinterpret_cast<void*>(this->winId()));
+#else
     this->mRenWin->SetWindowId( reinterpret_cast<void*>(this->winId()));
+#endif
 
     // mac compatibility issues
-#if defined(Q_WS_MAC) && (QT_VERSION < 0x040000)
+#if defined(QVTK_USE_CARBON) && (QT_VERSION < 0x040000)
     this->mRenWin->SetWindowId( NULL );
     static_cast<vtkCarbonRenderWindow*>(this->mRenWin)->SetRootWindow(
       reinterpret_cast<WindowPtr>(this->handle()));
@@ -238,7 +242,7 @@ void QVTKWidget::SetRenderWindow(vtkRenderWindow* w)
     if(isVisible())
       {
       this->mRenWin->Start();
-#if defined (Q_WS_MAC) && (QT_VERSION < 0x040000)
+#if defined (QVTK_USE_CARBON) && (QT_VERSION < 0x040000)
       macFixRect();
 #endif
       }
@@ -272,7 +276,7 @@ void QVTKWidget::SetRenderWindow(vtkRenderWindow* w)
     cbc->Delete();
     }
 
-#if defined(Q_WS_MAC) && QT_VERSION >= 0x040000
+#if defined(QVTK_USE_CARBON) && QT_VERSION >= 0x040000
   if(mRenWin && !this->DirtyRegionHandlerUPP)
     {
     this->DirtyRegionHandlerUPP = NewEventHandlerUPP(QVTKWidget::DirtyRegionProcessor);
@@ -439,7 +443,7 @@ void QVTKWidget::resizeEvent(QResizeEvent* e)
     }
   this->markCachedImageAsDirty();
   
-#if defined (Q_WS_MAC) && (QT_VERSION < 0x040000)
+#if defined (QVTK_USE_CARBON) && (QT_VERSION < 0x040000)
   macFixRect();
 #endif
 }
@@ -456,7 +460,7 @@ void QVTKWidget::moveEvent(QMoveEvent* e)
   // give the size to the interactor and vtk window
   this->mRenWin->vtkRenderWindow::SetPosition(this->x(), this->y());
   
-#if defined (Q_WS_MAC) && (QT_VERSION < 0x040000)
+#if defined (QVTK_USE_CARBON) && (QT_VERSION < 0x040000)
   macFixRect();
 #endif
 }
@@ -973,7 +977,7 @@ void QVTKWidget::reparent(QWidget* parent, Qt::WFlags f, const QPoint& p, bool s
     x11_setup_window();
 
     // connect to new window
-#if defined(Q_WS_MAC)
+#if defined(QVTK_USE_CARBON)
     static_cast<vtkCarbonRenderWindow*>(this->mRenWin)->SetRootWindow(
       reinterpret_cast<WindowPtr>(this->handle()));
 
@@ -1036,6 +1040,13 @@ QVTKInteractor::QVTKInteractor()
   this->Internal = new QVTKInteractorInternal(this);
   QObject::connect(this->Internal->SignalMapper, SIGNAL(mapped(int)), this, SLOT(TimerEvent(int)) );
 }
+  
+void QVTKInteractor::Initialize()
+{
+  this->Initialized = 1;
+  this->Enable();
+}
+
 
 /*! start method for interactor
  */
@@ -1415,7 +1426,7 @@ void QVTKWidget::x11_setup_window()
 #endif
 }
 
-#if defined (Q_WS_MAC) && QT_VERSION >= 0x040000
+#if defined (QVTK_USE_CARBON) && QT_VERSION >= 0x040000
 OSStatus QVTKWidget::DirtyRegionProcessor(EventHandlerCallRef, EventRef event, void* wid)
 {
   QVTKWidget* widget = reinterpret_cast<QVTKWidget*>(wid);
@@ -1430,7 +1441,7 @@ OSStatus QVTKWidget::DirtyRegionProcessor(EventHandlerCallRef, EventRef event, v
 
 #endif
 
-#if defined (Q_WS_MAC) && QT_VERSION < 0x040000
+#if defined (QVTK_USE_CARBON) && QT_VERSION < 0x040000
 
 // gotta do some special stuff on the MAC to make it work right
 // this stuff will need changing when using Qt4 with HIViews
@@ -1510,7 +1521,7 @@ void QVTKWidget::macWidgetChangedWindow()
 // slot to update the draw region and draw the scene
 void QVTKWidget::internalMacFixRect()
 {
-#if defined(Q_WS_MAC) && QT_VERSION < 0x040000
+#if defined(QVTK_USE_CARBON) && QT_VERSION < 0x040000
   this->macFixRect();
   this->update();
 #endif

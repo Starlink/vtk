@@ -34,8 +34,18 @@
 
 class vtkVariantArrayLookup;
 
+//BTX
+/// Forward declaration required for Boost serialization
+namespace boost { namespace serialization { class access; } }
+//ETX
+
 class VTK_COMMON_EXPORT vtkVariantArray : public vtkAbstractArray
 {
+//BTX
+  /// Friendship required for Boost serialization
+  friend class boost::serialization::access;
+//ETX
+
 public:
   static vtkVariantArray* New();
   vtkTypeRevisionMacro(vtkVariantArray,vtkAbstractArray);
@@ -188,6 +198,10 @@ public:
   void InsertValue(vtkIdType id, vtkVariant value);
 
   // Description:
+  // Insert a value into the array from a variant.
+  void InsertVariantValue(vtkIdType idx, vtkVariant value);
+
+  // Description:
   // Expand the array by one and set the value at that location.
   // Return the array index of the inserted value.
   vtkIdType InsertNextValue(vtkVariant value);
@@ -226,17 +240,27 @@ public:
   // the fast lookup will know to rebuild itself.  Otherwise, the lookup
   // functions will give incorrect results.
   virtual void DataChanged();
-  
+
+  // Description:
+  // Tell the array explicitly that a single data element has
+  // changed. Like DataChanged(), then is only necessary when you
+  // modify the array contents without using the array's API. 
+  virtual void DataElementChanged(vtkIdType id);
+
   // Description:
   // Delete the associated fast lookup data structure on this array,
   // if it exists.  The lookup will be rebuilt on the next call to a lookup
   // function.
   virtual void ClearLookup();
+
+  // Description:
+  // This destructor is public to work around a bug in version 1.36.0 of
+  // the Boost.Serialization library.
+  ~vtkVariantArray();
   
 protected:
   // Construct object with default tuple dimension (number of components) of 1.
   vtkVariantArray(vtkIdType numComp=1);
-  ~vtkVariantArray();
 
   // Pointer to data
   //BTX

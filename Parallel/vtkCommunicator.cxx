@@ -30,6 +30,7 @@
 #include "vtkIntArray.h"
 #include "vtkMultiBlockDataSet.h"
 #include "vtkMultiProcessController.h"
+#include "vtkMultiProcessStream.h"
 #include "vtkRectilinearGrid.h"
 #include "vtkSmartPointer.h"
 #include "vtkStructuredGrid.h"
@@ -45,7 +46,7 @@
 
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkCommunicator, "$Revision: 1.49 $");
+vtkCxxRevisionMacro(vtkCommunicator, "$Revision: 1.57 $");
 
 #define EXTENT_HEADER_SIZE      128
 
@@ -108,18 +109,22 @@ vtkCommunicator::vtkCommunicator()
   this->LocalProcessId = 0;
   this->NumberOfProcesses = 1;
   this->MaximumNumberOfProcesses = vtkMultiProcessController::MAX_PROCESSES;
+  this->Count = 0;
 }
 
+//----------------------------------------------------------------------------
 vtkCommunicator::~vtkCommunicator()
 {
 }
 
+//----------------------------------------------------------------------------
 int vtkCommunicator::UseCopy = 0;
 void vtkCommunicator::SetUseCopy(int useCopy)
 {
   vtkCommunicator::UseCopy = useCopy;
 }
 
+//----------------------------------------------------------------------------
 void vtkCommunicator::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
@@ -128,6 +133,7 @@ void vtkCommunicator::PrintSelf(ostream& os, vtkIndent indent)
      << this->MaximumNumberOfProcesses << endl;
   os << indent << "NumberOfProcesses: " << this->NumberOfProcesses << endl;
   os << indent << "LocalProcessId: " << this->LocalProcessId << endl;
+  os << indent << "Count: " << this->Count << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -168,11 +174,15 @@ int vtkCommunicator::Send(vtkDataObject* data, int remoteHandle,
   this->Send(header, 2, remoteHandle, tag);
   tag = mangledTag;
 
-  int data_type = data->GetDataObjectType();
+  int data_type = data? data->GetDataObjectType() : -1;
   this->Send(&data_type, 1, remoteHandle, tag);
   
   switch(data_type)
     {
+  case -1:
+    // NULL data.
+    return 1;
+
     //error on types we can't send
     case VTK_DATA_OBJECT:
     case VTK_DATA_SET:
@@ -231,7 +241,7 @@ int vtkCommunicator::SendMultiBlockDataSet(vtkMultiBlockDataSet* mbds,
     if (block)
       {
       // Now, send the actual block data.
-      remoteHandle = returnCode && this->Send(block, remoteHandle, tag);
+      returnCode = returnCode && this->Send(block, remoteHandle, tag);
       }
     }
   return returnCode;
@@ -275,7 +285,6 @@ int vtkCommunicator::SendElementalDataObject(
   // could not marshal data
   return 0;
 }
-
 int vtkCommunicator::Send(vtkDataArray* data, int remoteHandle, int tag)
 {
   // If the receiving end is using with ANY_SOURCE, we have a problem because
@@ -339,7 +348,6 @@ int vtkCommunicator::Send(vtkDataArray* data, int remoteHandle, int tag)
   return 1;
 }
 
-
 //----------------------------------------------------------------------------
 int vtkCommunicator::Receive(vtkDataObject* data, int remoteHandle, 
                              int tag)
@@ -368,6 +376,11 @@ vtkDataObject *vtkCommunicator::ReceiveDataObject(int remoteHandle, int tag)
 
   int data_type = 0;
   this->Receive(&data_type, 1, remoteHandle, tag); 
+  if (data_type < 0)
+    {
+    // NULL data object.
+    return NULL;
+    }
   //manufacture a data object of the proper type to fill
   vtkDataObject * dObj = vtkDataObjectTypes::NewDataObject(data_type);
   if (dObj != NULL)
@@ -476,14 +489,7 @@ int vtkCommunicator::ReceiveMultiBlockDataSet(
       {
       vtkDataObject* dObj = vtkDataObjectTypes::NewDataObject(dataType);
       returnCode = returnCode && this->Receive(dObj, remoteHandle, tag);
-      if (dObj->IsA("vtkDataSet"))
-        {
-        mbds->SetBlock(cc, vtkDataSet::SafeDownCast(dObj));
-        }
-      else if (dObj->IsA("vtkMultiBlockDataSet"))
-        {
-        mbds->SetBlock(cc, vtkMultiBlockDataSet::SafeDownCast(dObj));
-        }
+      mbds->SetBlock(cc, dObj);
       dObj->Delete();
       }
     }
@@ -984,7 +990,7 @@ int vtkCommunicator::Broadcast(vtkDataArray *data, int srcProcessId)
       vtkErrorMacro("Broadcast data types do not match!");
       return 0;
       }
-    name = new char[nameLength];
+    name = (nameLength > 0) ? new char[nameLength] : NULL;
     data->SetNumberOfComponents(numComponents);
     data->SetNumberOfTuples(numTuples);
     }
@@ -1474,3 +1480,85 @@ int vtkCommunicator::AllReduce(vtkDataArray *sendBuffer,
                                   recvBuffer->GetVoidPointer(0),
                                   components*tuples, type, operation);
 }
+
+//-----------------------------------------------------------------------------
+int vtkCommunicator::Broadcast(vtkMultiProcessStream& stream, int srcProcessId)
+{
+  if (this->GetLocalProcessId() == srcProcessId)
+    {
+    vtkstd::vector<unsigned char> data;
+    stream.GetRawData(data);
+    unsigned int length = static_cast<unsigned int>(data.size());
+    if (!this->Broadcast(reinterpret_cast<int*>(&length), 1, srcProcessId))
+      {
+      return 0;
+      }
+    if (length > 0)
+      {
+      return this->Broadcast(&data[0], length, srcProcessId);
+      }
+    return 1;
+    }
+  else
+    {
+    stream.Reset();
+    unsigned int length = 0;
+    if (!this->Broadcast(reinterpret_cast<int*>(&length), 1, srcProcessId))
+      {
+      return 0;
+      }
+    if (length > 0)
+      {
+      vtkstd::vector<unsigned char> data;
+      data.resize(length);
+      if (!this->Broadcast(&data[0], length, srcProcessId))
+        {
+        return 0;
+        }
+      stream.SetRawData(data);
+      }
+    return 1;
+    }
+}
+
+//----------------------------------------------------------------------------
+int vtkCommunicator::Send(const vtkMultiProcessStream& stream, int remoteId, int tag)
+{
+  vtkstd::vector<unsigned char> data;
+  stream.GetRawData(data);
+  unsigned int length = static_cast<unsigned int>(data.size());
+  if (!this->Send(&length, 1, remoteId, tag))
+    {
+    return 0;
+    }
+  if (length > 0)
+    {
+    return this->Send(&data[0], length, remoteId, tag);
+    }
+  return 1;
+}
+
+//----------------------------------------------------------------------------
+int vtkCommunicator::Receive(vtkMultiProcessStream& stream, int remoteId, int tag)
+{
+  stream.Reset();
+
+  unsigned int length;
+  if (!this->Receive(&length, 1, remoteId, tag))
+    {
+    return 0;
+    }
+
+  if (length > 0)
+    {
+    vtkstd::vector<unsigned char> data;
+    data.resize(length);
+    if (!this->Receive(&data[0], length, remoteId, tag))
+      {
+      return 0;
+      }
+    stream.SetRawData(data);
+    }
+  return 1;
+}
+
