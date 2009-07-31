@@ -268,10 +268,12 @@ vtkOpenGLExtensionManager::GetProcAddress(const char *fname)
   // when it should be:
   // extern void (*glXGetProcAddress(const GLubyte *procname))(void);
   return reinterpret_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
-#endif //VTK_USE_GLX_GET_PROC_ADDRESS
+#else
 #ifdef VTK_USE_GLX_GET_PROC_ADDRESS_ARB
   return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddressARB(reinterpret_cast<const GLubyte *>(fname)));
 #endif //VTK_USE_GLX_GET_PROC_ADDRESS_ARB
+#endif //VTK_USE_GLX_GET_PROC_ADDRESS
+
 
 
 #ifdef VTK_USE_VTK_DYNAMIC_LOADER
