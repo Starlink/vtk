@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeTextureMapper.cxx,v $
+  Module:    vtkVolumeTextureMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkVolume.h"
 #include "vtkVolumeProperty.h"
 
-vtkCxxRevisionMacro(vtkVolumeTextureMapper, "$Revision: 1.4 $");
 
 vtkVolumeTextureMapper::vtkVolumeTextureMapper()
 {
@@ -35,6 +34,14 @@ vtkVolumeTextureMapper::vtkVolumeTextureMapper()
   this->GradientEstimator       = vtkFiniteDifferenceGradientEstimator::New();
   this->GradientShader          = vtkEncodedGradientShader::New();
   this->NumberOfComponents      = 1;
+
+  this->RenderWindow            = NULL;
+  this->DataOrigin[0]           = 0.0;
+  this->DataOrigin[1]           = 0.0;
+  this->DataOrigin[2]           = 0.0;
+  this->DataSpacing[0]          = 1.0;
+  this->DataSpacing[1]          = 1.0;
+  this->DataSpacing[2]          = 1.0;
 }
 
 vtkVolumeTextureMapper::~vtkVolumeTextureMapper()

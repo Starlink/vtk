@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimePointToString.cxx,v $
+  Module:    vtkTimePointToString.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,6 @@
 #include "vtkTimePointUtility.h"
 #include "vtkTypeUInt64Array.h"
 
-vtkCxxRevisionMacro(vtkTimePointToString, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkTimePointToString);
 
 vtkTimePointToString::vtkTimePointToString()
@@ -276,8 +275,6 @@ int vtkTimePointToString::RequestDataObject(
         vtkDataObject* newOutput = input->NewInstance();
         newOutput->SetPipelineInformation(info);
         newOutput->Delete();
-        this->GetOutputPortInformation(0)->Set(
-          vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
         }
       }
     return 1;

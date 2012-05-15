@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageRGBToHSI.cxx,v $
+  Module:    vtkImageRGBToHSI.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageRGBToHSI, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkImageRGBToHSI);
 
 //----------------------------------------------------------------------------

@@ -3,7 +3,7 @@ SET(UKIT COMMON)
 SET(KIT_TCL_LIBS ${VTK_TCL_LIBRARIES})
 SET(KIT_PYTHON_LIBS)
 SET(KIT_JAVA_LIBS)
-SET(KIT_LIBS ${KWSYS_NAMESPACE})
+SET(KIT_INTERFACE_LIBRARIES ${KWSYS_NAMESPACE})
 
 IF(WIN32)
   IF (NOT VTK_USE_X)
@@ -13,7 +13,8 @@ IF(WIN32)
 ENDIF(WIN32)
 
 IF (UNIX)
-  SET(KIT_LIBS ${KIT_LIBS} ${CMAKE_THREAD_LIBS} ${CMAKE_DL_LIBS} -lm)
+  SET(KIT_LIBS ${KIT_LIBS} ${CMAKE_THREAD_LIBS} ${CMAKE_DL_LIBS})
+  SET(KIT_INTERFACE_LIBRARIES ${KWSYS_NAMESPACE} -lm)
 ENDIF (UNIX)
 
 SET( Kit_SRCS
@@ -30,12 +31,15 @@ vtkBitArray.cxx
 vtkBitArrayIterator.cxx
 vtkBoundingBox.cxx
 vtkBox.cxx
+vtkBoxMuellerRandomSequence.cxx
+vtkBreakPoint.cxx
 vtkByteSwap.cxx
 vtkCallbackCommand.cxx
 vtkCharArray.cxx
 vtkClientSocket.cxx
 vtkCollection.cxx
 vtkCollectionIterator.cxx
+vtkColor.h
 vtkCommand.cxx
 vtkCommonInformationKeyManager.cxx
 vtkConditionVariable.cxx
@@ -64,6 +68,7 @@ vtkFunctionParser.cxx
 vtkFunctionSet.cxx
 vtkGarbageCollector.cxx
 vtkGarbageCollectorManager.cxx
+vtkGaussianRandomSequence.cxx
 vtkGeneralTransform.cxx
 vtkHeap.cxx
 vtkHomogeneousTransform.cxx
@@ -106,9 +111,12 @@ vtkLongArray.cxx
 vtkLookupTable.cxx
 vtkLookupTableWithEnabling.cxx
 vtkMath.cxx
+vtkMathUtilities.h
+vtkMatrix3x3.cxx
 vtkMatrix4x4.cxx
 vtkMatrixToHomogeneousTransform.cxx
 vtkMatrixToLinearTransform.cxx
+vtkMinimalStandardRandomSequence.cxx
 vtkMultiThreader.cxx
 vtkMutexLock.cxx
 vtkOStrStreamWrapper.cxx
@@ -142,6 +150,7 @@ vtkPlane.cxx
 vtkPlaneCollection.cxx
 vtkPlanes.cxx
 vtkPoints.cxx
+vtkPoints2D.cxx
 vtkPolynomialSolversUnivariate.cxx
 vtkPriorityQueue.cxx
 vtkProp.cxx
@@ -149,6 +158,8 @@ vtkPropCollection.cxx
 vtkProperty2D.cxx
 vtkQuadratureSchemeDefinition.cxx
 vtkQuadric.cxx
+vtkRandomSequence.cxx
+vtkRect.h
 vtkReferenceCount.cxx
 vtkRungeKutta2.cxx
 vtkRungeKutta4.cxx
@@ -165,6 +176,7 @@ vtkSphericalTransform.cxx
 vtkStdString.cxx
 vtkStringArray.cxx
 vtkStructuredData.cxx
+vtkStructuredExtent.cxx
 vtkStructuredVisibilityConstraint.cxx
 vtkTableExtentTranslator.cxx
 vtkTensor.cxx
@@ -172,14 +184,19 @@ vtkThreadMessager.cxx
 vtkTimePointUtility.cxx
 vtkTimeStamp.cxx
 vtkTimerLog.cxx
+vtkTransform2D.cxx
 vtkTransform.cxx
 vtkTransformCollection.cxx
+vtkUnicodeString.cxx
+vtkUnicodeStringArray.cxx
 vtkUnsignedCharArray.cxx
 vtkUnsignedIntArray.cxx
 vtkUnsignedLongArray.cxx
 vtkUnsignedShortArray.cxx
 vtkVariant.cxx
 vtkVariantArray.cxx
+vtkVector.h
+vtkTuple.h
 vtkVersion.cxx
 vtkVoidArray.cxx
 vtkWarpTransform.cxx
@@ -189,6 +206,29 @@ vtkWindowLevelLookupTable.cxx
 vtkXMLDataElement.cxx
 vtkXMLFileOutputWindow.cxx
 )
+
+# Generate data for folding Unicode strings
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/vtkUnicodeString.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake @ONLY)
+
+ADD_CUSTOM_COMMAND(
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CaseFolding.txt
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeCaseFoldData.h
+  )
+
+IF(VTK_HAVE_SYNC_BUILTINS)
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkTimeStamp.cxx
+    PROPERTIES
+    COMPILE_DEFINITIONS VTK_HAVE_SYNC_BUILTINS
+  )
+ENDIF(VTK_HAVE_SYNC_BUILTINS)
+
+SET_SOURCE_FILES_PROPERTIES(
+  vtkUnicodeString.cxx
+  OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeCaseFoldData.h
+  )
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
   SET_SOURCE_FILES_PROPERTIES(
@@ -256,6 +296,54 @@ FOREACH(t Int8 Int16 Int32 Int64 UInt8 UInt16 UInt32 UInt64 Float32 Float64)
   ENDIF(VTK_TYPE_NATIVE)
 ENDFOREACH(t)
 
+# Figure out if isnan and isinf functions are present.
+INCLUDE(CheckSymbolExists)
+INCLUDE(CheckIncludeFile)
+
+IF (NOT HAVE_FLOAT_H)
+  CHECK_INCLUDE_FILE("float.h" HAVE_FLOAT_H)
+ENDIF(NOT HAVE_FLOAT_H)
+
+IF (HAVE_FLOAT_H)
+  CHECK_SYMBOL_EXISTS(isnan "float.h" VTK_HAS_ISNAN)
+  IF (NOT VTK_HAS_ISNAN)
+    CHECK_SYMBOL_EXISTS(_isnan "float.h" VTK_HAS__ISNAN)
+  ENDIF (NOT VTK_HAS_ISNAN)
+  CHECK_SYMBOL_EXISTS(isinf "float.h" VTK_HAS_ISINF)
+  IF (NOT VTK_HAS_ISINF)
+    CHECK_FUNCTION_EXISTS(_isinf "float.h" VTK_HAS__ISINF)
+  ENDIF (NOT VTK_HAS_ISINF)
+ENDIF (HAVE_FLOAT_H)
+
+CONFIGURE_FILE(
+  ${CMAKE_CURRENT_SOURCE_DIR}/vtkMathConfigure.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
+  )
+
+# Figure out if feenableexcept and fedisableexcept functions are present
+CHECK_INCLUDE_FILE("fenv.h" HAVE_FENV_H)
+IF (HAVE_FENV_H)
+  SET(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+  IF(UNIX)
+    SET(CMAKE_REQUIRED_LIBRARIES m)
+  ENDIF(UNIX)
+  CHECK_SYMBOL_EXISTS(feenableexcept "fenv.h" VTK_HAS_FEENABLEEXCEPT)
+  SET(CMAKE_REQUIRED_LIBRARIES)
+ENDIF (HAVE_FENV_H)
+
+CONFIGURE_FILE(
+  ${CMAKE_CURRENT_SOURCE_DIR}/vtkFloatingPointExceptionsConfigure.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkFloatingPointExceptionsConfigure.h
+  )
+
+# header files that have constants that can be wrapped
+SET(Kit_WRAP_HEADERS
+  vtkSystemIncludes.h
+  vtkType.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
+  ${VTK_BINARY_DIR}/vtkConfigure.h
+  )
+
 SET_SOURCE_FILES_PROPERTIES(
 # vtkObjectBase is marked ABSTRACT so that instantiators are happy.
 vtkAbstractArray
@@ -269,6 +357,7 @@ vtkDataArray
 vtkEventForwarderCommand
 vtkFloatingPointExceptions
 vtkFunctionSet
+vtkGaussianRandomSequence
 vtkHomogeneousTransform
 vtkImplicitFunction
 vtkInformationDataObjectKey
@@ -298,6 +387,7 @@ vtkOverrideInformation
 vtkOverrideInformationCollection
 vtkParametricFunction
 vtkProp
+vtkRandomSequence
 vtkScalarsToColors
 vtkSocket
 vtkStructuredData
@@ -307,10 +397,20 @@ ABSTRACT
 )
 
 SET_SOURCE_FILES_PROPERTIES(
+  vtkColor
+  vtkMathUtilities
+  vtkRect
+  vtkVector
+  vtkTuple
+  HEADER_FILE_ONLY
+)
+
+SET_SOURCE_FILES_PROPERTIES(
   vtkArrayIteratorTemplate.txx
   vtkBoundingBox.cxx
+  vtkBreakPoint.cxx
   vtkCallbackCommand.cxx
-  vtkCommand.cxx
+  vtkColor.h
   vtkCommonInformationKeyManager.cxx
   vtkDebugLeaksManager.cxx
   vtkErrorCode.cxx
@@ -320,16 +420,32 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkIOStream.cxx
   vtkIndent.cxx
   vtkLargeInteger.cxx
+  vtkMathUtilities.h
   vtkOStrStreamWrapper.cxx
   vtkOStreamWrapper.cxx
   vtkOldStyleCallbackCommand.cxx
+  vtkRect.h
   vtkSmartPointerBase.cxx
   vtkStdString.cxx
   vtkTimeStamp.cxx
   vtkVariant.cxx
   vtkWeakPointerBase.cxx
+  vtkUnicodeString.cxx
+  vtkVector.h
+  vtkTuple.h
 
   WRAP_EXCLUDE
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+  vtkColor.h
+  vtkRect.h
+  vtkTimeStamp.cxx
+  vtkVariant.cxx
+  vtkVector.h
+  vtkTuple.h
+
+  PROPERTIES WRAP_SPECIAL 1
 )
 
 # Activate code in "vtkVariant.cxx".  See the comment in the source.
@@ -342,13 +458,16 @@ IF(VTK_USE_N_WAY_ARRAYS)
   SET(Kit_SRCS
     ${Kit_SRCS}
     vtkArray.cxx
-    vtkArrayExtents.cxx
     vtkArrayCoordinates.cxx
-    vtkArrayCoordinateIterator.cxx
+    vtkArrayExtents.cxx
+    vtkArrayExtentsList.cxx
     vtkArrayRange.cxx
-    vtkArraySlice.cxx
-    vtkArraySlices.cxx
+    vtkArraySort.cxx
     vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
     )
 
   SET_SOURCE_FILES_PROPERTIES(
@@ -357,21 +476,47 @@ IF(VTK_USE_N_WAY_ARRAYS)
     )
 
   SET_SOURCE_FILES_PROPERTIES(
-    vtkArrayExtents.cxx
     vtkArrayCoordinates.cxx
+    vtkArrayExtents.cxx
+    vtkArrayExtentsList.cxx
     vtkArrayRange.cxx
-    vtkArraySlice.cxx
-    vtkArraySlices.cxx
+    vtkArraySort.cxx
     vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
     WRAP_EXCLUDE
     )
+
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
+    HEADER_FILE_ONLY
+    )
+
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkArrayCoordinates.cxx
+    vtkArrayExtents.cxx
+    vtkArrayExtentsList.cxx
+    vtkArrayRange.cxx
+    vtkArraySort.cxx
+    vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
+    PROPERTIES WRAP_SPECIAL 1
+  )
 
 ENDIF(VTK_USE_N_WAY_ARRAYS)
 
 SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS vtkTclUtil.cxx)
-SET(Kit_PYTHON_EXTRA_SRCS vtkPythonUtil.cxx)
+SET(Kit_PYTHON_EXTRA_SRCS vtkPythonCommand.cxx)
 SET(Kit_JAVA_EXTRA_SRCS vtkJavaUtil.cxx)
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
@@ -399,6 +544,12 @@ IF(NOT HAVE_SOCKETS)
     COMPILE_FLAGS -DVTK_SOCKET_FAKE_API)
 ENDIF(NOT HAVE_SOCKETS)
 
+# Need nsl to resolve gethostbyname on SunOS-5.8
+# and socket also
+IF(CMAKE_SYSTEM MATCHES "SunOS.*")
+  SET(KIT_LIBS ${KIT_LIBS} socket nsl)
+ENDIF(CMAKE_SYSTEM MATCHES "SunOS.*")
+
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
 INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
@@ -419,20 +570,26 @@ ENDIF(CMAKE_COMPILER_IS_GNUCXX AND MINGW)
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   SET(__inst_files
+    vtkABI.h
     vtkArrayIteratorTemplate.h
     vtkDataArrayTemplate.h
     vtkIOStream.h
     vtkIOStreamFwd.h
+    vtkNew.h
     vtkSetGet.h
     vtkSmartPointer.h
     vtkSystemIncludes.h
+    vtkTemplateAliasMacro.h
     vtkType.h
     vtkTypeTraits.h
+    vtkVariantCast.h
     vtkVariantInlineOperators.h
+    vtkVariantCreate.h
     vtkWeakPointer.h
     vtkWin32Header.h
     vtkWindows.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Testing/Cxx/vtkTestDriver.h
+    ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
     )
 
   IF(VTK_WRAP_TCL)
@@ -444,16 +601,15 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   ENDIF(VTK_WRAP_TCL)
   IF(VTK_WRAP_PYTHON)
     SET(__inst_files ${__inst_files}
-      vtkPythonUtil.h
-      vtkPython.h
+      vtkPythonCommand.h
       )
     IF (TK_FOUND)
-      IF(NOT VTK_USE_COCOA)
+      IF(VTK_USE_TK)
         SET(__inst_files ${__inst_files}
           vtkTcl.h
           vtkTk.h
           )
-      ENDIF(NOT VTK_USE_COCOA)
+      ENDIF(VTK_USE_TK)
     ENDIF (TK_FOUND)
   ENDIF(VTK_WRAP_PYTHON)
   IF(VTK_WRAP_JAVA)
@@ -467,6 +623,8 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkArrayIteratorTemplateImplicit.txx
     vtkDataArrayTemplate.txx
     vtkDataArrayTemplateImplicit.txx
+    vtkDenseArray.txx
+    vtkTypedArray.txx
     ${VTK_SOURCE_DIR}/${KIT}/Testing/Cxx/vtkTestUtilities.h)
 
   INSTALL(FILES ${__inst_files}

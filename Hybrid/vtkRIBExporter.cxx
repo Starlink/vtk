@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRIBExporter.cxx,v $
+  Module:    vtkRIBExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,6 @@
 
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkRIBExporter, "$Revision: 1.65 $");
 vtkStandardNewMacro(vtkRIBExporter);
 
 typedef double RtColor[3];
@@ -373,7 +372,7 @@ void vtkRIBExporter::WriteLight (vtkLight *aLight, int count)
 
   // get required info from light
   Intensity = aLight->GetIntensity();
-  Color = aLight->GetColor();
+  Color = aLight->GetDiffuseColor();
   color[0] = Intensity * Color[0];
   color[1] = Intensity * Color[1];
   color[2] = Intensity * Color[2];

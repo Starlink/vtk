@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitHalo.cxx,v $
+  Module:    vtkImplicitHalo.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkImplicitHalo, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkImplicitHalo);
 
 // ----------------------------------------------------------------------------

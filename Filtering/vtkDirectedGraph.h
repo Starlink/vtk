@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDirectedGraph.h,v $
+  Module:    vtkDirectedGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_FILTERING_EXPORT vtkDirectedGraph : public vtkGraph
 {
 public:
   static vtkDirectedGraph *New();
-  vtkTypeRevisionMacro(vtkDirectedGraph, vtkGraph);
+  vtkTypeMacro(vtkDirectedGraph, vtkGraph);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -55,14 +55,15 @@ public:
   static vtkDirectedGraph *GetData(vtkInformationVector *v, int i=0);
   //ETX
 
+  // Description:
+  // Check the storage, and accept it if it is a valid
+  // undirected graph. This is public to allow
+  // the ToDirected/UndirectedGraph to work.
+  virtual bool IsStructureValid(vtkGraph *g);
+
 protected:
   vtkDirectedGraph();
   ~vtkDirectedGraph();
-
-  // Description:
-  // Check the storage, and accept it if it is a valid
-  // undirected graph.
-  virtual bool IsStructureValid(vtkGraph *g);
 
 private:
   vtkDirectedGraph(const vtkDirectedGraph&);  // Not implemented.

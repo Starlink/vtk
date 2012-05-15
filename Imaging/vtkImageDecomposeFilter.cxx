@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageDecomposeFilter.cxx,v $
+  Module:    vtkImageDecomposeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageDecomposeFilter, "$Revision: 1.20 $");
 
 //----------------------------------------------------------------------------
 // Construct an instance of vtkImageDecomposeFilter fitler.

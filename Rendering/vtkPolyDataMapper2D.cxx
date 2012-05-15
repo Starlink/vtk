@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataMapper2D.cxx,v $
+  Module:    vtkPolyDataMapper2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkLookupTable.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPolyDataMapper2D, "$Revision: 1.45 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -44,6 +43,7 @@ vtkPolyDataMapper2D::vtkPolyDataMapper2D()
   this->ScalarMode = VTK_SCALAR_MODE_DEFAULT;
   
   this->TransformCoordinate = NULL;
+  this->TransformCoordinateUseDouble = false;
 
   strcpy(this->ArrayName, "");
   this->ArrayId = -1;
@@ -332,6 +332,8 @@ void vtkPolyDataMapper2D::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << indent << "No Transform Coordinate\n";
     }
+  os << indent << "Transform Coordinate use double: " 
+     << (this->TransformCoordinateUseDouble  ? "True\n" : "False\n") << "\n";
 }
 
 void vtkPolyDataMapper2D::SetColorModeToDefault() 

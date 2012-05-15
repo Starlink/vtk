@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationInformationVectorKey.cxx,v $
+  Module:    vtkInformationInformationVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkInformationInformationVectorKey, "$Revision: 1.7 $");
 
 //----------------------------------------------------------------------------
 vtkInformationInformationVectorKey::vtkInformationInformationVectorKey(const char* name, const char* location):
@@ -72,10 +71,10 @@ void vtkInformationInformationVectorKey::DeepCopy(vtkInformation* from,
     toInfo = vtkInformation::New();
     toInfo->Copy(fromVector->GetInformationObject(i), 1);
     toVector->Append(toInfo);
-    toInfo->Delete();
+    toInfo->FastDelete();
     }
   this->Set(to, toVector);
-  toVector->Delete();
+  toVector->FastDelete();
 }
 
 //----------------------------------------------------------------------------

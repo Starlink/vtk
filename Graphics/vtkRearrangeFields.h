@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRearrangeFields.h,v $
+  Module:    vtkRearrangeFields.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -64,7 +64,7 @@ class vtkFieldData;
 class VTK_GRAPHICS_EXPORT vtkRearrangeFields : public vtkDataSetAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkRearrangeFields,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkRearrangeFields,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

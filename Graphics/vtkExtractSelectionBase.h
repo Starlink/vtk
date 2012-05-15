@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractSelectionBase.h,v $
+  Module:    vtkExtractSelectionBase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@
 class VTK_GRAPHICS_EXPORT vtkExtractSelectionBase : public vtkDataObjectAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkExtractSelectionBase, vtkDataObjectAlgorithm);
+  vtkTypeMacro(vtkExtractSelectionBase, vtkDataObjectAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

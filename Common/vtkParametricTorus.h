@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricTorus.h,v $
+  Module:    vtkParametricTorus.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_COMMON_EXPORT vtkParametricTorus : public vtkParametricFunction
 {
 
 public:
-  vtkTypeRevisionMacro(vtkParametricTorus,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricTorus,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

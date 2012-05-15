@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBorderWidget.cxx,v $
+  Module:    vtkBorderWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkWidgetEvent.h"
 
 
-vtkCxxRevisionMacro(vtkBorderWidget, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBorderWidget);
 
 
@@ -264,7 +263,8 @@ void vtkBorderWidget::EndSelectAction(vtkAbstractWidget *w)
   vtkBorderWidget *self = reinterpret_cast<vtkBorderWidget*>(w);
 
   if ( self->SubclassEndSelectAction() ||
-       self->WidgetRep->GetInteractionState() == vtkBorderRepresentation::Outside )
+       self->WidgetRep->GetInteractionState() == vtkBorderRepresentation::Outside ||
+        self->WidgetState != vtkBorderWidget::Selected)
     {
     return;
     }

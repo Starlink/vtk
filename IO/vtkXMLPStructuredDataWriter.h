@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPStructuredDataWriter.h,v $
+  Module:    vtkXMLPStructuredDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,19 +23,18 @@
 #include "vtkXMLPDataWriter.h"
 
 class vtkXMLStructuredDataWriter;
-class vtkExtentTranslator;
 
 class VTK_IO_EXPORT vtkXMLPStructuredDataWriter : public vtkXMLPDataWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLPStructuredDataWriter,vtkXMLPDataWriter);
+  vtkTypeMacro(vtkXMLPStructuredDataWriter,vtkXMLPDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
-  
-  // Description:
-  // Get/Set the extent translator used for creating pieces.
-  virtual void SetExtentTranslator(vtkExtentTranslator*);
-  vtkGetObjectMacro(ExtentTranslator, vtkExtentTranslator);
-  
+
+  // See the vtkAlgorithm for a description of what these do
+  virtual int ProcessRequest(vtkInformation* request,
+                             vtkInformationVector** inputVector,
+                             vtkInformationVector* outputVector);
+
 protected:
   vtkXMLPStructuredDataWriter();
   ~vtkXMLPStructuredDataWriter();
@@ -44,9 +43,11 @@ protected:
   void WritePrimaryElementAttributes(ostream &os, vtkIndent indent);
   void WritePPieceAttributes(int index);
   vtkXMLWriter* CreatePieceWriter(int index);
-  
-  vtkExtentTranslator* ExtentTranslator;
-  
+
+  virtual int RequestUpdateExtent(vtkInformation* request,
+                                  vtkInformationVector** inputVector,
+                                  vtkInformationVector* outputVector);
+
 private:
   vtkXMLPStructuredDataWriter(const vtkXMLPStructuredDataWriter&);  // Not implemented.
   void operator=(const vtkXMLPStructuredDataWriter&);  // Not implemented.

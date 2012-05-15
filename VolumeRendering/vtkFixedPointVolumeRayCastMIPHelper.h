@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointVolumeRayCastMIPHelper.h,v $
+  Module:    vtkFixedPointVolumeRayCastMIPHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkFixedPointVolumeRayCastMIPHelper : public vt
 {
 public:
   static vtkFixedPointVolumeRayCastMIPHelper *New();
-  vtkTypeRevisionMacro(vtkFixedPointVolumeRayCastMIPHelper,vtkFixedPointVolumeRayCastHelper);
+  vtkTypeMacro(vtkFixedPointVolumeRayCastMIPHelper,vtkFixedPointVolumeRayCastHelper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   virtual void  GenerateImage( int threadID, 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageThreshold.h,v $
+  Module:    vtkImageThreshold.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImageThreshold : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageThreshold *New();
-  vtkTypeRevisionMacro(vtkImageThreshold,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageThreshold,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

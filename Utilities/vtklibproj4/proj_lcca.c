@@ -4,7 +4,7 @@
 ** Copyright (c) 2003, 2006   Gerald I. Evenden
 */
 static const char
-LIBPROJ_ID[] = "$Id: proj_lcca.c,v 1.1 2008-11-07 16:41:14 jeff Exp $";
+LIBPROJ_ID[] = "Id";
 /*
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -75,7 +75,7 @@ INVERSE(e_inverse); /* ellipsoid & spheroid */
 }
 FREEUP; if (P) { if (P->en) free(P->en); free(P); } }
 ENTRY0(lcca)
-  double s2p0, N0, R0, tan0, tan20;
+  double s2p0, N0, R0, tan0;
 
   if (!((P->en = proj_mdist_ini(P->es)))) E_ERROR_0;
   if (!proj_param(P->params, "tlat_0").i) E_ERROR(-44);
@@ -87,24 +87,13 @@ ENTRY0(lcca)
   N0 = sqrt(R0);
   R0 *= P->one_es * N0;
   tan0 = tan(P->phi0);
-  tan20 = tan0 * tan0;
   P->r0 = N0 / tan0;
   P->C = 1. / (6. * R0 * N0);
   P->inv = e_inverse;
   P->fwd = e_forward;
 ENDENTRY(P)
 /*
-** $Log: proj_lcca.c,v $
-** Revision 1.1  2008-11-07 16:41:14  jeff
-** ENH: Adding a 2D geoview. Adding the geographic projection library libproj4
-** to Utilities. Updating the architecture of the geospatial views. All
-** multi-resolution sources are now subclasses of vtkGeoSource. Each source
-** has its own worker thread for fetching refined images or geometry.
-** On the 3D side, vtkGeoGlobeSource is an appropriate source for vtkGeoTerrain,
-** and vtkGeoAlignedImageSource is an appropriate source for
-** vtkGeoAlignedImageRepresentation. On the 2D side, vtkGeoProjectionSource is an
-** appropriate source for vtkGeoTerrain2D, and the image source is the same.
-**
+** Log: proj_lcca.c
 ** Revision 3.1  2006/01/11 01:38:18  gie
 ** Initial
 **

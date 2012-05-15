@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThreadMessager.h,v $
+  Module:    vtkThreadMessager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_COMMON_EXPORT vtkThreadMessager : public vtkObject
 public:
   static vtkThreadMessager *New();
 
-  vtkTypeRevisionMacro(vtkThreadMessager,vtkObject);
+  vtkTypeMacro(vtkThreadMessager,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

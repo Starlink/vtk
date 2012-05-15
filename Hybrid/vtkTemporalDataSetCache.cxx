@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalDataSetCache.cxx,v $
+  Module:    vtkTemporalDataSetCache.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,9 +20,8 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkTemporalDataSetCache, "$Revision: 1.8 $");
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkTemporalDataSetCache);
 
@@ -121,7 +120,7 @@ int vtkTemporalDataSetCache
 
   // are there any times that we are missing from the request? e.g. times
   // that are not cached?
-  vtkstd::vector<double> reqTimeSteps;
+  std::vector<double> reqTimeSteps;
   if (!outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
     {
       // no time steps were passed in the update request, so just request
@@ -132,7 +131,7 @@ int vtkTemporalDataSetCache
         vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
       //
       // Get list of input time step values
-      vtkstd::vector<double> InputTimeValues;
+      std::vector<double> InputTimeValues;
       InputTimeValues.resize(NumberOfInputTimeSteps);
       inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS(), 
         &InputTimeValues[0] );
@@ -310,7 +309,7 @@ int vtkTemporalDataSetCache::RequestData(
         if (temporal) 
           {
           this->Cache[inTimes[j]] = 
-            vtkstd::pair<unsigned long, vtkDataObject *>
+            std::pair<unsigned long, vtkDataObject *>
             (outData->GetUpdateTime(), temporal->GetTimeStep(j));
           vtkDataObject *dobj = temporal->GetTimeStep(j);
           if (!dobj)
@@ -324,7 +323,7 @@ int vtkTemporalDataSetCache::RequestData(
           {
           vtkDebugMacro(<<"Cache : Should not be here 2");
           this->Cache[inTimes[j]] = 
-            vtkstd::pair<unsigned long, vtkDataObject *>
+            std::pair<unsigned long, vtkDataObject *>
             (outData->GetUpdateTime(), input);
           input->Register(this);
           }

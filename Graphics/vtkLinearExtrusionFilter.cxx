@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinearExtrusionFilter.cxx,v $
+  Module:    vtkLinearExtrusionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkLinearExtrusionFilter, "$Revision: 1.62 $");
 vtkStandardNewMacro(vtkLinearExtrusionFilter);
 
 // Create object with normal extrusion type, capping on, scale factor=1.0,
@@ -39,48 +38,35 @@ vtkLinearExtrusionFilter::vtkLinearExtrusionFilter()
   this->ExtrusionPoint[0] = this->ExtrusionPoint[1] = this->ExtrusionPoint[2] = 0.0;
 }
 
-double *vtkLinearExtrusionFilter::ViaNormal(double x[3], vtkIdType id,
+void vtkLinearExtrusionFilter::ViaNormal(double x[3], vtkIdType id,
                                            vtkDataArray *n)
 {
-  static double xNew[3], normal[3];
-  int i;
+  double normal[3];
 
   n->GetTuple(id, normal);
-  for (i=0; i<3; i++) 
+  for (vtkIdType i=0; i<3; i++)
     {
-    xNew[i] = x[i] + this->ScaleFactor*normal[i];
+    x[i] = x[i] + this->ScaleFactor*normal[i];
     }
-
-  return xNew;
 }
 
-double *vtkLinearExtrusionFilter::ViaVector(double x[3],
+void vtkLinearExtrusionFilter::ViaVector(double x[3],
                                            vtkIdType vtkNotUsed(id), 
                                            vtkDataArray *vtkNotUsed(n))
 {
-  static double xNew[3];
-  int i;
-
-  for (i=0; i<3; i++) 
+  for (vtkIdType i=0; i<3; i++)
     {
-    xNew[i] = x[i] + this->ScaleFactor*this->Vector[i];
+    x[i] = x[i] + this->ScaleFactor*this->Vector[i];
     }
-
-  return xNew;
 }
 
-double *vtkLinearExtrusionFilter::ViaPoint(double x[3], vtkIdType vtkNotUsed(id),
+void vtkLinearExtrusionFilter::ViaPoint(double x[3], vtkIdType vtkNotUsed(id),
                                           vtkDataArray *vtkNotUsed(n))
 {
-  static double xNew[3];
-  int i;
-
-  for (i=0; i<3; i++) 
+  for (vtkIdType i=0; i<3; i++)
     {
-    xNew[i] = x[i] + this->ScaleFactor*(x[i] - this->ExtrusionPoint[i]);
+    x[i] = x[i] + this->ScaleFactor*(x[i] - this->ExtrusionPoint[i]);
     }
-
-  return xNew;
 }
 
 int vtkLinearExtrusionFilter::RequestData(
@@ -92,7 +78,7 @@ int vtkLinearExtrusionFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -209,8 +195,8 @@ int vtkLinearExtrusionFilter::RequestData(
 
     inPts->GetPoint(ptId, x);
     newPts->SetPoint(ptId,x);
-    newPts->SetPoint(ptId+numPts,
-                     (this->*(this->ExtrudePoint))(x,ptId,inNormals));
+    (this->*(this->ExtrudePoint))(x,ptId,inNormals);
+    newPts->SetPoint(ptId+numPts,x);
     outputPD->CopyData(pd,ptId,ptId);
     outputPD->CopyData(pd,ptId,ptId+numPts);
     }

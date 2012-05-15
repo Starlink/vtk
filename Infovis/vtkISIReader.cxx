@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkISIReader.cxx,v $
+  Module:    vtkISIReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,15 +26,14 @@
 #include "vtkTable.h"
 #include "vtkVariant.h"
 
-#include <vtkstd/map>
-#include <vtkstd/string>
+#include <map>
+#include <string>
 
-vtkCxxRevisionMacro(vtkISIReader, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkISIReader);
 
-// Not all platforms support vtkstd::getline(istream&, vtkstd::string) so
+// Not all platforms support std::getline(istream&, std::string) so
 // we have to provide our own
-static istream& my_getline(istream& input, vtkstd::string& output, char delimiter = '\n');
+static istream& my_getline(istream& input, std::string& output, char delimiter = '\n');
 
 // ----------------------------------------------------------------------
 
@@ -103,10 +102,10 @@ int vtkISIReader::RequestData(
   vtkTable* table = vtkTable::GetData(outputVector);
   
   // Keep a mapping of column-name to column-index for quick lookups ...
-  vtkstd::map<vtkstd::string, vtkIdType> columns;
+  std::map<std::string, vtkIdType> columns;
 
   // Get header information from the first two lines of the file ...
-  vtkstd::string line_buffer;
+  std::string line_buffer;
   my_getline(file, line_buffer);
   if(line_buffer != "FN ISI Export Format")
     {
@@ -121,7 +120,7 @@ int vtkISIReader::RequestData(
     return 0;
     }
 
-  const vtkstd::string delimiter(this->Delimiter ? this->Delimiter : "");
+  const std::string delimiter(this->Delimiter ? this->Delimiter : "");
   int record_count = 0;
   
   // For each record in the file ...
@@ -143,22 +142,22 @@ int vtkISIReader::RequestData(
     // For each field in the record ...
     for(; file; )
       {
-      const vtkstd::string tag_type = line_buffer.size() >= 2 ? line_buffer.substr(0, 2) : vtkstd::string();
+      const std::string tag_type = line_buffer.size() >= 2 ? line_buffer.substr(0, 2) : std::string();
       if(tag_type == "ER")
         break;
       if(tag_type == "EF")
         break;
 
-      vtkstd::string tag_value = line_buffer.size() > 3 ? line_buffer.substr(3) : vtkstd::string();
+      std::string tag_value = line_buffer.size() > 3 ? line_buffer.substr(3) : std::string();
 
       // For each line in the field ...
       for(my_getline(file, line_buffer); file; my_getline(file, line_buffer))
         {
-        const vtkstd::string next_tag_type = line_buffer.size() >= 2 ? line_buffer.substr(0, 2) : vtkstd::string();
+        const std::string next_tag_type = line_buffer.size() >= 2 ? line_buffer.substr(0, 2) : std::string();
         if(next_tag_type != "  ")
           break;
         
-        const vtkstd::string next_tag_value = line_buffer.size() > 3 ? line_buffer.substr(3) : vtkstd::string();
+        const std::string next_tag_value = line_buffer.size() > 3 ? line_buffer.substr(3) : std::string();
         
         tag_value += delimiter + next_tag_value;
         }
@@ -187,7 +186,7 @@ int vtkISIReader::RequestData(
 
 // ----------------------------------------------------------------------
 
-static istream& my_getline(istream& input, vtkstd::string& output, char delimiter)
+static istream& my_getline(istream& input, std::string& output, char delimiter)
 {
   output = "";
   

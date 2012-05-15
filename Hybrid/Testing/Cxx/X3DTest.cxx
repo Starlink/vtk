@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: X3DTest.cxx,v $
+  Module:    X3DTest.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -71,7 +71,7 @@ int X3DTest( int argc, char *argv[] )
   exporter->SetFileName("testX3DExporter.x3d");
   exporter->Update();
   exporter->Write();
-  
+  exporter->Print(std::cout);
 
   int retVal = vtkRegressionTestImage( renWin );
 

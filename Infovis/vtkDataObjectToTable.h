@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectToTable.h,v $
+  Module:    vtkDataObjectToTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_INFOVIS_EXPORT vtkDataObjectToTable : public vtkTableAlgorithm
 {
 public:
   static vtkDataObjectToTable* New();
-  vtkTypeRevisionMacro(vtkDataObjectToTable,vtkTableAlgorithm);
+  vtkTypeMacro(vtkDataObjectToTable,vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   //BTX
@@ -42,7 +42,7 @@ public:
     POINT_DATA = 1,
     CELL_DATA = 2,
     VERTEX_DATA = 3,
-    EDGE_DATA = 4,
+    EDGE_DATA = 4
     };
   //ETX
   

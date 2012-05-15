@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLBreadthFirstSearch.cxx,v $
+  Module:    vtkPBGLBreadthFirstSearch.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,19 +46,19 @@
 #include "vtkStringArray.h"
 #include "vtkUndirectedGraph.h"
 
+#include <boost/graph/use_mpi.hpp>   // must precede all pbgl includes
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/distributed/breadth_first_search.hpp>
-#include <boost/parallel/algorithm.hpp>
+#include <boost/graph/parallel/algorithm.hpp>
 #include <boost/graph/visitors.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLBreadthFirstSearch, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkPBGLBreadthFirstSearch);
 
 // Redefine the bfs visitor, the only visitor we
@@ -106,7 +106,7 @@ public:
 
   furthest_vertex(vtkGraph *g) : graph(g) { }
 
-  vtkstd::pair<vtkIdType, int> operator()(vtkstd::pair<vtkIdType, int> x, vtkstd::pair<vtkIdType, int> y) const
+  std::pair<vtkIdType, int> operator()(std::pair<vtkIdType, int> x, std::pair<vtkIdType, int> y) const
   {
     vtkDistributedGraphHelper *helper = graph->GetDistributedGraphHelper();
     if (x.second > y.second 
@@ -230,7 +230,7 @@ int vtkPBGLBreadthFirstSearch::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(
@@ -381,7 +381,7 @@ int vtkPBGLBreadthFirstSearch::RequestData(
     maxDistance = BFSArray->GetValue(helper->GetVertexIndex(maxFromRootVertex));
     }
   maxFromRootVertex = all_reduce(pbglHelper->GetProcessGroup(),
-                                 vtkstd::make_pair(maxFromRootVertex,
+                                 std::make_pair(maxFromRootVertex,
                                                    maxDistance),
                                  furthest_vertex(output)).first;
 

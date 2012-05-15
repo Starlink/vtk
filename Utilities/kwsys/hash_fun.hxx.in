@@ -1,16 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  KWSys - Kitware System Library
+  Copyright 2000-2009 Kitware, Inc., Insight Software Consortium
 
-  Program:   KWSys - Kitware System Library
-  Module:    $RCSfile: hash_fun.hxx.in,v $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Kitware, Inc., Insight Consortium.  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 /*
  * Copyright (c) 1996
  * Silicon Graphics Computer Systems, Inc.
@@ -40,8 +38,9 @@
 #define @KWSYS_NAMESPACE@_hash_fun_hxx
 
 #include <@KWSYS_NAMESPACE@/Configure.hxx>
-
+#include <@KWSYS_NAMESPACE@/FundamentalType.h>
 #include <@KWSYS_NAMESPACE@/cstddef>        // size_t
+#include <@KWSYS_NAMESPACE@/stl/string>     // string
 
 namespace @KWSYS_NAMESPACE@
 {
@@ -66,6 +65,18 @@ struct hash<char*> {
 struct hash<const char*> {
   size_t operator()(const char* __s) const { return _stl_hash_string(__s); }
 };
+
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+  struct hash<@KWSYS_NAMESPACE@_stl::string> {
+  size_t operator()(const @KWSYS_NAMESPACE@_stl::string & __s) const { return _stl_hash_string(__s.c_str()); }
+};
+
+#if !defined(__BORLANDC__)
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+  struct hash<const @KWSYS_NAMESPACE@_stl::string> {
+  size_t operator()(const @KWSYS_NAMESPACE@_stl::string & __s) const { return _stl_hash_string(__s.c_str()); }
+};
+#endif
 
 @KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
 struct hash<char> {
@@ -111,6 +122,28 @@ struct hash<long> {
 struct hash<unsigned long> {
   size_t operator()(unsigned long __x) const { return __x; }
 };
+
+// use long long or __int64
+#if @KWSYS_NAMESPACE@_USE_LONG_LONG
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+struct hash<long long> {
+  size_t operator()(long long __x) const { return __x; }
+};
+
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+struct hash<unsigned long long> {
+  size_t operator()(unsigned long long __x) const { return __x; }
+};
+#elif @KWSYS_NAMESPACE@_USE___INT64
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+struct hash<__int64> {
+  size_t operator()(__int64 __x) const { return __x; }
+};
+@KWSYS_NAMESPACE@_CXX_DEFINE_SPECIALIZATION
+struct hash<unsigned __int64> {
+  size_t operator()(unsigned __int64 __x) const { return __x; }
+};
+#endif // use long long or __int64
 
 } // namespace @KWSYS_NAMESPACE@
 

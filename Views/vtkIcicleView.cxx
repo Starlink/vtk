@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIcicleView.cxx,v $
+  Module:    vtkIcicleView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkStackedTreeLayoutStrategy.h"
 #include "vtkTreeMapToPolyData.h"
 
-vtkCxxRevisionMacro(vtkIcicleView, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkIcicleView);
 //----------------------------------------------------------------------------
 vtkIcicleView::vtkIcicleView()

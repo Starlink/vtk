@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBalloonWidget.h,v $
+  Module:    vtkBalloonWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@
 //   TimerEvent - occurs when the time between events (e.g., mouse move)
 //                is greater than TimerDuration.
 //   KeyPressEvent - when the "Enter" key is pressed after the balloon appears,
-//                   a callback is activited (e.g., WidgetActivateEvent).
+//                   a callback is activated (e.g., WidgetActivateEvent).
 // </pre>
 //
 // Note that the event bindings described above can be changed using this
@@ -54,7 +54,7 @@
 // can listen for):
 // <pre>
 //   vtkCommand::TimerEvent (when hovering is determined to occur)
-//   vtkCommand::EndInteractionEvent (after a hover has occured and the
+//   vtkCommand::EndInteractionEvent (after a hover has occurred and the
 //                                    mouse begins moving again).
 //   vtkCommand::WidgetActivateEvent (when the balloon is selected with a
 //                                    keypress).
@@ -86,11 +86,11 @@ public:
 
   // Description:
   // Standard methods for a VTK class.
-  vtkTypeRevisionMacro(vtkBalloonWidget,vtkHoverWidget);
+  vtkTypeMacro(vtkBalloonWidget,vtkHoverWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // The method for activiating and deactiviating this widget. This method
+  // The method for activating and deactivating this widget. This method
   // must be overridden because it performs special timer-related operations.
   virtual void SetEnabled(int);
 
@@ -101,6 +101,11 @@ public:
   void SetRepresentation(vtkBalloonRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkBalloonRepresentation.
+  vtkBalloonRepresentation *GetBalloonRepresentation()
+    {return reinterpret_cast<vtkBalloonRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Create the default widget representation if one is not set. 
   void CreateDefaultRepresentation();
@@ -121,6 +126,12 @@ public:
   // associated with the specified vtkProp.
   const char *GetBalloonString(vtkProp *prop);
   vtkImageData *GetBalloonImage(vtkProp *prop);
+
+  // Description:
+  // Update the balloon string or image. If the specified prop does not exist,
+  // then nothing is added not changed.
+  void UpdateBalloonString(vtkProp *prop, const char *str);
+  void UpdateBalloonImage(vtkProp *prop, vtkImageData *image);
 
   // Description:
   // Return the current vtkProp that is being hovered over. Note that the

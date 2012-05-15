@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointSetAlgorithm.cxx,v $
+  Module:    vtkPointSetAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkPointSetAlgorithm, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkPointSetAlgorithm);
 
 //----------------------------------------------------------------------------
@@ -193,8 +192,6 @@ int vtkPointSetAlgorithm::RequestDataObject(
         output = input->NewInstance();
         output->SetPipelineInformation(info);
         output->Delete();
-        this->GetOutputPortInformation(i)->Set(
-          vtkDataObject::DATA_EXTENT_TYPE(), output->GetExtentType());
         }
       }
     return 1;

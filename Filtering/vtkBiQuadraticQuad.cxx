@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBiQuadraticQuad.cxx,v $
+  Module:    vtkBiQuadraticQuad.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkBiQuadraticQuad, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkBiQuadraticQuad);
 
 //----------------------------------------------------------------------------
@@ -183,7 +182,7 @@ int vtkBiQuadraticQuad::CellBoundary (int subId, double pcoords[3], vtkIdList * 
 void
 vtkBiQuadraticQuad::Contour (double value,
            vtkDataArray *cellScalars,
-           vtkPointLocator * locator,
+           vtkIncrementalPointLocator * locator,
            vtkCellArray * verts,
            vtkCellArray * lines,
            vtkCellArray * polys,
@@ -210,7 +209,7 @@ vtkBiQuadraticQuad::Contour (double value,
 // except that it cuts the quad to produce other quads and triangles.
 void
 vtkBiQuadraticQuad::Clip (double value, vtkDataArray * cellScalars,
-        vtkPointLocator * locator, vtkCellArray * polys,
+        vtkIncrementalPointLocator * locator, vtkCellArray * polys,
         vtkPointData * inPd, vtkPointData * outPd,
         vtkCellData * inCd, vtkIdType cellId, vtkCellData * outCd, int insideOut)
 {

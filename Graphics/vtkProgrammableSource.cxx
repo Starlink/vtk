@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableSource.cxx,v $
+  Module:    vtkProgrammableSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkProgrammableSource, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkProgrammableSource);
 
 // Construct programmable filter with empty execute method.
@@ -73,7 +72,8 @@ vtkProgrammableSource::~vtkProgrammableSource()
 
 // Specify the function to use to generate the source data. Note
 // that the function takes a single (void *) argument.
-void vtkProgrammableSource::SetExecuteMethod(void (*f)(void *), void *arg)
+void vtkProgrammableSource::SetExecuteMethod(void (*f)(void *),
+  void *arg)
 {
   if ( f != this->ExecuteMethod || arg != this->ExecuteMethodArg )
     {
@@ -89,7 +89,8 @@ void vtkProgrammableSource::SetExecuteMethod(void (*f)(void *), void *arg)
 }
 
 // Set the arg delete method. This is used to free user memory.
-void vtkProgrammableSource::SetExecuteMethodArgDelete(void (*f)(void *))
+void vtkProgrammableSource::SetExecuteMethodArgDelete(
+  void (*f)(void *))
 {
   if ( f != this->ExecuteMethodArgDelete)
     {
@@ -98,7 +99,8 @@ void vtkProgrammableSource::SetExecuteMethodArgDelete(void (*f)(void *))
     }
 }
 
-void vtkProgrammableSource::SetRequestInformationMethod(void (*f)(void *))
+void vtkProgrammableSource::SetRequestInformationMethod(
+  void (*f)(void *))
 {
   if ( f != this->RequestInformationMethod )
     {

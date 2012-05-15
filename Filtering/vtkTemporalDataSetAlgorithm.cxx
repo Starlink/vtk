@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkTemporalDataSetAlgorithm.cxx,v $
+Module:    vtkTemporalDataSetAlgorithm.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -23,7 +23,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkTemporalDataSetAlgorithm, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTemporalDataSetAlgorithm);
 
 //----------------------------------------------------------------------------

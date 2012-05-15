@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAreaPicker.h,v $
+  Module:    vtkAreaPicker.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,13 +51,12 @@ class vtkAbstractMapper3D;
 class vtkDataSet;
 class vtkExtractSelectedFrustum;
 class vtkProp;
-class vtkImageActor;
 
 class VTK_RENDERING_EXPORT vtkAreaPicker : public vtkAbstractPropPicker
 {
 public:
   static vtkAreaPicker *New();
-  vtkTypeRevisionMacro(vtkAreaPicker,vtkAbstractPropPicker);
+  vtkTypeMacro(vtkAreaPicker,vtkAbstractPropPicker);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -74,7 +73,7 @@ public:
 
   // Description:
   // Perform pick operation in volume behind the given screen coordinates.
-  // Props intersecting the selection frustum will be accesible via GetProp3D.
+  // Props intersecting the selection frustum will be accessible via GetProp3D.
   // GetPlanes returns a vtkImplicitFunciton suitable for vtkExtractGeometry.
   virtual int AreaPick(double x0, double y0, double x1, double y1, vtkRenderer *renderer = NULL);
 
@@ -116,7 +115,7 @@ protected:
   virtual void Initialize();
   void DefineFrustum(double x0, double y0, double x1, double y1, vtkRenderer *renderer);
   virtual int PickProps(vtkRenderer *renderer);  
-  int TypeDecipher(vtkProp *, vtkImageActor **, vtkAbstractMapper3D **);
+  int TypeDecipher(vtkProp *, vtkAbstractMapper3D **);
 
   int ABoxFrustumIsect(double bounds[], double &mindist);
 

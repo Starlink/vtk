@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaTubeGraph.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.7 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METATUBEGRAPH_H
@@ -35,7 +30,7 @@
  *    Reads and Writes MetaTubeGraph Files.
  *
  * \author Julien Jomier
- * 
+ *
  * \date May 22, 2002
  */
 
@@ -48,7 +43,7 @@ class TubeGraphPnt
 public:
 
   TubeGraphPnt(int dim)
-  { 
+  {
     m_Dim = dim;
     m_GraphNode = -1;
     m_R = 0;
@@ -58,9 +53,9 @@ public:
 
   ~TubeGraphPnt()
   {
-    delete m_T;
+    delete [] m_T;
   };
-  
+
   unsigned int m_Dim;
   int    m_GraphNode;
   float  m_R;
@@ -89,10 +84,10 @@ class METAIO_EXPORT MetaTubeGraph : public MetaObject
     ////
     MetaTubeGraph(void);
 
-    MetaTubeGraph(const char *_headerName);   
+    MetaTubeGraph(const char *_headerName);
 
-    MetaTubeGraph(const MetaTubeGraph *_tube); 
-    
+    MetaTubeGraph(const MetaTubeGraph *_tube);
+
     MetaTubeGraph(unsigned int dim);
 
     ~MetaTubeGraph(void);
@@ -124,7 +119,7 @@ class METAIO_EXPORT MetaTubeGraph : public MetaObject
 
     PointListType &  GetPoints(void) {return m_PointList;}
     const PointListType &  GetPoints(void) const {return m_PointList;}
-    
+
     MET_ValueEnumType ElementType(void) const;
     void  ElementType(MET_ValueEnumType _elementType);
 

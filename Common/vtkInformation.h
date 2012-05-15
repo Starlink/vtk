@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformation.h,v $
+  Module:    vtkInformation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,12 +60,20 @@ class vtkInformationStringVectorKey;
 class vtkInformationUnsignedLongKey;
 class vtkInformationVector;
 
-class vtkInformation : public vtkObject
+#if defined(_WIN32)
+# define VTK_INFORMATION_EXPORT
+#else
+# define VTK_INFORMATION_EXPORT VTK_COMMON_EXPORT
+#endif
+
+
+class VTK_INFORMATION_EXPORT vtkInformation : public vtkObject 
 {
 public:
   VTK_COMMON_EXPORT static vtkInformation *New();
-  vtkExportedTypeRevisionMacro(vtkInformation,vtkObject,VTK_COMMON_EXPORT);
+  vtkTypeMacro(vtkInformation,vtkObject);
   VTK_COMMON_EXPORT void PrintSelf(ostream& os, vtkIndent indent);
+  VTK_COMMON_EXPORT void PrintKeys(ostream& os, vtkIndent indent);
 
   // Description:
   // Modified signature with no arguments that calls Modified
@@ -89,16 +97,16 @@ public:
 
   // Description:
   // Copy all information entries from the given vtkInformation
-  // instance.  Any previously existing entries are removed.  If 
-  // deep==1, a deep copy of the information structure is performed (new 
-  // instances of any contained vtkInformation and vtkInformationVector 
+  // instance.  Any previously existing entries are removed.  If
+  // deep==1, a deep copy of the information structure is performed (new
+  // instances of any contained vtkInformation and vtkInformationVector
   // objects are created).
   VTK_COMMON_EXPORT void Copy(vtkInformation* from, int deep=0);
 
   // Description:
   // Copy the key/value pair associated with the given key in the
   // given information object.  If deep=1, a deep copy of the information
-  // structure is performed (new instances of any contained vtkInformation and 
+  // structure is performed (new instances of any contained vtkInformation and
   // vtkInformationVector objects are created).
   VTK_COMMON_EXPORT void CopyEntry(vtkInformation* from, vtkInformationKey* key, int deep=0);
   VTK_COMMON_EXPORT void CopyEntry(vtkInformation* from, vtkInformationDataObjectKey* key, int deep=0);
@@ -158,9 +166,9 @@ public:
   // Get/Set an integer-vector-valued entry.
   VTK_COMMON_EXPORT void Append(vtkInformationIntegerVectorKey* key, int value);
   VTK_COMMON_EXPORT void Set(vtkInformationIntegerVectorKey* key, int* value, int length);
-  VTK_COMMON_EXPORT void Set(vtkInformationIntegerVectorKey* key, int value1, 
+  VTK_COMMON_EXPORT void Set(vtkInformationIntegerVectorKey* key, int value1,
            int value2, int value3);
-  VTK_COMMON_EXPORT void Set(vtkInformationIntegerVectorKey* key, 
+  VTK_COMMON_EXPORT void Set(vtkInformationIntegerVectorKey* key,
            int value1, int value2, int value3,
            int value4, int value5, int value6);
   VTK_COMMON_EXPORT int* Get(vtkInformationIntegerVectorKey* key);
@@ -199,9 +207,9 @@ public:
   // Get/Set an double-vector-valued entry.
   VTK_COMMON_EXPORT void Append(vtkInformationDoubleVectorKey* key, double value);
   VTK_COMMON_EXPORT void Set(vtkInformationDoubleVectorKey* key, double* value, int length);
-  VTK_COMMON_EXPORT void Set(vtkInformationDoubleVectorKey* key, double value1, 
+  VTK_COMMON_EXPORT void Set(vtkInformationDoubleVectorKey* key, double value1,
            double value2, double value3);
-  VTK_COMMON_EXPORT void Set(vtkInformationDoubleVectorKey* key, 
+  VTK_COMMON_EXPORT void Set(vtkInformationDoubleVectorKey* key,
            double value1, double value2, double value3,
            double value4, double value5, double value6);
   VTK_COMMON_EXPORT double* Get(vtkInformationDoubleVectorKey* key);
@@ -243,7 +251,7 @@ public:
   VTK_COMMON_EXPORT void Append(vtkInformationKeyVectorKey* key,
               vtkInformationIntegerVectorKey* value);
   VTK_COMMON_EXPORT void Append(vtkInformationKeyVectorKey* key, vtkInformationStringKey* value);
-  VTK_COMMON_EXPORT void Append(vtkInformationKeyVectorKey* key, 
+  VTK_COMMON_EXPORT void Append(vtkInformationKeyVectorKey* key,
               vtkInformationStringVectorKey* value);
   VTK_COMMON_EXPORT void Append(vtkInformationKeyVectorKey* key,
               vtkInformationObjectBaseKey* value);
@@ -252,7 +260,7 @@ public:
 
   VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationDataObjectKey* value);
-  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key, 
+  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationDoubleKey* value);
   VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationDoubleVectorKey* value);
@@ -264,9 +272,9 @@ public:
                     vtkInformationIntegerKey* value);
   VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationIntegerVectorKey* value);
-  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key, 
+  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationStringKey* value);
-  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key, 
+  VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationStringVectorKey* value);
   VTK_COMMON_EXPORT void AppendUnique(vtkInformationKeyVectorKey* key,
                     vtkInformationObjectBaseKey* value);
@@ -304,8 +312,9 @@ public:
 
   // Description:
   // Get/Set an entry storing a vtkDataObject instance.
-  VTK_COMMON_EXPORT void Set(vtkInformationDataObjectKey* key, vtkDataObject*);
-  VTK_COMMON_EXPORT vtkDataObject* Get(vtkInformationDataObjectKey* key);
+  VTK_COMMON_EXPORT void Set(vtkInformationDataObjectKey* key,
+    vtkDataObject VTK_WRAP_EXTERN *);
+  VTK_COMMON_EXPORT vtkDataObject VTK_WRAP_EXTERN* Get(vtkInformationDataObjectKey* key);
   VTK_COMMON_EXPORT void Remove(vtkInformationDataObjectKey* key);
   VTK_COMMON_EXPORT int Has(vtkInformationDataObjectKey* key);
 
@@ -334,7 +343,7 @@ public:
   VTK_COMMON_EXPORT void SetRequest(vtkInformationRequestKey* request);
   VTK_COMMON_EXPORT vtkInformationRequestKey* GetRequest();
 
-  //BTX
+#if !defined(__WRAP__)
   // Description:
   // Copy the key/value pair associated with the given key in the
   // given information object.  If deep=1, a deep copy of the information
@@ -442,7 +451,7 @@ public:
   // @deprecated This convenience method will be removed in some future version.
   VTK_LEGACY(VTK_FILTERING_EXPORT
     static vtkInformationKey* GetKey(vtkInformationExecutivePortKey* key));
-  //ETX
+#endif // !defined(__WRAP__)
 
 protected:
   VTK_COMMON_EXPORT vtkInformation();
@@ -453,9 +462,6 @@ protected:
   VTK_COMMON_EXPORT void SetAsObjectBase(vtkInformationKey* key, vtkObjectBase* value);
   VTK_COMMON_EXPORT vtkObjectBase* GetAsObjectBase(vtkInformationKey* key);
 
-  // Expand the table to a larger size
-  VTK_COMMON_EXPORT void ExpandTable();
-  
   // Internal implementation details.
   vtkInformationInternals* Internal;
 

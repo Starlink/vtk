@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBlockIdScalars.cxx,v $
+  Module:    vtkBlockIdScalars.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkUnsignedCharArray.h"
 
 vtkStandardNewMacro(vtkBlockIdScalars);
-vtkCxxRevisionMacro(vtkBlockIdScalars, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkBlockIdScalars::vtkBlockIdScalars()
 {

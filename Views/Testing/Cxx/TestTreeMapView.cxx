@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTreeMapView.cxx,v $
+  Module:    TestTreeMapView.cxx
 
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -22,7 +22,10 @@
 #include "vtkDataRepresentation.h"
 #include "vtkRenderWindow.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderedTreeAreaRepresentation.h"
+#include "vtkRenderer.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkSplineGraphEdges.h"
 #include "vtkTestUtilities.h"
 #include "vtkTreeMapView.h"
 #include "vtkViewTheme.h"
@@ -31,7 +34,7 @@
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
-using vtkstd::string;
+using std::string;
 
 int TestTreeMapView(int argc, char* argv[])
 {
@@ -58,32 +61,35 @@ int TestTreeMapView(int argc, char* argv[])
   reader2->Update();
 
   VTK_CREATE(vtkTreeMapView, view);
+  view->DisplayHoverTextOff();
   view->SetTreeFromInputConnection(reader2->GetOutputPort());
   view->SetGraphFromInputConnection(reader1->GetOutputPort());
 
-  view->SetAreaColorArrayName("GraphVertexDegree");
+  view->SetAreaColorArrayName("level");
   view->SetEdgeColorToSplineFraction();
   view->SetColorEdges(true);
   view->SetAreaLabelArrayName("id");
   view->SetAreaHoverArrayName("id");
   view->SetAreaLabelVisibility(true);
-  view->SetAreaSizeArrayName("GraphVertexDegree");
+  view->SetAreaSizeArrayName("VertexDegree");
+  view->Update();
+  vtkRenderedTreeAreaRepresentation::SafeDownCast(view->GetRepresentation())->SetGraphSplineType(vtkSplineGraphEdges::CUSTOM, 0);
 
   // Apply a theme to the views
   vtkViewTheme* const theme = vtkViewTheme::CreateMellowTheme();
   view->ApplyViewTheme(theme);
   theme->Delete();
 
-  VTK_CREATE(vtkRenderWindow, win);
-  win->SetMultiSamples(0);
-  view->SetupRenderWindow(win);
+  view->GetRenderWindow()->SetMultiSamples(0);
+  view->GetRenderWindow()->SetAlphaBitPlanes(1);
   view->Update();
+  view->ResetCamera();
 
-  int retVal = vtkRegressionTestImage(win);
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if( retVal == vtkRegressionTester::DO_INTERACTOR )
     {
-    win->GetInteractor()->Initialize();
-    win->GetInteractor()->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
 
     retVal = vtkRegressionTester::PASSED;
     }

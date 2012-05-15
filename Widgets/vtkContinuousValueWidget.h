@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContinuousValueWidget.h,v $
+  Module:    vtkContinuousValueWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -69,7 +69,7 @@ class VTK_WIDGETS_EXPORT vtkContinuousValueWidget : public vtkAbstractWidget
 public:
   // Description:
   // Standard macros.
-  vtkTypeRevisionMacro(vtkContinuousValueWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkContinuousValueWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -80,6 +80,11 @@ public:
   {this->Superclass::SetWidgetRepresentation
      (reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkContinuousValueWidgetRepresentation.
+  vtkContinuousValueWidgetRepresentation *GetContinuousValueWidgetRepresentation()
+    {return reinterpret_cast<vtkContinuousValueWidgetRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Get the value for this widget. 
   double GetValue();

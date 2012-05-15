@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSelection.cxx,v $
+  Module:    vtkSelection.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -29,16 +29,18 @@
 #include "vtkSmartPointer.h"
 #include "vtkTable.h"
 
-#include <vtkstd/vector>
+#include <vector>
+
+using namespace std;
+
 
 //----------------------------------------------------------------------------
 struct vtkSelectionInternals
 {
-  vtkstd::vector<vtkSmartPointer<vtkSelectionNode> > Nodes;
+  std::vector<vtkSmartPointer<vtkSelectionNode> > Nodes;
 };
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSelection, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkSelection);
 
 //----------------------------------------------------------------------------
@@ -108,7 +110,7 @@ void vtkSelection::RemoveNode(unsigned int idx)
     {
     return;
     }
-  vtkstd::vector<vtkSmartPointer<vtkSelectionNode> >::iterator iter =
+  std::vector<vtkSmartPointer<vtkSelectionNode> >::iterator iter =
     this->Internal->Nodes.begin();
   this->Internal->Nodes.erase(iter+idx);
   this->Modified();
@@ -223,8 +225,37 @@ void vtkSelection::Union(vtkSelectionNode* node)
     {
     vtkSmartPointer<vtkSelectionNode> clone =
       vtkSmartPointer<vtkSelectionNode>::New();
-    clone->ShallowCopy(node);
+    clone->DeepCopy(node);
     this->AddNode(clone);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Subtract(vtkSelection* s)
+{
+  for(unsigned int n=0; n<s->GetNumberOfNodes(); ++n)
+    {
+    this->Subtract(s->GetNode(n));
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Subtract(vtkSelectionNode* node)
+{
+  bool subtracted = false;
+  for( unsigned int tn = 0; tn<this->GetNumberOfNodes(); ++tn)
+    {
+    vtkSelectionNode* tnode = this->GetNode(tn);
+
+    if(tnode->EqualProperties(node))
+      {
+      tnode->SubtractSelectionList(node);
+      subtracted = true;
+      }
+    }
+  if( !subtracted )
+    {
+    vtkErrorMacro("Could not subtract selections");
     }
 }
 
@@ -252,4 +283,85 @@ vtkSelection* vtkSelection::GetData(vtkInformation* info)
 vtkSelection* vtkSelection::GetData(vtkInformationVector* v, int i)
 {
   return vtkSelection::GetData(v->GetInformationObject(i));
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Dump()
+{
+  this->Dump(cout);
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Dump(ostream& os)
+{
+  vtkSmartPointer<vtkTable> tmpTable = vtkSmartPointer<vtkTable>::New();
+  cerr << "==Selection==" << endl;
+  for (unsigned int i = 0; i < this->GetNumberOfNodes(); ++i)
+    {
+    os << "===Node " << i << "===" << endl;
+    vtkSelectionNode* node = this->GetNode(i);
+    os << "ContentType: ";
+    switch (node->GetContentType())
+      {
+      case vtkSelectionNode::GLOBALIDS:
+        os << "GLOBALIDS";
+        break;
+      case vtkSelectionNode::PEDIGREEIDS:
+        os << "PEDIGREEIDS";
+        break;
+      case vtkSelectionNode::VALUES:
+        os << "VALUES";
+        break;
+      case vtkSelectionNode::INDICES:
+        os << "INDICES";
+        break;
+      case vtkSelectionNode::FRUSTUM:
+        os << "FRUSTUM";
+        break;
+      case vtkSelectionNode::LOCATIONS:
+        os << "LOCATIONS";
+        break;
+      case vtkSelectionNode::THRESHOLDS:
+        os << "THRESHOLDS";
+        break;
+      case vtkSelectionNode::BLOCKS:
+        os << "BLOCKS";
+        break;
+      default:
+        os << "UNKNOWN";
+        break;
+      }
+    os << endl;
+    os << "FieldType: ";
+    switch (node->GetFieldType())
+      {
+      case vtkSelectionNode::CELL:
+        os << "CELL";
+        break;
+      case vtkSelectionNode::POINT:
+        os << "POINT";
+        break;
+      case vtkSelectionNode::FIELD:
+        os << "FIELD";
+        break;
+      case vtkSelectionNode::VERTEX:
+        os << "VERTEX";
+        break;
+      case vtkSelectionNode::EDGE:
+        os << "EDGE";
+        break;
+      case vtkSelectionNode::ROW:
+        os << "ROW";
+        break;
+      default:
+        os << "UNKNOWN";
+        break;
+      }
+    os << endl;
+    if (node->GetSelectionData())
+      {
+      tmpTable->SetRowData(node->GetSelectionData());
+      tmpTable->Dump(10);
+      }
+    }
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtSQLQuery.h,v $
+  Module:    vtkQtSQLQuery.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class QVTK_EXPORT vtkQtSQLQuery : public vtkSQLQuery
 {
 public:
   static vtkQtSQLQuery* New();
-  vtkTypeRevisionMacro(vtkQtSQLQuery, vtkSQLQuery);
+  vtkTypeMacro(vtkQtSQLQuery, vtkSQLQuery);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,9 +67,7 @@ public:
 
   // Description:
   // Return data in current row, field c
-//BTX
   virtual vtkVariant DataValue(vtkIdType c);
-//ETX
   
   // Description:
   // Returns true if an error is set, otherwise false.
@@ -83,10 +81,8 @@ protected:
   vtkQtSQLQuery();
   ~vtkQtSQLQuery();
 
-//BTX
   vtkQtSQLQueryInternals* Internals;
   friend class vtkQtSQLDatabase;
-//ETX
 
 private:
 

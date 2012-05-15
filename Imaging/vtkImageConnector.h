@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageConnector.h,v $
+  Module:    vtkImageConnector.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class VTK_IMAGING_EXPORT vtkImageConnector : public vtkObject
 public:
   static vtkImageConnector *New();
 
-  vtkTypeRevisionMacro(vtkImageConnector,vtkObject);
+  vtkTypeMacro(vtkImageConnector,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //BTX

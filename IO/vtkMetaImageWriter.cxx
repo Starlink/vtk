@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMetaImageWriter.cxx,v $
+  Module:    vtkMetaImageWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkDataSetAttributes.h"
 
-#include <vtkstd/string>
+#include <string>
 #include "vtkmetaio/metaTypes.h"
 #include "vtkmetaio/metaUtils.h"
 #include "vtkmetaio/metaEvent.h"
@@ -39,7 +39,6 @@
 #include <sys/stat.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMetaImageWriter, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkMetaImageWriter);
 
 //----------------------------------------------------------------------------

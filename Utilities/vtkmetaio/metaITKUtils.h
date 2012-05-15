@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   Insight Segmentation & Registration Toolkit
-  Module:    $RCSfile: metaITKUtils.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 // Utility file - definition of loadImage
 // Templated over the Pixel Type
 
@@ -32,7 +27,7 @@ namespace METAIO_NAMESPACE {
 #endif
 
 template <class T>
-typename itk::Image<T, 3>::Pointer 
+typename itk::Image<T, 3>::Pointer
 metaITKUtilLoadImage3D(const char *fname, MET_ValueEnumType _toType,
                        double _toMinValue=0, double _toMaxValue=0)
   {
@@ -67,7 +62,7 @@ metaITKUtilLoadImage3D(const char *fname, MET_ValueEnumType _toType,
     spacing[2] = imIO->ElementSpacing()[2];
   else
     spacing[2] = imIO->ElementSpacing()[1];
-    
+
   if (spacing[0] == 0)
     {
     spacing[0] = 1;
@@ -108,9 +103,9 @@ metaITKUtilLoadImage3D(const char *fname, MET_ValueEnumType _toType,
 template <class imageT>
 bool metaITKUtilSaveImage(const char *fname, const char *dname,
                           typename imageT::Pointer _im,
-                          MET_ValueEnumType _fromType, 
+                          MET_ValueEnumType _fromType,
                           int _numberOfChannels,
-                          MET_ValueEnumType _toType, 
+                          MET_ValueEnumType _toType,
                           double _toMinValue=0, double _toMaxValue=0)
   {
   int i;
@@ -123,7 +118,7 @@ bool metaITKUtilSaveImage(const char *fname, const char *dname,
     sp[i] = _im->GetSpacing()[i];
     }
   MetaImage imIO(_im->GetImageDimension(), si, sp,
-                 _fromType, _numberOfChannels, 
+                 _fromType, _numberOfChannels,
                  (void *)_im->GetBufferPointer());
   delete si;
   delete sp;

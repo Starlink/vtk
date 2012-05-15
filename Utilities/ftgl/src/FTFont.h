@@ -7,6 +7,11 @@
 #include "FTGL.h"
 #include "FTFace.h"
 
+#ifdef FTGL_USE_NAMESPACE
+namespace ftgl
+{
+#endif
+
 class FTGlyphContainer;
 class FTGlyph;
 
@@ -65,7 +70,7 @@ class FTGL_EXPORT FTFont
     virtual bool Open( const unsigned char *pBufferBytes, size_t bufferSizeInBytes, bool preCache = true);
 
     /** 
-     * Attach auxilliary file to font (e.g., font metrics). 
+     * Attach auxiliary file to font (e.g., font metrics). 
      */ 
     bool Attach( const char* filename); 
 
@@ -273,6 +278,9 @@ class FTGL_EXPORT FTFont
 
 };
 
+#ifdef FTGL_USE_NAMESPACE
+} // namespace ftgl
+#endif
 
 #endif  //  __FTFont__
 

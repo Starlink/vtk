@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeDepth.cxx,v $
+  Module:    vtkHyperOctreeDepth.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkCellData.h"
 #include "vtkIntArray.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeDepth, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkHyperOctreeDepth);
 
 //----------------------------------------------------------------------------
@@ -52,7 +51,7 @@ int vtkHyperOctreeDepth::RequestData(vtkInformation *vtkNotUsed(request),
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   this->Input = vtkHyperOctree::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   this->Output=vtkHyperOctree::SafeDownCast(

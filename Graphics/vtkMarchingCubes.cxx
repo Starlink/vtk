@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMarchingCubes.cxx,v $
+  Module:    vtkMarchingCubes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -10,7 +10,6 @@
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
-
 
 =========================================================================*/
 #include "vtkMarchingCubes.h"
@@ -23,7 +22,7 @@
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
 #include "vtkLongArray.h"
-#include "vtkMarchingCubesCases.h"
+#include "vtkMarchingCubesTriangleCases.h"
 #include "vtkMath.h"
 #include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
@@ -36,8 +35,8 @@
 #include "vtkUnsignedLongArray.h"
 #include "vtkUnsignedShortArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkMarchingCubes, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkMarchingCubes);
 
 // Description:
@@ -84,7 +83,7 @@ unsigned long vtkMarchingCubes::GetMTime()
 // NOTE: We calculate the negative of the gradient for efficiency
 template <class T>
 void vtkMarchingCubesComputePointGradient(int i, int j, int k, T *s, int dims[3], 
-                                          int sliceSize, double spacing[3], double n[3])
+                                          vtkIdType sliceSize, double spacing[3], double n[3])
 {
   double sp, sm;
 
@@ -155,7 +154,7 @@ void vtkMarchingCubesComputePointGradient(int i, int j, int k, T *s, int dims[3]
 template <class T>
 void vtkMarchingCubesComputeGradient(vtkMarchingCubes *self,T *scalars, int dims[3], 
                                      double origin[3], double spacing[3],
-                                     vtkPointLocator *locator, 
+                                     vtkIncrementalPointLocator *locator, 
                                      vtkDataArray *newScalars, 
                                      vtkDataArray *newGradients, 
                                      vtkDataArray *newNormals, 
@@ -163,11 +162,13 @@ void vtkMarchingCubesComputeGradient(vtkMarchingCubes *self,T *scalars, int dims
                                      int numValues)
 {
   double s[8], value;
-  int i, j, k, sliceSize;
+  int i, j, k;
+  vtkIdType sliceSize;
   static int CASE_MASK[8] = {1,2,4,8,16,32,64,128};
   vtkMarchingCubesTriangleCases *triCase, *triCases;
   EDGE_LIST  *edge;
-  int contNum, jOffset, kOffset, idx, ii, index, *vert;
+  int contNum, jOffset, ii, index, *vert;
+  vtkIdType kOffset, idx;
   vtkIdType ptIds[3];
   int ComputeNormals = newNormals != NULL;
   int ComputeGradients = newGradients != NULL;
@@ -373,7 +374,7 @@ int vtkMarchingCubes::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkImageData *input = vtkImageData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -387,7 +388,7 @@ int vtkMarchingCubes::RequestData(
   vtkPointData *pd;
   vtkDataArray *inScalars;
   int dims[3], extent[6];
-  int estimatedSize;
+  vtkIdType estimatedSize;
   double spacing[3], origin[3];
   double bounds[6];
   int numContours=this->ContourValues->GetNumberOfContours();
@@ -423,8 +424,8 @@ int vtkMarchingCubes::RequestData(
   inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
 
   // estimate the number of points from the volume dimensions
-  estimatedSize = static_cast<int>(
-    pow(static_cast<double>(dims[0]*dims[1]*dims[2]),0.75));
+  estimatedSize = static_cast<vtkIdType>(
+    pow(1.0*dims[0]*dims[1]*dims[2], 0.75));
   estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
   if (estimatedSize < 1024)
     {
@@ -496,7 +497,7 @@ int vtkMarchingCubes::RequestData(
 
   else //multiple components - have to convert
     {
-    int dataSize = dims[0] * dims[1] * dims[2];
+    vtkIdType dataSize = static_cast<vtkIdType>(dims[0]) * dims[1] * dims[2];
     vtkDoubleArray *image=vtkDoubleArray::New(); 
     image->SetNumberOfComponents(inScalars->GetNumberOfComponents());
     image->SetNumberOfTuples(image->GetNumberOfComponents()*dataSize);
@@ -550,7 +551,7 @@ int vtkMarchingCubes::RequestData(
 // Description:
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkMarchingCubes::SetLocator(vtkPointLocator *locator)
+void vtkMarchingCubes::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

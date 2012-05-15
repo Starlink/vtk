@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinesPainter.h,v $
+  Module:    vtkLinesPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkLinesPainter : public vtkPrimitivePainter
 {
 public:
   static vtkLinesPainter* New();
-  vtkTypeRevisionMacro(vtkLinesPainter, vtkPrimitivePainter);
+  vtkTypeMacro(vtkLinesPainter, vtkPrimitivePainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
 protected:

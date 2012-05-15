@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContourGrid.h,v $
+  Module:    vtkContourGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,13 +51,13 @@
 #include "vtkContourValues.h" // Needed for inline methods
 
 class vtkEdgeTable;
-class vtkPointLocator;
 class vtkScalarTree;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkContourGrid : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkContourGrid,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkContourGrid,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -115,8 +115,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By default, 
   // an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is
@@ -134,7 +134,7 @@ protected:
   int ComputeNormals;
   int ComputeGradients;
   int ComputeScalars;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   int UseScalarTree;
   vtkScalarTree *ScalarTree;
   vtkEdgeTable *EdgeTable;

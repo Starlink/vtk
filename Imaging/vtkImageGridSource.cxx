@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageGridSource.cxx,v $
+  Module:    vtkImageGridSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageGridSource, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkImageGridSource);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVoxelModeller.cxx,v $
+  Module:    vtkVoxelModeller.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVoxelModeller, "$Revision: 1.59 $");
 vtkStandardNewMacro(vtkVoxelModeller);
 
 // Construct an instance of vtkVoxelModeller with its sample dimensions
@@ -47,6 +46,10 @@ vtkVoxelModeller::vtkVoxelModeller()
   this->SampleDimensions[0] = 50;
   this->SampleDimensions[1] = 50;
   this->SampleDimensions[2] = 50;
+
+  this->ScalarType = VTK_BIT;
+  this->ForegroundValue = 1.0;
+  this->BackgroundValue = 0.0;
 }
 
 // Specify the position in space to perform the voxelization.
@@ -105,7 +108,7 @@ int vtkVoxelModeller::RequestInformation (
   outInfo->Set(vtkDataObject::ORIGIN(),origin,3);
   outInfo->Set(vtkDataObject::SPACING(),ar,3);
 
-  vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_BIT, 1);
+  vtkDataObject::SetPointDataActiveScalarInfo(outInfo, this->ScalarType, 1);
   return 1;
 }
 
@@ -142,8 +145,7 @@ int vtkVoxelModeller::RequestData(
   double *weights=new double[input->GetMaxCellSize()];
   double closestPoint[3];
   double voxelHalfWidth[3], origin[3], spacing[3];
-  vtkBitArray *newScalars = 
-    vtkBitArray::SafeDownCast(output->GetPointData()->GetScalars());
+  vtkDataArray *newScalars = output->GetPointData()->GetScalars();
 
   //
   // Initialize self; create output objects
@@ -154,7 +156,7 @@ int vtkVoxelModeller::RequestData(
     this->SampleDimensions[2];
   for (i=0; i<numPts; i++)
     {
-    newScalars->SetComponent(i,0,0);
+    newScalars->SetComponent(i,0,this->BackgroundValue);
     }
 
   maxDistance = this->ComputeModelBounds(origin,spacing);
@@ -218,7 +220,7 @@ int vtkVoxelModeller::RequestData(
                   (fabs(closestPoint[1] - x[1]) <= voxelHalfWidth[1]) &&
                   (fabs(closestPoint[2] - x[2]) <= voxelHalfWidth[2])) )
               {
-              newScalars->SetComponent(idx,0,1);
+              newScalars->SetComponent(idx,0,this->ForegroundValue);
               }
             }
           }
@@ -353,4 +355,7 @@ void vtkVoxelModeller::PrintSelf(ostream& os, vtkIndent indent)
      << this->ModelBounds[3] << ")\n";
   os << indent << "  Zmin,Zmax: (" << this->ModelBounds[4] << ", "
      << this->ModelBounds[5] << ")\n";
+  os << indent << "ScalarType: " << this->ScalarType << endl;
+  os << indent << "ForegroundValue: " << this->ForegroundValue << endl;
+  os << indent << "BackgroundValue: " << this->BackgroundValue << endl;
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestPBGLCollapseGraph.cxx,v $
+  Module:    TestPBGLCollapseGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,6 +39,7 @@
 #include "vtkVariantArray.h"
 
 #include <vtksys/ios/sstream>
+#include <boost/graph/use_mpi.hpp>
 #include <boost/graph/distributed/mpi_process_group.hpp>
 
 #define myassert(Cond)                                  \

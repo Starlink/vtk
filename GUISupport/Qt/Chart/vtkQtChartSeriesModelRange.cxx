@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesModelRange.cxx,v $
+  Module:    vtkQtChartSeriesModelRange.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,26 +33,53 @@
 #include <QDateTime>
 #include <QTime>
 
+#include <math.h>
 
-vtkQtChartSeriesModelRange::vtkQtChartSeriesModelRange(
-    vtkQtChartSeriesModel *model)
-  : QObject(model)
+#ifndef isnan
+// This is compiler specific not platform specific: MinGW doesn't need that.
+# if defined(_MSC_VER) || defined(__BORLANDC__)
+#  include <float.h>
+#  define isnan(x) _isnan(x)
+# endif
+#endif
+
+vtkQtChartSeriesModelRange::vtkQtChartSeriesModelRange(QObject *parentObject)
+  : QObject(parentObject)
 {
-  this->Model = model;
+  this->Model = 0;
   this->XRangeShared = false;
-
-  // Use the series change signals to update the ranges.
-  this->connect(this->Model, SIGNAL(modelReset()), this, SLOT(resetSeries()));
-  this->connect(this->Model, SIGNAL(seriesInserted(int, int)),
-      this, SLOT(insertSeries(int, int)));
-  this->connect(this->Model, SIGNAL(seriesRemoved(int, int)),
-      this, SLOT(removeSeries(int, int)));
 }
 
-void vtkQtChartSeriesModelRange::initializeRanges(bool xShared)
+void vtkQtChartSeriesModelRange::setModel(vtkQtChartSeriesModel *model,
+    bool xShared)
 {
-  this->XRangeShared = xShared;
-  this->resetSeries();
+  if(this->Model != model)
+    {
+    if(this->Model)
+      {
+      this->disconnect(this->Model, 0, this, 0);
+      }
+
+    this->Model = model;
+    if(this->Model)
+      {
+      // Use the series change signals to update the ranges.
+      this->connect(this->Model, SIGNAL(modelReset()),
+          this, SLOT(resetSeries()));
+      this->connect(this->Model, SIGNAL(seriesInserted(int, int)),
+          this, SLOT(insertSeries(int, int)));
+      this->connect(this->Model, SIGNAL(seriesRemoved(int, int)),
+          this, SLOT(removeSeries(int, int)));
+      }
+
+    this->XRangeShared = xShared;
+    this->resetSeries();
+    }
+  else if(this->XRangeShared != xShared)
+    {
+    this->XRangeShared = xShared;
+    this->resetSeries();
+    }
 }
 
 QList<QVariant> vtkQtChartSeriesModelRange::getSeriesRange(int series,
@@ -134,19 +161,32 @@ QList<QVariant> vtkQtChartSeriesModelRange::computeSeriesRange(int series,
   if(this->Model)
     {
     int total = this->Model->getNumberOfSeriesValues(series);
-    if(total > 0)
-      {
-      // Use the first value to determine the type.
-      QVariant value = this->Model->getSeriesValue(series, 0, component);
-      QVariant::Type valueType = value.type();
-      if(valueType == QVariant::String)
-        {
-        return range;
-        }
+    int i;
+    QVariant value;
+    QVariant::Type valueType = QVariant::Invalid;
 
+    // Find the first non-NULL, non-NaN value.  Use it to determine type
+    // and initialize min/max values.
+    for (i = 0; i < total; i++)
+      {
+      value = this->Model->getSeriesValue(series, i, component);
+      valueType = value.type();
+      // Check to see if the the value is invalid and we have to continue loop.
+      if (value.isNull()) continue;
+      if (!value.isValid()) continue;
+      if ((valueType == QVariant::Double) && isnan(value.toDouble())) continue;
+      // If we got here, we passed all the checks.  Break out.
+      break;
+      }
+
+    // If we found a valid entry that is not a string (for which range has no
+    // meaning), then continue to compute the range.
+    if ((i < total) && (valueType != QVariant::String))
+      {
       range.append(value);
       range.append(value);
-      for(int i = 1; i < total; i++)
+      // Continue iteration over values.
+      for(i++; i < total; i++)
         {
         value = this->Model->getSeriesValue(series, i, component);
         if(value.type() != valueType)
@@ -161,8 +201,11 @@ QList<QVariant> vtkQtChartSeriesModelRange::computeSeriesRange(int series,
           }
         else if(valueType == QVariant::Double)
           {
-          range[0] = qMin<double>(value.toDouble(), range[0].toDouble());
-          range[1] = qMax<double>(value.toDouble(), range[1].toDouble());
+          if (!isnan(value.toDouble()))
+            {
+            range[0] = qMin<double>(value.toDouble(), range[0].toDouble());
+            range[1] = qMax<double>(value.toDouble(), range[1].toDouble());
+            }
           }
         else if(valueType == QVariant::Date)
           {

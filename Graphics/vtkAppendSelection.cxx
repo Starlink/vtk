@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendSelection.cxx,v $
+  Module:    vtkAppendSelection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkAppendSelection, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkAppendSelection);
 
 //----------------------------------------------------------------------------

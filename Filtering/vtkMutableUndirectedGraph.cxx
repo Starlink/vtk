@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMutableUndirectedGraph.cxx,v $
+  Module:    vtkMutableUndirectedGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 //----------------------------------------------------------------------------
 // class vtkMutableUndirectedGraph
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMutableUndirectedGraph, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkMutableUndirectedGraph);
 //----------------------------------------------------------------------------
 vtkMutableUndirectedGraph::vtkMutableUndirectedGraph()
@@ -42,6 +41,23 @@ vtkMutableUndirectedGraph::~vtkMutableUndirectedGraph()
 {
   this->GraphEdge->Delete();
 }
+
+//----------------------------------------------------------------------------
+vtkIdType vtkMutableUndirectedGraph::SetNumberOfVertices( vtkIdType numVerts )
+{
+  vtkIdType retval = -1;
+
+  if ( this->GetDistributedGraphHelper() )
+    {
+    vtkWarningMacro( "SetNumberOfVertices will not work on distributed graphs." );
+    return retval;
+    }
+
+  retval = static_cast<vtkIdType>( this->Internals->Adjacency.size() );
+  this->Internals->Adjacency.resize( numVerts );
+  return retval;
+}
+
 //----------------------------------------------------------------------------
 vtkIdType vtkMutableUndirectedGraph::AddVertex()
 {
@@ -205,6 +221,30 @@ vtkGraphEdge *vtkMutableUndirectedGraph::AddGraphEdge(vtkIdType u, vtkIdType v)
   this->GraphEdge->SetTarget(e.Target);
   this->GraphEdge->SetId(e.Id);
   return this->GraphEdge;
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableUndirectedGraph::RemoveVertex(vtkIdType v)
+{
+  this->RemoveVertexInternal(v, false);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableUndirectedGraph::RemoveEdge(vtkIdType e)
+{
+  this->RemoveEdgeInternal(e, false);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableUndirectedGraph::RemoveVertices(vtkIdTypeArray* arr)
+{
+  this->RemoveVerticesInternal(arr, false);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableUndirectedGraph::RemoveEdges(vtkIdTypeArray* arr)
+{
+  this->RemoveEdgesInternal(arr, false);
 }
 
 //----------------------------------------------------------------------------

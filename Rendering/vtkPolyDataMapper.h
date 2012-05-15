@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataMapper.h,v $
+  Module:    vtkPolyDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_RENDERING_EXPORT vtkPolyDataMapper : public vtkMapper
 {
 public:
   static vtkPolyDataMapper *New();
-  vtkTypeRevisionMacro(vtkPolyDataMapper,vtkMapper);
+  vtkTypeMacro(vtkPolyDataMapper,vtkMapper);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -107,6 +107,12 @@ public:
 protected:  
   vtkPolyDataMapper();
   ~vtkPolyDataMapper() {};
+
+  // Description:
+  // Called in GetBounds(). When this method is called, the consider the input
+  // to be updated depending on whether this->Static is set or not. This method
+  // simply obtains the bounds from the data-object and returns it.
+  virtual void ComputeBounds();
 
   int Piece;
   int NumberOfPieces;

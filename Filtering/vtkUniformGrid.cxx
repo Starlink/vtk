@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUniformGrid.cxx,v $
+  Module:    vtkUniformGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,6 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkUniformGrid, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkUniformGrid);
 
 vtkCxxSetObjectMacro(vtkUniformGrid, PointVisibility,
@@ -46,7 +45,7 @@ vtkUniformGrid::vtkUniformGrid()
   this->PointVisibility = vtkStructuredVisibilityConstraint::New();
   this->CellVisibility = vtkStructuredVisibilityConstraint::New();
 
-  this->EmptyCell = vtkEmptyCell::New();
+  this->EmptyCell = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -54,7 +53,10 @@ vtkUniformGrid::~vtkUniformGrid()
 {
   this->PointVisibility->Delete();
   this->CellVisibility->Delete();
-  this->EmptyCell->Delete();
+  if (this->EmptyCell)
+    {
+    this->EmptyCell->Delete();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -166,6 +168,15 @@ int vtkUniformGrid::Initialize(const vtkAMRBox *def, int nGhosts)
   return this->Initialize(def, nGhosts,nGhosts,nGhosts);
 }
 
+//----------------------------------------------------------------------------
+vtkEmptyCell* vtkUniformGrid::GetEmptyCell()
+{
+  if (!this->EmptyCell)
+    {
+    this->EmptyCell = vtkEmptyCell::New();
+    }
+  return this->EmptyCell;
+}
 
 //----------------------------------------------------------------------------
 // Copy the geometric and topological structure of an input structured points
@@ -210,7 +221,7 @@ vtkCell *vtkUniformGrid::GetCell(vtkIdType cellId)
   if (dims[0] == 0 || dims[1] == 0 || dims[2] == 0)
     {
     vtkErrorMacro("Requesting a cell from an empty image.");
-    return this->EmptyCell;
+    return this->GetEmptyCell();
     }
 
   // see whether the cell is blanked
@@ -218,13 +229,13 @@ vtkCell *vtkUniformGrid::GetCell(vtkIdType cellId)
         this->CellVisibility->IsConstrained())
        && !this->IsCellVisible(cellId) )
     {
-    return this->EmptyCell;
+    return this->GetEmptyCell();
     }
 
-  switch (this->DataDescription)
+  switch (this->GetDataDescription())
     {
     case VTK_EMPTY:
-      return this->EmptyCell;
+      return this->GetEmptyCell();
 
     case VTK_SINGLE_POINT: // cellId can only be = 0
       cell = this->Vertex;
@@ -342,7 +353,7 @@ void vtkUniformGrid::GetCell(vtkIdType cellId, vtkGenericCell *cell)
     return;
     }
 
-  switch (this->DataDescription)
+  switch (this->GetDataDescription())
     {
     case VTK_EMPTY:
       cell->SetCellTypeToEmptyCell();
@@ -517,7 +528,7 @@ vtkCell *vtkUniformGrid::FindAndGetCell(double x[3],
   //
   // Get the parametric coordinates and weights for interpolation
   //
-  switch (this->DataDescription)
+  switch (this->GetDataDescription())
     {
     case VTK_EMPTY:
       return NULL;
@@ -615,7 +626,7 @@ int vtkUniformGrid::GetCellType(vtkIdType cellId)
     return VTK_EMPTY_CELL;
     }
 
-  switch (this->DataDescription)
+  switch (this->GetDataDescription())
     {
     case VTK_EMPTY:
       return VTK_EMPTY_CELL;
@@ -762,7 +773,7 @@ void vtkUniformGrid::ComputeScalarRange()
 // Turn off a particular data point.
 void vtkUniformGrid::BlankPoint(vtkIdType ptId)
 {
-  this->PointVisibility->Initialize(this->Dimensions);
+  this->PointVisibility->Initialize(this->GetDimensions());
   this->PointVisibility->Blank(ptId);
 }
 
@@ -770,7 +781,7 @@ void vtkUniformGrid::BlankPoint(vtkIdType ptId)
 // Turn on a particular data point.
 void vtkUniformGrid::UnBlankPoint(vtkIdType ptId)
 {
-  this->PointVisibility->Initialize(this->Dimensions);
+  this->PointVisibility->Initialize(this->GetDimensions());
   this->PointVisibility->UnBlank(ptId);
 }
 
@@ -790,7 +801,7 @@ vtkUnsignedCharArray* vtkUniformGrid::GetPointVisibilityArray()
 // Turn off a particular data cell.
 void vtkUniformGrid::BlankCell(vtkIdType cellId)
 {
-  this->CellVisibility->Initialize(this->Dimensions);
+  this->CellVisibility->Initialize(this->GetDimensions());
   this->CellVisibility->Blank(cellId);
 }
 
@@ -798,7 +809,7 @@ void vtkUniformGrid::BlankCell(vtkIdType cellId)
 // Turn on a particular data cell.
 void vtkUniformGrid::UnBlankCell(vtkIdType cellId)
 {
-  this->CellVisibility->Initialize(this->Dimensions);
+  this->CellVisibility->Initialize(this->GetDimensions());
   this->CellVisibility->UnBlank(cellId);
 }
 
@@ -835,7 +846,7 @@ unsigned char vtkUniformGrid::IsCellVisible(vtkIdType cellId)
 
   iMin = iMax = jMin = jMax = kMin = kMax = 0;
 
-  switch (this->DataDescription)
+  switch (this->GetDataDescription())
     {
     case VTK_EMPTY:
       return 0;

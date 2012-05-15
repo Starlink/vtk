@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericClip.cxx,v $
+  Module:    vtkGenericClip.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,13 +36,13 @@
 #include "vtkGenericPointIterator.h"
 #include "vtkGenericCellTessellator.h"
 #include "vtkExecutive.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkGenericClip, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkGenericClip);
 vtkCxxSetObjectMacro(vtkGenericClip,ClipFunction,vtkImplicitFunction);
-vtkCxxSetObjectMacro(vtkGenericClip,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkGenericClip,Locator,vtkIncrementalPointLocator);
 
 //----------------------------------------------------------------------------
 // Construct with user-specified implicit function; InsideOut turned off; value

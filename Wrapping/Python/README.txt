@@ -84,7 +84,7 @@ modules.
       `VTK_ROOT` directory.  To install VTK built from source you
       simply need to run the "install rule".  Under Unix this
       implies running `make install` and under Windows this implies
-      running the INSTALL target.  
+      running the INSTALL target.
 
       The installation rule internally executes the
       ``VTK_BINARY_DIR/Wrapping/Python/setup.py`` script.
@@ -92,7 +92,7 @@ modules.
       VTK-Python correctly.  The `setup.py` script may also be
       executed from the `VTK_BINARY_DIR` in order to build an
       installer (via `bdist_wininst`) or to build a Python Egg.
-  
+
 
 VTK-Python interpreters
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -105,7 +105,7 @@ Python interpreter is good enough and works well for you, please use
 it.  However if you run into severe problems you might want to give
 vtkpython a try.  Incidentally, to see what the problems are with
 the vanilla Python interpreter on some platforms read this thread:
- 
+
 http://public.kitware.com/pipermail/vtk-developers/2002-May/001536.html
 
 Additionally, if you built VTK along with MPI support
@@ -145,7 +145,7 @@ in other kits can be imported by using the appropriate kit name.
 Please do note that even when you import vtk.common, the vtk
 namespace will still have all the kits loaded inside it.  Its just
 that vtk.common will have only the classes from the Common
-directory. 
+directory.
 
 
 Valid Kit names
@@ -203,7 +203,7 @@ the following widgets are available.
 
   qt4 -- PyQt v4 widgets.
 
-  tk -- The Tkinter widgets.  
+  tk -- The Tkinter widgets.
 
   wx -- wxPython widgets.
 
@@ -264,30 +264,28 @@ Information for packagers
 This section provides some details on how best to package VTK-Python
 in the form of Debian, RPM and other packages.
 
-  1. VTK releases by default have `VTK_USE_RPATH` set to `OFF`.
-     However, VTK from CVS defaults to `ON`.  Therefore, it is
-     important to make sure that `VTK_USE_RPATH` is `OFF`.
-     `VTK_USE_RPATH` is handy for developers who build VTK from CVS
-     and do not install it system wide.  It is not handy for
-     packagers.
+  1. The binaries in the Build tree of VTK have RPATH information
+     embeded. When an install is performed with 'make install' or
+     when CPACK is used, all RPATH information is stripped from the
+     binaries.
 
   2. VTK libraries (starting with VTK-5.0) are versioned.
      Therefore, it is safe to install multiple versions of VTK.
      Prior to VTK-5.0 this was not the case.
 
   3. VTK-Python has two components.  The ``libvtk*PythonD.so.*`` (or
-     ``vtk*PythonD.dll``) files should be treated as libraries and
-     *not* as Python extension modules.  Only the
-     ``libvtk*Python.so`` (or ``vtk*Python.dll``) files are Python
-     extension modules.  These extension modules are linked to the
-     `PythonD.so` libraries.  
+     ``vtk*PythonD.dll``) files and ``libvtkPythonCore.so.*'' should
+     be treated as libraries and *not* as Python extension modules.
+     Only the ``libvtk*Python.so`` (or ``vtk*Python.dll``) files are
+     Python extension modules.  These extension modules link to the
+     `PythonD.so` libraries.
 
-     Therefore, the ``libvtk*PythonD.so*`` files should be installed
-     somewhere in the linkers path (for example in `\usr\lib`).
-     Under Windows these should be installed in a directory that is
-     in the `PATH`.  The Python extension modules should be
-     installed via the `setup.py` file inside the `vtk` package.
-     Typically these should be installed to
+     Therefore, ``libvtkPythonCore.so*'' and all ``libvtk*PythonD.so*``
+     files should be installed somewhere in the linkers path (for
+     example in `\usr\lib`).  Under Windows these should be installed
+     in a directory that is in the `PATH`.  The Python extension modules
+     should be  installed via the `setup.py` file inside the `vtk`
+     package.  Typically these should be installed to
      `/usr/lib/pythonX.Y/site-packages/vtk` (or
      `PythonX.Y\Lib\site-packages\vtk`).
 
@@ -324,25 +322,18 @@ script you get a traceback with this error:
  ValueError: method requires a VTK object.
 
 This error occurs if you have two copies of the VTK libraries on
-your system. These copies need not be in your linkers path.  VTK
-from CVS defaults to building libraries with an rpath flag (under
-Unix).  This is necessary to be able to test the build in place.
-When you install VTK into another directory in your linkers path and
-then run a Python script, the Python modules remember the old path
-and load the libraries in the build directory as well. This triggers
-the above error since the object you passed the method was
-instantiated from the other copy.
+your system. These copies need not be in your linkers path. This is
+necessary to be able to test the build in place. When you install
+VTK into another directory in your linkers path and then run a Python
+script, the Python modules remember the old path and load the libraries
+in the build directory as well. This triggers the above error since
+the object you passed the method was instantiated from the other copy.
 
 So how do you fix it? The easiest solution is to simply delete the
 copy of the libraries inside your build directory or move the build
 directory to another place. For example, if you build the libraries
 in `VTK/bin` then move `VTK/bin` to `VTK/bin1` or remove all the
 `VTK/bin/*.so` files. The error should no longer occur.
-
-Another way to fix the error is to turn the `VTK_USE_RPATH` boolean
-to `OFF` in your `CMakeCache.txt` file and then rebuild VTK. You
-shouldn't have to rebuild all of VTK, just delete the libraries
-(`*.so` files) and then re-run cmake and make.
 
 Alternatively, starting with recent VTK CVS versions (post Dec. 6,
 2002) and with VTK versions greater than 4.1 (i.e. 4.2 and beyond)

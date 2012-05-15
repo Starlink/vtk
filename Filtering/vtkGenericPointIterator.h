@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericPointIterator.h,v $
+  Module:    vtkGenericPointIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_FILTERING_EXPORT vtkGenericPointIterator : public vtkObject
 public:
   // Description:
   // Standard VTK construction and type macros.
-  vtkTypeRevisionMacro(vtkGenericPointIterator,vtkObject);
+  vtkTypeMacro(vtkGenericPointIterator,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

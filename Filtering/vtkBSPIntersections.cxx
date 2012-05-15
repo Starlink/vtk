@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBSPIntersections.cxx,v $
+  Module:    vtkBSPIntersections.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,9 +26,8 @@
 #include "vtkPoints.h"
 #include "vtkMath.h"
 
-#include <vtkstd/set>
+#include <set>
 
-vtkCxxRevisionMacro(vtkBSPIntersections, "$Revision: 1.2 $");
 
 vtkStandardNewMacro(vtkBSPIntersections);
 

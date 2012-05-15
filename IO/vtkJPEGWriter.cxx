@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkJPEGWriter.cxx,v $
+  Module:    vtkJPEGWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,6 @@ extern "C" {
 #include <setjmp.h>
 }
 
-vtkCxxRevisionMacro(vtkJPEGWriter, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkJPEGWriter);
 
 vtkCxxSetObjectMacro(vtkJPEGWriter,Result,vtkUnsignedCharArray);
@@ -130,7 +129,7 @@ void vtkJPEGWriter::Write()
   this->InternalFileName = NULL;
 }
 
-// these three routines are for wqriting into memory
+// these three routines are for writing into memory
 extern "C"
 {
   void vtkJPEGWriteToMemoryInit(j_compress_ptr cinfo)
@@ -158,16 +157,20 @@ extern "C"
 {
   boolean vtkJPEGWriteToMemoryEmpty(j_compress_ptr cinfo)
   {
+    // Even if (cinfo->dest->free_in_buffer != 0) we still need to write on the
+    // new array and not at (arraySize - nbFree)
     vtkJPEGWriter *self = vtkJPEGWriter::SafeDownCast(
       static_cast<vtkObject *>(cinfo->client_data));
     if (self)
       {
       vtkUnsignedCharArray *uc = self->GetResult();
-      // we must grow the array, we grow by 50% each time
-      int oldSize = uc->GetSize();
-      uc->Resize(oldSize + oldSize/2);
+      // we must grow the array
+      vtkIdType oldSize = uc->GetSize();
+      uc->Resize(static_cast<vtkIdType>(oldSize + oldSize/2));
+      // Resize do grow the array but it is not the size we expect
+      vtkIdType newSize = uc->GetSize();
       cinfo->dest->next_output_byte = uc->GetPointer(oldSize);
-      cinfo->dest->free_in_buffer = oldSize/2;
+      cinfo->dest->free_in_buffer = static_cast<size_t>(newSize - oldSize);
       }
     return TRUE;
   }
@@ -183,8 +186,8 @@ extern "C"
       {
       vtkUnsignedCharArray *uc = self->GetResult();
       // we must close the array
-      vtkIdType oldSize = uc->GetSize();
-      uc->SetNumberOfTuples(oldSize - static_cast<vtkIdType>(cinfo->dest->free_in_buffer));
+      vtkIdType realSize = uc->GetSize() - static_cast<vtkIdType>(cinfo->dest->free_in_buffer);
+      uc->SetNumberOfTuples(realSize);
       }
   }
 }

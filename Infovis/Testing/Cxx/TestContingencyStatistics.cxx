@@ -10,6 +10,7 @@
 // Thanks to Philippe Pebay from Sandia National Laboratories 
 // for implementing this test.
 
+#include "vtkMultiBlockDataSet.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
 #include "vtkVariantArray.h"
@@ -81,127 +82,330 @@ int TestContingencyStatistics( int, char *[] )
   datasetTable->AddColumn( dataset3Arr );
   dataset3Arr->Delete();
 
-  int nMetricPairs = 3;
+  int nMetricPairs = 2;
 
-  vtkContingencyStatistics* haruspex = vtkContingencyStatistics::New();
-  haruspex->SetInput( 0, datasetTable );
-  vtkTable* outputData = haruspex->GetOutput( 0 );
-  vtkTable* outputMeta = haruspex->GetOutput( 1 );
+  // Entropies in the summary table should normally be retrieved as follows:
+  //   column 2: H(X,Y)
+  //   column 3: H(Y|X)
+  //   column 4: H(X|Y)
+  int iEntropies[] = { 2,
+                       3,
+                       4 }; 
+  int nEntropies = 3; // correct number of entropies reported in the summary table
+  double* H = new double[nEntropies];
+  
+  // Set contingency statistics algorithm and its input data port
+  vtkContingencyStatistics* cs = vtkContingencyStatistics::New();
+
+  // First verify that absence of input does not cause trouble
+  cout << "## Verifying that absence of input does not cause trouble... ";
+  cs->Update();
+  cout << "done.\n";
+
+  // Prepare first test with data
+  cs->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
+  vtkTable* outputData = cs->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
 
   datasetTable->Delete();
 
-// -- Select Column Pair of Interest ( Learn Mode ) -- 
-  haruspex->AddColumnPair( "Port", "Protocol" ); // A valid pair
-  haruspex->AddColumnPair( "Protocol", "Port" ); // The same valid pair, just reversed
-  haruspex->AddColumnPair( "Source", "Port" ); // Another valid pair
-  haruspex->AddColumnPair( "Source", "Dummy" ); // An invalid pair
+  // Select Column Pair of Interest ( Learn Option )
+  // 1.1: a valid pair
+  cs->AddColumnPair( "Port", "Protocol" );
+  // 1.2: the same valid pair, just reversed -- should thus be ignored
+  cs->AddColumnPair( "Protocol", "Port" );
+  // 2: another valid pair
+  cs->AddColumnPair( "Source", "Port" );
+  // 3: an invalid pair
+  cs->AddColumnPair( "Source", "Dummy" );
 
-// -- Test Learn Mode -- 
-  haruspex->SetLearn( true );
-  haruspex->SetAssess( true );
-  haruspex->Update();
-  vtkIdType n = haruspex->GetSampleSize();
+  // Test Learn, Derive, Assess, and Test options
+  cs->SetLearnOption( true );
+  cs->SetDeriveOption( true );
+  cs->SetAssessOption( true );
+  cs->SetTestOption( true );
+  cs->Update();
+
+  vtkMultiBlockDataSet* outputModelDS = vtkMultiBlockDataSet::SafeDownCast( cs->GetOutputDataObject( vtkStatisticsAlgorithm::OUTPUT_MODEL ) );
+  vtkTable* outputSummary = vtkTable::SafeDownCast( outputModelDS->GetBlock( 0 ) );
+  vtkTable* outputContingency = vtkTable::SafeDownCast( outputModelDS->GetBlock( 1 ) );
+  vtkTable* outputTest = vtkTable::SafeDownCast( cs->GetOutputDataObject( vtkStatisticsAlgorithm::OUTPUT_TEST ) );
+
   int testIntValue = 0;
+  double testDoubleValue = 0;
 
-  cout << "## Calculated the following statistics ( grand total: "
+  vtkIdType n = outputContingency->GetValueByName( 0, "Cardinality" ).ToInt();
+  cout << "## Calculated the following information entropies (grand total: "
        << n
-       << " ):\n";
-  for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
+       << "):\n";
+
+  testIntValue = outputSummary->GetNumberOfColumns();
+
+  if ( testIntValue != nEntropies + 2 )
     {
-    int c = outputMeta->GetValue( r, 4 ).ToInt();
-
-    if ( outputMeta->GetValue( r, 2 ).ToString() == "" )
-      {
-      cout << "   Information entropies for ("
-           << outputMeta->GetValue( r, 0 ).ToString()
-           << ", "
-           << outputMeta->GetValue( r, 1 ).ToString()
-           << "): H(X,Y) = "
-           << outputMeta->GetValue( r, 5 ).ToDouble()
-           << ", H(Y|X) = "
-           << outputMeta->GetValue( r, 6 ).ToDouble()
-           << ", H(X|Y) = "
-           << outputMeta->GetValue( r, 7 ).ToDouble()
-           << "\n";
-
-      continue;
-      }
-
-    cout << "   ("
-         << outputMeta->GetValue( r, 0 ).ToString();
-
-    vtkStdString varY = outputMeta->GetValue( r, 1 ).ToString();
-    if ( varY != "" )
-      {
-      testIntValue += c;
-      cout << ", "
-           << varY;
-      }
-
-    cout << ") = ("
-         << outputMeta->GetValue( r, 2 ).ToString();
-
-    if ( varY != "" )
-      {
-      cout << ", "
-           << outputMeta->GetValue( r, 3 ).ToString();
-      }
-
-    cout << "), "
-         << outputMeta->GetColumnName( 4 )
-         << "="
-         << c
-         << ", "
-         << outputMeta->GetColumnName( 5 )
-         << "="
-         << outputMeta->GetValue( r, 5 ).ToDouble()
-         << "\n";
-    }
-
-  if ( testIntValue != n * nMetricPairs )
-    {
-    vtkGenericWarningMacro("Reported an incorrect number of doubles: " << testIntValue << " != " << n * nMetricPairs << ".");
+    vtkGenericWarningMacro("Reported an incorrect number of columns in the summary table: " 
+                           << testIntValue 
+                           << " != " 
+                           << nEntropies + 2
+                           << ".");
     testStatus = 1;
     }
-
-//   cout << "## Calculated the following information entropies:\n   ";
-//   for ( int i = 0; i < outputMeta2->GetNumberOfColumns(); ++ i )
-//     {
-//     cout << outputMeta2->GetColumnName( i )
-//          << "   ";
-//     }
-//   cout << "\n";
-
-//   for ( vtkIdType r = 0; r < outputMeta2->GetNumberOfRows(); ++ r )
-//     {
-//     for ( int i = 0; i < outputMeta2->GetNumberOfColumns(); ++ i )
-//       {
-//       cout << "   "
-//            << outputMeta2->GetValue( r, i ).ToString();
-//       }
-//     cout << "\n";
-//     }
-
-  cout << "## Calculated the following probabilities:\n   ";
-  for ( int i = 0; i < outputData->GetNumberOfColumns(); ++ i )
+  else
     {
-    cout << outputData->GetColumnName( i )
-         << " ";
+    // For each row in the summary table, fetch variable names and information entropies
+    for ( vtkIdType r = 0; r < outputSummary->GetNumberOfRows(); ++ r )
+      {
+      // Variable names
+      cout << "   (X,Y) = ("
+           << outputSummary->GetValue( r, 0 ).ToString()
+           << ", "
+           << outputSummary->GetValue( r, 1 ).ToString()
+           << ")";
+      
+      // Information entropies
+      for ( vtkIdType c = 0; c < nEntropies; ++ c )
+        {
+        H[c] = outputSummary->GetValue( r, iEntropies[c] ).ToDouble();
+
+        cout << ", "
+             << outputSummary->GetColumnName( iEntropies[c] )
+             << "="
+             << H[c];
+        }
+      cout << "\n";
+
+      // Make sure that H(X,Y) > H(Y|X)+ H(X|Y)
+      testDoubleValue = H[1] + H[2]; // H(Y|X)+ H(X|Y)
+
+      if ( testDoubleValue > H[0] )
+        {
+        vtkGenericWarningMacro("Reported inconsistent information entropies: H(X,Y) = " 
+                               << H[0]
+                               << " < " 
+                               << testDoubleValue 
+                               << " = H(Y|X)+ H(X|Y).");
+        testStatus = 1;
+        }
+      }
+    }
+  cout << "   where H(X,Y) = - Sum_{x,y} p(x,y) log p(x,y) and H(X|Y) = - Sum_{x,y} p(x,y) log p(x|y).\n";
+
+  cout << "\n";
+
+  cout << "## Calculated the following joint and conditional probabilities and mutual informations:\n";
+  testIntValue = 0;
+
+  // Skip first row which contains data set cardinality
+  vtkIdType key;
+  for ( vtkIdType r = 1; r < outputContingency->GetNumberOfRows(); ++ r )
+    {
+    key = outputContingency->GetValue( r, 0 ).ToInt();
+    cout << "   ("
+         << outputSummary->GetValue( key, 0 ).ToString()
+         << ","
+         << outputSummary->GetValue( key, 1 ).ToString()
+         << ") = ("
+         << outputContingency->GetValue( r, 1 ).ToString()
+         << ","
+         << outputContingency->GetValue( r, 2 ).ToString()
+         << ")";
+
+    for ( vtkIdType c = 3; c < outputContingency->GetNumberOfColumns(); ++ c )
+      {
+      cout << ", "
+           << outputContingency->GetColumnName( c )
+           << "="
+           << outputContingency->GetValue( r, c ).ToDouble();
+      }
+    
+    cout << "\n";
+
+    // Update total cardinality
+    testIntValue += outputContingency->GetValueByName( r, "Cardinality" ).ToInt();
+    }
+
+  if ( testIntValue != nVals * nMetricPairs )
+    {
+    vtkGenericWarningMacro("Reported an incorrect total cardinality: " 
+                           << testIntValue 
+                           << " != " 
+                           << nVals * nMetricPairs
+                           << ".");
+    testStatus = 1;
     }
   cout << "\n";
 
-  for ( vtkIdType r = 0; r < outputData->GetNumberOfRows(); ++ r )
+  cout << "## Calculated the following marginal probabilities:\n";
+  testIntValue = 0;
+
+  for ( unsigned int b = 2; b < outputModelDS->GetNumberOfBlocks(); ++ b )
     {
-    for ( int i = 0; i < outputData->GetNumberOfColumns(); ++ i )
+    outputContingency = vtkTable::SafeDownCast( outputModelDS->GetBlock( b ) );
+
+    for ( vtkIdType r = 0; r < outputContingency->GetNumberOfRows(); ++ r )
       {
       cout << "   "
-           << outputData->GetValue( r, i ).ToString()
-           << "    ";
+           << outputContingency->GetColumnName( 0 )
+           << " = "
+           << outputContingency->GetValue( r, 0 ).ToString()
+           << ", "
+           << outputContingency->GetColumnName( 1 )
+           << "="
+           << outputContingency->GetValue( r, 1 ).ToDouble()
+           << ", "
+           << outputContingency->GetColumnName( 2 )
+           << "="
+           << outputContingency->GetValue( r, 2 ).ToDouble()
+           << "\n";
+        }
+    cout << "\n";
+
+    // Update total cardinality
+    testIntValue += 0;//outputContingency->GetValueByName( r, "Cardinality" ).ToInt();
+    }
+
+  // Now inspect results of the Assess option by looking for outliers
+  key = 0;
+  vtkStdString varX = outputSummary->GetValue( key, 0 ).ToString();
+  vtkStdString varY = outputSummary->GetValue( key, 1 ).ToString();
+
+  // List of columns used for outlier detection
+  vtkStdString outlierColumn[] = { "P",
+                                   "Px|y",
+                                   "PMI" };
+  // Corresponding threshold (low) values
+  double threshold[] = { .2,
+                         .2,
+                         .0 };
+
+  // Corresponding known number of outliers
+  int nOutliers[] = { 4,
+                      4,
+                      1 };
+
+  int nOutlierTypes = 3;
+  for ( int i = 0; i < nOutlierTypes; ++ i )
+    { 
+    vtkStdString colName = outlierColumn[i] + "(" + varX + "," + varY + ")";
+
+    cout << "## Found the following outliers such that "
+         << colName
+         << " < "
+         << threshold[i]
+         << ":\n";
+    
+    double val;
+    testIntValue = 0;
+    for ( vtkIdType r = 0; r < outputData->GetNumberOfRows(); ++ r )
+      {
+      val = outputData->GetValueByName( r, colName ).ToDouble();
+      if ( val >= threshold[i] )
+        {
+        continue;
+        }
+
+      ++ testIntValue;
+
+      cout << "   "
+           << outlierColumn[i]
+           << "("
+           << outputData->GetValueByName( r, varX ).ToString()
+           << ","
+           << outputData->GetValueByName( r, varY ).ToString()
+           << ") = "
+           << val
+           << "\n";
+      }
+
+    if ( testIntValue != nOutliers[i] )
+      {
+      vtkGenericWarningMacro("Reported an incorrect number of outliers: " 
+                             << testIntValue 
+                             << " != " 
+                             << nOutliers[i]
+                             << ".");
+      testStatus = 1;
       }
     cout << "\n";
     }
 
-  haruspex->Delete();
+  // Last, check some results of the Test option
+  cout << "## Chi square statistics:\n";
+
+  // Reference values
+  double testValues[] = { 
+    // (Port,Protocol) 
+    10.,       // number of degrees of freedom
+    36.896,    // Chi square statistic
+    22.35,     // Chi square statistic with Yates correction
+#ifdef VTK_USE_GNU_R
+    .00005899, // p-valued of Chi square statistic
+    .01341754, // p-value of Chi square statistic with Yates correction
+#endif // VTK_USE_GNU_R
+    // (Port,Source) 
+    10.,       // number of degrees of freedom
+    17.353,    // Chi square statistic
+    7.279,     // Chi square statistic with Yates correction
+#ifdef VTK_USE_GNU_R
+    .06690889, // p-valued of Chi square statistic
+    .69886917  // p-value of Chi square statistic with Yates correction
+#endif // VTK_USE_GNU_R
+  };
+
+#ifdef VTK_USE_GNU_R
+  double alpha = .05;
+  vtkIdType nv = 5;
+#else // VTK_USE_GNU_R
+  vtkIdType nv = 3;
+#endif // VTK_USE_GNU_R
+
+  // Loop over Test table
+  for ( vtkIdType r = 0; r < outputTest->GetNumberOfRows(); ++ r )
+    {
+    cout << "   ("
+         << outputSummary->GetValue( r, 0 ).ToString()
+         << ","
+         << outputSummary->GetValue( r, 1 ).ToString()
+         << ")";
+
+    for ( vtkIdType c = 0; c < nv; ++ c )
+      {
+      double x =  outputTest->GetValue( r, c ).ToDouble();
+      cout << ", "
+           << outputTest->GetColumnName( c )
+           << "="
+           << x;
+
+      // Verify calculated results
+      if ( fabs ( x - testValues[r * nv + c] ) > 1.e-4 * x )
+        {
+        vtkGenericWarningMacro("Incorrect " 
+                               << outputTest->GetColumnName( c )
+                               << ": "
+                               << x
+                               << " != "
+                               << testValues[r * nv + c]);
+        testStatus = 1;
+        }
+      }
+    
+#ifdef VTK_USE_GNU_R
+    // Check if null hypothesis is rejected at specified significance level
+    double p = outputTest->GetValueByName( r, "P Yates" ).ToDouble();
+    // Must verify that p value is valid (it is set to -1 if R has failed)
+    if ( p > -1 && p < alpha )
+      {
+      cout << ", Null hypothesis (independence) rejected at "
+           << alpha
+           << " significance level";
+      }
+#endif // VTK_USE_GNU_R
+
+    cout << "\n";
+    }
+
+  // Clean up
+  delete [] H;
+  cs->Delete();
 
   return testStatus;
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaRayCastImageDisplayHelper.h,v $
+  Module:    vtkMesaRayCastImageDisplayHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkMesaRayCastImageDisplayHelper : public vtkRa
 {
 public:
   static vtkMesaRayCastImageDisplayHelper *New();
-  vtkTypeRevisionMacro(vtkMesaRayCastImageDisplayHelper,vtkRayCastImageDisplayHelper);
+  vtkTypeMacro(vtkMesaRayCastImageDisplayHelper,vtkRayCastImageDisplayHelper);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   void RenderTexture( vtkVolume *vol, vtkRenderer *ren,

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageStencilData.h,v $
+  Module:    vtkImageStencilData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_IMAGING_EXPORT vtkImageStencilData : public vtkDataObject
 {
 public:
   static vtkImageStencilData *New();
-  vtkTypeRevisionMacro(vtkImageStencilData, vtkDataObject);
+  vtkTypeMacro(vtkImageStencilData, vtkDataObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   void Initialize();
@@ -58,6 +58,13 @@ public:
   // internally to keep track of which sub-extent should be returned next.
   int GetNextExtent(int &r1, int &r2, int xMin, int xMax,
                     int yIdx, int zIdx, int &iter);
+
+  // Description:
+  // Checks if an index is inside the stencil.
+  // This can be faster than GetNextExtent if called on a voxel. If calling 
+  // sequentially, along a scan line, the preferred way is to use 
+  // GetNextExtent and then loop over the returned [r1,r2] extents.
+  int IsInside( int xIdx, int yIdx, int zIdx );
 
   // Description:
   // This method is used by vtkImageStencilDataSource to add an x 
@@ -176,10 +183,76 @@ protected:
   int NumberOfExtentEntries;
   int *ExtentListLengths;
   int **ExtentLists;
+
 private:
   vtkImageStencilData(const vtkImageStencilData&);  // Not implemented.
   void operator=(const vtkImageStencilData&);  // Not implemented.
+
+  friend class vtkImageStencilIteratorFriendship;
 };
+
+//BTX
+// Description:
+// This is a helper class for stencil creation.  It is a raster with
+// infinite resolution in the X direction (approximately, since it uses
+// double precision).  Lines that represent polygon edges can be drawn
+// into this raster, and then filled given a tolerance.
+class VTK_IMAGING_EXPORT vtkImageStencilRaster
+{
+public:
+  // Description:
+  // Create a raster with the specified whole y extent.
+  vtkImageStencilRaster(const int wholeExtent[2]);
+
+  // Description:
+  // Destructor.
+  ~vtkImageStencilRaster();
+
+  // Description:
+  // Reset the raster to its original state, but keep the same whole
+  // extent. Pre-allocate the specified 1D allocateExtent, which must be
+  // within the whole extent.
+  void PrepareForNewData(const int allocateExtent[2] = 0);
+
+  // Description:
+  // Insert a line into the raster, given the two end points.
+  // The "inflect1" and "inflect2" should be set if you want
+  // to add a small vertical tolerance to either endpoints.
+  void InsertLine(const double p1[2], const double p2[2],
+                  bool inflect1, bool inflect2);
+
+  // Description:
+  // Fill the specified extent of a vtkImageStencilData with the raster,
+  // after permuting the raster according to xj and yj.
+  void FillStencilData(vtkImageStencilData *data, const int extent[6],
+                       int xj = 0, int yj = 1);
+
+  // Description:
+  // The tolerance for float-to-int conversions.
+  void SetTolerance(double tol) { this->Tolerance = tol; }
+  double GetTolerance() { return this->Tolerance; }
+
+protected:
+  // Description:
+  // Ensure that the raster is initialized for the specified range
+  // of y values, which must be within the Extent.
+  void PrepareExtent(int ymin, int ymax);
+
+  // Description:
+  // Insert an x point into the raster.  If the y value is larger
+  // than the y extent, the extent will grow automatically.
+  void InsertPoint(int y, double x);
+
+  int Extent[2];
+  int UsedExtent[2];
+  double **Raster;
+  double Tolerance;
+
+private:
+  vtkImageStencilRaster(const vtkImageStencilRaster&);  // Not implemented.
+  void operator=(const vtkImageStencilRaster&);  // Not implemented.
+};
+//ETX
 
 #endif
 

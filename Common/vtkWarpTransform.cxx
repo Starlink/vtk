@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpTransform.cxx,v $
+  Module:    vtkWarpTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkWarpTransform.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkWarpTransform, "$Revision: 1.11 $");
 
 //----------------------------------------------------------------------------
 void vtkWarpTransform::PrintSelf(ostream& os, vtkIndent indent)
@@ -219,12 +218,7 @@ void vtkWarpInverseTransformPoint(vtkWarpTransform *self,
     inverse[2] = lastInverse[2] - f*deltaI[2];
     }
 
-  if (self->GetDebug())
-    {
-    vtkGenericWarningMacro(<<"Debug: In " __FILE__ ", line "<< __LINE__ <<"\n" 
-               << self->GetClassName() << " (" << self 
-               <<") Inverse Iterations: " << (i+1));
-    }
+  vtkDebugWithObjectMacro(self, "Inverse Iterations: " << (i+1));
 
   if (i >= n)
     {
@@ -234,11 +228,9 @@ void vtkWarpInverseTransformPoint(vtkWarpTransform *self,
     inverse[2] = lastInverse[2];
 
     // print warning: Newton's method didn't converge
-    vtkGenericWarningMacro(<<
-         "Warning: In " __FILE__ ", line " << __LINE__ << "\n" << 
-         self->GetClassName() << " (" << self << ") " << 
+    vtkErrorWithObjectMacro(self,
          "InverseTransformPoint: no convergence (" <<
-         point[0] << ", " << point[1] << ", " << point[2] << 
+         point[0] << ", " << point[1] << ", " << point[2] <<
          ") error = " << sqrt(errorSquared) << " after " <<
          i << " iterations.");
     }

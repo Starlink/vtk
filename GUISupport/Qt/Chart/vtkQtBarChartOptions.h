@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtBarChartOptions.h,v $
+  Module:    vtkQtBarChartOptions.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include <QObject>
 
 #include "vtkQtChartLayer.h" // needed for enum
-#include <QColor>            // needed for static member
 
 class vtkQtChartHelpFormatter;
 
@@ -41,9 +40,8 @@ class vtkQtChartHelpFormatter;
 /// The default settings are as follows:
 ///   \li axes: \c BottomLeft
 ///   \li bar group fraction: 0.7
-///   \li bar width fraction: 0.9
+///   \li bar width fraction: 0.8
 ///   \li outline style: \c Darker
-///   \li selection background: \c LightBlue
 class VTKQTCHART_EXPORT vtkQtBarChartOptions : public QObject
 {
   Q_OBJECT
@@ -124,17 +122,6 @@ public:
   void setOutlineStyle(OutlineStyle style);
 
   /// \brief
-  ///   Gets the highlight background color.
-  /// \return
-  ///   The current highlight background color.
-  const QColor &getHighlightColor() const {return this->Highlight;}
-
-  /// \brief
-  ///   Sets the highlight background color.
-  /// \param color The color for the highlight background.
-  void setHighlightColor(const QColor &color);
-
-  /// \brief
   ///   Gets the chart help text formatter.
   ///
   /// The help text formatter stores the format string. It is also
@@ -167,16 +154,10 @@ signals:
   /// Emitted when the outline style changes.
   void outlineStyleChanged();
 
-  /// Emitted when the highlight color changes.
-  void highlightChanged();
-
-public:
-  /// Defines the default highlight background.
-  static const QColor LightBlue;
+  /// Emitted when the series colors object changes.
+  void seriesColorsChanged();
 
 private:
-  /// Stores the highlight background color.
-  QColor Highlight;
   vtkQtChartLayer::AxesCorner AxesCorner; ///< Stores the chart axes.
   OutlineStyle OutlineType;               ///< Stores the outline style.
   vtkQtChartHelpFormatter *Help;          ///< Stores the help text format.

@@ -7,16 +7,14 @@ It is included in all files while building the freetype library.  Due to
 namespace pollution, no freetype headers should be included in .h files in
 VTK.
 
-The following command was used to obtain the symbol list:
+To generate this list: wrap everything below in #if 0, build VTK, then
+use the following command to obtain the symbol list:
 
-nm libvtkfreetype.a |grep " [TRD] "
+nm libvtkfreetype.a |grep " [TRD] " | awk '{ print "#define "$3" vtk_freetype_"$3 }'
 
-This is the way to recreate the whole list:
 
-nm bin/libvtkfreetype.a |grep " [TRD] " | awk '{ print "#define "$3" vtk_freetype_"$3 }'
-
-In fact, you must do this on all supported platforms and merge the results,
-since some symbols may be present on only some platforms.
+In fact, you must do this on *all* supported platforms and merge the results,
+since some symbols are present only on some platforms.
 
 Then alphabetise the list so that future diffs/merges work better.
 
@@ -29,7 +27,6 @@ used when the shared library is loaded/unloaded from an executable.
 #ifndef vtk_freetype_mangle_h
 #define vtk_freetype_mangle_h
 
-#define _debug_mem_dummy vtk_freetype__debug_mem_dummy
 #define afm_parser_funcs vtk_freetype_afm_parser_funcs
 #define bdf_cmap_class vtk_freetype_bdf_cmap_class
 #define bdf_driver_class vtk_freetype_bdf_driver_class
@@ -39,7 +36,6 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Activate_Size vtk_freetype_FT_Activate_Size
 #define FT_Add_Default_Modules vtk_freetype_FT_Add_Default_Modules
 #define FT_Add_Module vtk_freetype_FT_Add_Module
-#define FT_Alloc vtk_freetype_FT_Alloc
 #define FT_Angle_Diff vtk_freetype_FT_Angle_Diff
 #define FT_Atan2 vtk_freetype_FT_Atan2
 #define FT_Attach_File vtk_freetype_FT_Attach_File
@@ -65,8 +61,14 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Done_Library vtk_freetype_FT_Done_Library
 #define FT_Done_Memory vtk_freetype_FT_Done_Memory
 #define FT_Done_Size vtk_freetype_FT_Done_Size
+#define FT_Face_GetCharsOfVariant vtk_freetype_FT_Face_GetCharsOfVariant
+#define FT_Face_GetCharVariantIndex vtk_freetype_FT_Face_GetCharVariantIndex
+#define FT_Face_GetCharVariantIsDefault vtk_freetype_FT_Face_GetCharVariantIsDefault
+#define FT_Face_GetVariantSelectors vtk_freetype_FT_Face_GetVariantSelectors
+#define FT_Face_GetVariantsOfChar vtk_freetype_FT_Face_GetVariantsOfChar
 #define FT_FloorFix vtk_freetype_FT_FloorFix
-#define FT_Free vtk_freetype_FT_Free
+#define FT_Get_Advance vtk_freetype_FT_Get_Advance
+#define FT_Get_Advances vtk_freetype_FT_Get_Advances
 #define FT_Get_Char_Index vtk_freetype_FT_Get_Char_Index
 #define FT_Get_Charmap_Index vtk_freetype_FT_Get_Charmap_Index
 #define FT_Get_CMap_Format vtk_freetype_FT_Get_CMap_Format
@@ -108,6 +110,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_GlyphLoader_Rewind vtk_freetype_FT_GlyphLoader_Rewind
 #define ft_glyphslot_alloc_bitmap vtk_freetype_ft_glyphslot_alloc_bitmap
 #define ft_glyphslot_free_bitmap vtk_freetype_ft_glyphslot_free_bitmap
+#define FT_GlyphSlot_Own_Bitmap vtk_freetype_FT_GlyphSlot_Own_Bitmap
 #define ft_glyphslot_set_bitmap vtk_freetype_ft_glyphslot_set_bitmap
 #define ft_grays_raster vtk_freetype_ft_grays_raster
 #define ft_highpow2 vtk_freetype_ft_highpow2
@@ -127,6 +130,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Match_Size vtk_freetype_FT_Match_Size
 #define FT_Matrix_Invert vtk_freetype_FT_Matrix_Invert
 #define FT_Matrix_Multiply vtk_freetype_FT_Matrix_Multiply
+#define FT_Matrix_Multiply_Scaled vtk_freetype_FT_Matrix_Multiply_Scaled
 #define ft_mem_alloc vtk_freetype_ft_mem_alloc
 #define ft_mem_dup vtk_freetype_ft_mem_dup
 #define ft_mem_free vtk_freetype_ft_mem_free
@@ -166,14 +170,13 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Outline_Reverse vtk_freetype_FT_Outline_Reverse
 #define FT_Outline_Transform vtk_freetype_FT_Outline_Transform
 #define FT_Outline_Translate vtk_freetype_FT_Outline_Translate
-#define FT_QAlloc vtk_freetype_FT_QAlloc
-#define FT_QRealloc vtk_freetype_FT_QRealloc
 #define FT_Raccess_Get_DataOffsets vtk_freetype_FT_Raccess_Get_DataOffsets
 #define FT_Raccess_Get_HeaderInfo vtk_freetype_FT_Raccess_Get_HeaderInfo
 #define FT_Raccess_Guess vtk_freetype_FT_Raccess_Guess
 #define ft_raster1_renderer_class vtk_freetype_ft_raster1_renderer_class
 #define ft_raster5_renderer_class vtk_freetype_ft_raster5_renderer_class
-#define FT_Realloc vtk_freetype_FT_Realloc
+#define FT_Reference_Face vtk_freetype_FT_Reference_Face
+#define FT_Reference_Library vtk_freetype_FT_Reference_Library
 #define FT_Remove_Module vtk_freetype_FT_Remove_Module
 #define FT_Render_Glyph vtk_freetype_FT_Render_Glyph
 #define FT_Render_Glyph_Internal vtk_freetype_FT_Render_Glyph_Internal
@@ -199,7 +202,6 @@ used when the shared library is loaded/unloaded from an executable.
 #define ft_smooth_lcd_renderer_class vtk_freetype_ft_smooth_lcd_renderer_class
 #define ft_smooth_lcdv_renderer_class vtk_freetype_ft_smooth_lcdv_renderer_class
 #define ft_smooth_renderer_class vtk_freetype_ft_smooth_renderer_class
-#define FT_Sqrt32 vtk_freetype_FT_Sqrt32
 #define FT_SqrtFixed vtk_freetype_FT_SqrtFixed
 #define ft_standard_raster vtk_freetype_ft_standard_raster
 #define FT_Stream_Close vtk_freetype_FT_Stream_Close
@@ -208,14 +210,13 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Stream_ExtractFrame vtk_freetype_FT_Stream_ExtractFrame
 #define FT_Stream_Free vtk_freetype_FT_Stream_Free
 #define FT_Stream_GetChar vtk_freetype_FT_Stream_GetChar
-#define FT_Stream_GetLong vtk_freetype_FT_Stream_GetLong
-#define FT_Stream_GetLongLE vtk_freetype_FT_Stream_GetLongLE
-#define FT_Stream_GetOffset vtk_freetype_FT_Stream_GetOffset
-#define FT_Stream_GetShort vtk_freetype_FT_Stream_GetShort
-#define FT_Stream_GetShortLE vtk_freetype_FT_Stream_GetShortLE
+#define FT_Stream_GetULong vtk_freetype_FT_Stream_GetULong
+#define FT_Stream_GetULongLE vtk_freetype_FT_Stream_GetULongLE
+#define FT_Stream_GetUOffset vtk_freetype_FT_Stream_GetUOffset
+#define FT_Stream_GetUShort vtk_freetype_FT_Stream_GetUShort
+#define FT_Stream_GetUShortLE vtk_freetype_FT_Stream_GetUShortLE
 #define FT_Stream_New vtk_freetype_FT_Stream_New
 #define FT_Stream_Open vtk_freetype_FT_Stream_Open
-#define FT_Stream_OpenGzip vtk_freetype_FT_Stream_OpenGzip
 #define FT_Stream_OpenLZW vtk_freetype_FT_Stream_OpenLZW
 #define FT_Stream_OpenMemory vtk_freetype_FT_Stream_OpenMemory
 #define FT_Stream_Pos vtk_freetype_FT_Stream_Pos
@@ -223,17 +224,15 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Stream_ReadAt vtk_freetype_FT_Stream_ReadAt
 #define FT_Stream_ReadChar vtk_freetype_FT_Stream_ReadChar
 #define FT_Stream_ReadFields vtk_freetype_FT_Stream_ReadFields
-#define FT_Stream_ReadLong vtk_freetype_FT_Stream_ReadLong
-#define FT_Stream_ReadLongLE vtk_freetype_FT_Stream_ReadLongLE
-#define FT_Stream_ReadOffset vtk_freetype_FT_Stream_ReadOffset
-#define FT_Stream_ReadShort vtk_freetype_FT_Stream_ReadShort
-#define FT_Stream_ReadShortLE vtk_freetype_FT_Stream_ReadShortLE
+#define FT_Stream_ReadULong vtk_freetype_FT_Stream_ReadULong
+#define FT_Stream_ReadULongLE vtk_freetype_FT_Stream_ReadULongLE
+#define FT_Stream_ReadUOffset vtk_freetype_FT_Stream_ReadUOffset
+#define FT_Stream_ReadUShort vtk_freetype_FT_Stream_ReadUShort
+#define FT_Stream_ReadUShortLE vtk_freetype_FT_Stream_ReadUShortLE
 #define FT_Stream_ReleaseFrame vtk_freetype_FT_Stream_ReleaseFrame
 #define FT_Stream_Seek vtk_freetype_FT_Stream_Seek
 #define FT_Stream_Skip vtk_freetype_FT_Stream_Skip
 #define FT_Stream_TryRead vtk_freetype_FT_Stream_TryRead
-#define ft_stub_set_char_sizes vtk_freetype_ft_stub_set_char_sizes
-#define ft_stub_set_pixel_sizes vtk_freetype_ft_stub_set_pixel_sizes
 #define ft_synthesize_vertical_metrics vtk_freetype_ft_synthesize_vertical_metrics
 #define FT_Tan vtk_freetype_FT_Tan
 #define FT_Trace_Get_Count vtk_freetype_FT_Trace_Get_Count
@@ -246,6 +245,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Vector_Polarize vtk_freetype_FT_Vector_Polarize
 #define FT_Vector_Rotate vtk_freetype_FT_Vector_Rotate
 #define FT_Vector_Transform vtk_freetype_FT_Vector_Transform
+#define FT_Vector_Transform_Scaled vtk_freetype_FT_Vector_Transform_Scaled
 #define FT_Vector_Unit vtk_freetype_FT_Vector_Unit
 #define ftc_basic_image_cache_class vtk_freetype_ftc_basic_image_cache_class
 #define ftc_basic_image_family_class vtk_freetype_ftc_basic_image_family_class
@@ -255,23 +255,16 @@ used when the shared library is loaded/unloaded from an executable.
 #define FTC_CMapCache_Lookup vtk_freetype_FTC_CMapCache_Lookup
 #define FTC_CMapCache_New vtk_freetype_FTC_CMapCache_New
 #define ftc_face_list_class vtk_freetype_ftc_face_list_class
-#define FTC_Image_Cache_Lookup vtk_freetype_FTC_Image_Cache_Lookup
-#define FTC_Image_Cache_New vtk_freetype_FTC_Image_Cache_New
 #define FTC_ImageCache_Lookup vtk_freetype_FTC_ImageCache_Lookup
 #define FTC_ImageCache_LookupScaler vtk_freetype_FTC_ImageCache_LookupScaler
 #define FTC_ImageCache_New vtk_freetype_FTC_ImageCache_New
 #define FTC_Manager_Done vtk_freetype_FTC_Manager_Done
-#define FTC_Manager_Lookup_Face vtk_freetype_FTC_Manager_Lookup_Face
-#define FTC_Manager_Lookup_Size vtk_freetype_FTC_Manager_Lookup_Size
 #define FTC_Manager_LookupFace vtk_freetype_FTC_Manager_LookupFace
 #define FTC_Manager_LookupSize vtk_freetype_FTC_Manager_LookupSize
 #define FTC_Manager_New vtk_freetype_FTC_Manager_New
 #define FTC_Manager_RemoveFaceID vtk_freetype_FTC_Manager_RemoveFaceID
 #define FTC_Manager_Reset vtk_freetype_FTC_Manager_Reset
-#define ftc_node_destroy vtk_freetype_ftc_node_destroy
 #define FTC_Node_Unref vtk_freetype_FTC_Node_Unref
-#define FTC_SBit_Cache_Lookup vtk_freetype_FTC_SBit_Cache_Lookup
-#define FTC_SBit_Cache_New vtk_freetype_FTC_SBit_Cache_New
 #define FTC_SBitCache_Lookup vtk_freetype_FTC_SBitCache_Lookup
 #define FTC_SBitCache_LookupScaler vtk_freetype_FTC_SBitCache_LookupScaler
 #define FTC_SBitCache_New vtk_freetype_FTC_SBitCache_New
@@ -301,6 +294,8 @@ used when the shared library is loaded/unloaded from an executable.
 #define tt_cmap0_class_rec vtk_freetype_tt_cmap0_class_rec
 #define tt_cmap10_class_rec vtk_freetype_tt_cmap10_class_rec
 #define tt_cmap12_class_rec vtk_freetype_tt_cmap12_class_rec
+#define tt_cmap13_class_rec vtk_freetype_tt_cmap13_class_rec
+#define tt_cmap14_class_rec vtk_freetype_tt_cmap14_class_rec
 #define tt_cmap2_class_rec vtk_freetype_tt_cmap2_class_rec
 #define tt_cmap4_class_rec vtk_freetype_tt_cmap4_class_rec
 #define tt_cmap6_class_rec vtk_freetype_tt_cmap6_class_rec
@@ -310,6 +305,5 @@ used when the shared library is loaded/unloaded from an executable.
 #define TT_New_Context vtk_freetype_TT_New_Context
 #define TT_RunIns vtk_freetype_TT_RunIns
 #define winfnt_driver_class vtk_freetype_winfnt_driver_class
-
 
 #endif

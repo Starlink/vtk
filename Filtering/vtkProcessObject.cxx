@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProcessObject.cxx,v $
+  Module:    vtkProcessObject.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkSource.h"
 
-vtkCxxRevisionMacro(vtkProcessObject, "$Revision: 1.7 $");
 
 //----------------------------------------------------------------------------
 vtkProcessObject::vtkProcessObject()

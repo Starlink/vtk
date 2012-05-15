@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Time-stamp: <2005-06-23 17:26:59 barre>
+# Time-stamp: <2011-01-16 21:15:53 barre>
 #
 # Convert VTK headers to doxygen format
 #
@@ -107,9 +107,11 @@ $PROGNAME =~ s/^.*[\\\/]//;
 # -------------------------------------------------------------------------
 # Defaults  (add options as you want: "verbose" => 1 for default verbose mode)
 
-my %default = 
+my %default =
   (
-   dirs => ["../../Common",
+   dirs => ["../../Charts",
+            "../../Chemistry",
+            "../../Common",
             "../../Filtering",
             "../../GenericFiltering",
             "../../GenericFiltering/Testing/Cxx",
@@ -122,10 +124,11 @@ my %default =
             "../../Infovis",
             "../../IO",
             "../../Parallel",
-            "../../Patented",
             "../../Rendering",
+            "../../TextAnalysis",
             "../../Views",
-            "../../VolumeRendering"],
+            "../../VolumeRendering",
+            "../../Widgets"],
    relativeto => "",
    temp => "doc_header2doxygen.tmp",
    to => "../../../VTK-doxygen"
@@ -271,13 +274,13 @@ foreach my $source (@files) {
         last if $line =~ /\/\/ \.NAME/;
 
         # Date. Example:
-        # Date:      $Date: 2008-06-16 06:59:09 $
+        # Date:      $Date$
 
         if ($line =~ /^\s*Date:\s*(.*)$/) {
             $date = $1;
 
         # Version. Example:
-        # Version:   $Revision: 1.16 $
+        # Version:   $Revision$
 
         } elsif ($line =~ /^\s*Version:\s*(.*)$/) {
             $revision = $1;
@@ -520,14 +523,20 @@ foreach my $source (@files) {
                 push @description, $line;
             }
 
-            # While there are non-empty lines add these lines to the
-            # list of declarations (and/or inline definitions)
-            # pertaining to the same description.
+            # While there are non-empty lines or a new Descrption line add
+            # these lines to the list of declarations
+            # (and/or inline definitions) pertaining to the same description.
 
             my @declarations = ();
-            while ($line && $line =~ /\s+\S/) {
+            while ($line && $line =~ /\s*\S/) {
                 push @declarations, $line;
-                $line = shift @headerfile
+                # terminate if we encounter another Description line
+                # that doesn't have a leading empty line
+                if ($headerfile[0] !~ /^(\s*)\/\/\s*De(s|c)(s|c)?ription/ ) {
+                    $line = shift @headerfile;
+                }else{
+                    $line = "";
+                }
             }
 
             # If there is more than one declaration or at least a macro,

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: CheckglXGetProcAddressARB.cxx,v $
+  Module:    CheckglXGetProcAddressARB.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,6 +23,8 @@
 // This is just a test program so that CMake can determine if
 // glXGetProcAddressARB needs to be declared.
 
+#define GLX_GLXEXT_LEGACY
+#define GL_GLEXT_LEGACY
 #include <GL/gl.h>
 #include <GL/glx.h>
 

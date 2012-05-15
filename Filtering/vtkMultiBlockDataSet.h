@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiBlockDataSet.h,v $
+  Module:    vtkMultiBlockDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_FILTERING_EXPORT vtkMultiBlockDataSet : public vtkCompositeDataSet
 {
 public:
   static vtkMultiBlockDataSet* New();
-  vtkTypeRevisionMacro(vtkMultiBlockDataSet, vtkCompositeDataSet);
+  vtkTypeMacro(vtkMultiBlockDataSet, vtkCompositeDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

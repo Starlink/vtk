@@ -2,10 +2,9 @@
 /*                                                                         */
 /*  ftbitmap.c                                                             */
 /*                                                                         */
-/*    FreeType utility functions for converting 1bpp, 2bpp, 4bpp, and 8bpp */
-/*    bitmaps into 8bpp format (body).                                     */
+/*    FreeType utility functions for bitmaps (body).                       */
 /*                                                                         */
-/*  Copyright 2004, 2005, 2006, 2007 by                                    */
+/*  Copyright 2004-2009, 2011 by                                           */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -19,6 +18,7 @@
 
 #include <ft2build.h>
 #include FT_BITMAP_H
+#include FT_IMAGE_H
 #include FT_INTERNAL_OBJECTS_H
 
 
@@ -105,7 +105,7 @@
     int             new_pitch;
     FT_UInt         bpp;
     FT_Int          i, width, height;
-    unsigned char*  buffer;
+    unsigned char*  buffer = NULL;
 
 
     width  = bitmap->width;
@@ -228,8 +228,12 @@
     if ( !bitmap || !bitmap->buffer )
       return FT_Err_Invalid_Argument;
 
-    xstr = FT_PIX_ROUND( xStrength ) >> 6;
-    ystr = FT_PIX_ROUND( yStrength ) >> 6;
+    if ( ( ( FT_PIX_ROUND( xStrength ) >> 6 ) > FT_INT_MAX ) ||
+         ( ( FT_PIX_ROUND( yStrength ) >> 6 ) > FT_INT_MAX ) )
+      return FT_Err_Invalid_Argument;
+       
+    xstr = (FT_Int)FT_PIX_ROUND( xStrength ) >> 6;
+    ystr = (FT_Int)FT_PIX_ROUND( yStrength ) >> 6;
 
     if ( xstr == 0 && ystr == 0 )
       return FT_Err_Ok;
@@ -388,6 +392,8 @@
     case FT_PIXEL_MODE_GRAY:
     case FT_PIXEL_MODE_GRAY2:
     case FT_PIXEL_MODE_GRAY4:
+    case FT_PIXEL_MODE_LCD:
+    case FT_PIXEL_MODE_LCD_V:
       {
         FT_Int   pad;
         FT_Long  old_size;
@@ -410,6 +416,10 @@
         }
 
         target->pitch = source->width + pad;
+
+        if ( target->pitch > 0                           &&
+             target->rows > (int)(FT_ULONG_MAX / target->pitch) )
+          return FT_Err_Invalid_Argument;
 
         if ( target->rows * target->pitch > old_size             &&
              FT_QREALLOC( target->buffer,
@@ -482,6 +492,8 @@
 
 
     case FT_PIXEL_MODE_GRAY:
+    case FT_PIXEL_MODE_LCD:
+    case FT_PIXEL_MODE_LCD_V:
       {
         FT_Int    width   = source->width;
         FT_Byte*  s       = source->buffer;
@@ -600,6 +612,31 @@
     }
 
     return error;
+  }
+
+
+  /* documentation is in ftbitmap.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_GlyphSlot_Own_Bitmap( FT_GlyphSlot  slot )
+  {
+    if ( slot && slot->format == FT_GLYPH_FORMAT_BITMAP   &&
+         !( slot->internal->flags & FT_GLYPH_OWN_BITMAP ) )
+    {
+      FT_Bitmap  bitmap;
+      FT_Error   error;
+
+
+      FT_Bitmap_New( &bitmap );
+      error = FT_Bitmap_Copy( slot->library, &slot->bitmap, &bitmap );
+      if ( error )
+        return error;
+
+      slot->bitmap = bitmap;
+      slot->internal->flags |= FT_GLYPH_OWN_BITMAP;
+    }
+
+    return FT_Err_Ok;
   }
 
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeometryFilter.cxx,v $
+  Module:    vtkGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,10 +34,10 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkVoxel.h"
 #include "vtkWedge.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkGeometryFilter, "$Revision: 1.108 $");
 vtkStandardNewMacro(vtkGeometryFilter);
-vtkCxxSetObjectMacro(vtkGeometryFilter, Locator, vtkPointLocator)
+vtkCxxSetObjectMacro(vtkGeometryFilter, Locator, vtkIncrementalPointLocator)
 
 //----------------------------------------------------------------------------
 // Construct with all types of clipping turned off.
@@ -120,7 +120,7 @@ int vtkGeometryFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -952,6 +952,7 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
 
         //Quadratic cells
         case VTK_QUADRATIC_EDGE:
+        case VTK_CUBIC_LINE:
         case VTK_QUADRATIC_TRIANGLE:
         case VTK_QUADRATIC_QUAD:
         case VTK_QUADRATIC_TETRA:
@@ -959,6 +960,7 @@ void vtkGeometryFilter::UnstructuredGridExecute(vtkDataSet *dataSetInput,
         case VTK_QUADRATIC_WEDGE:
         case VTK_QUADRATIC_PYRAMID:
         case VTK_QUADRATIC_LINEAR_QUAD:
+        case VTK_BIQUADRATIC_TRIANGLE:
         case VTK_BIQUADRATIC_QUAD:
         case VTK_TRIQUADRATIC_HEXAHEDRON:
         case VTK_QUADRATIC_LINEAR_WEDGE:

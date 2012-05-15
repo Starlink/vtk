@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCutter.cxx,v $
+  Module:    vtkCutter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,13 +39,13 @@
 #include "vtkSynchronizedTemplatesCutter3D.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCutter, "$Revision: 1.89 $");
 vtkStandardNewMacro(vtkCutter);
 vtkCxxSetObjectMacro(vtkCutter,CutFunction,vtkImplicitFunction);
-vtkCxxSetObjectMacro(vtkCutter,Locator,vtkPointLocator)
+vtkCxxSetObjectMacro(vtkCutter,Locator,vtkIncrementalPointLocator)
 
 //----------------------------------------------------------------------------
 // Construct with user-specified implicit function; initial value of 0.0; and
@@ -62,6 +62,9 @@ vtkCutter::vtkCutter(vtkImplicitFunction *cf)
   this->SynchronizedTemplatesCutter3D = vtkSynchronizedTemplatesCutter3D::New();
   this->GridSynchronizedTemplates = vtkGridSynchronizedTemplates3D::New();
   this->RectilinearSynchronizedTemplates = vtkRectilinearSynchronizedTemplates::New();
+
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_RANGES(), 1);
+  this->GetInformation()->Set(vtkAlgorithm::PRESERVES_BOUNDS(), 1);
 }
 
 //----------------------------------------------------------------------------
@@ -91,12 +94,6 @@ unsigned long vtkCutter::GetMTime()
   if ( this->CutFunction != NULL )
     {
     time = this->CutFunction->GetMTime();
-    mTime = ( time > mTime ? time : mTime );
-    }
-
-  if ( this->Locator != NULL )
-    {
-    time = this->Locator->GetMTime();
     mTime = ( time > mTime ? time : mTime );
     }
 
@@ -319,7 +316,7 @@ int vtkCutter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -393,6 +390,7 @@ void vtkCutter::GetCellTypeDimensions(unsigned char* cellTypeDimensions)
   cellTypeDimensions[VTK_VERTEX] = 0;
   cellTypeDimensions[VTK_POLY_VERTEX] = 0;
   cellTypeDimensions[VTK_LINE] = 1;
+  cellTypeDimensions[VTK_CUBIC_LINE]=1;
   cellTypeDimensions[VTK_POLY_LINE] = 1;
   cellTypeDimensions[VTK_QUADRATIC_EDGE] = 1;
   cellTypeDimensions[VTK_PARAMETRIC_CURVE] = 1;
@@ -403,6 +401,7 @@ void vtkCutter::GetCellTypeDimensions(unsigned char* cellTypeDimensions)
   cellTypeDimensions[VTK_PIXEL] = 2;
   cellTypeDimensions[VTK_QUAD] = 2;
   cellTypeDimensions[VTK_QUADRATIC_TRIANGLE] = 2;
+  cellTypeDimensions[VTK_BIQUADRATIC_TRIANGLE] = 2;
   cellTypeDimensions[VTK_QUADRATIC_QUAD] = 2;
   cellTypeDimensions[VTK_QUADRATIC_LINEAR_QUAD] = 2;
   cellTypeDimensions[VTK_BIQUADRATIC_QUAD] = 2;

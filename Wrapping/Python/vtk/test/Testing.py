@@ -4,7 +4,7 @@ documentation on what unittests are and how to use them, please read
 these:
 
    http://www.python.org/doc/current/lib/module-unittest.html
-   
+
    http://www.diveintopython.org/roman_divein.html
 
 
@@ -106,7 +106,7 @@ class vtkTest(unittest.TestCase):
     generating VTK pipelines you should create the pipeline in the
     class definition as done below for _blackbox.
     """
-    
+
     _blackbox = BlackBox.Tester(debug=0)
 
     # Due to what seems to be a bug in python some objects leak.
@@ -122,19 +122,19 @@ class vtkTest(unittest.TestCase):
         them and sorts them into different classes of objects."""
         self._blackbox.testParse(obj)
 
-    def _testGetSet(self, obj):
+    def _testGetSet(self, obj, excluded_methods=[]):
         """Checks the Get/Set method pairs by setting the value using
         the current state and making sure that it equals the value it
         was originally.  This effectively calls _testParse
         internally. """
-        self._blackbox.testGetSet(obj)
+        self._blackbox.testGetSet(obj, excluded_methods)
 
-    def _testBoolean(self, obj):
+    def _testBoolean(self, obj, excluded_methods=[]):
         """Checks the Boolean methods by setting the value on and off
         and making sure that the GetMethod returns the the set value.
         This effectively calls _testParse internally. """
-        self._blackbox.testBoolean(obj)
-        
+        self._blackbox.testBoolean(obj, excluded_methods)
+
 
 
 def interact():
@@ -148,7 +148,7 @@ def isInteractive():
     based on command line options."""
     return _INTERACT
 
-def getAbsImagePath(img_basename):    
+def getAbsImagePath(img_basename):
     """Returns the full path to the image given the basic image
     name."""
     global VTK_BASELINE_ROOT
@@ -169,7 +169,7 @@ def compareImageWithSavedImage(src_img, img_fname, threshold=10):
     global _NO_IMAGE
     if _NO_IMAGE:
         return
-    
+
     f_base, f_ext = os.path.splitext(img_fname)
 
     if not os.path.isfile(img_fname):
@@ -178,8 +178,8 @@ def compareImageWithSavedImage(src_img, img_fname, threshold=10):
         pngw.SetFileName(_getTempImagePath(img_fname))
         pngw.SetInput(src_img)
         pngw.Write()
-        return 
-        
+        return
+
     pngr = vtk.vtkPNGReader()
     pngr.SetFileName(img_fname)
 
@@ -266,14 +266,14 @@ def _printDartImageError(img_err, err_index, img_base):
     else:
         print "<DartMeasurement name=\"BaselineImage\" type=\"numeric/integer\">",
         print "%d </DartMeasurement>"%err_index
-	   
-    print "<DartMeasurementFile name=\"TestImage\" type=\"image/jpeg\">",
-    print "%s </DartMeasurementFile>"%(img_base + '.test.small.jpg')
 
-    print "<DartMeasurementFile name=\"DifferenceImage\" type=\"image/jpeg\">",
-    print "%s </DartMeasurementFile>"%(img_base + '.diff.small.jpg')
-    print "<DartMeasurementFile name=\"ValidImage\" type=\"image/jpeg\">",
-    print "%s </DartMeasurementFile>"%(img_base + '.small.jpg')
+    print "<DartMeasurementFile name=\"TestImage\" type=\"image/png\">",
+    print "%s </DartMeasurementFile>"%(img_base + '.png')
+
+    print "<DartMeasurementFile name=\"DifferenceImage\" type=\"image/png\">",
+    print "%s </DartMeasurementFile>"%(img_base + '.diff.png')
+    print "<DartMeasurementFile name=\"ValidImage\" type=\"image/png\">",
+    print "%s </DartMeasurementFile>"%(img_base + '.valid.png')
 
 
 def _printDartImageSuccess(img_err, err_index):
@@ -285,55 +285,34 @@ def _printDartImageSuccess(img_err, err_index):
     else:
        print "<DartMeasurement name=\"BaselineImage\" type=\"numeric/integer\">",
        print "%d </DartMeasurement>"%err_index
-    
+
 
 def _handleFailedImage(idiff, pngr, img_fname):
     """Writes all the necessary images when an image comparison
     failed."""
     f_base, f_ext = os.path.splitext(img_fname)
 
-    # write out the difference file in full.
-    pngw = vtk.vtkPNGWriter()
-    pngw.SetFileName(_getTempImagePath(f_base + ".diff.png"))
-    pngw.SetInput(idiff.GetOutput())
-    pngw.Write()
-    
-    # write the difference image scaled and gamma adjusted for the
-    # dashboard.
-    sz = pngr.GetOutput().GetDimensions()
-    if sz[1] <= 250.0:
-        mag = 1.0
-    else:
-        mag = 250.0/sz[1]
-
-    shrink = vtk.vtkImageResample()
-    shrink.SetInput(idiff.GetOutput())
-    shrink.InterpolateOn()
-    shrink.SetAxisMagnificationFactor(0, mag)
-    shrink.SetAxisMagnificationFactor(1, mag)
-
+    # write the difference image gamma adjusted for the dashboard.
     gamma = vtk.vtkImageShiftScale()
-    gamma.SetInput(shrink.GetOutput())
+    gamma.SetInputConnection(idiff.GetOutputPort())
     gamma.SetShift(0)
     gamma.SetScale(10)
 
-    jpegw = vtk.vtkJPEGWriter()
-    jpegw.SetFileName(_getTempImagePath(f_base + ".diff.small.jpg"))
-    jpegw.SetInput(gamma.GetOutput())
-    jpegw.SetQuality(85)
-    jpegw.Write()
+    pngw = vtk.vtkPNGWriter()
+    pngw.SetFileName(_getTempImagePath(f_base + ".diff.png"))
+    pngw.SetInputConnection(gamma.GetOutputPort())
+    pngw.Write()
 
-    # write out the image that was generated.
-    shrink.SetInput(idiff.GetInput())
-    jpegw.SetInput(shrink.GetOutput())
-    jpegw.SetFileName(_getTempImagePath(f_base + ".test.small.jpg"))
-    jpegw.Write()
+    # Write out the image that was generated.  Write it out as full so that
+    # it may be used as a baseline image if the tester deems it valid.
+    pngw.SetInput(idiff.GetInput())
+    pngw.SetFileName(_getTempImagePath(f_base + ".png"))
+    pngw.Write()
 
     # write out the valid image that matched.
-    shrink.SetInput(idiff.GetImage())
-    jpegw.SetInput(shrink.GetOutput())
-    jpegw.SetFileName(_getTempImagePath(f_base + ".small.jpg"))
-    jpegw.Write()
+    pngw.SetInput(idiff.GetImage())
+    pngw.SetFileName(_getTempImagePath(f_base + ".valid.png"))
+    pngw.Write()
 
 
 def main(cases):
@@ -349,7 +328,7 @@ def main(cases):
 
     timer = vtk.vtkTimerLog()
     s_time = timer.GetCPUTime()
-    s_wall_time = time.time()    
+    s_wall_time = time.time()
 
     # run the tests
     result = test(cases)
@@ -365,7 +344,7 @@ def main(cases):
 
     # Delete these to eliminate debug leaks warnings.
     del cases, timer
-    
+
     if result.wasSuccessful():
         sys.exit(0)
     else:
@@ -393,7 +372,7 @@ def test(cases):
     runner = unittest.TextTestRunner(verbosity=_VERBOSE)
     result = runner.run(test_suite)
 
-    return result        
+    return result
 
 
 def usage():
@@ -406,7 +385,7 @@ def usage():
           is not set via the command line the environment variable
           VTK_DATA_ROOT is used.  If the environment variable is not
           set the value defaults to '../../../../VTKData'.
-    
+
     -B /path/to/valid/image_dir/
     --baseline-root /path/to/valid/image_dir/
 
@@ -427,7 +406,7 @@ def usage():
 
     -v level
     --verbose level
-    
+
           Sets the verbosity of the test runner.  Valid values are 0,
           1, and 2 in increasing order of verbosity.
 
@@ -450,10 +429,10 @@ def usage():
     --help
 
                  Prints this message.
-                 
+
 """
     return msg
-    
+
 
 def parseCmdLine():
     arguments = sys.argv[1:]
@@ -469,10 +448,10 @@ def parseCmdLine():
         print '-'*70
         print msg
         sys.exit (1)
-        
+
     return opts, args
 
-    
+
 def processCmdLine():
     opts, args = parseCmdLine()
 
@@ -513,7 +492,7 @@ def processCmdLine():
                 msg="Verbosity should be an integer.  0, 1, 2 are valid."
                 print msg
                 sys.exit(1)
-        if o in ('-h', '--help'):            
+        if o in ('-h', '--help'):
             print usage()
             sys.exit()
 

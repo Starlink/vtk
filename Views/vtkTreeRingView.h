@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeRingView.h,v $
+  Module:    vtkTreeRingView.h
 
   -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -28,7 +28,6 @@
 // vertices as leaves of the tree with curved graph edges between leaves.
 //
 // .SEE ALSO
-// vtkTreeLayoutView
 // vtkGraphLayoutView
 //
 // .SECTION Thanks
@@ -43,7 +42,7 @@ class VTK_VIEWS_EXPORT vtkTreeRingView : public vtkTreeAreaView
 {
 public:
   static vtkTreeRingView *New();
-  vtkTypeRevisionMacro(vtkTreeRingView, vtkTreeAreaView);
+  vtkTypeMacro(vtkTreeRingView, vtkTreeAreaView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

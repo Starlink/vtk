@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationIterator.h,v $
+  Module:    vtkInformationIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,18 +28,26 @@
 
 class vtkInformation;
 class vtkInformationKey;
+class vtkInformationIteratorInternals;
 
 class VTK_COMMON_EXPORT vtkInformationIterator : public vtkObject
 {
 public:
   static vtkInformationIterator *New();
-  vtkTypeRevisionMacro(vtkInformationIterator,vtkObject);
+  vtkTypeMacro(vtkInformationIterator,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Set/Get the information to iterator over.
   void SetInformation(vtkInformation*);
   vtkGetObjectMacro(Information, vtkInformation);
+
+  // Description:
+  // Set the function to iterate over. The iterator
+  // will not hold a reference to the information object.
+  // Can be used to optimize certain places by avoiding
+  // garbage collection.
+  void SetInformationWeak(vtkInformation*);
 
   // Description:
   // Move the iterator to the beginning of the collection.
@@ -68,7 +76,9 @@ protected:
   ~vtkInformationIterator();
 
   vtkInformation* Information;
-  unsigned short Index;
+  vtkInformationIteratorInternals* Internal;
+
+  bool ReferenceIsWeak;
 
 private:
   vtkInformationIterator(const vtkInformationIterator&);  // Not implemented.

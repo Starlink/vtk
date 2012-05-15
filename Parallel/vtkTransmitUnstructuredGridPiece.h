@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransmitUnstructuredGridPiece.h,v $
+  Module:    vtkTransmitUnstructuredGridPiece.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_PARALLEL_EXPORT vtkTransmitUnstructuredGridPiece : public vtkUnstructu
 {
 public:
   static vtkTransmitUnstructuredGridPiece *New();
-  vtkTypeRevisionMacro(vtkTransmitUnstructuredGridPiece, vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkTransmitUnstructuredGridPiece, vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

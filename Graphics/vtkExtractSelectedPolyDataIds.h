@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractSelectedPolyDataIds.h,v $
+  Module:    vtkExtractSelectedPolyDataIds.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class vtkSelection;
 class VTK_GRAPHICS_EXPORT vtkExtractSelectedPolyDataIds : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkExtractSelectedPolyDataIds,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkExtractSelectedPolyDataIds,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkExtractSelectedPolyDataIds *New();
 

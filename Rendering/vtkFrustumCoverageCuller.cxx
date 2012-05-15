@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFrustumCoverageCuller.cxx,v $
+  Module:    vtkFrustumCoverageCuller.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkProp.h"
 #include "vtkRenderer.h"
 
-vtkCxxRevisionMacro(vtkFrustumCoverageCuller, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkFrustumCoverageCuller);
 
 // Create a frustum coverage culler with default values

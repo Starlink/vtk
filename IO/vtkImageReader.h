@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageReader.h,v $
+  Module:    vtkImageReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IO_EXPORT vtkImageReader : public vtkImageReader2
 {
 public:
   static vtkImageReader *New();
-  vtkTypeRevisionMacro(vtkImageReader,vtkImageReader2);
+  vtkTypeMacro(vtkImageReader,vtkImageReader2);
   void PrintSelf(ostream& os, vtkIndent indent);   
 
   // Description:
@@ -45,17 +45,13 @@ public:
   vtkGetVector6Macro(DataVOI,int);
   
   // Description:
-  // Set/Get the Data mask.
-  vtkGetMacro(DataMask,unsigned short);
-  void SetDataMask(int val) 
-    {
-      if (val == this->DataMask)
-        {
-        return;
-        }
-      this->DataMask = static_cast<unsigned short>(val);
-      this->Modified();
-    }
+  // Set/Get the Data mask.  The data mask is a simply integer whose bits are
+  // treated as a mask to the bits read from disk.  That is, the data mask is
+  // bitwise-and'ed to the numbers read from disk.  This ivar is stored as 64
+  // bits, the largest mask you will need.  The mask will be truncated to the
+  // data size required to be read (using the least significant bits).
+  vtkGetMacro(DataMask, vtkTypeUInt64);
+  vtkSetMacro(DataMask, vtkTypeUInt64);
   
   // Description:
   // Set/Get transformation matrix to transform the data from slice space
@@ -82,7 +78,7 @@ protected:
   vtkImageReader();
   ~vtkImageReader();
 
-  unsigned short DataMask;  // Mask each pixel with ...
+  vtkTypeUInt64 DataMask;
 
   vtkTransform *Transform;
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleRubberBand2D.cxx,v $
+  Module:    vtkInteractorStyleRubberBand2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleRubberBand2D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkInteractorStyleRubberBand2D);
 
 //--------------------------------------------------------------------------
@@ -37,6 +36,7 @@ vtkInteractorStyleRubberBand2D::vtkInteractorStyleRubberBand2D()
 {
   this->PixelArray = vtkUnsignedCharArray::New();
   this->Interaction = NONE;
+  this->RenderOnMouseMove = false;
 }
 
 //--------------------------------------------------------------------------
@@ -209,6 +209,10 @@ void vtkInteractorStyleRubberBand2D::OnMouseMove()
     this->InvokeEvent(vtkCommand::InteractionEvent);
     this->RedrawRubberBand();
     }
+  else if (this->RenderOnMouseMove)
+    {
+    this->GetInteractor()->Render();
+    }
 }
 
 //--------------------------------------------------------------------------
@@ -316,4 +320,7 @@ void vtkInteractorStyleRubberBand2D::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   os << indent << "Interaction: " << this->Interaction << endl;
+  os << indent << "RenderOnMouseMove: " << this->RenderOnMouseMove << endl;
+  os << indent << "StartPosition: " << this->StartPosition[0] << "," << this->StartPosition[1] << endl;
+  os << indent << "EndPosition: " << this->EndPosition[0] << "," << this->EndPosition[1] << endl;
 }

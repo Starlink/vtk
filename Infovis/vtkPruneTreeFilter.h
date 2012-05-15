@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPruneTreeFilter.h,v $
+  Module:    vtkPruneTreeFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_INFOVIS_EXPORT vtkPruneTreeFilter : public vtkTreeAlgorithm
 {
 public:
   static vtkPruneTreeFilter* New();
-  vtkTypeRevisionMacro(vtkPruneTreeFilter,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkPruneTreeFilter,vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiThreader.h,v $
+  Module:    vtkMultiThreader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -89,7 +89,7 @@ class VTK_COMMON_EXPORT vtkMultiThreader : public vtkObject
 public:
   static vtkMultiThreader *New();
 
-  vtkTypeRevisionMacro(vtkMultiThreader,vtkObject);
+  vtkTypeMacro(vtkMultiThreader,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

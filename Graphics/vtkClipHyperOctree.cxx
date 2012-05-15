@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipHyperOctree.cxx,v $
+  Module:    vtkClipHyperOctree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,11 +39,11 @@
 #include "vtkPolygon.h"
 #include "vtkOrderedTriangulator.h"
 #include "vtkHyperOctreeClipCutPointsGrabber.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkClipHyperOctree, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkClipHyperOctree);
 vtkCxxSetObjectMacro(vtkClipHyperOctree,ClipFunction,vtkImplicitFunction);
 
@@ -162,7 +162,7 @@ int vtkClipHyperOctree::RequestData(vtkInformation *vtkNotUsed(request),
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   this->Input = vtkHyperOctree::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   this->Output=vtkUnstructuredGrid::SafeDownCast(
@@ -1048,7 +1048,7 @@ void vtkClipHyperOctree::ClipNode(vtkHyperOctreeCursor *cursor,
         
         // just pass the tetra or polygon to the output without clipping
         // TODO
-        vtkPointLocator *locator;
+        vtkIncrementalPointLocator *locator;
         if(allIn)
           {
           i=0;
@@ -1514,7 +1514,7 @@ void vtkClipHyperOctree::ClipNode(vtkHyperOctreeCursor *cursor,
 //----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkClipHyperOctree::SetLocator(vtkPointLocator *locator)
+void vtkClipHyperOctree::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator)
     {

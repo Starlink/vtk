@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricDini.cxx,v $
+  Module:    vtkParametricDini.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkParametricDini, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkParametricDini);
 
 //----------------------------------------------------------------------------

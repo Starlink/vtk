@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDistanceRepresentation2D.h,v $
+  Module:    vtkDistanceRepresentation2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,10 +17,13 @@
 // The vtkDistanceRepresentation2D is a representation for the
 // vtkDistanceWidget. This representation consists of a measuring line (axis)
 // and two vtkHandleWidgets to place the end points of the line. Note that
-// this particular widget draws its representation in the overlay plane.
+// this particular widget draws its representation in the overlay plane, and
+// the handles also operate in the 2D overlay plane. (If you desire to use
+// the distance widget for 3D measurements, use the
+// vtkDistanceRepresentation3D.)
 
 // .SECTION See Also
-// vtkDistanceWidget vtkDistanceRepresentation
+// vtkDistanceWidget vtkDistanceRepresentation vtkDistanceRepresentation3D
 
 
 #ifndef __vtkDistanceRepresentation2D_h
@@ -41,7 +44,7 @@ public:
 
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkDistanceRepresentation2D,vtkDistanceRepresentation);
+  vtkTypeMacro(vtkDistanceRepresentation2D,vtkDistanceRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,8 +70,10 @@ public:
 
   // Description:
   // Retrieve the vtkAxisActor2D used to draw the measurement axis. With this
-  // properties can be set and so on.
+  // properties can be set and so on. There is also a convenience method to
+  // get the axis property.
   vtkAxisActor2D *GetAxis();
+  vtkProperty2D  *GetAxisProperty();
 
   // Description:
   // Method to satisfy superclasses' API.

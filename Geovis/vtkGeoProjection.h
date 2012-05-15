@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoProjection.h,v $
+  Module:    vtkGeoProjection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_GEOVIS_EXPORT vtkGeoProjection : public vtkObject
 public:
   static vtkGeoProjection* New();
   virtual void PrintSelf( ostream& os, vtkIndent indent );
-  vtkTypeRevisionMacro(vtkGeoProjection,vtkObject);
+  vtkTypeMacro(vtkGeoProjection,vtkObject);
 
   // Description:
   // Returns the number of projections that this class offers.
@@ -86,6 +86,31 @@ public:
   // on your own as it will then be out of sync with the vtkGeoProjection class.
   PROJ* GetProjection();
 
+  // Description:
+  // Add an optional parameter to the projection that will be computed or
+  // replace it if already present.
+  void SetOptionalParameter(const char* key, const char* value);
+
+  // Description:
+  // Remove an optional parameter to the projection that will be computed
+  void RemoveOptionalParameter(const char*);
+
+  // Description:
+  // Return the number of optional parameters
+  int GetNumberOfOptionalParameters();
+
+  // Description:
+  // Return the number of optional parameters
+  const char* GetOptionalParameterKey(int index);
+
+  // Description:
+  // Return the number of optional parameters
+  const char* GetOptionalParameterValue(int index);
+
+  // Description:
+  // Clear all optional parameters
+  void ClearOptionalParameters();
+
 protected:
   vtkGeoProjection();
   virtual ~vtkGeoProjection();
@@ -105,6 +130,9 @@ protected:
 private:
   vtkGeoProjection( const vtkGeoProjection& ); // Not implemented.
   void operator = ( const vtkGeoProjection& ); // Not implemented.
+
+  class vtkInternals;
+  vtkInternals* Internals;
 };
 
 #endif // __vtkGeoProjection_h

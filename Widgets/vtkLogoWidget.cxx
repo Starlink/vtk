@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLogoWidget.cxx,v $
+  Module:    vtkLogoWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkCallbackCommand.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkLogoWidget, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkLogoWidget);
 
 //-------------------------------------------------------------------------

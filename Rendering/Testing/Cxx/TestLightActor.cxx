@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestLightActor.cxx,v $
+  Module:    TestLightActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,6 +44,7 @@
 #include "vtkVolumetricPass.h"
 #include "vtkOverlayPass.h"
 #include "vtkRenderPassCollection.h"
+#include "vtkShadowMapBakerPass.h"
 #include "vtkShadowMapPass.h"
 #include "vtkConeSource.h"
 #include "vtkPlaneSource.h"
@@ -138,7 +139,7 @@ int TestLightActor(int argc, char* argv[])
   rectangleMapper->SetScalarVisibility(0);
   vtkActor *rectangleActor=vtkActor::New();
   vtkInformation *rectangleKeyProperties=vtkInformation::New();
-  rectangleKeyProperties->Set(vtkShadowMapPass::OCCLUDER(),0); // dummy val.
+  rectangleKeyProperties->Set(vtkShadowMapBakerPass::OCCLUDER(),0); // dummy val.
   rectangleActor->SetPropertyKeys(rectangleKeyProperties);
   rectangleKeyProperties->Delete();
   rectangleActor->SetMapper(rectangleMapper);

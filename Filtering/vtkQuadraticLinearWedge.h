@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticLinearWedge.h,v $
+  Module:    vtkQuadraticLinearWedge.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ class VTK_FILTERING_EXPORT vtkQuadraticLinearWedge : public vtkNonLinearCell
 {
 public:
   static vtkQuadraticLinearWedge *New ();
-  vtkTypeRevisionMacro (vtkQuadraticLinearWedge, vtkNonLinearCell);
+  vtkTypeMacro(vtkQuadraticLinearWedge,vtkNonLinearCell);
   void PrintSelf (ostream & os, vtkIndent indent);
 
   // Description:
@@ -68,7 +68,7 @@ public:
   // The quadratic linear wege is splitted into 4 linear wedges,
   // each of them is contoured by a provided scalar value
   void Contour (double value, vtkDataArray * cellScalars,
-    vtkPointLocator * locator, vtkCellArray * verts,
+    vtkIncrementalPointLocator * locator, vtkCellArray * verts,
     vtkCellArray * lines, vtkCellArray * polys,
     vtkPointData * inPd, vtkPointData * outPd, vtkCellData * inCd,
     vtkIdType cellId, vtkCellData * outCd);
@@ -84,7 +84,7 @@ public:
   // contouring, except that it cuts the hex to produce linear
   // tetrahedron.
   void Clip (double value, vtkDataArray * cellScalars,
-       vtkPointLocator * locator, vtkCellArray * tetras,
+       vtkIncrementalPointLocator * locator, vtkCellArray * tetras,
        vtkPointData * inPd, vtkPointData * outPd,
        vtkCellData * inCd, vtkIdType cellId, vtkCellData * outCd, int insideOut);
 

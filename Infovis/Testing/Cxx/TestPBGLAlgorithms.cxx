@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestPBGLAlgorithms.cxx,v $
+  Module:    TestPBGLAlgorithms.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,8 +40,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-using vtkstd::pair;
-using vtkstd::vector;
+using std::pair;
+using std::vector;
 
 static vtkIdType verticesPerNode = 1000;
 

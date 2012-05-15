@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSectorSource.cxx,v $
+  Module:    vtkSectorSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #define VTK_CREATE(type, name)                                  \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-vtkCxxRevisionMacro(vtkSectorSource, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkSectorSource);
 
 vtkSectorSource::vtkSectorSource()

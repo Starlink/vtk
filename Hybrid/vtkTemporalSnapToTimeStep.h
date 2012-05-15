@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalSnapToTimeStep.h,v $
+  Module:    vtkTemporalSnapToTimeStep.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,14 +32,14 @@
 #include "vtkTemporalDataSetAlgorithm.h"
 
 //BTX
-#include <vtkstd/vector> // used because I am a bad boy. So there.
+#include <vector> // used because I am a bad boy. So there.
 //ETX
 
 class VTK_HYBRID_EXPORT vtkTemporalSnapToTimeStep : public vtkTemporalDataSetAlgorithm
 {
 public:
   static vtkTemporalSnapToTimeStep *New();
-  vtkTypeRevisionMacro(vtkTemporalSnapToTimeStep, vtkTemporalDataSetAlgorithm);
+  vtkTypeMacro(vtkTemporalSnapToTimeStep, vtkTemporalDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX
@@ -71,7 +71,7 @@ protected:
                           vtkInformationVector *);
 
 //BTX
-    vtkstd::vector<double>  InputTimeValues;
+    std::vector<double>  InputTimeValues;
     int HasDiscrete;
     int SnapMode;
 //ETX

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLineRepresentation.h,v $
+  Module:    vtkLineRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkLineRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkLineRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -105,6 +105,12 @@ public:
   vtkGetObjectMacro(EndPointProperty,vtkProperty);
   vtkGetObjectMacro(SelectedEndPointProperty,vtkProperty);
 
+  // Description:
+  // Get the end-point (sphere) properties. The properties of the end-points 
+  // when selected and unselected can be manipulated.
+  vtkGetObjectMacro(EndPoint2Property,vtkProperty);
+  vtkGetObjectMacro(SelectedEndPoint2Property,vtkProperty);
+  
   // Description:
   // Get the line properties. The properties of the line when selected
   // and unselected can be manipulated.
@@ -181,13 +187,13 @@ public:
   virtual void SetRenderer(vtkRenderer *ren);
 
   // Description:
-  // Show the distance between the points
+  // Show the distance between the points.
   vtkSetMacro( DistanceAnnotationVisibility, int );
   vtkGetMacro( DistanceAnnotationVisibility, int );
   vtkBooleanMacro( DistanceAnnotationVisibility, int );
 
   // Description:
-  // Specify the format to use for labelling the angle. Note that an empty
+  // Specify the format to use for labelling the line. Note that an empty
   // string results in no label, or a format string without a "%" character
   // will not print the angle value.
   vtkSetStringMacro(DistanceAnnotationFormat);
@@ -195,6 +201,14 @@ public:
   
   // Description:
   // Scale text (font size along each dimension).
+  void SetDistanceAnnotationScale(double x, double y, double z)
+  {
+    double scale[3];
+    scale[0] = x;
+    scale[1] = y;
+    scale[2] = z;
+    this->SetDistanceAnnotationScale(scale);
+  }
   virtual void SetDistanceAnnotationScale( double scale[3] );
   virtual double * GetDistanceAnnotationScale();
 
@@ -202,6 +216,20 @@ public:
   // Get the distance between the points.
   double GetDistance();
   
+
+  // Description:
+  // Convenience method to set the line color.
+  // Ideally one should use GetLineProperty()->SetColor().
+  void SetLineColor(double r, double g, double b);
+
+  // Description:
+  // Get the distance annotation property
+  virtual vtkProperty *GetDistanceAnnotationProperty();
+
+  // Description:
+  // Get the text actor
+  vtkGetObjectMacro(TextActor, vtkFollower);
+
 protected:
   vtkLineRepresentation();
   ~vtkLineRepresentation();
@@ -229,6 +257,8 @@ protected:
   // the manipulator in general.
   vtkProperty *EndPointProperty;
   vtkProperty *SelectedEndPointProperty;
+  vtkProperty *EndPoint2Property;
+  vtkProperty *SelectedEndPoint2Property;
   vtkProperty *LineProperty;
   vtkProperty *SelectedLineProperty;
   void         CreateDefaultProperties();

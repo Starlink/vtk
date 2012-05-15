@@ -24,11 +24,16 @@ ENDIF (VTK_WRAP_TCL AND VTKMY_WRAP_TCL)
 
 # Create the vtkmyCommon Python library.
 IF (VTK_WRAP_PYTHON AND VTKMY_WRAP_PYTHON)
+  INCLUDE_DIRECTORIES("${PYTHON_INCLUDE_PATH}")
   VTK_WRAP_PYTHON3 (vtkmyCommonPython CommonPython_SRCS "${Common_SRCS}")
   ADD_LIBRARY (vtkmyCommonPythonD ${CommonPython_SRCS})
   ADD_LIBRARY (vtkmyCommonPython MODULE vtkmyCommonPythonInit.cxx)
   TARGET_LINK_LIBRARIES(vtkmyCommonPythonD vtkmyCommon vtkCommon vtkCommonPythonD)
   TARGET_LINK_LIBRARIES(vtkmyCommonPython vtkmyCommonPythonD)
+  SET_TARGET_PROPERTIES(vtkmyCommonPython PROPERTIES PREFIX "")
+  IF(WIN32 AND NOT CYGWIN)
+    SET_TARGET_PROPERTIES(vtkmyCommonPython PROPERTIES SUFFIX ".pyd")
+  ENDIF(WIN32 AND NOT CYGWIN)
 ENDIF (VTK_WRAP_PYTHON AND VTKMY_WRAP_PYTHON)
 
 # Create the vtkmyCommon Java library.

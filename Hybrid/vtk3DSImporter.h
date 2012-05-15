@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtk3DSImporter.h,v $
+  Module:    vtk3DSImporter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_HYBRID_EXPORT vtk3DSImporter : public vtkImporter
 public:
   static vtk3DSImporter *New();
 
-  vtkTypeRevisionMacro(vtk3DSImporter,vtkImporter);
+  vtkTypeMacro(vtk3DSImporter,vtkImporter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

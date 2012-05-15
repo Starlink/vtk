@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalDataSetGeometryFilter.cxx,v $
+  Module:    vtkHierarchicalDataSetGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkHierarchicalDataSetGeometryFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkHierarchicalDataSetGeometryFilter);
 //-----------------------------------------------------------------------------
 vtkHierarchicalDataSetGeometryFilter::vtkHierarchicalDataSetGeometryFilter()

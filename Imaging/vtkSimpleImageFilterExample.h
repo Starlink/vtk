@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleImageFilterExample.h,v $
+  Module:    vtkSimpleImageFilterExample.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkSimpleImageFilterExample : public vtkSimpleImageToIm
 {
 public:
   static vtkSimpleImageFilterExample *New();
-  vtkTypeRevisionMacro(vtkSimpleImageFilterExample,vtkSimpleImageToImageFilter);
+  vtkTypeMacro(vtkSimpleImageFilterExample,vtkSimpleImageToImageFilter);
 
 protected:
 

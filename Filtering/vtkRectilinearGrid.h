@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGrid.h,v $
+  Module:    vtkRectilinearGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_FILTERING_EXPORT vtkRectilinearGrid : public vtkDataSet
 public:
   static vtkRectilinearGrid *New();
 
-  vtkTypeRevisionMacro(vtkRectilinearGrid,vtkDataSet);
+  vtkTypeMacro(vtkRectilinearGrid,vtkDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -199,6 +199,8 @@ protected:
   double PointReturn[3];
 
 private:
+  void Cleanup();
+
   // Description:
   // For legacy compatibility. Do not use.
   VTK_LEGACY(void GetCellNeighbors(vtkIdType cellId, vtkIdList& ptIds, vtkIdList& cellIds));

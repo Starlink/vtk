@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataMapper.cxx,v $
+  Module:    vtkPolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,14 +21,13 @@
 #include "vtkPolyData.h"
 #include "vtkRenderWindow.h"
 
-vtkCxxRevisionMacro(vtkPolyDataMapper, "$Revision: 1.50 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkPolyDataMapper);
 
 //----------------------------------------------------------------------------
-// return the correct type of PolyDataMapper 
+// return the correct type of PolyDataMapper
 vtkPolyDataMapper *vtkPolyDataMapper::New()
 {
   // First try to create the object from the vtkObjectFactory
@@ -45,23 +44,24 @@ vtkPolyDataMapper::vtkPolyDataMapper()
   this->GhostLevel = 0;
 }
 
-void vtkPolyDataMapper::Render(vtkRenderer *ren, vtkActor *act) 
+//----------------------------------------------------------------------------
+void vtkPolyDataMapper::Render(vtkRenderer *ren, vtkActor *act)
 {
   if (this->Static)
     {
     this->RenderPiece(ren,act);
     return;
     }
-  
+
   int currentPiece, nPieces;
-  vtkPolyData *input = this->GetInput();
-  
+  vtkDataObject *input = this->GetInputDataObject(0, 0);
+
   if (input == NULL)
     {
     vtkErrorMacro("Mapper has no input.");
     return;
     }
-  
+
   nPieces = this->NumberOfPieces * this->NumberOfSubPieces;
 
   for(int i=0; i<this->NumberOfSubPieces; i++)
@@ -102,28 +102,28 @@ void vtkPolyDataMapper::Update()
     {
     return;
     }
-  
+
   int currentPiece, nPieces = this->NumberOfPieces;
   vtkPolyData* input = this->GetInput();
-  
+
   // If the estimated pipeline memory usage is larger than
   // the memory limit, break the current piece into sub-pieces.
-  if (input) 
+  if (input)
     {
     currentPiece = this->NumberOfSubPieces * this->Piece;
-    input->SetUpdateExtent(currentPiece, this->NumberOfSubPieces*nPieces, 
+    input->SetUpdateExtent(currentPiece, this->NumberOfSubPieces*nPieces,
                            this->GhostLevel);
     }
 
   this->vtkMapper::Update();
 }
 
-// Get the bounds for the input of this mapper as 
+// Get the bounds for the input of this mapper as
 // (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
 double *vtkPolyDataMapper::GetBounds()
 {
   // do we have an input
-  if ( ! this->GetNumberOfInputConnections(0)) 
+  if ( ! this->GetNumberOfInputConnections(0))
     {
       vtkMath::UninitializeBounds(this->Bounds);
       return this->Bounds;
@@ -143,9 +143,9 @@ double *vtkPolyDataMapper::GetBounds()
 
       this->Update();
       }
-    this->GetInput()->GetBounds(this->Bounds);
+    this->ComputeBounds();
 
-    // if the bounds indicate NAN and subpieces are being used then 
+    // if the bounds indicate NAN and subpieces are being used then
     // return NULL
     if (!vtkMath::AreBoundsInitialized(this->Bounds)
         && this->NumberOfSubPieces > 1)
@@ -154,6 +154,11 @@ double *vtkPolyDataMapper::GetBounds()
       }
     return this->Bounds;
     }
+}
+
+void vtkPolyDataMapper::ComputeBounds()
+{
+  this->GetInput()->GetBounds(this->Bounds);
 }
 
 void vtkPolyDataMapper::ShallowCopy(vtkAbstractMapper *mapper)
@@ -183,8 +188,8 @@ void vtkPolyDataMapper::MapDataArrayToVertexAttribute(
 
 void vtkPolyDataMapper::MapDataArrayToMultiTextureAttribute(
     int vtkNotUsed(unit),
-    const char* vtkNotUsed(dataArrayName), 
-    int vtkNotUsed(fieldAssociation), 
+    const char* vtkNotUsed(dataArrayName),
+    int vtkNotUsed(fieldAssociation),
     int vtkNotUsed(componentno)
     )
 {

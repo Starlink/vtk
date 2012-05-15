@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageGaussianSmooth.h,v $
+  Module:    vtkImageGaussianSmooth.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@
 class VTK_IMAGING_EXPORT vtkImageGaussianSmooth : public vtkThreadedImageAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkImageGaussianSmooth,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageGaussianSmooth,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

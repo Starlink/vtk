@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaTube.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.8 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METATUBE_H
@@ -35,7 +30,7 @@
  *    Reads and Writes MetaTubeFiles.
  *
  * \author Julien Jomier
- * 
+ *
  * \date May 22, 2002
  */
 
@@ -48,7 +43,7 @@ class TubePnt
 public:
   TubePnt(int dim);
   ~TubePnt();
-  
+
   unsigned int m_Dim;
   float* m_V1;
   float* m_V2;
@@ -80,10 +75,10 @@ class METAIO_EXPORT MetaTube : public MetaObject
     ////
     MetaTube(void);
 
-    MetaTube(const char *_headerName);   
+    MetaTube(const char *_headerName);
 
-    MetaTube(const MetaTube *_tube); 
-    
+    MetaTube(const MetaTube *_tube);
+
     MetaTube(unsigned int dim);
 
     ~MetaTube(void);
@@ -121,7 +116,7 @@ class METAIO_EXPORT MetaTube : public MetaObject
 
     PointListType &  GetPoints(void) {return m_PointList;}
     const PointListType &  GetPoints(void) const {return m_PointList;}
-    
+
     MET_ValueEnumType ElementType(void) const;
     void  ElementType(MET_ValueEnumType _elementType);
 

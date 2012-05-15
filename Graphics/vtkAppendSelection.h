@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendSelection.h,v $
+  Module:    vtkAppendSelection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_GRAPHICS_EXPORT vtkAppendSelection : public vtkSelectionAlgorithm
 public:
   static vtkAppendSelection *New();
 
-  vtkTypeRevisionMacro(vtkAppendSelection,vtkSelectionAlgorithm);
+  vtkTypeMacro(vtkAppendSelection,vtkSelectionAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -57,9 +57,9 @@ public:
   // used when UserManagedInputs is true, use SetInputByNumber (NULL) instead.
   void RemoveInput(vtkSelection *);
 
+//BTX
   // Description:
   // Get any input of this filter.
-//BTX
   vtkSelection *GetInput(int idx);
   vtkSelection *GetInput() { return this->GetInput( 0 ); };
 //ETX

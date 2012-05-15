@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoGraticule.cxx,v $
+  Module:    vtkGeoGraticule.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,10 +31,9 @@
 #include "vtkPoints.h"
 #include "vtkPointData.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 vtkStandardNewMacro(vtkGeoGraticule);
-vtkCxxRevisionMacro(vtkGeoGraticule,"$Revision: 1.3 $");
 
 double vtkGeoGraticule::LatitudeLevelTics[12] =
 {
@@ -194,7 +193,7 @@ void vtkGeoGraticule::GenerateGraticule( vtkPolyData* output, double latbds[2], 
   latLong->SetName( "LatLong" );
 
   // Do the parallels first and record the start of each so we can do the meridians afterwards
-  vtkstd::vector<vtkIdType> offsets; // where each row of points starts.
+  std::vector<vtkIdType> offsets; // where each row of points starts.
   double latTicIncrement = vtkGeoGraticule::LatitudeLevelTics[this->LatitudeLevel];
   double lngTicIncrement = vtkGeoGraticule::LongitudeLevelTics[this->LongitudeLevel];
   double pt[3] = { 0., 0., 0. };

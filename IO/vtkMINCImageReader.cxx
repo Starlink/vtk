@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageReader.cxx,v $
+  Module:    vtkMINCImageReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,18 +67,17 @@ POSSIBILITY OF SUCH DAMAGES.
 
 #include "vtkMINCImageAttributes.h"
 #include "vtkMINC.h"
-#include "vtknetcdf/netcdf.h"
+#include "vtk_netcdf.h"
 
 #include <stdlib.h>
 #include <ctype.h>
 #include <float.h>
-#include <vtkstd/string>
-#include <vtkstd/map>
+#include <string>
+#include <map>
 
 #define VTK_MINC_MAX_DIMS 8
 
 //--------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMINCImageReader, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkMINCImageReader);
 
 //-------------------------------------------------------------------------
@@ -104,6 +103,7 @@ vtkMINCImageReader::vtkMINCImageReader()
   this->DataRange[1] = 1.0;
 
   this->ImageAttributes = vtkMINCImageAttributes::New();
+  this->ImageAttributes->ValidateAttributesOff();
 
   this->FileNameHasChanged = 0;
 }
@@ -174,10 +174,11 @@ int vtkMINCImageReader::CanReadFile(const char* fname)
     }
 
   char magic[4];
-  fread(magic, 4, 1, fp);
+  size_t count = fread(magic, 4, 1, fp);
   fclose(fp);
 
-  if (magic[0] != 'C' ||
+  if (count != 1 ||
+      magic[0] != 'C' ||
       magic[1] != 'D' ||
       magic[2] != 'F' ||
       magic[3] != '\001')

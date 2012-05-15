@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataReader.cxx,v $
+  Module:    vtkDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,6 +38,7 @@
 #include "vtkStringArray.h"
 #include "vtkTable.h"
 #include "vtkTypeInt64Array.h"
+#include "vtkUnicodeStringArray.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedIntArray.h"
 #include "vtkUnsignedLongArray.h"
@@ -61,7 +62,6 @@
 // so it would be nice to put this in a common file.
 static int my_getline(istream& stream, vtkStdString &output, char delim='\n');
 
-vtkCxxRevisionMacro(vtkDataReader, "$Revision: 1.159 $");
 vtkStandardNewMacro(vtkDataReader);
 
 vtkCxxSetObjectMacro(vtkDataReader, InputArray, vtkCharArray);
@@ -429,7 +429,7 @@ int vtkDataReader::OpenVTKFile()
     if (this->InputArray)
       {
       vtkDebugMacro(<< "Reading from InputArray");
-      vtkstd::string str(this->InputArray->GetPointer(0),
+      std::string str(this->InputArray->GetPointer(0),
         static_cast<size_t>( this->InputArray->GetNumberOfTuples()  *
                              this->InputArray->GetNumberOfComponents()) );
       this->IS = new vtksys_ios::istringstream(str);
@@ -438,7 +438,7 @@ int vtkDataReader::OpenVTKFile()
     else if (this->InputString)
       {
       vtkDebugMacro(<< "Reading from InputString");
-      vtkstd::string str(this->InputString, this->InputStringLength);
+      std::string str(this->InputString, this->InputStringLength);
       this->IS = new vtksys_ios::istringstream(str);
       return 1;
       }
@@ -1748,6 +1748,86 @@ vtkAbstractArray *vtkDataReader::ReadArray(const char *dataType, int numTuples, 
         }
       }
     }
+  else if ( ! strncmp(type, "utf8_string", 11) )
+    {
+    array = vtkUnicodeStringArray::New();
+    array->SetNumberOfComponents(numComp);
+
+    if ( this->FileType == VTK_BINARY )
+      {
+      // read in newline
+      char line[256];
+      IS->getline(line,256);
+
+      for (int i=0; i<numTuples; i++)
+        {
+        for (int j=0; j<numComp; j++)
+          {
+          vtkTypeUInt8 firstByte;
+          vtkTypeUInt8 headerType;
+          vtkStdString::size_type stringLength;
+          firstByte = IS->peek();
+          headerType = firstByte >> 6;
+          if (headerType == 3)
+            {
+            vtkTypeUInt8 length = IS->get();
+            length <<= 2;
+            length >>= 2;
+            stringLength = length;
+            }
+          else if (headerType == 2)
+            {
+            vtkTypeUInt16 length;
+            IS->read(reinterpret_cast<char*>(&length), 2);
+            vtkByteSwap::Swap2BE(&length);
+            length <<= 2;
+            length >>= 2;
+            stringLength = length;
+            }
+          else if (headerType == 1)
+            {
+            vtkTypeUInt32 length;
+            IS->read(reinterpret_cast<char*>(&length), 4);
+            vtkByteSwap::Swap4BE(&length);
+            length <<= 2;
+            length >>= 2;
+            stringLength = length;
+            }
+          else
+            {
+            vtkTypeUInt64 length;
+            IS->read(reinterpret_cast<char*>(&length), 8);
+            vtkByteSwap::Swap4BE(&length);
+            stringLength = length;
+            }
+          char* str = new char[stringLength];
+          IS->read(str, stringLength);
+          vtkUnicodeString s = vtkUnicodeString::from_utf8(str, str + stringLength);
+          ((vtkUnicodeStringArray*)array)->InsertNextValue(s);
+          delete [] str;
+          }
+        }
+      }
+    else 
+      {
+      // read in newline
+      vtkStdString s;
+      my_getline(*(this->IS), s);
+
+      for (int i=0; i<numTuples; i++)
+        {
+        for (int j=0; j<numComp; j++)
+          {
+          my_getline(*(this->IS), s);
+          int length = static_cast<int>(s.length());
+          char* decoded = new char[length + 1];
+          int decodedLength = this->DecodeString(decoded, s.c_str());
+          vtkUnicodeString decodedStr = vtkUnicodeString::from_utf8(decoded, decoded + decodedLength);
+          ((vtkUnicodeStringArray*)array)->InsertNextValue(decodedStr);
+          }
+        }
+      }
+    }
   else if ( ! strncmp(type, "variant", 7) )
     {
     array = vtkVariantArray::New();
@@ -2189,7 +2269,7 @@ int vtkDataReader::ReadTensorData(vtkDataSetAttributes *a, int numPts)
 // Read color scalar point attributes. Return 0 if error.
 int vtkDataReader::ReadCoScalarData(vtkDataSetAttributes *a, int numPts)
 {
-  int i, j, idx, numComp, skipScalar=0;
+  int i, j, idx, numComp=0, skipScalar=0;
   char name[256];
   char buffer[1024];
 
@@ -2283,7 +2363,7 @@ int vtkDataReader::ReadCoScalarData(vtkDataSetAttributes *a, int numPts)
 // Read texture coordinates point attributes. Return 0 if error.
 int vtkDataReader::ReadTCoordsData(vtkDataSetAttributes *a, int numPts)
 {
-  int dim;
+  int dim = 0;
   int skipTCoord = 0;
   char line[256], name[256];
   vtkDataArray *data;
@@ -2433,7 +2513,7 @@ int vtkDataReader::ReadPedigreeIds(vtkDataSetAttributes *a, int numPts)
 int vtkDataReader::ReadLutData(vtkDataSetAttributes *a)
 {
   int i;
-  int size, skipTable=0;
+  int size=0, skipTable=0;
   vtkLookupTable *lut;
   unsigned char *ptr;
   char line[256], name[256];
@@ -2645,7 +2725,7 @@ int vtkDataReader::ReadCells(int size, int *data,
 
 vtkFieldData *vtkDataReader::ReadFieldData()
 {
-  int i, numArrays, skipField=0;
+  int i, numArrays=0, skipField=0;
   vtkFieldData *f;
   char name[256], type[256];
   int numComp, numTuples;

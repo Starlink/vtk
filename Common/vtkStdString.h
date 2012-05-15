@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStdString.h,v $
+  Module:    vtkStdString.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkStdString - Wrapper around vtkstd::string to keep symbols short.
+// .NAME vtkStdString - Wrapper around std::string to keep symbols short.
 // .SECTION Description
-// vtkStdString derives from vtkstd::string to provide shorter symbol
+// vtkStdString derives from std::string to provide shorter symbol
 // names than basic_string<...> in namespace std given by the standard
 // STL string.
 
@@ -22,15 +22,23 @@
 #define __vtkStdString_h
 
 #include "vtkSystemIncludes.h" // For VTK_COMMON_EXPORT.
-#include <vtkstd/string>       // For the superclass.
+#include <string>       // For the superclass.
 
 class vtkStdString;
 VTK_COMMON_EXPORT ostream& operator<<(ostream&, const vtkStdString&);
 
-class vtkStdString : public vtkstd::string
+// Workaround for a difference between GCC visibility and MSVC dllexport
+// Not setting the visibility of this class caused the
+// vtkArrayIteratorTemplate<vtkStdString> symbols to be hidden on Apple GCC 4.2
+// but exporting would cause failure on MSVC 10 (works either way with GCC 4.4
+#if defined(__APPLE__) && __GNUC__ >=4
+class VTK_COMMON_EXPORT vtkStdString : public std::string
+#else
+class vtkStdString : public std::string
+#endif
 {
 public:
-  typedef vtkstd::string StdString;
+  typedef std::string StdString;
   typedef StdString::value_type             value_type;
   typedef StdString::pointer                pointer;
   typedef StdString::reference              reference;

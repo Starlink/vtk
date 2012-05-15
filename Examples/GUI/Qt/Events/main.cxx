@@ -24,28 +24,16 @@
  !!! license.
 =========================================================================*/
 
-#include "qapplication.h"
+#include "QVTKApplication.h"
 
-#if QT_VERSION >= 0x040000
-# include "GUI4.h"
-#else
-# include "GUI.h"
-#endif
-
+#include "GUI4.h"
 
 int main(int argc, char** argv)
 {
-  QApplication app(argc, argv);
-
-#if QT_VERSION <= 0x040000
-  Form1 widget;
-  app.setMainWidget(&widget);
-#else
+  QVTKApplication app(argc, argv);
   GUI4 widget;
-#endif
-
+  
   widget.show();
 
   return app.exec();
 }
-

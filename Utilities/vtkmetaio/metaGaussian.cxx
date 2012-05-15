@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaGaussian.cxx,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.5 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaGaussian.h"
 
 #ifdef _MSC_VER
@@ -91,7 +86,7 @@ CopyInfo(const MetaObject * _object)
 {
   MetaObject::CopyInfo(_object);
 }
-  
+
 /** Clear gaussian information */
 void MetaGaussian::
 Clear(void)
@@ -101,7 +96,7 @@ Clear(void)
   m_Maximum = 1;
   m_Radius = 1;
 }
-        
+
 /** Destroy gaussian information */
 void MetaGaussian::
 M_Destroy(void)

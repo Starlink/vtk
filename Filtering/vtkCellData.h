@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellData.h,v $
+  Module:    vtkCellData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_FILTERING_EXPORT vtkCellData : public vtkDataSetAttributes
 public:
   static vtkCellData *New();
 
-  vtkTypeRevisionMacro(vtkCellData,vtkDataSetAttributes);
+  vtkTypeMacro(vtkCellData,vtkDataSetAttributes);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

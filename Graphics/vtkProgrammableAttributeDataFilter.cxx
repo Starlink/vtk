@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableAttributeDataFilter.cxx,v $
+  Module:    vtkProgrammableAttributeDataFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkProgrammableAttributeDataFilter, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkProgrammableAttributeDataFilter);
 
 vtkProgrammableAttributeDataFilter::vtkProgrammableAttributeDataFilter()
@@ -69,7 +68,8 @@ void vtkProgrammableAttributeDataFilter::RemoveInput(vtkDataSet *ds)
 
 // Specify the function to use to operate on the point attribute data. Note
 // that the function takes a single (void *) argument.
-void vtkProgrammableAttributeDataFilter::SetExecuteMethod(void (*f)(void *), void *arg)
+void vtkProgrammableAttributeDataFilter::SetExecuteMethod(
+  void (*f)(void *), void *arg)
 {
   if ( f != this->ExecuteMethod || arg != this->ExecuteMethodArg )
     {
@@ -85,7 +85,8 @@ void vtkProgrammableAttributeDataFilter::SetExecuteMethod(void (*f)(void *), voi
 }
 
 // Set the arg delete method. This is used to free user memory.
-void vtkProgrammableAttributeDataFilter::SetExecuteMethodArgDelete(void (*f)(void *))
+void vtkProgrammableAttributeDataFilter::SetExecuteMethodArgDelete(
+  void (*f)(void *))
 {
   if ( f != this->ExecuteMethodArgDelete)
     {
@@ -103,7 +104,7 @@ int vtkProgrammableAttributeDataFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkDataSet *output = vtkDataSet::SafeDownCast(

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractTemporalFieldData.cxx,v $
+  Module:    vtkExtractTemporalFieldData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,11 +29,10 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkGenericCell.h"
 #include "vtkStdString.h"
-#include <vtkstd/vector>
+#include <vector>
 
 
 
-vtkCxxRevisionMacro(vtkExtractTemporalFieldData, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkExtractTemporalFieldData);
 
 //----------------------------------------------------------------------------
@@ -146,14 +145,15 @@ int vtkExtractTemporalFieldData::RequestData(
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
   vtkDataSet *input = vtkDataSet::GetData(inInfo);
 
-  this->CopyDataToOutput(input, output);
+  this->CopyDataToOutput(inInfo, input, output);
 
   return 1;
 }
 
 //----------------------------------------------------------------------------
-void vtkExtractTemporalFieldData::CopyDataToOutput(vtkDataSet *input, 
-                                                 vtkTable *output)
+void vtkExtractTemporalFieldData::CopyDataToOutput(
+  vtkInformation* inInfo,
+  vtkDataSet *input, vtkTable *output)
 {
   vtkDataSetAttributes *opd = output->GetRowData();
   vtkFieldData *ifd = input->GetFieldData();
@@ -175,8 +175,7 @@ void vtkExtractTemporalFieldData::CopyDataToOutput(vtkDataSet *input,
       {
       vtkDataArray *outPointArray = vtkDataArray::CreateDataArray(inFieldArray->GetDataType());
       //outPointArray->DeepCopy(inFieldArray);
-
-      outPointArray->SetNumberOfComponents(1);
+      outPointArray->SetNumberOfComponents(inFieldArray->GetNumberOfComponents());
       outPointArray->SetNumberOfTuples(this->NumberOfTimeSteps);
       for(vtkIdType i=0; i<inFieldArray->GetNumberOfComponents(); i++)
         {
@@ -190,6 +189,11 @@ void vtkExtractTemporalFieldData::CopyDataToOutput(vtkDataSet *input,
       }
     }
 
+  double *timesteps = NULL;
+  if ( inInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_STEPS()) )
+    {
+    timesteps = inInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    }
 
   // Add an array to hold the time at each step
   vtkDoubleArray *timeArray = vtkDoubleArray::New();
@@ -205,7 +209,7 @@ void vtkExtractTemporalFieldData::CopyDataToOutput(vtkDataSet *input,
     }
   for(int m=0; m<this->NumberOfTimeSteps; m++)
     {
-    timeArray->SetTuple1(m,m);
+    timeArray->SetTuple1(m, timesteps[m]);
     }
   opd->AddArray(timeArray);
   timeArray->Delete();

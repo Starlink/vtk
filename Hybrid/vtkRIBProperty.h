@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRIBProperty.h,v $
+  Module:    vtkRIBProperty.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_HYBRID_EXPORT vtkRIBProperty : public vtkProperty
 {
 public:
   static vtkRIBProperty *New();
-  vtkTypeRevisionMacro(vtkRIBProperty,vtkProperty);
+  vtkTypeMacro(vtkRIBProperty,vtkProperty);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

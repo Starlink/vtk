@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDistributedGraphHelper.h,v $
+  Module:    vtkDistributedGraphHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -72,7 +72,7 @@ typedef vtkIdType (*vtkVertexPedigreeIdDistribution)
 class VTK_FILTERING_EXPORT vtkDistributedGraphHelper : public vtkObject
 {
  public:
-  vtkTypeRevisionMacro (vtkDistributedGraphHelper, vtkObject);
+  vtkTypeMacro(vtkDistributedGraphHelper,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -96,6 +96,7 @@ class VTK_FILTERING_EXPORT vtkDistributedGraphHelper : public vtkObject
   // Builds a distributed ID consisting of the given owner and the local ID.
   vtkIdType MakeDistributedId(int owner, vtkIdType local);
 
+  //BTX
   // Description:
   // Set the pedigreeId -> processor distribution function that determines
   // how vertices are distributed when they are associated with
@@ -104,12 +105,11 @@ class VTK_FILTERING_EXPORT vtkDistributedGraphHelper : public vtkObject
   // hashed distribution will be used.
   void SetVertexPedigreeIdDistribution(vtkVertexPedigreeIdDistribution Func,
                                        void *userData);
+  //ETX
 
-  //BTX
   // Description:
   // Determine which processor owns the vertex with the given pedigree ID.
   vtkIdType GetVertexOwnerByPedigreeId(const vtkVariant& pedigreeId);
-  //ETX
 
   // Description:
   // Synchronizes all of the processors involved in this distributed

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageWrapPad.h,v $
+  Module:    vtkImageWrapPad.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IMAGING_EXPORT vtkImageWrapPad : public vtkImagePadFilter
 {
 public:
   static vtkImageWrapPad *New();
-  vtkTypeRevisionMacro(vtkImageWrapPad,vtkImagePadFilter);
+  vtkTypeMacro(vtkImageWrapPad,vtkImagePadFilter);
 
 protected:
   vtkImageWrapPad() {};

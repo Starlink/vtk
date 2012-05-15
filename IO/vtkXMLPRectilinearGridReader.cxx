@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPRectilinearGridReader.cxx,v $
+  Module:    vtkXMLPRectilinearGridReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkInformation.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkXMLPRectilinearGridReader, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkXMLPRectilinearGridReader);
 
 //----------------------------------------------------------------------------
@@ -109,7 +108,9 @@ vtkXMLPRectilinearGridReader::ReadPrimaryElement(vtkXMLDataElement* ePrimary)
   if(!this->PCoordinatesElement)
     {
     int extent[6];
-    vtkRectilinearGrid::SafeDownCast(this->GetCurrentOutput())->GetWholeExtent(extent);
+    vtkInformation* outInfo = this->GetCurrentOutputInformation();
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
+                 extent);
     if((extent[0] <= extent[1]) && (extent[2] <= extent[3]) &&
        (extent[4] <= extent[5]))
       {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeToUniformGridFilter.h,v $
+  Module:    vtkHyperOctreeToUniformGridFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_GRAPHICS_EXPORT vtkHyperOctreeToUniformGridFilter : public vtkImageAlg
 {
 public:
   static vtkHyperOctreeToUniformGridFilter *New();
-  vtkTypeRevisionMacro(vtkHyperOctreeToUniformGridFilter,vtkImageAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeToUniformGridFilter,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
 protected:

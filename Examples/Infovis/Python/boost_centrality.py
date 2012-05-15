@@ -31,12 +31,13 @@ theme = vtkViewTheme.CreateMellowTheme()
 theme.SetLineWidth(5)
 theme.SetPointSize(10)
 theme.SetCellOpacity(1)
+theme.SetVertexLabelColor(0, 0, 0)
 view.ApplyViewTheme(theme)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
 
-window.GetInteractor().Start()
+view.GetInteractor().Start()
 

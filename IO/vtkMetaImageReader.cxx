@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMetaImageReader.cxx,v $
+  Module:    vtkMetaImageReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@
 #include "vtkInformationVector.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-#include <vtkstd/string>
+#include <string>
 #include "vtkmetaio/metaTypes.h"
 #include "vtkmetaio/metaUtils.h"
 #include "vtkmetaio/metaEvent.h"
@@ -38,7 +38,6 @@
 #include <sys/stat.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMetaImageReader, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkMetaImageReader);
 
 //----------------------------------------------------------------------------
@@ -256,21 +255,21 @@ int vtkMetaImageReader::RequestInformation(vtkInformation *,
 int vtkMetaImageReader::CanReadFile(const char* fname)
 {
 
-  vtkstd::string filename = fname;
+  std::string filename = fname;
   if( filename == "" )
     {
     return false;
     }
 
   bool extensionFound = false;
-  vtkstd::string::size_type mhaPos = filename.rfind(".mha");
-  if ((mhaPos != vtkstd::string::npos)
+  std::string::size_type mhaPos = filename.rfind(".mha");
+  if ((mhaPos != std::string::npos)
       && (mhaPos == filename.length() - 4))
     {
     extensionFound = true;
     }
-  vtkstd::string::size_type mhdPos = filename.rfind(".mhd");
-  if ((mhdPos != vtkstd::string::npos)
+  std::string::size_type mhdPos = filename.rfind(".mhd");
+  if ((mhdPos != std::string::npos)
       && (mhdPos == filename.length() - 4))
     {
     extensionFound = true;

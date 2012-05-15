@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTessellatorFilter.cxx,v $
+  Module:    vtkTessellatorFilter.cxx
   Language:  C++
-  Date:      $Date: 2007-06-05 16:46:33 $
-  Version:   $Revision: 1.3 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright 2003 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
@@ -37,7 +37,6 @@
 #include "vtkTessellatorFilter.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkTessellatorFilter, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkTessellatorFilter);
 
 // ========================================
@@ -545,6 +544,13 @@ vtkIdType quadEdgeEdges[][2] =
   {2,1}
 };
 
+vtkIdType cubicLinEdges[][2] =
+{
+  {0,2},
+  {2,3},
+  {3,1}
+};
+
 vtkIdType linTriTris[][3] =
 {
   {0,1,2}
@@ -563,6 +569,26 @@ vtkIdType quadTriTris[][3] =
   {5,3,1},
   {5,1,4},
   {4,2,5}
+};
+
+vtkIdType biQuadTriTris[][3] = 
+{
+  {0,3,6},
+  {3,1,6},
+  {6,1,4},
+  {6,4,2},
+  {6,2,5},
+  {0,6,5}
+};
+
+vtkIdType biQuadTriEdges[][2] =
+{
+  {0,3},
+  {3,1},
+  {1,4},
+  {4,2},
+  {2,5},
+  {5,0}
 };
 
 vtkIdType quadTriEdges[][2] =
@@ -1116,7 +1142,7 @@ int vtkTessellatorFilter::RequestData(
       int np = cp->GetCellType();
       if (
         np == VTK_POLYGON || np == VTK_TRIANGLE_STRIP || np == VTK_CONVEX_POINT_SET ||
-        np == VTK_POLY_LINE || np == VTK_POLY_VERTEX )
+        np == VTK_POLY_LINE || np == VTK_POLY_VERTEX || np == VTK_POLYHEDRON )
         {
         if ( ! vtkTessellatorHasPolys )
           {
@@ -1256,6 +1282,11 @@ int vtkTessellatorFilter::RequestData(
         outconn = &quadEdgeEdges[0][0];
         nprim = sizeof(quadEdgeEdges)/sizeof(quadEdgeEdges[0]);
         break;
+      case VTK_CUBIC_LINE:
+        dim = 1;
+        outconn = &cubicLinEdges[0][0];
+        nprim = sizeof(cubicLinEdges)/sizeof(cubicLinEdges[0]);
+        break;
       case VTK_QUADRATIC_TRIANGLE:
         if ( dim > 1 )
           {
@@ -1267,6 +1298,19 @@ int vtkTessellatorFilter::RequestData(
           {
           outconn = &quadTriEdges[0][0];
           nprim = sizeof(quadTriEdges)/sizeof(quadTriEdges[0]);
+          }
+        break;
+      case VTK_BIQUADRATIC_TRIANGLE:
+        if ( dim > 1 )
+          {
+          dim = 2;
+          outconn = &biQuadTriTris[0][0];
+          nprim = sizeof(biQuadTriTris)/sizeof(biQuadTriTris[0]);
+          }
+        else
+          {
+          outconn = &biQuadTriEdges[0][0];
+          nprim = sizeof(biQuadTriEdges)/sizeof(biQuadTriEdges[0]);
           }
         break;
       case VTK_BIQUADRATIC_QUAD:

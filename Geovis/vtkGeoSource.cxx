@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoSource.cxx,v $
+  Module:    vtkGeoSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,30 +34,6 @@
 #include <vtksys/stl/utility>
 #include <vtksys/stl/vector>
 
-// For vtkSleep
-#include "vtkWindows.h"
-#include <ctype.h>
-#include <time.h>
-#if _WIN32
-#include "windows.h"
-#endif
-
-//-----------------------------------------------------------------------------
-// Cross platform sleep
-inline void vtkSleep(double duration)
-{
-  duration = duration; // avoid warnings
-  // sleep according to OS preference
-#ifdef _WIN32
-  Sleep((int)(1000*duration));
-#elif defined(__FreeBSD__) || defined(__linux__) || defined(sgi)
-  struct timespec sleep_time, dummy;
-  sleep_time.tv_sec = static_cast<int>(duration);
-  sleep_time.tv_nsec = static_cast<int>(1000000000*(duration-sleep_time.tv_sec));
-  nanosleep(&sleep_time,&dummy);
-#endif
-}
-
 VTK_THREAD_RETURN_TYPE vtkGeoSourceThreadStart(void* arg)
 {
   vtkGeoSource* self;
@@ -72,7 +48,6 @@ public:
   vtksys_stl::vector<int> ThreadIds;
 };
 
-vtkCxxRevisionMacro(vtkGeoSource, "$Revision: 1.6 $");
 vtkGeoSource::vtkGeoSource()
 {
   this->InputSet = vtkCollection::New();
@@ -129,7 +104,7 @@ void vtkGeoSource::ShutDown()
     this->Condition->Broadcast();
     this->Lock->Unlock();
 
-    vtkstd::vector<int>::iterator iter;
+    std::vector<int>::iterator iter;
     for(iter = this->Implementation->ThreadIds.begin();
         iter != this->Implementation->ThreadIds.end();
         ++iter)
@@ -137,6 +112,7 @@ void vtkGeoSource::ShutDown()
       this->Threader->TerminateThread(*iter);
       }
     this->Implementation->ThreadIds.clear();
+    this->Implementation->OutputMap.clear();
     }
   this->Initialized = false;
 }
@@ -149,6 +125,11 @@ vtkCollection* vtkGeoSource::GetRequestedNodes(vtkGeoTreeNode* node)
   if (this->Implementation->OutputMap.count(p) > 0)
     {
     c = this->Implementation->OutputMap[p];
+    if (c)
+      {
+      c->Register(0);
+      this->Implementation->OutputMap[p] = 0;
+      }
     }
   this->OutputSetLock->Unlock();
 

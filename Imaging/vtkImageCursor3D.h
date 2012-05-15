@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageCursor3D.h,v $
+  Module:    vtkImageCursor3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@ class VTK_IMAGING_EXPORT vtkImageCursor3D : public vtkImageInPlaceFilter
 {
 public:
   static vtkImageCursor3D *New();
-  vtkTypeRevisionMacro(vtkImageCursor3D,vtkImageInPlaceFilter);
+  vtkTypeMacro(vtkImageCursor3D,vtkImageInPlaceFilter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 

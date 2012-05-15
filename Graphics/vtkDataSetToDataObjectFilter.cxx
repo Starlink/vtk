@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetToDataObjectFilter.cxx,v $
+  Module:    vtkDataSetToDataObjectFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkStructuredPoints.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkDataSetToDataObjectFilter, "$Revision: 1.35 $");
 vtkStandardNewMacro(vtkDataSetToDataObjectFilter);
 
 //----------------------------------------------------------------------------

@@ -4,24 +4,43 @@
 
 SET(KIT Infovis)
 SET(UKIT INFOVIS)
-SET(KIT_TCL_LIBS vtkWidgetsTCL)
-SET(KIT_PYTHON_LIBS vtkWidgetsPythonD)
-SET(KIT_JAVA_LIBS vtkWidgetsJava)
-SET(KIT_LIBS vtkWidgets ${VTK_LIBXML2_LIBRARIES} vtkalglib)
+IF(VTK_USE_RENDERING)
+  SET(KIT_TCL_LIBS vtkWidgetsTCL)
+  SET(KIT_PYTHON_LIBS vtkWidgetsPythonD)
+  SET(KIT_JAVA_LIBS vtkWidgetsJava)
+  SET(KIT_INTERFACE_LIBRARIES vtkWidgets)
+  SET(KIT_LIBS ${VTK_LIBXML2_LIBRARIES} vtkalglib)
+ELSE(VTK_USE_RENDERING)
+  SET(KIT_TCL_LIBS vtkGraphicsTCL)
+  SET(KIT_PYTHON_LIBS vtkGraphicsPythonD)
+  SET(KIT_JAVA_LIBS vtkGraphicsJava)
+  SET(KIT_INTERFACE_LIBRARIES vtkGraphics)
+  SET(KIT_LIBS ${VTK_LIBXML2_LIBRARIES} vtkalglib vtkIO vtkImaging)
+ENDIF(VTK_USE_RENDERING)
 
 SET( Kit_SRCS
+vtkAddMembershipArray.cxx
+vtkAppendPoints.cxx
+vtkApplyColors.cxx
+vtkApplyIcons.cxx
 vtkArcParallelEdgeStrategy.cxx
 vtkAreaLayout.cxx
 vtkAreaLayoutStrategy.cxx
-vtkArrayMap.cxx
 vtkAssignCoordinates.cxx
-vtkBivariateStatisticsAlgorithm.cxx
+vtkAssignCoordinatesLayoutStrategy.cxx
+vtkBivariateLinearTableThreshold.cxx
 vtkBoxLayoutStrategy.cxx
 vtkChacoGraphReader.cxx
+vtkCirclePackFrontChainLayoutStrategy.cxx
+vtkCirclePackLayout.cxx
+vtkCirclePackLayoutStrategy.cxx
+vtkCirclePackToPolyData.cxx
 vtkCircularLayoutStrategy.cxx
 vtkClustering2DLayoutStrategy.cxx
 vtkCollapseGraph.cxx
+vtkCollapseVerticesByArray.cxx
 vtkCommunity2DLayoutStrategy.cxx
+vtkConeLayoutStrategy.cxx
 vtkConstrained2DLayoutStrategy.cxx
 vtkContingencyStatistics.cxx
 vtkCorrelativeStatistics.cxx
@@ -29,30 +48,38 @@ vtkCosmicTreeLayoutStrategy.cxx
 vtkDataObjectToTable.cxx
 vtkDelimitedTextReader.cxx
 vtkDescriptiveStatistics.cxx
+vtkDIMACSGraphReader.cxx
+vtkDIMACSGraphWriter.cxx
 vtkEdgeCenters.cxx
 vtkEdgeLayout.cxx
 vtkEdgeLayoutStrategy.cxx
+vtkExpandSelectedGraph.cxx
 vtkExtractSelectedGraph.cxx
 vtkFast2DLayoutStrategy.cxx
 vtkFixedWidthTextReader.cxx
 vtkForceDirectedLayoutStrategy.cxx
 vtkGenerateIndexArray.cxx
+vtkGeoEdgeStrategy.cxx
+vtkGeoMath.cxx
 vtkGraphHierarchicalBundle.cxx
+vtkGraphHierarchicalBundleEdges.cxx
 vtkGraphLayout.cxx
 vtkGraphLayoutStrategy.cxx
-vtkGraphMapper.cxx
-vtkGraphToPolyData.cxx
 vtkGroupLeafVertices.cxx
 vtkISIReader.cxx
-vtkInteractorStyleAreaSelectHover.cxx
-vtkInteractorStyleTreeMapHover.cxx
-vtkLabeledTreeMapDataMapper.cxx
+vtkKCoreLayout.cxx
+vtkKCoreDecomposition.cxx
+vtkKMeansDistanceFunctor.cxx
+vtkKMeansDistanceFunctorCalculator.cxx
+vtkKMeansStatistics.cxx
 vtkMergeColumns.cxx
+vtkMergeGraphs.cxx
 vtkMergeTables.cxx
 vtkMultiCorrelativeStatistics.cxx
 vtkMutableGraphHelper.cxx
 vtkNetworkHierarchy.cxx
 vtkOrderStatistics.cxx
+vtkPassArrays.cxx
 vtkPassThrough.cxx
 vtkPassThroughEdgeStrategy.cxx
 vtkPassThroughLayoutStrategy.cxx
@@ -63,15 +90,25 @@ vtkRISReader.cxx
 vtkRandomGraphSource.cxx
 vtkRandomLayoutStrategy.cxx
 vtkRemoveIsolatedVertices.cxx
+vtkRemoveHiddenData.cxx
+vtkSCurveSpline.cxx
 vtkSimple2DLayoutStrategy.cxx
+vtkSimple3DCirclesStrategy.cxx
 vtkSliceAndDiceLayoutStrategy.cxx
+vtkSplineGraphEdges.cxx
+vtkSplitColumnComponents.cxx
 vtkSquarifyLayoutStrategy.cxx
+vtkSpanTreeLayoutStrategy.cxx
 vtkStackedTreeLayoutStrategy.cxx
 vtkStatisticsAlgorithm.cxx
+vtkStrahlerMetric.cxx
+vtkStreamGraph.cxx
+vtkStreamingStatistics.cxx
 vtkStringToCategory.cxx
 vtkStringToNumeric.cxx
 vtkTableToGraph.cxx
 vtkTableToTreeFilter.cxx
+vtkThresholdGraph.cxx
 vtkThresholdTable.cxx
 vtkTransferAttributes.cxx
 vtkTreeFieldAggregator.cxx
@@ -81,20 +118,26 @@ vtkTreeLevelsFilter.cxx
 vtkTreeMapLayout.cxx
 vtkTreeMapLayoutStrategy.cxx
 vtkTreeMapToPolyData.cxx
-vtkTreeMapViewer.cxx
 vtkTreeRingToPolyData.cxx
 vtkTulipReader.cxx
-vtkUnivariateStatisticsAlgorithm.cxx
+vtkAttributeClustering2DLayoutStrategy.cxx
 vtkVertexDegree.cxx
-vtkViewTheme.cxx
-vtkViewUpdater.cxx
+vtkXGMLReader.cxx
 vtkXMLTreeReader.cxx
 )
+
+IF(VTK_USE_RENDERING)
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkConvexHull2D.cxx
+    vtkGraphAnnotationLayersFilter.cxx
+    )
+ENDIF(VTK_USE_RENDERING)
 
 # Add these classes only if using Boost
 
 # About the BOOST_OLD_VERSION warning:
-# 
+#
 # The Kruskal minimum spanning tree algorithm does not compile
 # correctly with Boost versions earlier than 1.36 on 64-bit platforms.
 # If you're using one of those old versions you have two options:
@@ -105,13 +148,14 @@ vtkXMLTreeReader.cxx
 #     variable Boost_INCLUDE_DIR to point to the new version.
 #
 # 2.  Continue with your existing version of Boost.  We will still
-#     compile whatever Boost filters we can.  
+#     compile whatever Boost filters we can.
 #
 # Upgrading to a recent Boost version is the preferred solution.  A
 # future version of ParaView will probably require Boost 1.36 or later.
 
 
 IF(VTK_USE_BOOST)
+  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
   IF( "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}" LESS 1.36)
     IF( HAVE_CMAKE_SIZEOF_VOID_P AND CMAKE_SIZEOF_VOID_P EQUAL 8 )
       SET( BOOST_OLD_VERSION TRUE )
@@ -128,11 +172,13 @@ IF(VTK_USE_BOOST)
 
   SET(Kit_SRCS
     ${Kit_SRCS}
+    vtkBoostBetweennessClustering.cxx
     vtkBoostBiconnectedComponents.cxx
     vtkBoostBrandesCentrality.cxx
     vtkBoostBreadthFirstSearch.cxx
     vtkBoostBreadthFirstSearchTree.cxx
     vtkBoostConnectedComponents.cxx
+    vtkBoostExtractLargestComponent.cxx
     vtkBoostPrimMinimumSpanningTree.cxx
     vtkBoostSplitTableField.cxx
   )
@@ -143,7 +189,7 @@ IF(VTK_USE_BOOST)
         vtkBoostKruskalMinimumSpanningTree.cxx
        )
   ENDIF( NOT BOOST_OLD_VERSION )
-  
+
 ENDIF(VTK_USE_BOOST)
 
 IF(VTK_USE_N_WAY_ARRAYS)
@@ -151,13 +197,18 @@ IF(VTK_USE_N_WAY_ARRAYS)
   SET(Kit_SRCS
     ${Kit_SRCS}
     vtkAdjacencyMatrixToEdgeTable.cxx
+    vtkArrayNorm.cxx
     vtkArrayToTable.cxx
-    vtkCosineSimilarity.cxx
+    vtkComputeHistogram2DOutliers.cxx
     vtkDiagonalMatrixSource.cxx
-    vtkExtractFactoredArray.cxx
+    vtkDotProductSimilarity.cxx
+    vtkExtractArray.cxx
+    vtkExtractHistogram2D.cxx
     vtkMatricizeArray.cxx
-    vtkMatrixColumnNorm.cxx
     vtkNormalizeMatrixVectors.cxx
+    vtkPairwiseExtractHistogram2D.cxx
+    vtkSparseArrayToTable.cxx
+    vtkTableToArray.cxx
     vtkTableToSparseArray.cxx
     vtkTransposeMatrix.cxx
     )
@@ -176,12 +227,25 @@ ENDIF(VTK_USE_N_WAY_ARRAYS)
 # Add these classes only if PARALLEL is turned ON
 IF(VTK_USE_PARALLEL)
   SET(Kit_SRCS ${Kit_SRCS}
+    vtkPBivariateLinearTableThreshold.cxx
     vtkPCorrelativeStatistics.cxx
+    vtkPContingencyStatistics.cxx
     vtkPDescriptiveStatistics.cxx
+    vtkPKMeansStatistics.cxx
     vtkPMultiCorrelativeStatistics.cxx
+    vtkPOrderStatistics.cxx
     vtkPPCAStatistics.cxx
     )
-  SET(KIT_LIBS ${KIT_LIBS} vtkParallel)
+
+    IF(VTK_USE_N_WAY_ARRAYS)
+      SET(Kit_SRCS ${Kit_SRCS}
+        vtkPComputeHistogram2DOutliers.cxx
+        vtkPExtractHistogram2D.cxx
+        vtkPPairwiseExtractHistogram2D.cxx
+        )
+    ENDIF(VTK_USE_N_WAY_ARRAYS)
+
+  SET(KIT_INTERFACE_LIBRARIES ${KIT_INTERFACE_LIBRARIES} vtkParallel)
 ENDIF(VTK_USE_PARALLEL)
 
 # Add these classes only if vtkTypeUInt64Array exists
@@ -198,12 +262,11 @@ ENDIF(VTK_HAS_UINT64_ARRAY)
 
 SET_SOURCE_FILES_PROPERTIES(
 vtkAreaLayoutStrategy.cxx
-vtkBivariateStatisticsAlgorithm.cxx
+vtkCirclePackLayoutStrategy.cxx
 vtkEdgeLayoutStrategy.cxx
 vtkGraphLayoutStrategy.cxx
 vtkStatisticsAlgorithm.cxx
 vtkTreeMapLayoutStrategy.cxx
-vtkUnivariateStatisticsAlgorithm.cxx
 ABSTRACT
 )
 

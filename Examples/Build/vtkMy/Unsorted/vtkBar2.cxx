@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBar2.cxx,v $
+  Module:    vtkBar2.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,5 +17,4 @@
 
 //----------------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkBar2, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkBar2);

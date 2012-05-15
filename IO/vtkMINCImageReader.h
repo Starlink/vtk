@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageReader.h,v $
+  Module:    vtkMINCImageReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -81,7 +81,7 @@ class vtkMINCImageAttributes;
 class VTK_IO_EXPORT vtkMINCImageReader : public vtkImageReader2
 {
 public:
-  vtkTypeRevisionMacro(vtkMINCImageReader,vtkImageReader2);
+  vtkTypeMacro(vtkMINCImageReader,vtkImageReader2);
 
   static vtkMINCImageReader *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);

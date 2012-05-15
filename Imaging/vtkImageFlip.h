@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFlip.h,v $
+  Module:    vtkImageFlip.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,12 +28,12 @@ class VTK_IMAGING_EXPORT vtkImageFlip : public vtkImageReslice
 public:
   static vtkImageFlip *New();
 
-  vtkTypeRevisionMacro(vtkImageFlip,vtkImageReslice);
+  vtkTypeMacro(vtkImageFlip,vtkImageReslice);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Specify which axis will be flipped.  This must be an integer
-  // between 0 (for x) and 2 (for z).
+  // between 0 (for x) and 2 (for z). Initial value is 0.
   vtkSetMacro(FilteredAxis, int);
   vtkGetMacro(FilteredAxis, int);
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkNormalizeMatrixVectors.h,v $
+  Module:    vtkNormalizeMatrixVectors.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,28 +19,34 @@
 
 =========================================================================*/
 
+// .NAME vtkNormalizeMatrixVectors - given a sparse input matrix, produces
+// a sparse output matrix with each vector normalized to unit length with respect 
+// to a p-norm (default p=2).
+//
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
 #ifndef __vtkNormalizeMatrixVectors_h
 #define __vtkNormalizeMatrixVectors_h
 
 #include "vtkArrayDataAlgorithm.h"
 
-// .NAME vtkNormalizeMatrixVectors - given a sparse input matrix, produces
-// a sparse output matrix with each vector normalized to unit length.
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
 class VTK_INFOVIS_EXPORT vtkNormalizeMatrixVectors : public vtkArrayDataAlgorithm
 {
 public:
   static vtkNormalizeMatrixVectors* New();
-  vtkTypeRevisionMacro(vtkNormalizeMatrixVectors, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkNormalizeMatrixVectors, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Controls whether to normalize row-vectors or column-vectors.  0 = rows, 1 = columns.
   vtkGetMacro(VectorDimension, int);
   vtkSetMacro(VectorDimension, int);
+
+  // Description:
+  // Value of p in p-norm normalization, subject to p >= 1.  Default is p=2 (Euclidean norm).
+  vtkGetMacro(PValue, double);
+  vtkSetMacro(PValue, double);
 
 protected:
   vtkNormalizeMatrixVectors();
@@ -52,6 +58,7 @@ protected:
     vtkInformationVector*);
 
   int VectorDimension;
+  double PValue;
 
 private:
   vtkNormalizeMatrixVectors(const vtkNormalizeMatrixVectors&); // Not implemented

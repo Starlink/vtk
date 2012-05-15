@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationObjectBaseVectorKey.cxx,v $
+  Module:    vtkInformationObjectBaseVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 #include "vtkInformationObjectBaseVectorKey.h"
 #include "vtkInformation.h" // For vtkErrorWithObjectMacro
 #include "vtkSmartPointer.h"
-#include <vtkstd/vector>
+#include <vector>
 
 
 //============================================================================
@@ -23,17 +23,16 @@ class vtkInformationObjectBaseVectorValue: public vtkObjectBase
 {
 public:
   vtkTypeMacro(vtkInformationObjectBaseVectorValue, vtkObjectBase);
-  vtkstd::vector<vtkSmartPointer<vtkObjectBase> > &GetVector()
+  std::vector<vtkSmartPointer<vtkObjectBase> > &GetVector()
   {
     return this->Vector;
   }
 private:
-  vtkstd::vector<vtkSmartPointer<vtkObjectBase> > Vector;
+  std::vector<vtkSmartPointer<vtkObjectBase> > Vector;
 };
 
 
 //============================================================================
-vtkCxxRevisionMacro(vtkInformationObjectBaseVectorKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationObjectBaseVectorKey::vtkInformationObjectBaseVectorKey(

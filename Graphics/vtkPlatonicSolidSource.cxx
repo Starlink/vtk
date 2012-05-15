@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPlatonicSolidSource.cxx,v $
+  Module:    vtkPlatonicSolidSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkCellData.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkPlatonicSolidSource, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPlatonicSolidSource);
 
 // The geometry and topology of each solid. Solids are centered at

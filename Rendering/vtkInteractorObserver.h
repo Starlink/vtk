@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorObserver.h,v $
+  Module:    vtkInteractorObserver.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class vtkObserverMediator;
 class VTK_RENDERING_EXPORT vtkInteractorObserver : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkInteractorObserver,vtkObject);
+  vtkTypeMacro(vtkInteractorObserver,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -144,6 +144,7 @@ public:
   static void ComputeWorldToDisplay(vtkRenderer *ren, double x, double y, 
                                     double z, double displayPt[3]);
 
+  //BTX
   // Description:
   // These methods enable an interactor observer to exclusively grab all
   // events invoked by its associated vtkRenderWindowInteractor. (This method
@@ -153,7 +154,6 @@ public:
   // are separated so that the widget can listen for its activation keypress,
   // as well as listening for DeleteEvents, without actually having to process
   // mouse events.)
-  //BTX
   void GrabFocus(vtkCommand *mouseEvents, vtkCommand *keypressEvents=NULL);
   void ReleaseFocus();
   //ETX

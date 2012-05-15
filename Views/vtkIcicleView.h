@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIcicleView.h,v $
+  Module:    vtkIcicleView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_VIEWS_EXPORT vtkIcicleView : public vtkTreeAreaView
 {
 public:
   static vtkIcicleView *New();
-  vtkTypeRevisionMacro(vtkIcicleView, vtkTreeAreaView);
+  vtkTypeMacro(vtkIcicleView, vtkTreeAreaView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

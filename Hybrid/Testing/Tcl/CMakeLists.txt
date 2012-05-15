@@ -16,6 +16,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       clipWedge
       cubeAxes
       cubeAxes2
+      cubeAxes3
       depthSort
       earth
       imageToPolyData
@@ -34,8 +35,12 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestGridWarpNearest
       TestICPTransform
       TestImageStencilWithPolydata
+      TestMNIObjects
+      TestMNITagPoints
+      TestMNITransforms
       TestPCA
       TestProcrustes
+      TestProcrustesRigidCentroid
       TestProjectedTerrainPath
       TestThinPlateWarp
       TestThinPlateWarp3D

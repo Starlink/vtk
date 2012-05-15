@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataWriter.cxx,v $
+  Module:    vtkPolyDataWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 # include <io.h> /* unlink */
 #endif
 
-vtkCxxRevisionMacro(vtkPolyDataWriter, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkPolyDataWriter);
 
 void vtkPolyDataWriter::WriteData()

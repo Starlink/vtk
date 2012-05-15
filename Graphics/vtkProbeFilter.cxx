@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProbeFilter.cxx,v $
+  Module:    vtkProbeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,13 +25,12 @@
 #include "vtkPointData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkProbeFilter, "$Revision: 1.96 $");
 vtkStandardNewMacro(vtkProbeFilter);
 
 class vtkProbeFilter::vtkVectorOfArrays : 
-  public vtkstd::vector<vtkDataArray*>
+  public std::vector<vtkDataArray*>
 {
 };
 
@@ -50,6 +49,8 @@ vtkProbeFilter::vtkProbeFilter()
 
   this->PointList = 0;
   this->CellList = 0;
+
+  this->UseNullPoint = true;
 }
 
 //----------------------------------------------------------------------------
@@ -100,7 +101,7 @@ int vtkProbeFilter::RequestData(
   vtkInformation *sourceInfo = inputVector[1]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkDataSet *source = vtkDataSet::SafeDownCast(
@@ -181,6 +182,10 @@ void vtkProbeFilter::InitializeForProbing(vtkDataSet* input,
   tempCellData->Delete();
 
   outPD->AddArray(this->MaskPoints);
+
+  // Since we haven't resize the point arrays, we need to fill them up with
+  // nulls whenever we have a miss when probing.
+  this->UseNullPoint = true;
 
   // BUG FIX: JB.
   // Output gets setup from input, but when output is imagedata, scalartype
@@ -316,7 +321,10 @@ void vtkProbeFilter::ProbeEmptyPoints(vtkDataSet *input,
       }
     else
       {
-      outPD->NullPoint(ptId);
+      if (this->UseNullPoint)
+        {
+        outPD->NullPoint(ptId);
+        }
       }
     }
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVertex.cxx,v $
+  Module:    vtkVertex.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,10 +19,9 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkVertex, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkVertex);
 
 //----------------------------------------------------------------------------
@@ -109,7 +108,7 @@ int vtkVertex::CellBoundary(int vtkNotUsed(subId), double pcoords[3],
 // points list that merges points as they are inserted (i.e., prevents 
 // duplicates). 
 void vtkVertex::Contour(double value, vtkDataArray *cellScalars, 
-                        vtkPointLocator *locator,
+                        vtkIncrementalPointLocator *locator,
                         vtkCellArray *verts, 
                         vtkCellArray *vtkNotUsed(lines), 
                         vtkCellArray *vtkNotUsed(polys), 
@@ -217,7 +216,7 @@ void vtkVertex::Derivatives(int vtkNotUsed(subId),
 
 //----------------------------------------------------------------------------
 void vtkVertex::Clip(double value, vtkDataArray *cellScalars, 
-                     vtkPointLocator *locator, vtkCellArray *verts,
+                     vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                      vtkPointData *inPd, vtkPointData *outPd,
                      vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
                      int insideOut)

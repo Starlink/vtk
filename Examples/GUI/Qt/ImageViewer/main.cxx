@@ -25,7 +25,7 @@
  !!! license.
 =========================================================================*/
 
-#include "qapplication.h"
+#include <QApplication>
 
 #include "vtkImageViewer.h"
 #include "vtkRenderWindowInteractor.h"
@@ -41,10 +41,6 @@ int main(int argc, char** argv)
 
   QVTKWidget widget;
   widget.resize(256,256);
- 
-#if QT_VERSION < 0x040000
-  app.setMainWidget(&widget);
-#endif
 
   vtkPNGReader* reader = vtkPNGReader::New();
   char* fname = vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/vtk.png");

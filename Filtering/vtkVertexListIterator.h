@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVertexListIterator.h,v $
+  Module:    vtkVertexListIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_FILTERING_EXPORT vtkVertexListIterator : public vtkObject
 {
 public:
   static vtkVertexListIterator *New();
-  vtkTypeRevisionMacro(vtkVertexListIterator, vtkObject);
+  vtkTypeMacro(vtkVertexListIterator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

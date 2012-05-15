@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLDisplayListPainter.cxx,v $
+  Module:    vtkOpenGLDisplayListPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,17 +27,16 @@
 #  include "vtkOpenGL.h"
 #endif
 
-#include <vtkstd/map>
+#include <map>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLDisplayListPainter);
-vtkCxxRevisionMacro(vtkOpenGLDisplayListPainter, "$Revision: 1.11 $");
 #endif
 
 class vtkOpenGLDisplayListPainter::vtkInternals
 {
 public:
-  typedef vtkstd::map<unsigned long, GLuint> DisplayListMapType;
+  typedef std::map<unsigned long, GLuint> DisplayListMapType;
   DisplayListMapType DisplayListMap;
 
   // Refers to the build time of the first display list.
@@ -94,11 +93,12 @@ vtkOpenGLDisplayListPainter::~vtkOpenGLDisplayListPainter()
 //-----------------------------------------------------------------------------
 void vtkOpenGLDisplayListPainter::ReleaseGraphicsResources(vtkWindow* win)
 {
-  if (win)
+  if (win && win->GetMapped())
     {
     win->MakeCurrent();
     this->Internals->ReleaseAllLists();
     }
+  this->Internals->DisplayListMap.clear();
   this->Superclass::ReleaseGraphicsResources(win);
   this->LastWindow = NULL;
 }
@@ -109,11 +109,11 @@ void vtkOpenGLDisplayListPainter::RenderInternal(vtkRenderer *renderer,
                                                  unsigned long typeflags,
                                                  bool forceCompileOnly)
 {
-  if (this->GetMTime() > this->Internals->BuildTime ||
-    (this->LastWindow && (renderer->GetRenderWindow() != this->LastWindow.GetPointer())))
+  // if active render window has changed, then release the old display lists on
+  // the old window, if the old window is still valid.
+  if (this->LastWindow &&
+    (renderer->GetRenderWindow() != this->LastWindow.GetPointer()))
     {
-    // MTime changes when input changes or someother iVar changes, so display
-    // lists are obsolete so we can let go of them.
     this->ReleaseGraphicsResources(this->LastWindow);
     renderer->GetRenderWindow()->MakeCurrent();
     }
@@ -137,6 +137,8 @@ void vtkOpenGLDisplayListPainter::RenderInternal(vtkRenderer *renderer,
   // First check for the cases where all display lists (irrespective of
   // typeflags are obsolete.
   if (
+    // the painter has changed.
+    this->GetMTime() > this->Internals->BuildTime ||
     // Since input changed
     input->GetMTime() > this->Internals->BuildTime  ||
     // actor's properties were modified
@@ -145,6 +147,7 @@ void vtkOpenGLDisplayListPainter::RenderInternal(vtkRenderer *renderer,
     this->Information->GetMTime() > this->Internals->BuildTime)
     {
     this->Internals->ReleaseAllLists();
+    this->LastWindow = 0;
     }
 
   vtkInternals::DisplayListMapType::iterator iter = 

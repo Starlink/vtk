@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPCorrelativeStatistics.h,v $
+  Module:    vtkPCorrelativeStatistics.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+/*-------------------------------------------------------------------------
+  Copyright 2011 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+  -------------------------------------------------------------------------*/
 // .NAME vtkPCorrelativeStatistics - A class for parallel bivariate correlative statistics
 // .SECTION Description
 // vtkPCorrelativeStatistics is vtkCorrelativeStatistics subclass for parallel datasets.
@@ -26,13 +31,14 @@
 
 #include "vtkCorrelativeStatistics.h"
 
+class vtkMultiBlockDataSet;
 class vtkMultiProcessController;
 
 class VTK_INFOVIS_EXPORT vtkPCorrelativeStatistics : public vtkCorrelativeStatistics
 {
 public:
   static vtkPCorrelativeStatistics* New();
-  vtkTypeRevisionMacro(vtkPCorrelativeStatistics, vtkCorrelativeStatistics);
+  vtkTypeMacro(vtkPCorrelativeStatistics, vtkCorrelativeStatistics);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -43,8 +49,9 @@ public:
 
   // Description:
   // Execute the parallel calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
-                             vtkDataObject* outMeta );
+  virtual void Learn( vtkTable* inData,
+                      vtkTable* inParameters,
+                      vtkMultiBlockDataSet* outMeta );
 
 protected:
   vtkPCorrelativeStatistics();

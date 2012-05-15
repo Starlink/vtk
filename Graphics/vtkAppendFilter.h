@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendFilter.h,v $
+  Module:    vtkAppendFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,16 +36,30 @@ class VTK_GRAPHICS_EXPORT vtkAppendFilter : public vtkUnstructuredGridAlgorithm
 public:
   static vtkAppendFilter *New();
 
-  vtkTypeRevisionMacro(vtkAppendFilter,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkAppendFilter,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+//BTX
   // Description:
   // Get any input of this filter.
-//BTX
   vtkDataSet *GetInput(int idx);
   vtkDataSet *GetInput() 
     {return this->GetInput( 0 );}
 //ETX
+
+  // Description:
+  // Get if the filter should merge coincidental points
+  // Note: The filter will only merge points if the ghost cell array doesn't exist
+  // Defaults to Off
+  vtkGetMacro(MergePoints,int);
+
+  // Description:
+  // Set the filter to merge coincidental points.
+  // Note: The filter will only merge points if the ghost cell array doesn't exist
+  // Defaults to Off
+  vtkSetMacro(MergePoints,int);
+
+  vtkBooleanMacro(MergePoints,int);
 
   // Description:
   // Remove a dataset from the list of data to append.
@@ -64,10 +78,23 @@ protected:
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
+  
+  // Description:
+  // This function appends multiple blocks / pieces into a vtkUnstructuredGrid
+  // data by using a point locator to merge duplicate points (when ghost cell
+  // information is not available from the input data blocks / pieces).
+  // This function should be called by RequestData() only.
+  int     AppendBlocksWithPointLocator( vtkInformationVector ** inputVector,
+                                        vtkInformationVector  * outputVector );
+  
 
   // list of data sets to append together.
   // Here as a convenience.  It is a copy of the input array.
   vtkDataSetCollection *InputList;
+
+  //If true we will attempt to merge points. Must also not have
+  //ghost cells defined.
+  int MergePoints;
 
 private:
   vtkAppendFilter(const vtkAppendFilter&);  // Not implemented.

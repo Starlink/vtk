@@ -1,6 +1,11 @@
 from vtk import *
+import os.path
 
 data_dir = "../../../../VTKData/Data/Infovis/SQLite/"
+if not os.path.exists(data_dir):
+  data_dir = "../../../../../VTKData/Data/Infovis/SQLite/"
+if not os.path.exists(data_dir):
+  data_dir = "../../../../../../VTKData/Data/Infovis/SQLite/"
 sqlite_file = data_dir + "SmallEmailTest.db"
 
 # Construct a graph from database tables (yes very tricky)
@@ -26,9 +31,9 @@ theme.SetCellColor(.2,.2,.6)
 theme.SetLineWidth(5)
 theme.SetPointSize(10)
 view.ApplyViewTheme(theme)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
-window.GetInteractor().Start()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
+view.GetInteractor().Start()

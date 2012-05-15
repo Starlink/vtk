@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageCacheFilter.h,v $
+  Module:    vtkImageCacheFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_IMAGING_EXPORT vtkImageCacheFilter : public vtkImageAlgorithm
 {
 public:
   static vtkImageCacheFilter *New();
-  vtkTypeRevisionMacro(vtkImageCacheFilter,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageCacheFilter,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

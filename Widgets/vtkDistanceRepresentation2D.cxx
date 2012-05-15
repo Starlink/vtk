@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDistanceRepresentation2D.cxx,v $
+  Module:    vtkDistanceRepresentation2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkTextProperty.h"
 #include "vtkWindow.h"
 
-vtkCxxRevisionMacro(vtkDistanceRepresentation2D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkDistanceRepresentation2D);
 
 //----------------------------------------------------------------------
@@ -103,7 +102,7 @@ void vtkDistanceRepresentation2D::SetPoint1DisplayPosition(double x[3])
   double p[3];
   this->Point1Representation->GetWorldPosition(p);
   this->Point1Representation->SetWorldPosition(p);
-  this->AxisActor->GetPoint1Coordinate()->SetValue(p);
+  this->BuildRepresentation();
 }
 
 //----------------------------------------------------------------------
@@ -113,7 +112,7 @@ void vtkDistanceRepresentation2D::SetPoint2DisplayPosition(double x[3])
   double p[3];
   this->Point2Representation->GetWorldPosition(p);
   this->Point2Representation->SetWorldPosition(p);
-  this->AxisActor->GetPoint2Coordinate()->SetValue(p);
+  this->BuildRepresentation();
 }
 
 //----------------------------------------------------------------------
@@ -122,7 +121,7 @@ void vtkDistanceRepresentation2D::SetPoint1WorldPosition(double x[3])
   if (this->Point1Representation)
     {
     this->Point1Representation->SetWorldPosition(x);
-    this->AxisActor->GetPoint1Coordinate()->SetValue(x);
+    this->BuildRepresentation();
     }
 }
 
@@ -132,7 +131,7 @@ void vtkDistanceRepresentation2D::SetPoint2WorldPosition(double x[3])
   if (this->Point2Representation)
     {
     this->Point2Representation->SetWorldPosition(x);
-    this->AxisActor->GetPoint2Coordinate()->SetValue(x);
+    this->BuildRepresentation();
     }
 }
 
@@ -157,9 +156,17 @@ vtkAxisActor2D *vtkDistanceRepresentation2D::GetAxis()
 }
 
 //----------------------------------------------------------------------
+vtkProperty2D *vtkDistanceRepresentation2D::GetAxisProperty()
+{
+  return this->AxisActor->GetProperty();
+}
+
+//----------------------------------------------------------------------
 void vtkDistanceRepresentation2D::BuildRepresentation()
 {
   if ( this->GetMTime() > this->BuildTime ||
+       this->AxisActor->GetMTime() > this->BuildTime ||
+       this->AxisActor->GetTitleTextProperty()->GetMTime()  > this->BuildTime ||
        this->Point1Representation->GetMTime() > this->BuildTime ||
        this->Point2Representation->GetMTime() > this->BuildTime ||
        (this->Renderer && this->Renderer->GetVTKWindow() &&
@@ -172,6 +179,13 @@ void vtkDistanceRepresentation2D::BuildRepresentation()
     this->Point1Representation->GetWorldPosition(p1);
     this->Point2Representation->GetWorldPosition(p2);
     this->Distance = sqrt(vtkMath::Distance2BetweenPoints(p1,p2));
+
+      this->AxisActor->GetPoint1Coordinate()->SetValue(p1);
+    this->AxisActor->GetPoint2Coordinate()->SetValue(p2);
+    this->AxisActor->SetRulerMode(this->RulerMode);
+    this->AxisActor->SetRulerDistance(this->RulerDistance);
+    this->AxisActor->SetNumberOfLabels(this->NumberOfRulerTicks);
+
     char string[512];
     sprintf(string, this->LabelFormat, this->Distance);
     this->AxisActor->SetTitle(string);

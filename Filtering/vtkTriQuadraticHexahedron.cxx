@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTriQuadraticHexahedron.cxx,v $
+  Module:    vtkTriQuadraticHexahedron.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkBiQuadraticQuad.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro (vtkTriQuadraticHexahedron, "$Revision: 1.12 $");
 vtkStandardNewMacro (vtkTriQuadraticHexahedron);
 
 //----------------------------------------------------------------------------
@@ -305,7 +304,7 @@ vtkTriQuadraticHexahedron::CellBoundary (int subId, double pcoords[3], vtkIdList
 //----------------------------------------------------------------------------
 void vtkTriQuadraticHexahedron::Contour (double value,
             vtkDataArray * cellScalars,
-            vtkPointLocator * locator,
+            vtkIncrementalPointLocator * locator,
             vtkCellArray * verts,
             vtkCellArray * lines,
             vtkCellArray * polys,
@@ -332,7 +331,7 @@ void vtkTriQuadraticHexahedron::Contour (double value,
 // except that it cuts the hex to produce tetrahedra.
 void vtkTriQuadraticHexahedron::Clip (double value,
          vtkDataArray * cellScalars,
-         vtkPointLocator * locator,
+         vtkIncrementalPointLocator * locator,
          vtkCellArray * tets,
          vtkPointData * inPd,
          vtkPointData * outPd,

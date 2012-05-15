@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkPCAStatistics.h,v $
+Module:    vtkPCAStatistics.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -13,19 +13,19 @@ PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2010 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
   -------------------------------------------------------------------------*/
-// .NAME vtkPCAStatistics - A class for principal component analysis
+// .NAME vtkPCAStatistics - A class for multivariate principal component analysis
 //
 // .SECTION Description
 // This class derives from the multi-correlative statistics algorithm and
 // uses the covariance matrix and Cholesky decomposition computed by it.
-// However, when it finalizes the statistics in Learn mode, the PCA class
+// However, when it finalizes the statistics in learn operation, the PCA class
 // computes the SVD of the covariance matrix in order to obtain its eigenvectors.
 //
-// In the assess mode, the input data are
+// In the assess operation, the input data are
 // - projected into the basis defined by the eigenvectors,
 // - the energy associated with each datum is computed,
 // - or some combination thereof.
@@ -34,20 +34,24 @@ PURPOSE.  See the above copyright notice for more information.
 // projection into a lower-dimensional state while minimizing (in a 
 // least squares sense) the projection error.
 //
+// In the test operation, a Jarque-Bera-Srivastava test of n-d normality is performed.
 //
 // .SECTION Thanks
 // Thanks to David Thompson, Philippe Pebay and Jackson Mayo from
 // Sandia National Laboratories for implementing this class.
+// Updated by Philippe Pebay, Kitware SAS 2012
 
 #ifndef __vtkPCAStatistics_h
 #define __vtkPCAStatistics_h
 
 #include "vtkMultiCorrelativeStatistics.h"
 
+class vtkDoubleArray;
+
 class VTK_INFOVIS_EXPORT vtkPCAStatistics : public vtkMultiCorrelativeStatistics
 {
 public:
-  vtkTypeRevisionMacro(vtkPCAStatistics,vtkMultiCorrelativeStatistics);
+  vtkTypeMacro(vtkPCAStatistics,vtkMultiCorrelativeStatistics);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
   static vtkPCAStatistics* New();
 
@@ -124,7 +128,33 @@ public:
   virtual void SetSpecifiedNormalization( vtkTable* );
 
   // Description:
-  // This variable controls the dimensionality of output tuples in Assess mode.
+  // Get the eigenvalues. The eigenvalues are ordered according from largest to smallest.
+  // This function:
+  // void GetEigenvalues(int request, int i, vtkDoubleArray*);
+  // does all of the work. The other functions simply call this function with the appropriate
+  // parameters. These functions are not valid unless Update() has been called and the Derive
+  // option is turned on.
+  void GetEigenvalues(int request, vtkDoubleArray*);
+  void GetEigenvalues(vtkDoubleArray*);
+  double GetEigenvalue(int request, int i);
+  double GetEigenvalue(int i);
+
+  // Description:
+  // Get the eigenvectors. The eigenvectors are ordered according to the magnitude of their
+  // associated eigenvalues, sorted from largest to smallest. That is, eigenvector 0 corresponds
+  // to the largest eigenvalue.
+  // This function:
+  // void GetEigenvectors(int request, vtkDoubleArray* eigenvectors)
+  // does all of the work. The other functions are convenience functions that call this function
+  // with default arguments. These functions are not valid unless Update() has been called and the Derive
+  // option is turned on.
+  void GetEigenvectors(int request, vtkDoubleArray* eigenvectors);
+  void GetEigenvectors(vtkDoubleArray* eigenvectors);
+  void GetEigenvector(int i, vtkDoubleArray* eigenvector);
+  void GetEigenvector(int request, int i, vtkDoubleArray* eigenvector);
+
+  // Description:
+  // This variable controls the dimensionality of output tuples in Assess operation.
   // Consider the case where you have requested a PCA on D columns.
   //
   // When set to vtkPCAStatistics::FULL_BASIS, the entire set of basis vectors
@@ -166,23 +196,39 @@ public:
   vtkSetClampMacro(FixedBasisEnergy,double,0.,1.);
   vtkGetMacro(FixedBasisEnergy,double);
 
+  // Description:
+  // A convenience method (in particular for access from other applications) to 
+  // set parameter values.
+  // Return true if setting of requested parameter name was excuted, false otherwise.
+  virtual bool SetParameter( const char* parameter,
+                             int index,
+                             vtkVariant value );
+
 protected:
   vtkPCAStatistics();
   ~vtkPCAStatistics();
 
   // Description:
   // This algorithm accepts a vtkTable containing normalization values for
-  // its third input (port 2).
+  // its fourth input (port 3).
   // We override FillInputPortInformation to indicate this.
   virtual int FillInputPortInformation( int port, vtkInformation* info );
 
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void ExecuteDerive( vtkDataObject* inMeta );
+  virtual void Derive( vtkMultiBlockDataSet* );
 
   // Description:
-  // Execute the calculations required by the Derive option.
-  virtual void ExecuteAssess( vtkTable*, vtkDataObject*, vtkTable*, vtkDataObject* );
+  // Execute the calculations required by the Test option.
+  virtual void Test( vtkTable*,
+                     vtkMultiBlockDataSet*,
+                     vtkTable* );
+
+  // Description:
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable*, 
+                       vtkMultiBlockDataSet*, 
+                       vtkTable* );
 
   //BTX  
   // Description:

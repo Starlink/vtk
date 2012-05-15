@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImporter.cxx,v $
+  Module:    vtkImporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkRendererCollection.h"
 #include "vtkRenderWindow.h"
 
-vtkCxxRevisionMacro(vtkImporter, "$Revision: 1.23 $");
 
 vtkCxxSetObjectMacro(vtkImporter,RenderWindow,vtkRenderWindow);
 
@@ -69,6 +68,10 @@ void vtkImporter::Read ()
     }
   else
     {
+    if (this->Renderer)
+      {
+      this->Renderer->UnRegister(NULL);
+      }
     this->Renderer = renderer;
     this->Renderer->Register( this );
     }

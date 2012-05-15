@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKdTreeSelector.cxx,v $
+  Module:    vtkKdTreeSelector.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkSelectionNode.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkKdTreeSelector, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkKdTreeSelector);
 
 vtkKdTreeSelector::vtkKdTreeSelector()

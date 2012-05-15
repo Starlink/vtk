@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTkRenderWidget.cxx,v $
+  Module:    vtkTkRenderWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,13 +22,22 @@
 #ifdef _WIN32
 #include "vtkWin32OpenGLRenderWindow.h"
 #else
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
 #ifdef VTK_USE_CARBON
 #include "vtkCarbonRenderWindow.h"
 #include "tkMacOSXInt.h"// Needed for XEvent.type == UnmapNotify
 #else
+#include "vtkCocoaRenderWindow.h"
+#include "vtkCocoaTkUtilities.h"
+#ifndef MAC_OSX_TK
+#define MAC_OSX_TK 1
+#endif
+#include "tkInt.h"
+#endif
+#else
 #include "vtkXOpenGLRenderWindow.h"
 #endif
-#endif 
+#endif
 
 #include <stdlib.h>
 
@@ -158,19 +167,32 @@ extern "C" {
 
     // Find the image
 #ifdef VTK_PYTHON_BUILD
-    void *ptr;
-    char typeCheck[128];
-    sscanf ( argv[1], "_%lx_%s", (long *)&ptr, typeCheck);
-    if ( strcmp ( "vtkImageData", typeCheck ) != 0
-         && strcmp ( "vtkStructuredPoints", typeCheck ) != 0 )
+    char typeCheck[256];
+#if VTK_SIZEOF_VOID_P == VTK_SIZEOF_LONG
+    union { void *p; unsigned long l; } u;
+    sscanf ( argv[1], "_%lx_%s", &u.l, typeCheck);
+#elif defined(VTK_TYPE_USE_LONG_LONG)
+    union { void *p; unsigned long long l; } u;
+    sscanf ( argv[1], "_%llx_%s", &u.l, typeCheck);
+#elif defined(VTK_TYPE_USE___INT64)
+    union { void *p; unsigned __int64 l; } u;
+    sscanf ( argv[1], "_%I64x_%s", &u.l, typeCheck);
+#endif
+    // Various historical pointer manglings
+    if ( strcmp ( "vtkImageData", typeCheck ) != 0 &&
+         strcmp ( "vtkImageData_p", typeCheck ) != 0 &&
+         strcmp ( "p_vtkImageData", typeCheck ) != 0 &&
+         strcmp ( "vtkStructuredPoints", typeCheck ) != 0 &&
+         strcmp ( "vtkStructuredPoints_p", typeCheck ) != 0 &&
+         strcmp ( "p_vtkStructuredPoints", typeCheck ) != 0 )
       {
       // bad type
-      ptr = NULL;
+      u.p = NULL;
       }
-    image = (vtkImageData*) ptr;
+    image = static_cast<vtkImageData*>(u.p);
 #else
-    image = (vtkImageData*) vtkTclGetPointerFromObject ( argv[1], 
-                                                         "vtkImageData", interp, status );
+    image = static_cast<vtkImageData*>(
+      vtkTclGetPointerFromObject ( argv[1], "vtkImageData", interp, status ));
 #endif
     if ( !image )
       {
@@ -644,8 +666,8 @@ extern "C"
     switch (eventPtr->type) 
       {
       case Expose:
-        if ((eventPtr->xexpose.count == 0)
-            /* && !self->UpdatePending*/) 
+        if (eventPtr->xexpose.count == 0)
+            /* && !self->UpdatePending)*/
           {
           // let the user bind expose events
           // self->RenderWindow->Render();
@@ -659,20 +681,30 @@ extern "C"
       //Tk_GeometryRequest(self->TkWin,self->Width,self->Height);
       if (self->RenderWindow)
         {
-// VTK_USE_CARBON: Do not call SetSize or SetPosition until we're
-// mapped and if we aren't mapped, clear the AGL_BUFFER_RECT.
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
+        // Do not call SetSize or SetPosition until we're mapped.
+        if (Tk_IsMapped(self->TkWin))
+          {
+          // On Carbon and Cocoa, compute coordinates relative to toplevel
+          int x = Tk_X(self->TkWin);
+          int y = Tk_Y(self->TkWin);
+          for (TkWindow *curPtr = ((TkWindow *)self->TkWin)->parentPtr;
+               (NULL != curPtr) && !(curPtr->flags & TK_TOP_LEVEL);
+               curPtr = curPtr->parentPtr)
+            {
+            x += Tk_X(curPtr);
+            y += Tk_Y(curPtr);
+            }
+          self->RenderWindow->SetPosition(x, y);
+          self->RenderWindow->SetSize(self->Width, self->Height);
+          }
 #ifdef VTK_USE_CARBON
-  if (Tk_IsMapped(self->TkWin))
-    {
-    TkWindow *winPtr = (TkWindow *)self->TkWin;
-    self->RenderWindow->SetPosition(winPtr->privatePtr->xOff,
-            winPtr->privatePtr->yOff);
-    self->RenderWindow->SetSize(self->Width, self->Height);
-    }
-  else
-    {
-    self->RenderWindow->SetSize(0, 0);
-    }
+        // On Carbon, if we aren't mapped, clear the AGL_BUFFER_RECT.
+        else
+          {
+          self->RenderWindow->SetSize(0, 0);
+          }
+#endif
 #else
         self->RenderWindow->SetPosition(Tk_X(self->TkWin),Tk_Y(self->TkWin));
         self->RenderWindow->SetSize(self->Width, self->Height);
@@ -683,22 +715,29 @@ extern "C"
       break;
       case MapNotify:
       {
-// VTK_USE_CARBON: we need to update the current AGL_BUFFER_RECT by
-// calling vtkCarbonRenderWindow::SetSize and vtkCarbonRenderWindow::SetPosition
-#ifdef VTK_USE_CARBON
-      TkWindow *winPtr = (TkWindow *)self->TkWin;
-      self->RenderWindow->SetPosition(winPtr->privatePtr->xOff,
-                                      winPtr->privatePtr->yOff);
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
+      // On Carbon and Cocoa, compute coordinates relative to the toplevel
+      int x = Tk_X(self->TkWin);
+      int y = Tk_Y(self->TkWin);
+      for (TkWindow *curPtr = ((TkWindow *)self->TkWin)->parentPtr;
+           (NULL != curPtr) && !(curPtr->flags & TK_TOP_LEVEL);
+           curPtr = curPtr->parentPtr)
+        {
+        x += Tk_X(curPtr);
+        y += Tk_Y(curPtr);
+        }
+      self->RenderWindow->SetPosition(x, y);
       self->RenderWindow->SetSize(self->Width, self->Height);
 #endif
       break;
       }
-// VTK_USE_CARBON: we need to clear the current AGL_BUFFER_RECT by
-// calling vtkCarbonRenderWindow::SetSize(0,0).
-#ifdef VTK_USE_CARBON
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
       case UnmapNotify:
       {
+#ifdef VTK_USE_CARBON
+      // On Carbon, clear the AGL_BUFFER_RECT by calling SetSize(0, 0).
       self->RenderWindow->SetSize(0, 0);
+#endif
       break;
       }
 #endif
@@ -1049,32 +1088,27 @@ static int vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
 }
 #else
 
-// the carbon version - tk not available using the cocoa api
-#ifdef VTK_USE_CARBON
+// the cocoa and carbon versions
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
 //----------------------------------------------------------------------------
 // Creates a render window and forces Tk to use the window.
 static int
 vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self) 
 {
-  Display *dpy;
-  TkWindow *winPtr = (TkWindow *)self->TkWin;
-  vtkCarbonRenderWindow *renderWindow = NULL;
-  WindowPtr parentWin;
+  vtkRenderWindow *renderWindow = NULL;
 
   if (self->RenderWindow)
     {
     return TCL_OK;
     }
   
-  dpy = Tk_Display(self->TkWin);
-
   if (self->RW[0] == '\0')
     {
     // Make the Render window.
     self->RenderWindow = vtkRenderWindow::New();
     self->RenderWindow->Register(NULL);
     self->RenderWindow->Delete();
-    renderWindow = (vtkCarbonRenderWindow *)(self->RenderWindow);
+    renderWindow = self->RenderWindow;
 #ifndef VTK_PYTHON_BUILD
     vtkTclGetObjectFromPointer(self->Interp, self->RenderWindow,
           "vtkRenderWindow");
@@ -1092,24 +1126,25 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
       {
       void *tmp;
       sscanf(self->RW+5,"%p",&tmp);
-      renderWindow = (vtkCarbonRenderWindow *)tmp;
+      renderWindow = reinterpret_cast<vtkRenderWindow *>(tmp);
       }
     else
       {
 #ifndef VTK_PYTHON_BUILD
       int new_flag;
-      renderWindow = (vtkCarbonRenderWindow *)
+      renderWindow = static_cast<vtkRenderWindow *>(
         vtkTclGetPointerFromObject(self->RW,"vtkRenderWindow",self->Interp, 
-                                   new_flag);
+                                   new_flag));
 #endif
       }
+
     if (renderWindow != self->RenderWindow)
       {
       if (self->RenderWindow != NULL) 
         {
         self->RenderWindow->UnRegister(NULL);
         }
-      self->RenderWindow = (vtkRenderWindow *)(renderWindow);
+      self->RenderWindow = renderWindow;
       if (self->RenderWindow != NULL) 
         {
         self->RenderWindow->Register(NULL);
@@ -1117,6 +1152,10 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
       }
     }
 
+  TkWindow *winPtr = reinterpret_cast<TkWindow *>(self->TkWin);
+
+#ifdef VTK_USE_CARBON
+  WindowPtr parentWin;
   // Position should be set, but only if winPtr properly initialized
   // 
   //self->RenderWindow->SetPosition(winPtr->privatePtr->xOff,
@@ -1149,24 +1188,36 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
         vtkGenericWarningMacro("Could not find the TK_TOP_LEVEL. This is bad.");
         }
       }
-    
-    parentWin = GetWindowFromPort(TkMacOSXGetDrawablePort(
+
+    parentWin = GetWindowFromPort((CGrafPtr)TkMacOSXGetDrawablePort(
                                   Tk_WindowId(winPtr->parentPtr)));
     // Carbon does not have 'sub-windows', so the ParentId is used more
     // as a flag to indicate that the renderwindow is being used as a sub-
     // view of its 'parent' window.
-    renderWindow->SetParentId(parentWin);
-    renderWindow->SetRootWindow(parentWin);
+    vtkCarbonRenderWindow *carbonRenderWindow = 
+      static_cast<vtkCarbonRenderWindow *>(renderWindow);
+    carbonRenderWindow->SetParentId(parentWin);
+    carbonRenderWindow->SetRootWindow(parentWin);
     }
+  
+  renderWindow->SetDisplayId(Tk_Display(self->TkWin));
 
-  // Use the same display
-  renderWindow->SetDisplayId(dpy);
+#else /* now the VTK_USE_COCOA section */
+  Tk_MakeWindowExist(self->TkWin);
+  // set the ParentId to the NSView of the Tk toplevel
+  renderWindow->SetParentId(vtkCocoaTkUtilities::GetDrawableView(self->TkWin));
+  renderWindow->SetSize(self->Width, self->Height);
+#endif
+
+#ifdef VTK_USE_CARBON
+  Display *dpy = Tk_Display(self->TkWin);
 
   // Don't render yet, the widget isn't necessarily mapped
   // self->RenderWindow->Render();
 
   XSelectInput(dpy, Tk_WindowId(self->TkWin), VTK_ALL_EVENTS_MASK);
-  
+#endif
+
   /*
    * Issue a ConfigureNotify event if there were deferred configuration
    * changes (but skip it if the window is being deleted;  the
@@ -1202,6 +1253,7 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
       event.xconfigure.override_redirect = winPtr->atts.override_redirect;
       Tk_HandleEvent(&event);
     }
+#ifdef VTK_USE_CARBON
   else
     {
     // Assume that vtkTkRenderWidget will be packed after this
@@ -1209,11 +1261,13 @@ vtkTkRenderWidget_MakeRenderWindow(struct vtkTkRenderWidget *self)
     // initial 'black square'.
 
     // Cast to a vtkCarbonRenderWindow so we can access the necessary members.
-    vtkCarbonRenderWindow *carbonRW = (vtkCarbonRenderWindow *)self->RenderWindow;
+    vtkCarbonRenderWindow *carbonRW =
+      static_cast<vtkCarbonRenderWindow *>(self->RenderWindow);
     carbonRW->Initialize();
     carbonRW->UpdateSizeAndPosition(0, 0, 0, 0);
     carbonRW->UpdateGLRegion();
     }
+#endif
 
   return TCL_OK;
 }

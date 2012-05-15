@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageDifference.h,v $
+  Module:    vtkImageDifference.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_IMAGING_EXPORT vtkImageDifference : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageDifference *New();
-  vtkTypeRevisionMacro(vtkImageDifference,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageDifference,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

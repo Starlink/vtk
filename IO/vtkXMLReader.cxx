@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLReader.cxx,v $
+  Module:    vtkXMLReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,8 +34,8 @@
 #include <vtksys/ios/sstream>
 #include <sys/stat.h>
 #include <assert.h>
+#include <locale> // C++ locale
 
-vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.55 $");
 //-----------------------------------------------------------------------------
 static void ReadStringVersion(const char* version, int& major, int& minor)
 {
@@ -502,6 +502,8 @@ int vtkXMLReader::RequestData(vtkInformation *vtkNotUsed(request),
   
   // Give the vtkXMLParser instance its file back so that data section
   // reads will work.
+  
+  (*this->Stream).imbue(std::locale::classic());
   this->XMLParser->SetStream(this->Stream);
   
   // We are just starting to read.  Do not call UpdateProgressDiscrete
@@ -688,14 +690,36 @@ vtkAbstractArray* vtkXMLReader::CreateArray(vtkXMLDataElement* da)
   vtkAbstractArray* array = vtkAbstractArray::CreateArray(dataType);
 
   array->SetName(da->GetAttribute("Name"));
+  
 
-  int components;
+  //if NumberOfComponents fails, we have 1 component
+  int components = 1;
+
   if(da->GetScalarAttribute("NumberOfComponents", components))
     {
     array->SetNumberOfComponents(components);
     }
 
-  // Scan/load for vtkInformationKey data.
+  //determine what component names have been saved in the file.  
+  const char* compName = NULL;
+  vtksys_ios::ostringstream buff;  
+  for ( int i=0; i < components && i < 10; ++i )
+    {
+    //get the component names                    
+    buff << "ComponentName" << i;        
+    compName = da->GetAttribute( buff.str().c_str() );
+    if ( compName )
+      {      
+      //detected a component name, add it
+      array->SetComponentName( i ,compName );
+      compName=NULL;
+      }    
+    buff.str("");
+    buff.clear();
+    }
+    
+    
+  // Scan/load for vtkInformationKey data.  
   int nElements=da->GetNumberOfNestedElements();
   for (int i=0; i<nElements; ++i)
     {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPCellDataToPointData.cxx,v $
+  Module:    vtkPCellDataToPointData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPCellDataToPointData, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkPCellDataToPointData);
 
 //----------------------------------------------------------------------------
@@ -79,8 +78,7 @@ int vtkPCellDataToPointData::RequestUpdateExtent(
     return 1;
     }
 
-  vtkInformation* opInfo = this->GetOutputPortInformation(0);
-  int extentType = opInfo->Get(vtkDataObject::DATA_EXTENT_TYPE());
+  int extentType = VTK_PIECES_EXTENT;
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
   
@@ -90,7 +88,12 @@ int vtkPCellDataToPointData::RequestUpdateExtent(
   int ext[6];
 
   int isInputPiecesExtent = 1;
-  if (extentType == VTK_3D_EXTENT && 
+  vtkDataObject* dataObject = inInfo->Get(vtkDataObject::DATA_OBJECT());
+  if (dataObject)
+    {
+    extentType = dataObject->GetInformation()->Get(vtkDataObject::DATA_EXTENT_TYPE());
+    }
+  if (extentType == VTK_3D_EXTENT &&
       inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
     {
     isInputPiecesExtent = 0;

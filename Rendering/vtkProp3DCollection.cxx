@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProp3DCollection.cxx,v $
+  Module:    vtkProp3DCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkProp3DCollection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkProp3DCollection, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkProp3DCollection);
 
 //----------------------------------------------------------------------------

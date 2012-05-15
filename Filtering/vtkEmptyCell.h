@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEmptyCell.h,v $
+  Module:    vtkEmptyCell.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_FILTERING_EXPORT vtkEmptyCell : public vtkCell
 {
 public:
   static vtkEmptyCell *New();
-  vtkTypeRevisionMacro(vtkEmptyCell,vtkCell);
+  vtkTypeMacro(vtkEmptyCell,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -39,12 +39,12 @@ public:
   vtkCell *GetFace(int) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts1,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts1,
                vtkCellArray *lines, vtkCellArray *verts2,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *pts,
+            vtkIncrementalPointLocator *locator, vtkCellArray *pts,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);

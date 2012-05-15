@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCubeSource.h,v $
+  Module:    vtkCubeSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_GRAPHICS_EXPORT vtkCubeSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkCubeSource *New();
-  vtkTypeRevisionMacro(vtkCubeSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkCubeSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

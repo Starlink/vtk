@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOutlineSource.h,v $
+  Module:    vtkOutlineSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_GRAPHICS_EXPORT vtkOutlineSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkOutlineSource *New();
-  vtkTypeRevisionMacro(vtkOutlineSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkOutlineSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -60,12 +60,19 @@ public:
   vtkSetVectorMacro(Corners,double,24);
   vtkGetVectorMacro(Corners,double,24);
 
+  // Description:
+  // Generate solid faces for the box. This is off by default.
+  vtkSetMacro(GenerateFaces, int);
+  vtkBooleanMacro(GenerateFaces, int);
+  vtkGetMacro(GenerateFaces, int);
+
 protected:
   vtkOutlineSource();
   ~vtkOutlineSource() {}
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int   BoxType;
+  int   GenerateFaces;
   double Bounds[6];
   double Corners[24];
 

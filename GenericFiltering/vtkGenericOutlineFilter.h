@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericOutlineFilter.h,v $
+  Module:    vtkGenericOutlineFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_GENERIC_FILTERING_EXPORT vtkGenericOutlineFilter : public vtkPolyDataA
 {
 public:
   static vtkGenericOutlineFilter *New();
-  vtkTypeRevisionMacro(vtkGenericOutlineFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGenericOutlineFilter,vtkPolyDataAlgorithm);
 
 protected:
   vtkGenericOutlineFilter();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageProgressIterator.cxx,v $
+  Module:    vtkImageProgressIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,15 @@
 #pragma warning ( disable : 4275 )
 #endif
 
-#include "vtkImageIterator.txx"
+// Do not include vtkImageIterator.txx here - will cause implicit template
+// instantiation, breaking symbol visibility for the iterator with GCC.
+// Silencing the MSVC warning after discussions about the fact that the explicit
+// instantiation of the this class tries to implicitly instantiate the member
+// class. This is not an error, and the symbols should be found at link time.
+#if defined(_MSC_VER)
+# pragma warning (disable:4661)
+#endif
+
 #include "vtkImageProgressIterator.txx"
 
 #ifndef VTK_NO_EXPLICIT_TEMPLATE_INSTANTIATION

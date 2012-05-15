@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricSpline.h,v $
+  Module:    vtkParametricSpline.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -43,7 +43,7 @@ class vtkPoints;
 class VTK_FILTERING_EXPORT vtkParametricSpline : public vtkParametricFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkParametricSpline,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricSpline,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -85,6 +85,12 @@ public:
   // splines will be fit.
   void SetPoints(vtkPoints*);
   vtkGetObjectMacro(Points,vtkPoints);
+
+  // Description:
+  // Another API to set the points. Set the number of points and then set the
+  // individual point coordinates.
+  void SetNumberOfPoints(vtkIdType numPts);
+  void SetPoint(vtkIdType index, double x, double y, double z);
 
   // Description:
   // Control whether the spline is open or closed. A closed spline forms

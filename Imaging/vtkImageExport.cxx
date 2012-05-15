@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageExport.cxx,v $
+  Module:    vtkImageExport.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <ctype.h>
 #include <string.h>
 
-vtkCxxRevisionMacro(vtkImageExport, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkImageExport);
 
 //----------------------------------------------------------------------------
@@ -61,7 +60,7 @@ vtkImageData *vtkImageExport::GetInput()
 }
 
 //----------------------------------------------------------------------------
-int vtkImageExport::GetDataMemorySize()
+vtkIdType vtkImageExport::GetDataMemorySize()
 {
   vtkImageData *input = this->GetInput();
   if (input == NULL)
@@ -71,7 +70,7 @@ int vtkImageExport::GetDataMemorySize()
 
   input->UpdateInformation();
   int *extent = input->GetWholeExtent();
-  int size = input->GetScalarSize();
+  vtkIdType size = input->GetScalarSize();
   size *= input->GetNumberOfScalarComponents();
   size *= (extent[1] - extent[0] + 1);
   size *= (extent[3] - extent[2] + 1);
@@ -139,16 +138,16 @@ void vtkImageExport::Export(void *output)
     { // flip the image when it is output
     void *ptr = this->GetPointerToData();
     int *extent = this->GetInput()->GetWholeExtent();
-    int xsize = extent[1]-extent[0]+1;
-    int ysize = extent[3]-extent[2]+1;
-    int zsize = extent[5]-extent[4]+1;
+    vtkIdType xsize = extent[1]-extent[0]+1;
+    vtkIdType ysize = extent[3]-extent[2]+1;
+    vtkIdType zsize = extent[5]-extent[4]+1;
     int csize = this->GetInput()->GetScalarSize()* \
                 this->GetInput()->GetNumberOfScalarComponents();
 
-    for (int i = 0; i < zsize; i++)
+    for (vtkIdType i = 0; i < zsize; i++)
       {
       ptr = static_cast<void *>(static_cast<char *>(ptr) + ysize*xsize*csize);
-      for (int j = 0; j < ysize; j++)
+      for (vtkIdType j = 0; j < ysize; j++)
         {
         ptr = static_cast<void *>(static_cast<char *>(ptr) - xsize*csize);
         memcpy(output, ptr, xsize*csize);

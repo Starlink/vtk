@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProjectedTerrainPath.cxx,v $
+  Module:    vtkProjectedTerrainPath.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@
 #include "vtkExecutive.h"
 #include "vtkMath.h"
 #include "vtkPixel.h"
-#include <vtkstd/vector>
+#include <vector>
 
 // Define the edge list class--------------------------------------------------
 struct vtkEdge
@@ -39,14 +39,13 @@ struct vtkEdge
   double    tNeg; //parametric coordinates where negative maximum error occurs
 };
 
-class vtkEdgeList : public vtkstd::vector<vtkEdge> {};
+class vtkEdgeList : public std::vector<vtkEdge> {};
 typedef vtkEdgeList EdgeListType;
 typedef vtkEdgeList::iterator EdgeListIterator;
 
 
 // Begin vtkProjectedTerrainPath class implementation--------------------------
 //
-vtkCxxRevisionMacro(vtkProjectedTerrainPath, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkProjectedTerrainPath);
 
 //-----------------------------------------------------------------------------

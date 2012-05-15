@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLConnectedComponents.cxx,v $
+  Module:    vtkPBGLConnectedComponents.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,6 +22,8 @@
  * Use, modification and distribution is subject to the Boost Software
  * License, Version 1.0. (See http://www.boost.org/LICENSE_1_0.txt)
  */
+#include <boost/graph/use_mpi.hpp> // must precede PBGL headers
+
 #include "vtkPBGLConnectedComponents.h"
 
 #include "vtkCellArray.h"
@@ -34,8 +36,8 @@
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPBGLDistributedGraphHelper.h"
 #include "vtkPBGLGraphAdapter.h"
+#include "vtkPBGLDistributedGraphHelper.h"
 #include "vtkPointData.h"
 #include "vtkSelection.h"
 #include "vtkSmartPointer.h"
@@ -54,7 +56,6 @@
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLConnectedComponents, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkPBGLConnectedComponents);
 
 // Constructor/Destructor
@@ -79,7 +80,7 @@ int vtkPBGLConnectedComponents::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationVector.cxx,v $
+  Module:    vtkInformationVector.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,15 +18,14 @@
 #include "vtkInformation.h"
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkInformationVector, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkInformationVector);
 
 class vtkInformationVectorInternals
 {
 public:
-  vtkstd::vector<vtkInformation*> Vector;
+  std::vector<vtkInformation*> Vector;
 
   ~vtkInformationVectorInternals();
 };
@@ -35,7 +34,7 @@ public:
 vtkInformationVectorInternals::~vtkInformationVectorInternals()
 {
   // Delete all the information objects.
-  for(vtkstd::vector<vtkInformation*>::iterator i = this->Vector.begin();
+  for(std::vector<vtkInformation*>::iterator i = this->Vector.begin();
       i != this->Vector.end(); ++i)
     {
     if(vtkInformation* info = *i)

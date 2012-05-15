@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGLSLShaderDeviceAdapter2.h,v $
+  Module:    vtkGLSLShaderDeviceAdapter2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,14 +20,15 @@
 #ifndef __vtkGLSLShaderDeviceAdapter2_h
 #define __vtkGLSLShaderDeviceAdapter2_h
 
-#include "vtkObject.h"
+#include "vtkShaderDeviceAdapter2.h"
 
 class vtkShaderProgram2;
 
-class VTK_RENDERING_EXPORT vtkGLSLShaderDeviceAdapter2 :  public vtkObject
+class VTK_RENDERING_EXPORT vtkGLSLShaderDeviceAdapter2
+  : public vtkShaderDeviceAdapter2
 {
 public:
-  vtkTypeRevisionMacro(vtkGLSLShaderDeviceAdapter2, vtkObject);
+  vtkTypeMacro(vtkGLSLShaderDeviceAdapter2, vtkShaderDeviceAdapter2);
   static vtkGLSLShaderDeviceAdapter2 *New();
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 

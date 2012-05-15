@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoView.cxx,v $
+  Module:    vtkGeoView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,13 +22,14 @@
 
 #include "vtkActor.h"
 #include "vtkAssembly.h"
+#include "vtkCullerCollection.h"
 #include "vtkGeoAlignedImageSource.h"
 #include "vtkGeoAlignedImageRepresentation.h"
 #include "vtkGeoCamera.h"
 #include "vtkGeoGlobeSource.h"
-#include "vtkGeoGraphRepresentation.h"
 #include "vtkGeoInteractorStyle.h"
-#include "vtkGeoLineRepresentation.h"
+#include "vtkGeoMath.h"
+#include "vtkGeoSphereTransform.h"
 #include "vtkGeoTerrain.h"
 #include "vtkGlobeSource.h"
 #include "vtkLight.h"
@@ -41,12 +42,13 @@
 #include "vtkSmartPointer.h"
 #include "vtkViewTheme.h"
 
-vtkCxxRevisionMacro(vtkGeoView, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkGeoView);
 vtkCxxSetObjectMacro(vtkGeoView, Terrain, vtkGeoTerrain);
 //----------------------------------------------------------------------------
 vtkGeoView::vtkGeoView()
 {
+  this->Terrain = 0;
+
   // Replace the interactor style
   vtkGeoInteractorStyle* style = vtkGeoInteractorStyle::New();
   this->SetInteractorStyle(style);
@@ -71,19 +73,26 @@ vtkGeoView::vtkGeoView()
   // The actor in vtkGeoBackgroundImageRepresentation is not rendered during
   // visible cell selection because it is a vtkAssembly.
   this->LowResEarthMapper       = vtkPolyDataMapper::New();
+//  this->LowResEarthMapper->SetResolveCoincidentTopologyToPolygonOffset();
+//  this->LowResEarthMapper->SetResolveCoincidentTopologyPolygonOffsetParameters(1.0, 1000.0);
+
   this->LowResEarthActor        = vtkActor::New();
   this->LowResEarthSource       = NULL; // BuildLowResEarth tests if the source is null.
   this->BuildLowResEarth( cam->GetOrigin() ); // call once the mapper is set!
   this->LowResEarthActor->SetMapper(this->LowResEarthMapper);
-  this->RenderWindow = 0;
-  this->Terrain = 0;
-
-  // Perform frustum selection by default
-  this->SetSelectionModeToFrustum();
+  this->Renderer->AddActor(this->LowResEarthActor);
 
   // Add the assembly to the view.
   this->Assembly = vtkAssembly::New();
   this->Renderer->AddActor(this->Assembly);
+
+  vtkGeoSphereTransform* t = vtkGeoSphereTransform::New();
+//  t->SetBaseAltitude(vtkGeoMath::EarthRadiusMeters()*0.0001);
+  t->SetBaseAltitude(0.0);
+  this->SetTransform(t);
+  t->Delete();
+
+  this->UsingMesaDrivers = -1;
 }
 
 //----------------------------------------------------------------------------
@@ -94,11 +103,6 @@ vtkGeoView::~vtkGeoView()
   this->LowResEarthActor->Delete();
   this->Assembly->Delete();
   this->SetTerrain(0);
-
-  if (this->RenderWindow)
-    {
-    this->RenderWindow->Delete();
-    }
 }
 
 //----------------------------------------------------------------------------
@@ -111,7 +115,7 @@ void vtkGeoView::BuildLowResEarth( double origin[3] )
   this->LowResEarthSource       = vtkGlobeSource::New();
   this->LowResEarthSource->SetOrigin( origin );
   // Make it slightly smaller than the earth so it is not visible
-  double radius = this->LowResEarthSource->GetRadius(); 
+  double radius = this->LowResEarthSource->GetRadius();
   this->LowResEarthSource->SetRadius(0.95*radius);
   this->LowResEarthSource->SetStartLatitude(-90.0);
   this->LowResEarthSource->SetEndLatitude(90.0);
@@ -120,26 +124,6 @@ void vtkGeoView::BuildLowResEarth( double origin[3] )
   this->LowResEarthSource->SetLongitudeResolution(15);
   this->LowResEarthMapper->SetInputConnection(this->LowResEarthSource->GetOutputPort());
   //this->LowResEarthActor->VisibilityOff();
-}
-  
-
-//----------------------------------------------------------------------------
-void vtkGeoView::SetupRenderWindow(vtkRenderWindow* win)
-{
-  this->Superclass::SetupRenderWindow(win);
-
-  if (win->GetRenderers()->GetFirstRenderer())
-    {
-    win->GetRenderers()->GetFirstRenderer()->AddActor(this->LowResEarthActor);
-    }
-  
-  // We must keep a reference to the render window so we can call
-  // ExitCleanup() before it gets deleted.
-  if (win)
-    {
-    this->RenderWindow = win;
-    this->RenderWindow->Register(this);
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -164,6 +148,8 @@ bool vtkGeoView::GetLockHeading()
 // Prepares the view for rendering.
 void vtkGeoView::PrepareForRendering()
 {
+  this->Superclass::PrepareForRendering();
+
   vtkSmartPointer<vtkCollection> imageReps =
     vtkSmartPointer<vtkCollection>::New();
   for (int i = 0; i < this->GetNumberOfRepresentations(); i++)
@@ -174,23 +160,78 @@ void vtkGeoView::PrepareForRendering()
       {
       imageReps->AddItem(imageRep);
       }
-    vtkGeoLineRepresentation* lineRep =
-      vtkGeoLineRepresentation::SafeDownCast(this->GetRepresentation(i));
-    if (lineRep)
-      {
-      lineRep->PrepareForRendering();
-      }
-    vtkGeoGraphRepresentation* graphRep =
-      vtkGeoGraphRepresentation::SafeDownCast(this->GetRepresentation(i));
-    if (graphRep)
-      {
-      graphRep->PrepareForRendering();
-      }
     }
 
   if (this->Terrain)
     {
     this->Terrain->AddActors(this->Renderer, this->Assembly, imageReps);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkGeoView::Render()
+{
+  // If this is the first time, render an extra time to get things
+  // initialized for the first PrepareForRendering pass.
+  this->RenderWindow->MakeCurrent();
+  if(!this->RenderWindow->IsCurrent())
+    {
+
+    // Note: For some reason this needs to be called even thoguh it does not
+    // make much difference logically.
+    this->Superclass::Render();
+    return;
+    }
+
+  this->Update();
+  this->PrepareForRendering();
+
+  // Since ZShift or polygon offsets are global, here we would like to
+  // use polygon offset to push the polygons (of globe) away so that
+  // other polygons or lines can be drawn on top of it.
+  double zShift = 0.0;
+  double factor = 0.0;
+  double units = 0.0;
+
+  // Save the depth offset state.
+  if(vtkMapper::GetResolveCoincidentTopology() ==
+     VTK_RESOLVE_POLYGON_OFFSET)
+    {
+    vtkMapper::GetResolveCoincidentTopologyPolygonOffsetParameters(
+        factor, units);
+    }
+  else if(vtkMapper::GetResolveCoincidentTopology() ==
+          VTK_RESOLVE_SHIFT_ZBUFFER)
+    {
+    zShift = vtkMapper::GetResolveCoincidentTopologyZShift();
+    }
+
+  vtkMapper::SetResolveCoincidentTopologyZShift(0.0);
+  vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
+
+  // Apply minimum offset (using factor and units == 1.0).
+  vtkMapper::SetResolveCoincidentTopologyPolygonOffsetParameters(1.0, 1.0);
+
+  this->Renderer->GetCullers()->RemoveAllItems();
+  this->RenderWindow->Render();
+
+  // Restore the depth offset state.
+  if(vtkMapper::GetResolveCoincidentTopology() ==
+     VTK_RESOLVE_POLYGON_OFFSET)
+    {
+    vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
+    vtkMapper::SetResolveCoincidentTopologyPolygonOffsetParameters(
+        factor, units);
+    }
+  else if(vtkMapper::GetResolveCoincidentTopology() ==
+          VTK_RESOLVE_SHIFT_ZBUFFER)
+    {
+    vtkMapper::SetResolveCoincidentTopologyToShiftZBuffer();
+    vtkMapper::SetResolveCoincidentTopologyZShift(zShift);
+    }
+  else
+    {
+    vtkMapper::SetResolveCoincidentTopologyToOff();
     }
 }
 
@@ -218,14 +259,6 @@ vtkGeoAlignedImageRepresentation* vtkGeoView::AddDefaultImageRepresentation(vtkI
 }
 
 //----------------------------------------------------------------------------
-void vtkGeoView::ApplyViewTheme(vtkViewTheme* theme)
-{
-  this->Renderer->SetBackground(theme->GetBackgroundColor());
-  this->Renderer->SetBackground2(theme->GetBackgroundColor2());
-  this->Renderer->GradientBackgroundOn();
-}
-
-//----------------------------------------------------------------------------
 vtkGeoInteractorStyle* vtkGeoView::GetGeoInteractorStyle()
 {
   return vtkGeoInteractorStyle::SafeDownCast(this->GetInteractorStyle());
@@ -234,7 +267,7 @@ vtkGeoInteractorStyle* vtkGeoView::GetGeoInteractorStyle()
 //----------------------------------------------------------------------------
 void vtkGeoView::SetGeoInteractorStyle(vtkGeoInteractorStyle* style)
 {
-  if(style && style != this->InteractorStyle)
+  if(style && style != this->GetInteractorStyle())
     {
     this->SetInteractorStyle(style);
     style->SetCurrentRenderer(this->Renderer);

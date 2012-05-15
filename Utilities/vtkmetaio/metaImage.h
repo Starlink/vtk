@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaImage.h,v $
-  Language:  C++
-  Date:      $Date: 2009-02-16 00:02:06 $
-  Version:   $Revision: 1.11 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAIMAGE_H
@@ -43,7 +38,7 @@
  *          merely specifying a separate text header (.mhd) file and in that
  *          file specifying how many data-header-bytes should be skipped.
  *          Thereby the data files can serve a dual role (as bitmap files
- *          and as metaImage data files) 
+ *          and as metaImage data files)
  *    Supports all pixel formats
  *    Handles byte ordering (MSB/LSB)
  *    Provides the ability to handle associated medical image
@@ -53,9 +48,9 @@
  *    REQUIRED: NDims, DimSize, ByteOrderMSB, ElementDataType, DataFileName
  *
  * \author Stephen R. Aylward
- * 
+ *
  * \date August 29, 1999
- * 
+ *
  * Depends on:
  *    MetaUtils.h
  *    MetaFileLib.h
@@ -76,28 +71,28 @@ class METAIO_EXPORT MetaImage : public MetaObject
     ////
     MetaImage(void);
 
-    MetaImage(const char *_headerName);   
+    MetaImage(const char *_headerName);
 
     MetaImage(MetaImage *_im);    // share memory
 
-    MetaImage(int _nDims, 
+    MetaImage(int _nDims,
               const int * _dimSize,
               const float *_elementSpacing,
               MET_ValueEnumType _elementType,
               int _elementNumberOfChannels=1,
               void *_elementData=NULL);
 
-    MetaImage(int _x, int _y, 
-              float _elementSpacingX, 
+    MetaImage(int _x, int _y,
+              float _elementSpacingX,
               float _elementSpacingY,
-              MET_ValueEnumType _elementType, 
+              MET_ValueEnumType _elementType,
               int _elementNumberOfChannels=1,
               void *_elementData=NULL);
 
-    MetaImage(int _x, int _y, int _z, 
+    MetaImage(int _x, int _y, int _z,
               float _elementSpacingX,
               float _elementSpacingY,
-              float _elementSpacingZ, 
+              float _elementSpacingZ,
               MET_ValueEnumType _elementType,
               int _elementNumberOfChannels=1,
               void *_elementData=NULL);
@@ -110,7 +105,7 @@ class METAIO_EXPORT MetaImage : public MetaObject
 
     virtual void Clear(void);
 
-    virtual bool InitializeEssential(int _nDims, 
+    virtual bool InitializeEssential(int _nDims,
                                      const int * _dimSize,
                                      const float * _elementSpacing,
                                      MET_ValueEnumType _elementType,
@@ -131,21 +126,21 @@ class METAIO_EXPORT MetaImage : public MetaObject
     //       REQUIRED Field
     //       Number of elements along each dimension
     const int *  DimSize(void) const;
-    int          DimSize(int _i) const;      
+    int          DimSize(int _i) const;
     //void  DimSize(const int * _dimSize);
     //void  DimSize(int _i, int _value);
 
     //    Quantity()
     //       Not a field in file
     //       Total number of elements in image (Prod(dimSize[i]))
-    METAIO_STL::streamsize  Quantity(void) const;
+    METAIO_STL::streamoff  Quantity(void) const;
 
     //    SubQuantity(...)
     //       Not a field in file
     //       Number of elements in image spanning sub-dimensions
     //       E.g., elements per line, 2D sub-image, 3D sub-volume,
-    const METAIO_STL::streamsize * SubQuantity(void) const;      
-    METAIO_STL::streamsize SubQuantity(int _i) const;  
+    const METAIO_STL::streamoff * SubQuantity(void) const;
+    METAIO_STL::streamoff SubQuantity(int _i) const;
 
     //    SequenceID(...)
     //       Optional Field
@@ -177,8 +172,12 @@ class METAIO_EXPORT MetaImage : public MetaObject
     //    ElemByteOrderSwap(), ElemByteOrderFix()
     //       The following functions are available only after
     //       ReadImageData() or if _read_and_close=TRUE when read
-    void  ElementByteOrderSwap(void);
-    bool  ElementByteOrderFix(void);
+    //
+    // if streaming is used, then the size of buffer in total number
+    // of elements, should be passed as an argument, otherwise the
+    // internal value Quantity() will be used
+    void  ElementByteOrderSwap( METAIO_STL::streamoff _quantity = 0);
+    bool  ElementByteOrderFix( METAIO_STL::streamoff _quantity = 0);
 
     //    Min(...) Max(...)
     //       The default max returned is the largest allowed by
@@ -188,7 +187,7 @@ class METAIO_EXPORT MetaImage : public MetaObject
     bool   ElementMinMaxValid(void) const;
     void   ElementMinMaxValid(bool _elementMinMaxValid);
     void   ElementMinMaxRecalc(void);
-    double ElementMin(void) const;    
+    double ElementMin(void) const;
     void   ElementMin(double _elementMin);
     double ElementMax(void) const;
     void   ElementMax(double _elementMax);
@@ -218,8 +217,8 @@ class METAIO_EXPORT MetaImage : public MetaObject
     //
     //
     void * ElementData(void);
-    double ElementData(METAIO_STL::streamsize _i) const;
-    bool   ElementData(METAIO_STL::streamsize _i, double _v);
+    double ElementData(METAIO_STL::streamoff _i) const;
+    bool   ElementData(METAIO_STL::streamoff _i, double _v);
     void   ElementData(void * _data, bool _autoFreeElementData=false);
 
     //    ConverTo(...)
@@ -252,13 +251,13 @@ class METAIO_EXPORT MetaImage : public MetaObject
     virtual bool CanReadStream(METAIO_STREAM::ifstream * _stream) const;
 
     virtual bool ReadStream(int _nDims,
-                            METAIO_STREAM::ifstream * _stream, 
+                            METAIO_STREAM::ifstream * _stream,
                             bool _readElements=true,
                             void * _buffer=NULL);
- 
+
     virtual bool ReadROIStream(int * _indexMin, int * _indexMax,
                                int _nDims,
-                               METAIO_STREAM::ifstream * _stream, 
+                               METAIO_STREAM::ifstream * _stream,
                                bool _readElements=true,
                                void * _buffer=NULL,
                                unsigned int subSamplingFactor=1);
@@ -280,7 +279,7 @@ class METAIO_EXPORT MetaImage : public MetaObject
     virtual bool WriteStream(METAIO_STREAM::ofstream * _stream,
                              bool _writeElements=true,
                              const void * _constElementData=NULL);
-    
+
 
     virtual bool Append(const char *_headName=NULL);
 
@@ -296,12 +295,12 @@ class METAIO_EXPORT MetaImage : public MetaObject
 
     MET_ImageModalityEnumType m_Modality;
 
-                       
+
     MET_CompressionTableType*  m_CompressionTable;
 
     int                    m_DimSize[10];
-    METAIO_STL::streamsize m_SubQuantity[10];
-    METAIO_STL::streamsize m_Quantity;
+    METAIO_STL::streamoff m_SubQuantity[10];
+    METAIO_STL::streamoff m_Quantity;
 
     int                m_HeaderSize;
 
@@ -336,33 +335,44 @@ class METAIO_EXPORT MetaImage : public MetaObject
 
     bool  M_Read(void);
 
-    bool  M_ReadElements(METAIO_STREAM::ifstream * _fstream, 
+    // _dataQuantity is expressed in number of pixels. Internally it will be
+    // scaled by the number of components and number of bytes per component.
+    bool  M_ReadElements(METAIO_STREAM::ifstream * _fstream,
                          void * _data,
-                         METAIO_STL::streamsize _dataQuantity);
+                         METAIO_STL::streamoff _dataQuantity);
 
-    bool  M_ReadElementsROI(METAIO_STREAM::ifstream * _fstream, 
+    // _totalDataQuantity and _dataQuantity are expressed in number of pixels.
+    // Internally they will be scaled by the number of components and number of
+    // bytes per component.
+    bool  M_ReadElementsROI(METAIO_STREAM::ifstream * _fstream,
                             void * _data,
-                            METAIO_STL::streamsize _dataQuantity,
+                            METAIO_STL::streamoff _dataQuantity,
                             int * _indexMin,
                             int* _indexMax,
                             unsigned int subSamplingFactor=1,
-                            METAIO_STL::streamsize _totalDataQuantity=0);
+                            METAIO_STL::streamoff _totalDataQuantity=0);
+
+    bool M_ReadElementData(METAIO_STREAM::ifstream * _fstream,
+                           void * _data,
+                           METAIO_STL::streamoff _dataQuantity);
 
     bool  M_WriteElements(METAIO_STREAM::ofstream * _fstream,
                           const void * _data,
-                          METAIO_STL::streamsize _dataQuantity);
+                          METAIO_STL::streamoff _dataQuantity);
 
     bool  M_WriteElementsROI(METAIO_STREAM::ofstream * _fstream,
                              const void * _data,
-                             unsigned long _dataPos,
+                             METAIO_STL::streampos _dataPos,
                              int * _indexMin,
                              int* _indexMax);
 
     bool  M_WriteElementData(METAIO_STREAM::ofstream * _fstream,
                              const void * _data,
-                             METAIO_STL::streamsize _dataQuantity);
+                             METAIO_STL::streamoff _dataQuantity);
 
     bool M_FileExists(const char* filename) const;
+
+    bool FileIsFullPath(const char* in_name) const;
 
     METAIO_STL::string M_GetTagValue(const METAIO_STL::string & buffer,
                                      const char* tag) const;

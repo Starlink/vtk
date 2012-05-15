@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkLighting_s.glsl,v $
+//  Module:    vtkLighting_s.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -16,6 +16,7 @@
 // This file defines some lighting functions.
 // They can be used either in a vertex or fragment shader.
 
+#version 110
 
 // Example in vertex shader:
 // Reminder: two-sided/one-sided is controlled by GL_VERTEX_PROGRAM_TWO_SIDE

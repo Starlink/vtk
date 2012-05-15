@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusModel.cxx,v $
+  Module:    vtkExodusModel.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,13 +27,12 @@
 #include "vtkCellData.h"
 #include "vtkPointData.h"
 #include <ctype.h>
-#include <vtkstd/set>
-#include <vtkstd/map>
-#include <exodusII.h>
+#include <set>
+#include <map>
+#include "vtk_exodusII.h"
 #include <ctype.h>
 
 
-vtkCxxRevisionMacro(vtkExodusModel, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkExodusModel);
 
 vtkExodusModel::vtkExodusModel()
@@ -650,8 +649,8 @@ int vtkExodusModel::SetLocalBlockInformation(
   int lastId = -1;
   int idx = 0;
 
-  vtkstd::map<int,int> blockIdStart;
-  vtkstd::map<int,int>::iterator it;
+  std::map<int,int> blockIdStart;
+  std::map<int,int>::iterator it;
 
   for (i=0; i<ncells; i++) 
     {
@@ -669,7 +668,7 @@ int vtkExodusModel::SetLocalBlockInformation(
         return 1; 
         }
 
-      blockIdStart.insert(vtkstd::map<int,int>::value_type(idx, i));
+      blockIdStart.insert(std::map<int,int>::value_type(idx, i));
       lastId = id;
       }
 
@@ -777,15 +776,21 @@ int vtkExodusModel::SetLocalNodeSetInformation(
   int *nodeMap = new int [numNodesInFile];
 
   ex_get_node_num_map(fid, nodeMap);
+cerr << "node num map : ";
+for (i = 0; i < numNodesInFile; i ++)
+{
+  cerr << nodeMap[i] << " ";
+}
+cerr << endl;
 
   // external node IDs in vtkUnstructuredGrid
 
-  vtkstd::map<int, int> localNodeIdMap;
-  vtkstd::map<int, int>::iterator it;
+  std::map<int, int> localNodeIdMap;
+  std::map<int, int>::iterator it;
 
   for (i=0; i<npoints; i++)
     {
-    localNodeIdMap.insert(vtkstd::map<int,int>::value_type(pointIds[i], i));
+    localNodeIdMap.insert(std::map<int,int>::value_type(pointIds[i], i));
     }
 
   int nns = emd->GetNumberOfNodeSets();
@@ -934,12 +939,12 @@ int vtkExodusModel::SetLocalSideSetInformation(
 
   // external cell IDs in vtkUnstructuredGrid
 
-  vtkstd::map<int, int> localCellIdMap;
-  vtkstd::map<int, int>::iterator it;
+  std::map<int, int> localCellIdMap;
+  std::map<int, int>::iterator it;
 
   for (i=0; i<ncells; i++)
     {
-    localCellIdMap.insert(vtkstd::map<int,int>::value_type(cellIds[i], i));
+    localCellIdMap.insert(std::map<int,int>::value_type(cellIds[i], i));
     }
 
   int nss = emd->GetNumberOfSideSets();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLineWidget2.cxx,v $
+  Module:    vtkLineWidget2.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkRenderWindow.h"
 
 
-vtkCxxRevisionMacro(vtkLineWidget2, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkLineWidget2);
 
 //----------------------------------------------------------------------------

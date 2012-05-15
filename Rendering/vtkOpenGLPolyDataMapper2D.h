@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLPolyDataMapper2D.h,v $
+  Module:    vtkOpenGLPolyDataMapper2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_RENDERING_EXPORT vtkOpenGLPolyDataMapper2D : public vtkPolyDataMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkOpenGLPolyDataMapper2D,vtkPolyDataMapper2D);
+  vtkTypeMacro(vtkOpenGLPolyDataMapper2D,vtkPolyDataMapper2D);
   static vtkOpenGLPolyDataMapper2D *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 

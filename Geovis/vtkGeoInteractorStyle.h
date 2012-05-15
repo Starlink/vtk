@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoInteractorStyle.h,v $
+  Module:    vtkGeoInteractorStyle.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_GEOVIS_EXPORT vtkGeoInteractorStyle :
 {
 public:
   static vtkGeoInteractorStyle *New();
-  vtkTypeRevisionMacro(vtkGeoInteractorStyle, 
+  vtkTypeMacro(vtkGeoInteractorStyle,
                        vtkInteractorStyleTrackballCamera);
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -100,13 +100,13 @@ public:
   // Override to make the renderer use this camera subclass
   virtual void SetCurrentRenderer(vtkRenderer*);
 
-  // Decription:
+  // Description:
   // Whether to lock the heading a particular value during pan.
   vtkGetMacro(LockHeading, bool);
   vtkSetMacro(LockHeading, bool);
   vtkBooleanMacro(LockHeading, bool);
   
-  // Decription:
+  // Description:
   // Called after camera properties are modified
   void ResetCameraClippingRange();
 

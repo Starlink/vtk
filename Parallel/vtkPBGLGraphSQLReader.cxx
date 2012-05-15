@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLGraphSQLReader.cxx,v $
+  Module:    vtkPBGLGraphSQLReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,8 +35,12 @@
 
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkPBGLGraphSQLReader, "$Revision: 1.4 $");
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
 vtkStandardNewMacro(vtkPBGLGraphSQLReader);
+
+
 
 vtkIdType IdentityDistribution(const vtkVariant& id, void* user_data)
 {
@@ -57,6 +61,8 @@ vtkIdType IdentityDistribution(const vtkVariant& id, void* user_data)
   return 0;
 }
 
+
+
 vtkPBGLGraphSQLReader::vtkPBGLGraphSQLReader()
 {
   this->Directed = true;
@@ -72,6 +78,8 @@ vtkPBGLGraphSQLReader::vtkPBGLGraphSQLReader()
   this->DistributionUserData[1] = 0;
 }
 
+
+
 vtkPBGLGraphSQLReader::~vtkPBGLGraphSQLReader()
 {
   this->SetDatabase(0);
@@ -81,6 +89,8 @@ vtkPBGLGraphSQLReader::~vtkPBGLGraphSQLReader()
   this->SetTargetField(0);
   this->SetVertexIdField(0);
 }
+
+
 
 void vtkPBGLGraphSQLReader::PrintSelf(ostream& os, vtkIndent indent)
 {
@@ -98,7 +108,11 @@ void vtkPBGLGraphSQLReader::PrintSelf(ostream& os, vtkIndent indent)
     }
 }
 
+
+
 vtkCxxSetObjectMacro(vtkPBGLGraphSQLReader, Database, vtkSQLDatabase);
+
+
 
 template<class MutableGraph>
 int vtkPBGLGraphSQLReaderRequestData(
@@ -107,7 +121,7 @@ int vtkPBGLGraphSQLReaderRequestData(
   vtkInformationVector**,
   vtkInformationVector* output_vec)
 {
-  vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
+  VTK_CREATE(vtkTimerLog, timer);
   timer->StartTimer();
   // Check for valid inputs
   if (!self->GetDatabase())
@@ -174,13 +188,10 @@ int vtkPBGLGraphSQLReaderRequestData(
   self->GetRange(rank, total, num_edges, edge_offset, edge_limit);
 
   // Setup the graph as a distributed graph
-  vtkSmartPointer<vtkPBGLDistributedGraphHelper> helper =
-    vtkSmartPointer<vtkPBGLDistributedGraphHelper>::New();
+  VTK_CREATE(vtkPBGLDistributedGraphHelper, helper);
   builder->SetDistributedGraphHelper(helper);
 
-  // Setup hash to always add vertices locally
-  self->SetDistributionUserData(total, num_verts);
-  helper->SetVertexPedigreeIdDistribution(IdentityDistribution, self->GetDistributionUserData());
+  // -----[ Verts ]-------------------------
 
   // Read my vertices from vertex query, adding attribute values
   oss.str("");
@@ -193,6 +204,7 @@ int vtkPBGLGraphSQLReaderRequestData(
   vertex_query->Execute();
 
   // Add local vertex data arrays
+  // Note: GetNumberOfFields() is analogous to the # of columns in Query Tbl.
   for (int i = 0; i < vertex_query->GetNumberOfFields(); ++i)
     {
     vtkStdString field_name = vertex_query->GetFieldName(i);
@@ -213,13 +225,14 @@ int vtkPBGLGraphSQLReaderRequestData(
   helper->Synchronize();
 
   // Add the vertices
-  vtkSmartPointer<vtkVariantArray> row =
-    vtkSmartPointer<vtkVariantArray>::New();
+  VTK_CREATE(vtkVariantArray, row);
   while (vertex_query->NextRow(row))
     {
     builder->LazyAddVertex(row);
     }
   helper->Synchronize();
+
+  // -----[ Edges ]-------------------------
 
   // Read edges from edge query, adding attribute values
   oss.str("");
@@ -231,15 +244,27 @@ int vtkPBGLGraphSQLReaderRequestData(
   edge_query->SetQuery(oss.str().c_str());
   edge_query->Execute();
 
+#if defined(DEBUG)      // WCMCLEN
+  cout << "["<<rank<<"]\tSQLReader: NumberOfEdgeAttributeArrays = "
+       << edge_query->GetNumberOfFields() << endl;
+  fflush(stdout);
+#endif
+
   // Add local edge data arrays
   for (int i = 0; i < edge_query->GetNumberOfFields(); ++i)
     {
     vtkStdString field_name = edge_query->GetFieldName(i);
     vtkSmartPointer<vtkAbstractArray> arr;
-    arr.TakeReference(vtkAbstractArray::CreateArray(
-      edge_query->GetFieldType(i)));
+    arr.TakeReference(vtkAbstractArray::CreateArray(edge_query->GetFieldType(i)));
     arr->SetName(field_name);
     builder->GetEdgeData()->AddArray(arr);
+
+#if defined(DEBUG)      // WCMCLEN
+    cout << "["<<rank<<"]\t"
+         << "-\tEdge field_name["<<i<<"]='"<<field_name<<"'"
+         << endl;
+    fflush(stdout);
+#endif
     }
   helper->Synchronize();
 
@@ -250,8 +275,25 @@ int vtkPBGLGraphSQLReaderRequestData(
     {
     vtkVariant source = edge_query->DataValue(source_id);
     vtkVariant target = edge_query->DataValue(target_id);
+
+#if defined(DEBUG)      // WCMCLEN
+    cout << "["<<rank<< "]\tReader: Read edge("
+         << source.ToString() << ", " << target.ToString() << ", " << &row << ")"
+         << endl;
+    fflush(stdout);
+#endif
+
     builder->LazyAddEdge(source, target, row);
     }
+
+#if defined(DEBUG)      // WCMCLEN
+  cout << "["<<rank<<"]\tReader: Done adding edges!" << endl;
+  fflush(stdout);
+#endif
+  helper->Synchronize();
+
+  // Call a second synchronize to pick up anything that was possibly sent
+  // in a trigger after the previous synchronize.
   helper->Synchronize();
 
   // Copy into output graph
@@ -262,24 +304,36 @@ int vtkPBGLGraphSQLReaderRequestData(
     }
 
   timer->StopTimer();
+#ifdef VTKPBGL_REPORT_TIMES
+  // Suppress timer printing (for now)
   cerr << "vtkPBGLGraphSQLReader: " << timer->GetElapsedTime() << endl;
+#endif
 
   return 1;
 }
 
+
+
 int vtkPBGLGraphSQLReader::RequestData(
-  vtkInformation* info, 
-  vtkInformationVector** input_vec, 
+  vtkInformation* info,
+  vtkInformationVector** input_vec,
   vtkInformationVector* output_vec)
 {
+  int rval = 0;
   if (this->Directed)
     {
-    return vtkPBGLGraphSQLReaderRequestData<vtkMutableDirectedGraph>(
-      this, info, input_vec, output_vec);
+    rval = vtkPBGLGraphSQLReaderRequestData<vtkMutableDirectedGraph>(
+              this, info, input_vec, output_vec);
     }
-  return vtkPBGLGraphSQLReaderRequestData<vtkMutableUndirectedGraph>(
-    this, info, input_vec, output_vec);
+  else
+    {
+    rval = vtkPBGLGraphSQLReaderRequestData<vtkMutableUndirectedGraph>(
+              this, info, input_vec, output_vec);
+    }
+  return rval;
 }
+
+
 
 int vtkPBGLGraphSQLReader::RequestDataObject(
   vtkInformation* info,
@@ -287,7 +341,7 @@ int vtkPBGLGraphSQLReader::RequestDataObject(
   vtkInformationVector* output_vec)
 {
   vtkDataObject *current = this->GetExecutive()->GetOutputData(0);
-  if (!current 
+  if (!current
     || (this->Directed && !vtkDirectedGraph::SafeDownCast(current))
     || (!this->Directed && vtkDirectedGraph::SafeDownCast(current)))
     {
@@ -308,10 +362,11 @@ int vtkPBGLGraphSQLReader::RequestDataObject(
   return 1;
 }
 
+
+
 void vtkPBGLGraphSQLReader::GetRange(int rank, int total,
   vtkIdType size, vtkIdType& offset, vtkIdType& limit)
 {
   offset = size*rank/total;
   limit = size*(rank+1)/total - offset;
 }
-

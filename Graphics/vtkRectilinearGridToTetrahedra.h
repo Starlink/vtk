@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridToTetrahedra.h,v $
+  Module:    vtkRectilinearGridToTetrahedra.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -59,7 +59,7 @@ class vtkPoints;
 class VTK_GRAPHICS_EXPORT vtkRectilinearGridToTetrahedra : public vtkUnstructuredGridAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkRectilinearGridToTetrahedra,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkRectilinearGridToTetrahedra,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

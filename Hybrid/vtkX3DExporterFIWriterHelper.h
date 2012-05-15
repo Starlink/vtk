@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterFIWriterHelper.h,v $
+  Module:    vtkX3DExporterFIWriterHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+// .NAME vtkX3DExporterFIWriterHelper - 
+// .SECTION Description
+
 #ifndef __vtkX3DExporterFIWriterHelper_h
 #define __vtkX3DExporterFIWriterHelper_h
 
@@ -47,7 +50,7 @@ public:
       // ITU 10.8.1: This encoding algorithm has a vocabulary table index of 7,
       writer->PutBits(7-1, 8);
 
-      vtkstd::string bytes;
+      std::string bytes;
       char byte[4];
       for (size_t i = 0; i < size; i++)
         {
@@ -81,7 +84,7 @@ public:
       writer->PutBits("11");
       // ITU 10.8.1: This encoding algorithm has a vocabulary table index of 4,
       writer->PutBits(4-1, 8);
-      vtkstd::string bytes;
+      std::string bytes;
       for(size_t i = 0; i < size; i++)
         {
         int v = value[i];
@@ -92,7 +95,7 @@ public:
       EncodeNonEmptyByteString5(writer, bytes);
       }
 
-  static inline void EncodeCharacterString3(vtkX3DExporterFIByteWriter* writer, vtkstd::string value)
+  static inline void EncodeCharacterString3(vtkX3DExporterFIByteWriter* writer, std::string value)
     {
     // We want to start at position 3
     assert(writer->CurrentBytePos == 2);
@@ -106,7 +109,7 @@ public:
 
   // ITU C.23: Encoding of the NonEmptyByteString starting
   // on the fifth bit of an byte
-  static inline void EncodeNonEmptyByteString5(vtkX3DExporterFIByteWriter* writer, vtkstd::string value)
+  static inline void EncodeNonEmptyByteString5(vtkX3DExporterFIByteWriter* writer, std::string value)
     {
     int length = static_cast<int>(value.length());
     if (length <= 8)
@@ -233,7 +236,7 @@ public:
       char span = 0;
       size_t i = 0;
       int f; unsigned char *p;
-      vtkstd::vector<unsigned char> deltas;
+      std::vector<unsigned char> deltas;
 
       if (image)
         {
@@ -292,7 +295,7 @@ public:
       unsigned char* buffer = new unsigned char[bufferSize];
       size_t newSize = compressor->Compress(&deltas[0],static_cast<unsigned long>(deltas.size()), buffer, static_cast<unsigned long>(bufferSize));
 
-      vtkstd::string bytes;
+      std::string bytes;
       int size32 = static_cast<int>(size);
       int size32_reversed = vtkX3DExporterFIWriterHelper::ReverseBytes(&size32);
       char *s = reinterpret_cast <char*> (&size32_reversed);
@@ -326,7 +329,7 @@ public:
 
     unsigned char* bytes = new unsigned char[size*4];
     unsigned char* bytepos = bytes;
-    vtkstd::string bytesCompressed;
+    std::string bytesCompressed;
     size_t i;
 
     const double* vd = value;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransmitRectilinearGridPiece.h,v $
+  Module:    vtkTransmitRectilinearGridPiece.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_PARALLEL_EXPORT vtkTransmitRectilinearGridPiece : public vtkRectilinea
 {
 public:
   static vtkTransmitRectilinearGridPiece *New();
-  vtkTypeRevisionMacro(vtkTransmitRectilinearGridPiece, vtkRectilinearGridAlgorithm);
+  vtkTypeMacro(vtkTransmitRectilinearGridPiece, vtkRectilinearGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

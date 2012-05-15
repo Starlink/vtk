@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ExerciseMultiProcessController.cxx,v $
+  Module:    ExerciseMultiProcessController.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@
 
 #include <string.h>
 #include <time.h>
-#include <vtkstd/vector>
+#include <vector>
 
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
@@ -72,7 +72,7 @@ void MatrixMultArray(const T *A, T *B, vtkIdType length)
     newVal[1] = A[0]*B[1] + A[1]*B[3];
     newVal[2] = A[2]*B[0] + A[3]*B[2];
     newVal[3] = A[2]*B[1] + A[3]*B[3];
-    vtkstd::copy(newVal, newVal+4, B);
+    std::copy(newVal, newVal+4, B);
     A += 4;  B += 4;
     }
 }
@@ -321,21 +321,21 @@ void ExerciseType(vtkMultiProcessController *controller)
 
   typedef typename vtkTypeTraits<baseType>::PrintType printType;
 
-  int rank = controller->GetLocalProcessId();
-  int numProc = controller->GetNumberOfProcesses();
+  const int rank = controller->GetLocalProcessId();
+  const int numProc = controller->GetNumberOfProcesses();
   int i;
   int result;
   int srcProcessId;
   int destProcessId;
   vtkIdType length;
-  vtkstd::vector<vtkIdType> lengths;  lengths.resize(numProc);
-  vtkstd::vector<vtkIdType> offsets;  offsets.resize(numProc);
-  int arraySize = (numProc < 8) ? 8 : numProc;
+  std::vector<vtkIdType> lengths;  lengths.resize(numProc);
+  std::vector<vtkIdType> offsets;  offsets.resize(numProc);
+  const int arraySize = (numProc < 8) ? 8 : numProc;
 
   // Fill up some random arrays.  Note that here and elsewhere we are careful to
   // have each process request the same random numbers.  The pseudorandomness
   // gives us the same values on all processes.
-  vtkstd::vector<vtkSmartPointer<arrayType> > sourceArrays;
+  std::vector<vtkSmartPointer<arrayType> > sourceArrays;
   sourceArrays.resize(numProc);
   for (i = 0; i < numProc; i++)
     {
@@ -365,6 +365,7 @@ void ExerciseType(vtkMultiProcessController *controller)
     }
 
   VTK_CREATE(arrayType, buffer);
+  VTK_CREATE(arrayType, tmpSource);
 
   COUT("Basic send and receive.");
   result = 1;
@@ -751,6 +752,79 @@ void ExerciseType(vtkMultiProcessController *controller)
     }
   CheckSuccess(controller, result);
 
+  COUT("Vector Gather with vtkDataArray");
+  offsets[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, 2.99));
+  lengths[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+  for (i = 1; i < numProc; i++)
+    {
+    offsets[i] = (  offsets[i-1] + lengths[i-1]
+                  + static_cast<vtkIdType>(vtkMath::Random(0.0, 2.99)) );
+    lengths[i]
+      = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+    }
+  destProcessId = static_cast<int>(vtkMath::Random(0.0, numProc - 0.01));
+  tmpSource->DeepCopy(sourceArrays[rank]);
+  tmpSource->SetNumberOfTuples(lengths[rank]);
+  buffer->SetNumberOfTuples(offsets[numProc-1]+lengths[numProc-1]);
+  result = 1;
+  if (rank == destProcessId)
+    {
+    controller->GatherV(tmpSource, buffer,
+                        &lengths[0], &offsets[0], destProcessId);
+    for (i = 0; i < numProc; i++)
+      {
+      for (int j = 0; j < lengths[i]; j++)
+        {
+        if (sourceArrays[i]->GetValue(j) != buffer->GetValue(offsets[i] + j))
+          {
+          vtkGenericWarningMacro("Gathered array from " << i << " incorrect.");
+          result = 0;
+          break;
+          }
+        }
+      }
+    }
+  else
+    {
+    controller->GatherV(tmpSource, NULL, NULL, NULL, destProcessId);
+    }
+  CheckSuccess(controller, result);
+
+  COUT("Vector Gather with vtkDataArray (automatic receive sizes)");
+  lengths[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+  for (i = 1; i < numProc; i++)
+    {
+    lengths[i]
+      = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+    }
+  destProcessId = static_cast<int>(vtkMath::Random(0.0, numProc - 0.01));
+  tmpSource->DeepCopy(sourceArrays[rank]);
+  tmpSource->SetNumberOfTuples(lengths[rank]);
+  buffer->Initialize();
+  result = 1;
+  if (rank == destProcessId)
+    {
+    controller->GatherV(tmpSource, buffer, destProcessId);
+    int k = 0;
+    for (i = 0; i < numProc; i++)
+      {
+      for (int j = 0; j < lengths[i]; j++)
+        {
+        if (sourceArrays[i]->GetValue(j) != buffer->GetValue(k++))
+          {
+          vtkGenericWarningMacro("Gathered array from " << i << " incorrect.");
+          result = 0;
+          break;
+          }
+        }
+      }
+    }
+  else
+    {
+    controller->GatherV(tmpSource, NULL, destProcessId);
+    }
+  CheckSuccess(controller, result);
+
   COUT("All Gather with vtkDataArray");
   buffer->Initialize();
   result = 1;
@@ -760,6 +834,62 @@ void ExerciseType(vtkMultiProcessController *controller)
     for (int j = 0; j < arraySize; j++)
       {
       if (sourceArrays[i]->GetValue(j) != buffer->GetValue(i*arraySize + j))
+        {
+        vtkGenericWarningMacro("Gathered array from " << i << " incorrect.");
+        result = 0;
+        break;
+        }
+      }
+    }
+  CheckSuccess(controller, result);
+
+  COUT("Vector All Gather with vtkDataArray");
+  offsets[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, 2.99));
+  lengths[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+  for (i = 1; i < numProc; i++)
+    {
+    offsets[i] = (  offsets[i-1] + lengths[i-1]
+                  + static_cast<vtkIdType>(vtkMath::Random(0.0, 2.99)) );
+    lengths[i]
+      = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+    }
+  tmpSource->DeepCopy(sourceArrays[rank]);
+  tmpSource->SetNumberOfTuples(lengths[rank]);
+  buffer->SetNumberOfTuples(offsets[numProc-1]+lengths[numProc-1]);
+  result = 1;
+  controller->AllGatherV(tmpSource, buffer, &lengths[0], &offsets[0]);
+  for (i = 0; i < numProc; i++)
+    {
+    for (int j = 0; j < lengths[i]; j++)
+      {
+      if (sourceArrays[i]->GetValue(j) != buffer->GetValue(offsets[i] + j))
+        {
+        vtkGenericWarningMacro("Gathered array from " << i << " incorrect.");
+        result = 0;
+        break;
+        }
+      }
+    }
+  CheckSuccess(controller, result);
+
+  COUT("Vector All Gather with vtkDataArray (automatic receive sizes)");
+  lengths[0] = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+  for (i = 1; i < numProc; i++)
+    {
+    lengths[i]
+      = static_cast<vtkIdType>(vtkMath::Random(0.0, arraySize + 0.99));
+    }
+  tmpSource->DeepCopy(sourceArrays[rank]);
+  tmpSource->SetNumberOfTuples(lengths[rank]);
+  buffer->Initialize();
+  result = 1;
+  controller->AllGatherV(tmpSource, buffer);
+  int k = 0;
+  for (i = 0; i < numProc; i++)
+    {
+    for (int j = 0; j < lengths[i]; j++)
+      {
+      if (sourceArrays[i]->GetValue(j) != buffer->GetValue(k++))
         {
         vtkGenericWarningMacro("Gathered array from " << i << " incorrect.");
         result = 0;
@@ -1043,6 +1173,22 @@ int ExerciseMultiProcessController(vtkMultiProcessController *controller)
     cout << "**** Error: Process " << controller->GetLocalProcessId()
          << " does not belong to either subgroup! ****" << endl;
     }
+  try
+    {
+    CheckSuccess(controller, !args.retval);
+    }
+  catch (ExerciseMultiProcessControllerError)
+    {
+    args.retval = 1;
+    }
+
+  int color = (group1->GetLocalProcessId() >= 0) ? 1 : 2;
+  vtkMultiProcessController *subcontroller
+    = controller->PartitionController(color, 0);
+  subcontroller->SetSingleMethod(Run, &args);
+  subcontroller->SingleMethodExecute();
+  subcontroller->Delete();
+
   try
     {
     CheckSuccess(controller, !args.retval);

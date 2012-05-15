@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageProgressIterator.h,v $
+  Module:    vtkImageProgressIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@
 class vtkAlgorithm;
 
 template<class DType>
-class vtkImageProgressIterator : public vtkImageIterator<DType>
+class VTK_FILTERING_EXPORT vtkImageProgressIterator : public vtkImageIterator<DType>
 {
 public:
   typedef vtkImageIterator<DType> Superclass;

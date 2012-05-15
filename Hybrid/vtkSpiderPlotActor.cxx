@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpiderPlotActor.cxx,v $
+  Module:    vtkSpiderPlotActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,11 +29,10 @@
 #include "vtkLegendBoxActor.h"
 #include "vtkGlyphSource2D.h"
 #include "vtkProperty2D.h"
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <string>
+#include <vector>
 
 
-vtkCxxRevisionMacro(vtkSpiderPlotActor, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSpiderPlotActor);
 
 vtkCxxSetObjectMacro(vtkSpiderPlotActor,Input,vtkDataObject);
@@ -41,7 +40,7 @@ vtkCxxSetObjectMacro(vtkSpiderPlotActor,LabelTextProperty,vtkTextProperty);
 vtkCxxSetObjectMacro(vtkSpiderPlotActor,TitleTextProperty,vtkTextProperty);
 
 // PIMPL'd list of labels
-class vtkAxisLabelArray : public vtkstd::vector<vtkstd::string> {};
+class vtkAxisLabelArray : public std::vector<std::string> {};
 
 // PIMPL'd list of ranges
 struct vtkAxisRange
@@ -51,7 +50,7 @@ struct vtkAxisRange
   vtkAxisRange() : Min(0.0), Max(0.0) {}
   vtkAxisRange(double min, double max) : Min(min), Max(max) {}
 };
-class vtkAxisRanges : public vtkstd::vector<vtkAxisRange> {};
+class vtkAxisRanges : public std::vector<vtkAxisRange> {};
 
 
 //----------------------------------------------------------------------------
@@ -817,7 +816,7 @@ void vtkSpiderPlotActor::SetAxisLabel(const int i, const char *label)
     {
     this->Labels->resize(i+1);
     }
-  (*this->Labels)[i] = vtkstd::string(label);
+  (*this->Labels)[i] = std::string(label);
   this->Modified();
 }
 

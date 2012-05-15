@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: Tokenizer.h,v $
+  Module:    Tokenizer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,22 +22,22 @@
  * statement of authorship are reproduced on all copies.
  */
 
-#include <vtkstd/string>
+#include <string>
 
 class Tokenizer
 {
 public:
   Tokenizer(const char *s, const char *delim = " \t\n\r");
-  Tokenizer(const vtkstd::string &s, const char *delim = " \t\n\r");
+  Tokenizer(const std::string &s, const char *delim = " \t\n\r");
 
-  vtkstd::string GetNextToken();
-  vtkstd::string GetRemainingString() const;
+  std::string GetNextToken();
+  std::string GetRemainingString() const;
   bool HasMoreTokens() const;
 
   void Reset();
 
 private:
-  vtkstd::string FullString;
-  vtkstd::string Delim;
-  vtkstd::string::size_type Position;
+  std::string FullString;
+  std::string Delim;
+  std::string::size_type Position;
 };

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTemporalCacheSimple.cxx,v $
+  Module:    TestTemporalCacheSimple.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,8 +32,8 @@
 #include "vtkSphereSource.h"
 #include "vtkObjectFactory.h"
 #include "vtkInformationVector.h"
-#include <vtkstd/algorithm>
-#include <vtkstd/vector>
+#include <algorithm>
+#include <vector>
 
 //
 // This test is intended  to test the ability of the temporal pipeline 
@@ -48,7 +48,7 @@ class vtkTemporalSphereSource : public vtkSphereSource {
 
 public:
   static vtkTemporalSphereSource *New();
-  vtkTypeRevisionMacro(vtkTemporalSphereSource, vtkSphereSource);
+  vtkTypeMacro(vtkTemporalSphereSource, vtkSphereSource);
 
   // Description:
   // Set/Get the time value at which to get the value.
@@ -61,7 +61,7 @@ public:
   vtkGetVector2Macro(TimeStepRange, int);
 
   //BTX
-//  void GetTimeStepValues(vtkstd::vector<double> &steps);
+//  void GetTimeStepValues(std::vector<double> &steps);
   //ETX
 
  protected:
@@ -81,10 +81,9 @@ public:
   int TimeStepRange[2];
   int TimeStep;
   int ActualTimeStep;
-  vtkstd::vector<double> TimeStepValues;
+  std::vector<double> TimeStepValues;
 };
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkTemporalSphereSource, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkTemporalSphereSource);
 //----------------------------------------------------------------------------
 vtkTemporalSphereSource::vtkTemporalSphereSource()
@@ -123,7 +122,7 @@ int vtkTemporalSphereSource::RequestInformation(
   return 1;
 }
 //----------------------------------------------------------------------------
-class vtkTestTemporalCacheSimpleWithinTolerance: public vtkstd::binary_function<double, double, bool>
+class vtkTestTemporalCacheSimpleWithinTolerance: public std::binary_function<double, double, bool>
 {
 public:
     result_type operator()(first_argument_type a, second_argument_type b) const
@@ -146,14 +145,16 @@ int vtkTemporalSphereSource::RequestData(
   if (this->TimeStep==0 && outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
     {
     double requestedTimeValue = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS())[0];
-    this->ActualTimeStep = vtkstd::find_if(
+    this->ActualTimeStep = std::find_if(
       this->TimeStepValues.begin(), 
       this->TimeStepValues.end(), 
-      vtkstd::bind2nd( vtkTestTemporalCacheSimpleWithinTolerance( ), requestedTimeValue )) 
+      std::bind2nd( vtkTestTemporalCacheSimpleWithinTolerance( ), requestedTimeValue ))
       - this->TimeStepValues.begin();
     this->ActualTimeStep = this->ActualTimeStep + this->TimeStepRange[0];
+#ifndef NDEBUG
     int N = outInfo->Length(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
     doOutput->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &requestedTimeValue, 1);
+#endif
     vtkDebugMacro(<<"Got a timestep request from downstream t= " << requestedTimeValue 
       << " Step : " << this->ActualTimeStep << "(Number of steps requested " << N << ")");
     }
@@ -188,7 +189,7 @@ public:
     this->Count += Length;
     if (Length>0)
       {
-      vtkstd::vector<double> steps;
+      std::vector<double> steps;
       steps.resize(Length);
       info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS(), &steps[0]);
       for (int i=0; i<Length; ++i) 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTrivialProducer.h,v $
+  Module:    vtkTrivialProducer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_FILTERING_EXPORT vtkTrivialProducer : public vtkAlgorithm
 {
 public:
   static vtkTrivialProducer *New();
-  vtkTypeRevisionMacro(vtkTrivialProducer,vtkAlgorithm);
+  vtkTypeMacro(vtkTrivialProducer,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

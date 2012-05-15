@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStackedChartView.cxx,v $
+  Module:    vtkQtStackedChartView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,6 +24,7 @@
 #include "vtkQtChartHelpFormatter.h"
 #include "vtkQtChartMouseSelection.h"
 #include "vtkQtChartSeriesModelCollection.h"
+#include "vtkQtChartSeriesOptionsModelCollection.h"
 #include "vtkQtChartSeriesSelectionHandler.h"
 #include "vtkQtChartWidget.h"
 #include "vtkQtStackedChart.h"
@@ -31,21 +32,20 @@
 
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkQtStackedChartView, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkQtStackedChartView);
 
 //-----------------------------------------------------------------------------
 vtkQtStackedChartView::vtkQtStackedChartView()
 {
-  // Get the chart widget from the base class.
-  vtkQtChartWidget* chart = this->GetChartWidget();
-  vtkQtChartArea* area = chart->getChartArea();
+  // Get the chart area from the base class.
+  vtkQtChartArea* area = this->GetChartArea();
 
   // Create the bar chart and model. Add them to the chart between the
   // grid and axis layers.
   this->StackedChart = new vtkQtStackedChart();
   this->StackedModel = new vtkQtChartSeriesModelCollection(this->StackedChart);
   this->StackedChart->setModel(this->StackedModel);
+  this->StackedChart->setOptionsModel(this->GetChartOptionsModel());
   area->insertLayer(area->getAxisLayerIndex(), this->StackedChart);
 }
 
@@ -96,6 +96,18 @@ void vtkQtStackedChartView::AddChartSelectionHandlers(
 vtkQtChartSeriesModelCollection* vtkQtStackedChartView::GetChartSeriesModel()
 {
   return this->StackedModel;
+}
+
+//-----------------------------------------------------------------------------
+vtkQtChartSeriesLayer* vtkQtStackedChartView::GetChartSeriesLayer()
+{
+  return this->StackedChart;
+}
+
+//-----------------------------------------------------------------------------
+vtkQtChartSeriesOptions* vtkQtStackedChartView::GetChartSeriesOptions(int series)
+{
+  return this->StackedChart->getSeriesOptions(series);
 }
 
 //-----------------------------------------------------------------------------

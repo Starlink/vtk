@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPEG2Writer.cxx,v $
+  Module:    vtkMPEG2Writer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,8 +22,8 @@
 #include "vtkSmartPointer.h"
 #include "vtkErrorCode.h"
 
-#include <vtkstd/map>
-#include <vtkstd/string>
+#include <map>
+#include <string>
 
 #include "mpeg2enc_config.h"
 #include "mpeg2enc_global.h"
@@ -37,7 +37,7 @@ public:
   vtkMPEG2WriterInternal();
   ~vtkMPEG2WriterInternal();
 
-  typedef vtkstd::map<vtkstd::string, vtkSmartPointer<vtkImageData> > StringToImageMap;
+  typedef std::map<std::string, vtkSmartPointer<vtkImageData> > StringToImageMap;
 
   int StoreImage(const char* name, vtkImageData* id);
   unsigned char* GetImagePtr(const char* name);
@@ -178,7 +178,6 @@ int vtkMPEG2WriterInternal::RemoveImage(const char* fname)
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkMPEG2Writer);
-vtkCxxRevisionMacro(vtkMPEG2Writer, "$Revision: 1.7 $");
 
 //---------------------------------------------------------------------------
 vtkMPEG2Writer::vtkMPEG2Writer()

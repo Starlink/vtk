@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticTetra.h,v $
+  Module:    vtkQuadraticTetra.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_FILTERING_EXPORT vtkQuadraticTetra : public vtkNonLinearCell
 {
 public:
   static vtkQuadraticTetra *New();
-  vtkTypeRevisionMacro(vtkQuadraticTetra,vtkNonLinearCell);
+  vtkTypeMacro(vtkQuadraticTetra,vtkNonLinearCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -56,7 +56,7 @@ public:
 
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
@@ -74,7 +74,7 @@ public:
   // Clip this edge using scalar value provided. Like contouring, except
   // that it cuts the tetra to produce new tetras.
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *tetras,
+            vtkIncrementalPointLocator *locator, vtkCellArray *tetras,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);

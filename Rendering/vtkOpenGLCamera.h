@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLCamera.h,v $
+  Module:    vtkOpenGLCamera.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLCamera : public vtkCamera
 {
 public:
   static vtkOpenGLCamera *New();
-  vtkTypeRevisionMacro(vtkOpenGLCamera,vtkCamera);
+  vtkTypeMacro(vtkOpenGLCamera,vtkCamera);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

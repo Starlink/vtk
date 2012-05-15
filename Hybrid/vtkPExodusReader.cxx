@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPExodusReader.cxx,v $
+  Module:    vtkPExodusReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,7 @@
  Copyright (c) Sandia Corporation
  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 ----------------------------------------------------------------------------*/
-
+#define VTK_LEGACY_SILENT
 #include "vtkPExodusReader.h"
 
 #ifndef MERGE_CELLS
@@ -43,16 +43,16 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkCommand.h"
 
-#include "netcdf.h"
-#include "exodusII.h"
+#include "vtk_netcdf.h"
+#include "vtk_exodusII.h"
+
 #include <sys/stat.h>
 #include <ctype.h>
-#include <vtkstd/vector>
+#include <vector>
 
 #define DEBUG 0
 #define vtkPExodusReaderMAXPATHLEN 2048
 
-vtkCxxRevisionMacro(vtkPExodusReader, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkPExodusReader);
 
 class vtkPExodusReaderUpdateProgress : public vtkCommand
@@ -138,6 +138,7 @@ protected:
 // Instantiate object with NULL filename.
 vtkPExodusReader::vtkPExodusReader()
 {
+  VTK_LEGACY_BODY(vtkPExodusReader, "VTK 5.8");
   this->FilePattern   = 0;
   this->CurrentFilePattern   = 0;
   this->FilePrefix    = 0;

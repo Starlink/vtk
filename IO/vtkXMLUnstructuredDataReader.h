@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLUnstructuredDataReader.h,v $
+  Module:    vtkXMLUnstructuredDataReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class vtkUnsignedCharArray;
 class VTK_IO_EXPORT vtkXMLUnstructuredDataReader : public vtkXMLDataReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLUnstructuredDataReader,vtkXMLDataReader);
+  vtkTypeMacro(vtkXMLUnstructuredDataReader,vtkXMLDataReader);
   void PrintSelf(ostream& os, vtkIndent indent);  
   
   // Description:
@@ -85,7 +85,11 @@ protected:
   int ReadPieceData();
   int ReadCellArray(vtkIdType numberOfCells, vtkIdType totalNumberOfCells,
                     vtkXMLDataElement* eCells, vtkCellArray* outCells);
-  
+
+  // Read faces and faceoffsets arrays for unstructured grid with polyhedon cells
+  int ReadFaceArray(vtkIdType numberOfCells, vtkXMLDataElement* eCells,
+                    vtkIdTypeArray* outFaces, vtkIdTypeArray* outFaceOffsets);
+
   // Read a data array whose tuples coorrespond to points.
   virtual int ReadArrayForPoints(vtkXMLDataElement* da, vtkAbstractArray* outArray);
   

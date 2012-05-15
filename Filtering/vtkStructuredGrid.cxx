@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredGrid.cxx,v $
+  Module:    vtkStructuredGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkCellData.h"
 #include "vtkEmptyCell.h"
-#include "vtkExtentTranslator.h"
 #include "vtkGenericCell.h"
 #include "vtkHexahedron.h"
 #include "vtkInformation.h"
@@ -30,7 +29,6 @@
 #include "vtkQuad.h"
 #include "vtkVertex.h"
 
-vtkCxxRevisionMacro(vtkStructuredGrid, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkStructuredGrid);
 
 vtkCxxSetObjectMacro(vtkStructuredGrid,
@@ -71,7 +69,6 @@ vtkStructuredGrid::vtkStructuredGrid()
 //----------------------------------------------------------------------------
 vtkStructuredGrid::~vtkStructuredGrid()
 {
-  this->Initialize();
   this->Vertex->Delete();
   this->Line->Delete();
   this->Quad->Delete();
@@ -107,6 +104,7 @@ void vtkStructuredGrid::CopyStructure(vtkDataSet *ds)
   this->CellVisibility->ShallowCopy(sg->CellVisibility);
 }
 
+
 //----------------------------------------------------------------------------
 void vtkStructuredGrid::Initialize()
 {
@@ -120,7 +118,7 @@ void vtkStructuredGrid::Initialize()
 
   if(this->Information)
     {
-  this->SetDimensions(0,0,0);
+    this->SetDimensions(0,0,0);
     }
 }
 
@@ -1216,4 +1214,38 @@ vtkStructuredGrid* vtkStructuredGrid::GetData(vtkInformation* info)
 vtkStructuredGrid* vtkStructuredGrid::GetData(vtkInformationVector* v, int i)
 {
   return vtkStructuredGrid::GetData(v->GetInformationObject(i));
+}
+
+//----------------------------------------------------------------------------
+void vtkStructuredGrid::GetPoint(int i, int j, int k, double p[3], bool adjustForExtent)
+{
+  int extent[6];
+  this->GetExtent(extent);  
+
+  if(i < extent[0] || i > extent[1] || 
+     j < extent[2] || j > extent[3] || 
+     k < extent[4] || k > extent[5])
+    {
+    return; // out of bounds!
+    }
+  
+  int pos[3];
+  pos[0] = i;
+  pos[1] = j;
+  pos[2] = k;
+
+  vtkIdType id;
+
+  if(adjustForExtent)
+    {
+    id = vtkStructuredData::ComputePointIdForExtent(extent, pos);
+    }
+  else
+    {
+    int dim[3];
+    this->GetDimensions(dim);  
+    id = vtkStructuredData::ComputePointId(dim, pos);
+    }
+
+  this->GetPoint(id, p);  
 }

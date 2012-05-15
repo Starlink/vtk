@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkISIReader.h,v $
+  Module:    vtkISIReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_INFOVIS_EXPORT vtkISIReader : public vtkTableAlgorithm
 {
 public:
   static vtkISIReader* New();
-  vtkTypeRevisionMacro(vtkISIReader,vtkTableAlgorithm);
+  vtkTypeMacro(vtkISIReader,vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

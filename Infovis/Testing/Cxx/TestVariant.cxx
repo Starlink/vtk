@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestVariant.cxx,v $
+  Module:    TestVariant.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -65,6 +65,7 @@ int TestVariant(int, char*[])
       default:
         continue;
       }
+    cerr << "v = " << v << " (" << vtkImageScalarTypeNameMacro(type[i]) << ")\n";
     for (int j = 0; j < numTypes; j++)
       {
       vtkStdString str;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractCTHPart.cxx,v $
+  Module:    vtkExtractCTHPart.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,11 +46,10 @@
 #include "vtkUniformGrid.h"
 
 #include <math.h>
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <string>
+#include <vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkExtractCTHPart, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkExtractCTHPart);
 vtkCxxSetObjectMacro(vtkExtractCTHPart,ClipPlane,vtkPlane);
 vtkCxxSetObjectMacro(vtkExtractCTHPart,Controller,vtkMultiProcessController);
@@ -66,7 +65,7 @@ const double CTH_AMR_SURFACE_VALUE_UNSIGNED_CHAR=255;
 class vtkExtractCTHPartInternal
 {
 public:
-  vtkstd::vector<vtkstd::string> VolumeArrayNames;
+  std::vector<std::string> VolumeArrayNames;
   int DataType;
 };
 //=============================================================================
@@ -2056,7 +2055,7 @@ void vtkExtractCTHPart::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "VolumeArrayNames: \n";
   vtkIndent i2 = indent.GetNextIndent();
-  vtkstd::vector<vtkstd::string>::iterator it;
+  std::vector<std::string>::iterator it;
   for ( it = this->Internals->VolumeArrayNames.begin();
     it != this->Internals->VolumeArrayNames.end();
     ++ it )

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabeledDataMapper.h,v $
+  Module:    vtkLabeledDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ public:
   // are labeled.
   static vtkLabeledDataMapper *New();
 
-  vtkTypeRevisionMacro(vtkLabeledDataMapper,vtkMapper2D);
+  vtkTypeMacro(vtkLabeledDataMapper,vtkMapper2D);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -117,9 +117,10 @@ public:
   vtkDataSet *GetInput();
 
   // Description:
-  // Specify which data to plot: scalars, vectors, normals, texture coords,
+  // Specify which data to plot: IDs, scalars, vectors, normals, texture coords,
   // tensors, or field data. If the data has more than one component, use
   // the method SetLabeledComponent to control which components to plot.
+  // The default is VTK_LABEL_IDS.
   vtkSetMacro(LabelMode, int);
   vtkGetMacro(LabelMode, int);
   void SetLabelModeToLabelIds() {this->SetLabelMode(VTK_LABEL_IDS);};
@@ -133,8 +134,15 @@ public:
 
   // Description:
   // Set/Get the text property.
-  virtual void SetLabelTextProperty(vtkTextProperty *p);
-  vtkGetObjectMacro(LabelTextProperty,vtkTextProperty);
+  // If an integer argument is provided, you may provide different text
+  // properties for different label types. The type is determined by an
+  // optional type input array.
+  virtual void SetLabelTextProperty(vtkTextProperty *p)
+    { this->SetLabelTextProperty(p, 0); }
+  virtual vtkTextProperty* GetLabelTextProperty()
+    { return this->GetLabelTextProperty(0); }
+  virtual void SetLabelTextProperty(vtkTextProperty *p, int type);
+  virtual vtkTextProperty* GetLabelTextProperty(int type);
 
   // Description:
   // Draw the text to the screen at each input point.
@@ -150,18 +158,39 @@ public:
   vtkGetObjectMacro(Transform, vtkTransform);
   void SetTransform(vtkTransform* t);
 
+  //BTX
+  /// Coordinate systems that output dataset may use.
+  enum Coordinates
+    {
+    WORLD=0,           //!< Output 3-D world-space coordinates for each label anchor.
+    DISPLAY=1          //!< Output 2-D display coordinates for each label anchor (3 components but only 2 are significant).
+    };
+  //ETX
+
+  // Description:
+  // Set/get the coordinate system used for output labels.
+  // The output datasets may have point coordinates reported in the world space or display space.
+  vtkGetMacro(CoordinateSystem,int);
+  vtkSetClampMacro(CoordinateSystem,int,WORLD,DISPLAY);
+  void CoordinateSystemWorld() { this->SetCoordinateSystem( vtkLabeledDataMapper::WORLD ); }
+  void CoordinateSystemDisplay() { this->SetCoordinateSystem( vtkLabeledDataMapper::DISPLAY ); }
+
+  // Description:
+  // Return the modified time for this object.
+  virtual unsigned long GetMTime();
+
 protected:
   vtkLabeledDataMapper();
   ~vtkLabeledDataMapper();
 
   vtkDataSet *Input;
-  vtkTextProperty *LabelTextProperty;
 
   char  *LabelFormat;
   int   LabelMode;
   int   LabeledComponent;
   int   FieldDataArray;
   char  *FieldDataName;
+  int CoordinateSystem;
 
   vtkTimeStamp BuildTime;
 
@@ -176,6 +205,12 @@ protected:
   void AllocateLabels(int numLabels);
   void BuildLabels();
   void BuildLabelsInternal(vtkDataSet*);
+  
+  //BTX
+  class Internals;
+  Internals* Implementation;
+  //ETX
+
 private:
   vtkLabeledDataMapper(const vtkLabeledDataMapper&);  // Not implemented.
   void operator=(const vtkLabeledDataMapper&);  // Not implemented.

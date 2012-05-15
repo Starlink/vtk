@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTkImageViewerWidget.cxx,v $
+  Module:    vtkTkImageViewerWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,15 +19,16 @@
 #ifdef _MSC_VER
  #pragma warning ( disable : 4273 )
 #else
- #ifdef VTK_USE_CARBON
-  #include "vtkCarbonRenderWindow.h"
- #else
-  #ifdef VTK_USE_COCOA
-   #include "vtkCocoaRenderWindow.h"
-  #else
-   #include "vtkXOpenGLRenderWindow.h"
-  #endif
- #endif
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
+#ifdef VTK_USE_CARBON
+#include "vtkCarbonRenderWindow.h"
+#else
+#include "vtkCocoaRenderWindow.h"
+#include "vtkCocoaTkUtilities.h"
+#endif
+#else
+#include "vtkXOpenGLRenderWindow.h"
+#endif
 #endif
 
 #include <stdlib.h>
@@ -354,8 +355,8 @@ extern "C"
     switch (eventPtr->type) 
       {
       case Expose:
-        if ((eventPtr->xexpose.count == 0)
-            /* && !self->UpdatePending*/) 
+        if (eventPtr->xexpose.count == 0)
+            /* && !self->UpdatePending)*/ 
           {
           // bid this in tcl now
           //self->ImageViewer->Render();
@@ -369,13 +370,19 @@ extern "C"
           //Tk_GeometryRequest(self->TkWin,self->Width,self->Height);
           if (self->ImageViewer)
             {
+            int x = Tk_X(self->TkWin);
+            int y = Tk_Y(self->TkWin);
 #ifdef VTK_USE_CARBON
-            TkWindow *winPtr = (TkWindow *)self->TkWin;
-            self->ImageViewer->SetPosition(winPtr->privatePtr->xOff,
-                                           winPtr->privatePtr->yOff);
-#else
-            self->ImageViewer->SetPosition(Tk_X(self->TkWin),Tk_Y(self->TkWin));
+            // need to get position relative to top level window
+            for (TkWindow *curPtr = ((TkWindow *)self->TkWin)->parentPtr;
+                 (NULL != curPtr) && !(curPtr->flags & TK_TOP_LEVEL);
+                 curPtr = curPtr->parentPtr)
+              {
+              x += Tk_X(curPtr);
+              y += Tk_Y(curPtr);
+              }
 #endif
+            self->ImageViewer->SetPosition(x, y);
             self->ImageViewer->SetSize(self->Width, self->Height);
             }
           
@@ -714,19 +721,16 @@ static int vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget 
   return TCL_OK;
 }
 
-// now the APPLE version - only available using the Carbon APIs
+// now the APPLE version for Cocoa and Carbon APIs
 #else
-#ifdef VTK_USE_CARBON
+#if defined(VTK_USE_CARBON) || defined(VTK_USE_COCOA)
 //----------------------------------------------------------------------------
 // Creates a ImageViewer window and forces Tk to use the window.
 static int
 vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self) 
 {
   Display *dpy;
-  TkWindow *winPtr = (TkWindow *)self->TkWin;
-  vtkImageViewer *imgViewer;
-  vtkCarbonRenderWindow *imgWindow;
-  WindowPtr parentWin;
+  vtkImageViewer *imgViewer = NULL;
   
   if (self->ImageViewer)
     {
@@ -755,15 +759,15 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
       {
       void *tmp;
       sscanf(self->IV+5,"%p",&tmp);
-      imgViewer = (vtkImageViewer *)tmp;
+      imgViewer = reinterpret_cast<vtkImageViewer *>(tmp);
       }
     else
       {
 #ifndef VTK_PYTHON_BUILD
       int new_flag;
-      imgViewer = (vtkImageViewer *)
+      imgViewer = static_cast<vtkImageViewer *>(
         vtkTclGetPointerFromObject(self->IV, "vtkImageViewer", self->Interp,
-                                   new_flag);
+                                   new_flag));
 #endif
       }
     if (imgViewer != self->ImageViewer)
@@ -781,9 +785,13 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
     }
   
         
+#ifdef VTK_USE_CARBON
+  TkWindow *winPtr = (TkWindow *)self->TkWin;
+  WindowPtr parentWin;
   // get the window
-  imgWindow = static_cast<vtkCarbonRenderWindow *>(imgViewer->GetRenderWindow());
-  // If the imageviewer has already created it's window, throw up our hands and quit...
+  vtkCarbonRenderWindow *imgWindow =
+    static_cast<vtkCarbonRenderWindow *>(imgViewer->GetRenderWindow());
+  // If the imageviewer has already created it's window, then quit...
   if ( imgWindow->GetRootWindow() != (Window)NULL )
     {
     return TCL_ERROR;
@@ -819,7 +827,7 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
           }
         }
 
-      parentWin = GetWindowFromPort(TkMacOSXGetDrawablePort(
+      parentWin = GetWindowFromPort((CGrafPtr)TkMacOSXGetDrawablePort(
                                     Tk_WindowId(winPtr->parentPtr)));
       // Carbon does not have 'sub-windows', so the ParentId is used more
       // as a flag to indicate that the renderwindow is being used as a sub-
@@ -827,7 +835,15 @@ vtkTkImageViewerWidget_MakeImageViewer(struct vtkTkImageViewerWidget *self)
       imgWindow->SetParentId(parentWin);
       imgWindow->SetRootWindow(parentWin);
     }
+#else /* now the VTK_USE_COCOA section */
+  Tk_MakeWindowExist(self->TkWin);
+  // set the ParentId to the NSView
+  vtkCocoaRenderWindow *imgWindow =
+    static_cast<vtkCocoaRenderWindow *>(imgViewer->GetRenderWindow());
+  imgWindow->SetParentId(vtkCocoaTkUtilities::GetDrawableView(self->TkWin));
+  imgWindow->SetSize(self->Width, self->Height);
 
+#endif
 
   // Set the size
   self->ImageViewer->SetSize(self->Width, self->Height);

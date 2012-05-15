@@ -9,17 +9,23 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         ContinuousClose2D
         IdealHighPass
         LaplacianEdgeEnhance
+        MultipleUpdateExtents
         #reconstructSurface -- scanf
         resampledTexture
+        ResliceBSpline
         ResliceColorWrap
         ResliceInformationInput
         ResliceInterpolationModes
         ResliceInterpolationOblique
+        ResliceLanczosKaiser
         ResliceMirrorOblique
         ResliceMirrorPad
         ResliceOptimizationOff
         ReslicePermutations
         ReslicePermuteResample
+        ReslicePermuteSlab
+        ResliceSlabModes
+        ResliceToColors
         ResliceWrapOblique
         ResliceWrapPad
         Spectrum
@@ -54,8 +60,11 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         TestHybridMedian2D
         TestIdealLowPass
         TestImageCanvas
+        TestImageProjection
+        #TestImageThresholdConnectivity -- uses lists in lists etc...
         TestInPlaceFilter
         TestIslandRemoval2D
+        TestLassoStencil
         TestMapToRGBABlockStreaming
         TestMapToWindowLevelColors
         TestMapToWindowLevelColors2
@@ -67,6 +76,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         TestQuantizeTo16Colors 
         TestRange3D
         TestResample
+        TestROIStencil
         TestSeparableFilter
         TestShiftScale
         TestShiftScale2
@@ -74,6 +84,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         TestSkeleton2D
         TestSobel2D
         TestSobel3D
+        TestStencilToImage
         TestStencilWithFunction
         TestStencilWithImage
         #TestThreshold -- uses lists in lists etc...

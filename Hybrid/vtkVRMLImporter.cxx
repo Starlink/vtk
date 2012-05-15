@@ -4,7 +4,7 @@
 #  undef __VTK_SYSTEM_INCLUDES__INSIDE
 #endif
 
-#if defined (__digital__) && defined (__unix__) || defined(__IBMCPP__) || defined(__unix)
+#if defined (__digital__) && defined (__unix__) || defined(__IBMCPP__) || defined(__sun)
 #define HAVE_ALLOCA_H 1
 #endif
 
@@ -30,7 +30,7 @@ char *alloca ();
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVRMLImporter.cxx,v $
+  Module:    vtkVRMLImporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -1975,12 +1975,6 @@ extern char *yytext;
 
 #ifndef yytext_ptr
 static void yy_flex_strncpy YY_PROTO(( char *, const char *, int ));
-#endif
-
-#ifdef __cplusplus
-static int yyinput YY_PROTO(( void ));
-#else
-static int input YY_PROTO(( void ));
 #endif
 
 static yy_state_type yy_get_previous_state YY_PROTO(( void ));
@@ -4260,7 +4254,6 @@ YY_MALLOC_DECL
 #define YY_BREAK break;
 #endif
 
-vtkCxxRevisionMacro(vtkVRMLImporter, "$Revision: 1.73 $");
 vtkStandardNewMacro(vtkVRMLImporter);
 
 vtkPoints* vtkVRMLImporter::PointsNew()
@@ -5102,74 +5095,6 @@ static yy_state_type yy_try_NUL_trans( yy_state_type yy_current_state )
 
 
 
-#ifdef __cplusplus
-static int yyinput()
-#else
-  static int input()
-#endif
-{
-  int c;
-
-  *yy_c_buf_p = yy_hold_char;
-
-  if ( *yy_c_buf_p == YY_END_OF_BUFFER_CHAR )
-    {
-    /* yy_c_buf_p now points to the character we want to return.
-     * If this occurs *before* the EOB characters, then it's a
-     * valid NUL; if not, then we've hit the end of the buffer.
-     */
-    if ( yy_c_buf_p < &yy_current_buffer->yy_ch_buf[yy_n_chars] )
-      /* This was really a NUL. */
-      *yy_c_buf_p = '\0';
-
-    else
-      { /* need more input */
-      yytext_ptr = yy_c_buf_p;
-      ++yy_c_buf_p;
-
-      switch ( yy_get_next_buffer() )
-        {
-        case EOB_ACT_END_OF_FILE:
-        {
-        if ( yywrap() )
-          {
-          yy_c_buf_p =
-            yytext_ptr + YY_MORE_ADJ;
-          return EOF;
-          }
-
-        YY_NEW_FILE;
-#ifdef __cplusplus
-        return yyinput();
-#else
-        return input();
-#endif
-        }
-
-        case EOB_ACT_CONTINUE_SCAN:
-          yy_c_buf_p = yytext_ptr + YY_MORE_ADJ;
-          break;
-
-        case EOB_ACT_LAST_MATCH:
-#ifdef __cplusplus
-          YY_FATAL_ERROR(
-            "unexpected last match in yyinput()" );
-#else
-          YY_FATAL_ERROR(
-            "unexpected last match in input()" );
-#endif
-        }
-      }
-    }
-
-  c = *(unsigned char *) yy_c_buf_p;      /* cast for 8-bit char's */
-  *yy_c_buf_p = '\0';     /* preserve yytext */
-  yy_hold_char = *++yy_c_buf_p;
-
-  return c;
-}
-
-
 #ifdef YY_USE_PROTOS
 void yyrestart( FILE *input_file )
 #else
@@ -5400,6 +5325,7 @@ vtkVRMLImporter::vtkVRMLImporter ()
   this->CurrentPoints = NULL;
   this->CurrentScalars = NULL;
   this->CurrentNormals = NULL;
+  this->CurrentNormalCells = NULL;
   this->CurrentTCoords = NULL;
   this->CurrentTCoordCells = NULL;
   this->CurrentMapper = NULL;
@@ -5552,6 +5478,10 @@ vtkVRMLImporter::~vtkVRMLImporter()
   if (this->CurrentTCoordCells)
     {
     this->CurrentTCoordCells->Delete();
+    }
+  if (this->CurrentNormalCells)
+    {
+    this->CurrentNormalCells->Delete();
     }
   if (this->CurrentScalars)
     {
@@ -5826,18 +5756,26 @@ vtkVRMLImporter::exitNode()
     // a similar scheme is implemented in vtkOBJReader
 
     int tcoords_correspond; // (boolean)
-    if (this->CurrentTCoords==NULL || this->CurrentTCoordCells==NULL) 
+    if ( (this->CurrentTCoords==NULL || this->CurrentTCoordCells==NULL) && (this->CurrentNormals==NULL || this->CurrentNormalCells==NULL) )
         tcoords_correspond=1; // there aren't any, can proceed
-    else if (this->CurrentTCoords->GetNumberOfTuples()!=this->CurrentPoints->GetNumberOfPoints())
+    else if (this->CurrentTCoords && this->CurrentTCoords->GetNumberOfTuples()!=this->CurrentPoints->GetNumberOfPoints())
+        tcoords_correspond=0; // false, must rejig
+    else if (this->CurrentNormals && this->CurrentNormals->GetNumberOfTuples()!=this->CurrentPoints->GetNumberOfPoints())
         tcoords_correspond=0; // false, must rejig
     else 
       {
       // the number of polygon faces and texture faces must be equal.
       // if they are not then something is wrong
-      if (this->CurrentTCoordCells->GetNumberOfCells() !=
+      if (this->CurrentTCoordCells && this->CurrentTCoordCells->GetNumberOfCells() !=
           this->CurrentMapper->GetInput()->GetPolys()->GetNumberOfCells())
         {
         vtkErrorMacro(<<"Number of faces does not match texture faces, output may not be correct")
+        tcoords_correspond=1; // don't rejig
+        }
+      else if (this->CurrentNormalCells && this->CurrentNormalCells->GetNumberOfCells() !=
+          this->CurrentMapper->GetInput()->GetPolys()->GetNumberOfCells())
+        {
+        vtkErrorMacro(<<"Number of faces does not match normal faces, output may not be correct")
         tcoords_correspond=1; // don't rejig
         }
       else 
@@ -5845,30 +5783,62 @@ vtkVRMLImporter::exitNode()
         // count of tcoords and points is the same, must run through indices to see if they
         // correspond by index point-for-point
         tcoords_correspond=1; // assume true until found otherwise
-        vtkIdType DUMMY_WARNING_PREVENTION_MECHANISM;
-        vtkIdType n_pts=-1,*pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
-        vtkIdType n_tcoord_pts=-1,*tcoord_pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
-        this->CurrentMapper->GetInput()->GetPolys()->InitTraversal();
-        this->CurrentTCoordCells->InitTraversal();
-        int i,j;
-        for (i=0;i<this->CurrentTCoordCells->GetNumberOfCells();i++)
+        if (this->CurrentTCoords && this->CurrentTCoordCells)
           {
-          this->CurrentMapper->GetInput()->GetPolys()->GetNextCell(n_pts,pts);
-          this->CurrentTCoordCells->GetNextCell(n_tcoord_pts,tcoord_pts);
-          if (n_pts!=n_tcoord_pts) 
+          vtkIdType DUMMY_WARNING_PREVENTION_MECHANISM;
+          vtkIdType n_pts=-1,*pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
+          vtkIdType n_tcoord_pts=-1,*tcoord_pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
+          this->CurrentMapper->GetInput()->GetPolys()->InitTraversal();
+          this->CurrentTCoordCells->InitTraversal();
+          int i,j;
+          for (i=0;i<this->CurrentTCoordCells->GetNumberOfCells();i++)
             {
-            vtkErrorMacro(<<"Face size differs to texture face size, output may not be correct")
-            break;
-            }
-          for (j=0;j<n_pts;j++) 
-            {
-            if (pts[j]!=tcoord_pts[j]) 
+            this->CurrentMapper->GetInput()->GetPolys()->GetNextCell(n_pts,pts);
+            this->CurrentTCoordCells->GetNextCell(n_tcoord_pts,tcoord_pts);
+            if (n_pts!=n_tcoord_pts) 
               {
-              tcoords_correspond=0; // have found an exception
+              vtkErrorMacro(<<"Face size differs to texture face size, output may not be correct")
               break;
+              }
+            for (j=0;j<n_pts;j++) 
+              {
+              if (pts[j]!=tcoord_pts[j]) 
+                {
+                tcoords_correspond=0; // have found an exception
+                break;
+                }
               }
             }
           }
+
+        if (this->CurrentNormals && this->CurrentNormalCells)
+          {
+          vtkIdType DUMMY_WARNING_PREVENTION_MECHANISM;
+          vtkIdType n_pts=-1,*pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
+          vtkIdType n_normal_pts=-1,*normal_pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
+          this->CurrentMapper->GetInput()->GetPolys()->InitTraversal();
+          this->CurrentNormalCells->InitTraversal();
+          int i,j;
+          for (i=0;i<this->CurrentNormalCells->GetNumberOfCells();i++)
+            {
+            this->CurrentMapper->GetInput()->GetPolys()->GetNextCell(n_pts,pts);
+            this->CurrentNormalCells->GetNextCell(n_normal_pts,normal_pts);
+            if (n_pts!=n_normal_pts) 
+              {
+              vtkErrorMacro(<<"Face size differs to normal face size, output may not be correct")
+              break;
+              }
+            for (j=0;j<n_pts;j++) 
+              {
+              if (pts[j]!=normal_pts[j]) 
+                {
+                tcoords_correspond=0; // have found an exception
+                break;
+                }
+              }
+            }
+          }
+
         }
       }
 
@@ -5910,23 +5880,35 @@ vtkVRMLImporter::exitNode()
       // also copy its normals into new_normals
       // also copy its scalar into new_scalars
       this->CurrentMapper->GetInput()->GetPolys()->InitTraversal();
-      this->CurrentTCoordCells->InitTraversal();
+      if (this->CurrentTCoordCells)
+        this->CurrentTCoordCells->InitTraversal();
+      if (this->CurrentNormalCells)
+        this->CurrentNormalCells->InitTraversal();
       int i,j;
       vtkIdType DUMMY_WARNING_PREVENTION_MECHANISM;
       vtkIdType n_pts=-1,*pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
       vtkIdType n_tcoord_pts=-1,*tcoord_pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
+      vtkIdType n_normal_pts=-1,*normal_pts = &DUMMY_WARNING_PREVENTION_MECHANISM;
       for (i=0;i<this->CurrentMapper->GetInput()->GetPolys()->GetNumberOfCells();i++) 
         {
 
         this->CurrentMapper->GetInput()->GetPolys()->GetNextCell(n_pts,pts); 
-        this->CurrentTCoordCells->GetNextCell(n_tcoord_pts,tcoord_pts);
+        if (this->CurrentTCoordCells)
+          this->CurrentTCoordCells->GetNextCell(n_tcoord_pts,tcoord_pts);
+        if (this->CurrentNormalCells)
+          this->CurrentNormalCells->GetNextCell(n_normal_pts,normal_pts);
 
         // If some vertices have tcoords and not others 
         // then we must do something else VTK will complain. (crash on render attempt)
         // Easiest solution is to delete polys that don't have complete tcoords (if there 
         // are any tcoords in the dataset)
 
-        if (n_pts!=n_tcoord_pts && this->CurrentTCoords->GetNumberOfTuples()>0) 
+        if (this->CurrentTCoords && n_pts!=n_tcoord_pts && this->CurrentTCoords->GetNumberOfTuples()>0) 
+          {
+          // skip this poly
+          vtkDebugMacro(<<"Skipping poly "<<i+1<<" (1-based index)");
+          }
+        else if (this->CurrentNormals && n_pts!=n_normal_pts && this->CurrentNormals->GetNumberOfTuples()>0) 
           {
           // skip this poly
           vtkDebugMacro(<<"Skipping poly "<<i+1<<" (1-based index)");
@@ -5940,8 +5922,8 @@ vtkVRMLImporter::exitNode()
             if (this->CurrentTCoords && n_tcoord_pts>0)
               new_tcoords->InsertNextTuple(this->CurrentTCoords->GetTuple(tcoord_pts[j]));
             // copy the normal for this point across (if any)
-            if (this->CurrentNormals)
-              new_normals->InsertNextTuple(this->CurrentNormals->GetTuple(pts[j]));
+            if (this->CurrentNormals && n_normal_pts>0)
+              new_normals->InsertNextTuple(this->CurrentNormals->GetTuple(normal_pts[j]));
             // copy the scalar for this point across
             if (this->CurrentScalars)
               new_scalars->InsertNextTuple(this->CurrentScalars->GetTuple(pts[j]));
@@ -6324,21 +6306,43 @@ vtkVRMLImporter::exitField()
       cells = pd->GetLines();
     cells->InitTraversal();
     index = 0;j = 0;
-    cells->GetNextCell(npts, pts);
-    for (int i=0;i <= yylval.mfint32->GetMaxId();i++) 
+
+    // At this point we either have colors index by vertex or faces
+    // If faces, num of color indexes must match num of faces else
+    // we assume index by vertex.
+    if ((yylval.mfint32->GetMaxId() + 1) == pd->GetNumberOfPolys())
       {
-      if (yylval.mfint32->GetValue(index) == -1) 
+      for (int i=0;i <= yylval.mfint32->GetMaxId();i++) 
         {
-        cells->GetNextCell(npts, pts);
-        // Pass by the -1
-        index++;
-        j = 0;
+        if (yylval.mfint32->GetValue(i) >= 0) 
+          {
+          cells->GetNextCell(npts, pts);
+		  for (j = 0; j < npts; j++)
+            {
+	          this->CurrentScalars->SetComponent(pts[j], 0, yylval.mfint32->GetValue(i));
+            }
+          }
         }
-      else 
+      }
+    // else handle colorindex by vertex
+	else
+      {
+      cells->GetNextCell(npts, pts);
+      for (int i=0;i <= yylval.mfint32->GetMaxId();i++) 
         {
-        // Redirect color into scalar position
-        this->CurrentScalars->SetComponent(pts[j++], 0,
+        if (yylval.mfint32->GetValue(index) == -1) 
+          {
+          cells->GetNextCell(npts, pts);
+          // Pass by the -1
+          index++;
+          j = 0;
+          }
+        else 
+          {
+          // Redirect color into scalar position
+          this->CurrentScalars->SetComponent(pts[j++], 0,
                                            yylval.mfint32->GetValue(index++));
+          }
         }
       }
     }
@@ -6422,6 +6426,32 @@ vtkVRMLImporter::exitField()
       if (yylval.mfint32->GetValue(i) == -1) 
         {
         this->CurrentTCoordCells->InsertNextCell(cnt,
+                              (vtkIdType*)yylval.mfint32->GetPointer(index));
+        index = i+1;
+        cnt = 0;
+        }
+      else 
+        {
+        cnt++;
+        }
+      }
+    yylval.mfint32->Reset();this->DeleteObject(yylval.mfint32);
+    }
+  else if (strcmp(fr->fieldName, "normalIndex") == 0)
+    {
+    if (this->CurrentNormalCells) {
+      this->CurrentNormalCells->Delete();
+    }
+    this->CurrentNormalCells = vtkCellArray::New();
+
+    // read the indices of the normals and assign accordingly
+    int index, i, cnt;
+    index = i = cnt = 0;
+    for (i = 0;i <= yylval.mfint32->GetMaxId();i++) 
+      {
+      if (yylval.mfint32->GetValue(i) == -1) 
+        {
+        this->CurrentNormalCells->InsertNextCell(cnt,
                               (vtkIdType*)yylval.mfint32->GetPointer(index));
         index = i+1;
         cnt = 0;

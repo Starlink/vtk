@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLCollapseGraph.h,v $
+  Module:    vtkPBGLCollapseGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_PARALLEL_EXPORT vtkPBGLCollapseGraph : public vtkGraphAlgorithm
 {
 public:
   static vtkPBGLCollapseGraph* New();
-  vtkTypeRevisionMacro(vtkPBGLCollapseGraph,vtkGraphAlgorithm);
+  vtkTypeMacro(vtkPBGLCollapseGraph,vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

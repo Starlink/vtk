@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArcSource.cxx,v $
+  Module:    vtkArcSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkMath.h"
 
 #include <math.h>
-vtkCxxRevisionMacro(vtkArcSource, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkArcSource);
 
 // --------------------------------------------------------------------------
@@ -45,6 +44,7 @@ vtkArcSource::vtkArcSource(int res)
   this->Center[2] =  0.0;
   
   this->Resolution = (res < 1 ? 1 : res);
+  this->Negative = false;
 
   this->SetNumberOfInputPorts(0);
 }
@@ -99,6 +99,10 @@ int vtkArcSource::RequestData(
   double dotprod = 
     vtkMath::Dot( v1, v2 ) / (vtkMath::Norm(v1) * vtkMath::Norm(v2));
   double angle = acos( dotprod );
+  if (this->Negative)
+    {
+    angle -= vtkMath::DoubleTwoPi();
+    }
   double radius = vtkMath::Normalize( v1 );
   double angleInc = angle / this->Resolution;
   
@@ -166,5 +170,7 @@ void vtkArcSource::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Center: (" << this->Center[0] << ", "
                               << this->Center[1] << ", "
                               << this->Center[2] << ")\n";
+  
+  os << indent << "Negative: " << this->Negative << "\n";
 }
 

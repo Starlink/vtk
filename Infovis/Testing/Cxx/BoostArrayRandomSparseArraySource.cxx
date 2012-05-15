@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: BoostArrayRandomSparseArraySource.cxx,v $
+  Module:    BoostArrayRandomSparseArraySource.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,15 +31,16 @@
 #define test_expression(expression) \
 { \
   if(!(expression)) \
-    throw vtkstd::runtime_error("Expression failed: " #expression); \
+    throw std::runtime_error("Expression failed: " #expression); \
 }
 
-static const bool close_enough(const double lhs, const double rhs)
+static bool close_enough(const double lhs, const double rhs)
 {
   return fabs(lhs - rhs) < 1.0e-12;
 }
 
-int BoostArrayRandomSparseArraySource(int argc, char* argv[])
+int BoostArrayRandomSparseArraySource(int vtkNotUsed(argc),
+                                      char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -52,7 +53,7 @@ int BoostArrayRandomSparseArraySource(int argc, char* argv[])
     source->SetMaxValue(1.0);
     source->Update();
 
-    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(source->GetOutput()->GetArray());
+    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(source->GetOutput()->GetArray(0));
     
     cout << "sparse random source:\n";
 
@@ -71,7 +72,7 @@ int BoostArrayRandomSparseArraySource(int argc, char* argv[])
 
     return 0;
     }
-  catch(vtkstd::exception& e)
+  catch(std::exception& e)
     {
     cerr << e.what() << endl;
     return 1;

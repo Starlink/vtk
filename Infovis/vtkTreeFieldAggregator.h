@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeFieldAggregator.h,v $
+  Module:    vtkTreeFieldAggregator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_INFOVIS_EXPORT vtkTreeFieldAggregator : public vtkTreeAlgorithm
 public:
   static vtkTreeFieldAggregator *New();
 
-  vtkTypeRevisionMacro(vtkTreeFieldAggregator,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkTreeFieldAggregator,vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

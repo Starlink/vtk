@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVisibleCellSelector.cxx,v $
+  Module:    vtkVisibleCellSelector.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkIdTypeArray.h"
 #include "vtkIntArray.h"
-#include "vtkstd/set"
+#include <set>
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkSelection.h"
@@ -39,11 +39,11 @@ public:
   unsigned char Byte[15];
 
   //the mutables are here so that they can be changed while this is inside 
-  //a vtkstd::set
+  //a std::set
   //ie, while Byte determines a particular cell for the set, these ivars
   //are statistics of that particular cell which are allowed to change
   mutable int PixelCount; 
-  mutable vtkstd::set<vtkIdType> visverts;
+  mutable std::set<vtkIdType> visverts;
 
   vtkVisibleCellSelectorInternals()
     {
@@ -200,7 +200,6 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////
-vtkCxxRevisionMacro(vtkVisibleCellSelector, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkVisibleCellSelector);
 vtkCxxSetObjectMacro(vtkVisibleCellSelector, Renderer, vtkRenderer);
 
@@ -209,6 +208,12 @@ vtkVisibleCellSelector::vtkVisibleCellSelector()
 {
   this->Renderer = NULL;
 
+  this->X0=0;
+  this->Y0=0;
+  this->X1=0;
+  this->Y1=0;
+  
+  
   this->DoProcessor=0;
   this->DoActor=0;
   this->DoCellIdHi=0;
@@ -236,7 +241,6 @@ vtkVisibleCellSelector::vtkVisibleCellSelector()
   this->VertexLists = vtkIdTypeArray::New();
   this->VertexLists->SetNumberOfComponents(1);
   this->VertexLists->SetNumberOfTuples(0);
-
 }
 
 //-----------------------------------------------------------------------------
@@ -470,7 +474,7 @@ void vtkVisibleCellSelector::ComputeSelectedIds()
 {
   //go over the pixels, determine the proc, actor and cell id.
   //create a sorted list of hitrecords without duplicates
-  vtkstd::set<vtkVisibleCellSelectorInternals> hitrecords;
+  std::set<vtkVisibleCellSelectorInternals> hitrecords;
   
   unsigned int misscnt, hitcnt, dupcnt;
   misscnt = hitcnt = dupcnt = 0;
@@ -552,10 +556,10 @@ void vtkVisibleCellSelector::ComputeSelectedIds()
 
   if (hitcnt != 0)
     {
-    //traversing the set will result in a sorted list, because vtkstd::set 
+    //traversing the set will result in a sorted list, because std::set
     //inserts entries using operator< to sort them for quick retrieval
     vtkIdType cellid = 0;
-    vtkstd::set<vtkVisibleCellSelectorInternals>::iterator sit;
+    std::set<vtkVisibleCellSelectorInternals>::iterator sit;
     for (sit = hitrecords.begin(); sit != hitrecords.end(); sit++)
       {
       vtkIdType info[5];
@@ -569,7 +573,7 @@ void vtkVisibleCellSelector::ComputeSelectedIds()
       if (this->DoVertices)
         {
         vtkIdType top = this->VertexLists->GetNumberOfTuples();
-        vtkstd::set<vtkIdType>::iterator vit;
+        std::set<vtkIdType>::iterator vit;
         //record each visible vertex of this cell
         if (sit->visverts.size()>0)
           {

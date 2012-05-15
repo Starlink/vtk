@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStatisticalBoxChartOptions.cxx,v $
+  Module:    vtkQtStatisticalBoxChartOptions.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,6 +51,12 @@ vtkQtStatisticalBoxChartOptions::vtkQtStatisticalBoxChartOptions(const vtkQtStat
   this->Help = new vtkQtChartHelpFormatter(other.Help->getFormat());
   this->Outlier = new vtkQtChartHelpFormatter(other.Outlier->getFormat());
   this->BoxFraction = other.BoxFraction;
+}
+
+vtkQtStatisticalBoxChartOptions::~vtkQtStatisticalBoxChartOptions()
+{
+  delete this->Help;
+  delete this->Outlier;
 }
 
 void vtkQtStatisticalBoxChartOptions::setAxesCorner(vtkQtChartLayer::AxesCorner axes)

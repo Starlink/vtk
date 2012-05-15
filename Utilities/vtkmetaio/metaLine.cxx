@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaLine.cxx,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.11 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
 #pragma warning(disable:4284)
@@ -31,7 +26,7 @@ namespace METAIO_NAMESPACE {
 
 LinePnt::
 LinePnt(int dim)
-{ 
+{
   m_Dim = dim;
 
   m_X = new float[m_Dim];
@@ -44,14 +39,14 @@ LinePnt(int dim)
       {
       m_V[i][j] = 0;
       m_X[j] = 0;
-      } 
+      }
     }
-  
+
   //Color is red by default
-  m_Color[0]=1.0;
-  m_Color[1]=0.0;
-  m_Color[2]=0.0;
-  m_Color[3]=1.0;  
+  m_Color[0]=1.0f;
+  m_Color[1]=0.0f;
+  m_Color[2]=0.0f;
+  m_Color[3]=1.0f;
 }
 
 LinePnt::
@@ -133,14 +128,14 @@ CopyInfo(const MetaObject * _object)
   MetaObject::CopyInfo(_object);
 }
 
-    
+
 
 void MetaLine::
 PointDim(const char* pointDim)
 {
   strcpy(m_PointDim,pointDim);
 }
-    
+
 const char* MetaLine::
 PointDim(void) const
 {
@@ -173,13 +168,13 @@ Clear(void)
     LinePnt* pnt = *it;
     it++;
     delete pnt;
-  }  
+  }
   m_PointList.clear();
 
   strcpy(m_PointDim, "x y z v1x v1y v1z");
   m_ElementType = MET_FLOAT;
 }
-        
+
 /** Destroy line information */
 void MetaLine::
 M_Destroy(void)
@@ -277,9 +272,9 @@ M_Read(void)
   }
 
   if(META_DEBUG) METAIO_STREAM::cout << "MetaLine: M_Read: Parsing Header" << METAIO_STREAM::endl;
- 
+
   MET_FieldRecordType * mF;
- 
+
   mF = MET_GetFieldRecord("NPoints", &m_Fields);
   if(mF->defined)
   {
@@ -301,7 +296,7 @@ M_Read(void)
   int pntDim;
   char** pntVal = NULL;
   MET_StringToWordArray(m_PointDim, &pntDim, &pntVal);
-  
+
   int ii;
   for(ii=0;ii<pntDim;ii++)
     {
@@ -323,62 +318,60 @@ M_Read(void)
     int gc = m_ReadStream->gcount();
     if(gc != readSize)
     {
-      METAIO_STREAM::cout << "MetaLine: m_Read: data not read completely" 
+      METAIO_STREAM::cout << "MetaLine: m_Read: data not read completely"
                 << METAIO_STREAM::endl;
       METAIO_STREAM::cout << "   ideal = " << readSize << " : actual = " << gc << METAIO_STREAM::endl;
+      delete [] _data;
       return false;
     }
 
     int i=0;
     int d;
     unsigned int k;
-    for(int j=0; j<m_NPoints; j++) 
+    for(int j=0; j<m_NPoints; j++)
     {
       LinePnt* pnt = new LinePnt(m_NDims);
-      
+
       for(d=0; d<m_NDims; d++)
         {
-        char* num = new char[sizeof(float)];
+        float td;
+        char * const num = (char *)(&td);
         for(k=0;k<sizeof(float);k++)
           {
           num[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
         i+=sizeof(float);
         pnt->m_X[d] = (float)td;
-        delete [] num;
         }
 
       for(int l=0;l<m_NDims-1;l++)
       {
         for(d=0; d<m_NDims; d++)
         {
-          char* num = new char[sizeof(float)];
+          float td;
+          char * const num = (char *)(&td);
           for(k=0;k<sizeof(float);k++)
             {
             num[k] = _data[i+k];
             }
-          float td = (float)((float*)num)[0];
           MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-          i+=sizeof(float); 
+          i+=sizeof(float);
           pnt->m_V[l][d] = (float)td;
-          delete [] num;
-        }   
+        }
       }
-      
+
       for(d=0; d<4; d++)
       {
-        char* num = new char[sizeof(float)];
+        float td;
+        char * const num = (char *)(&td);
         for(k=0;k<sizeof(float);k++)
           {
           num[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
         i+=sizeof(float);
         pnt->m_Color[d] = (float)td;
-        delete [] num;
       }
 
       m_PointList.push_back(pnt);
@@ -387,10 +380,10 @@ M_Read(void)
   }
   else
   {
-    for(int j=0; j<m_NPoints; j++) 
+    for(int j=0; j<m_NPoints; j++)
     {
       LinePnt* pnt = new LinePnt(m_NDims);
-      
+
       int k;
       int d;
       for(k=0; k<m_NDims; k++)
@@ -432,7 +425,7 @@ M_Read(void)
       m_PointList.push_back(pnt);
     }
 
-      
+
     char c = ' ';
     while( (c!='\n') && (!m_ReadStream->eof()))
     {
@@ -469,8 +462,8 @@ M_Write(void)
       for(d = 0; d < m_NDims; d++)
         {
         float pntX = (*it)->m_X[d];
-        MET_SwapByteIfSystemMSB(&pntX,MET_FLOAT);    
-        MET_DoubleToValue((double)pntX,m_ElementType,data,i++);  
+        MET_SwapByteIfSystemMSB(&pntX,MET_FLOAT);
+        MET_DoubleToValue((double)pntX,m_ElementType,data,i++);
         }
 
       for(int j=0;j<m_NDims-1;j++)
@@ -501,7 +494,7 @@ M_Write(void)
     {
     PointListType::const_iterator it = m_PointList.begin();
     PointListType::const_iterator itEnd = m_PointList.end();
-  
+
     int d;
     while(it != itEnd)
     {

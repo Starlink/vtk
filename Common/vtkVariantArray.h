@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantArray.h,v $
+  Module:    vtkVariantArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_COMMON_EXPORT vtkVariantArray : public vtkAbstractArray
 
 public:
   static vtkVariantArray* New();
-  vtkTypeRevisionMacro(vtkVariantArray,vtkAbstractArray);
+  vtkTypeMacro(vtkVariantArray,vtkAbstractArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // 
@@ -181,7 +181,6 @@ public:
   // Additional functions
   //
 
-  //BTX
   // Description:
   // Get the data at a particular index.
   vtkVariant & GetValue(vtkIdType id) const;
@@ -199,13 +198,14 @@ public:
 
   // Description:
   // Insert a value into the array from a variant.
-  void InsertVariantValue(vtkIdType idx, vtkVariant value);
+  void SetVariantValue(vtkIdType idx, vtkVariant value);
 
   // Description:
   // Expand the array by one and set the value at that location.
   // Return the array index of the inserted value.
   vtkIdType InsertNextValue(vtkVariant value);
 
+  //BTX
   // Description:
   // Return a pointer to the location in the internal array at the specified index.
   vtkVariant* GetPointer(vtkIdType id);
@@ -225,12 +225,10 @@ public:
   // Return the number of values in the array.
   vtkIdType GetNumberOfValues() { return this->MaxId + 1; }
 
-  //BTX
   // Description:
   // Return the indices where a specific value appears.
   virtual vtkIdType LookupValue(vtkVariant value);
   virtual void LookupValue(vtkVariant value, vtkIdList* ids);
-  //ETX
   
   // Description:
   // Tell the array explicitly that the data has changed.
@@ -276,10 +274,8 @@ private:
   vtkVariantArray(const vtkVariantArray&);  // Not implemented.
   void operator=(const vtkVariantArray&);  // Not implemented.
 
-  //BTX
   vtkVariantArrayLookup* Lookup;
   void UpdateLookup();
-  //ETX
 };
 
 #endif

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraph.h,v $
+  Module:    vtkGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@
 // wrappable vtkGraphEdge object, which has the same fields as vtkEdgeType
 // accessible through getter methods.
 //
-// To traverse all edges outgoing from a vertex, create a vtkOutEdgeIterator and 
+// To traverse all edges outgoing from a vertex, create a vtkOutEdgeIterator and
 // call graph->GetOutEdges(v, it). it->Next() returns a lightweight vtkOutEdgeType
 // containing the fields Id and Target. The source of the edge is always the
 // vertex that was passed as an argument to GetOutEdges().
@@ -75,13 +75,13 @@
 //
 // For graph types that are known to be compatible, calling ShallowCopy()
 // or DeepCopy() will work as expected.  When the outcome of a conversion
-// is unknown (i.e. setting a graph to a tree), CheckedShallowCopy() and 
-// CheckedDeepCopy() exist which are identical to ShallowCopy() and DeepCopy(), 
+// is unknown (i.e. setting a graph to a tree), CheckedShallowCopy() and
+// CheckedDeepCopy() exist which are identical to ShallowCopy() and DeepCopy(),
 // except that instead of emitting an error for an incompatible structure,
 // the function returns false.  This allows you to programmatically check
 // structure compatibility without causing error messages.
 //
-// To construct a graph, use vtkMutableDirectedGraph or 
+// To construct a graph, use vtkMutableDirectedGraph or
 // vtkMutableUndirectedGraph. You may then use CheckedShallowCopy
 // to set the contents of a mutable graph type into one of the non-mutable
 // types vtkDirectedGraph, vtkUndirectedGraph.
@@ -112,7 +112,7 @@
 // To configure the vtkGraph with a pedigree ID mapping, create a
 // vtkDataArray that will store the pedigree IDs and set that array as
 // the pedigree ID array for the vertices via
-// GetVertexData()->SetPedigreeIds(). 
+// GetVertexData()->SetPedigreeIds().
 //
 // .SECTION Distributed graphs
 //
@@ -191,9 +191,9 @@
 // vertex to the same processor where it already resides.
 
 // .SECTION See Also
-// vtkDirectedGraph vtkUndirectedGraph vtkMutableDirectedGraph 
+// vtkDirectedGraph vtkUndirectedGraph vtkMutableDirectedGraph
 // vtkMutableUndirectedGraph vtkTree vtkDistributedGraphHelper
-// 
+//
 // .SECTION Thanks
 // Thanks to Brian Wylie, Timothy Shead, Ken Moreland of Sandia National
 // Laboratories and Douglas Gregor of Indiana University for designing these
@@ -208,6 +208,7 @@ class vtkAdjacentVertexIterator;
 class vtkCellArray;
 class vtkEdgeListIterator;
 class vtkDataSetAttributes;
+class vtkDirectedGraph;
 class vtkGraphEdge;
 class vtkGraphEdgePoints;
 class vtkDistributedGraphHelper;
@@ -216,6 +217,7 @@ class vtkIdTypeArray;
 class vtkInEdgeIterator;
 class vtkOutEdgeIterator;
 class vtkPoints;
+class vtkUndirectedGraph;
 class vtkVertexListIterator;
 class vtkVariant;
 class vtkVariantArray;
@@ -272,7 +274,7 @@ struct vtkEdgeType : vtkEdgeBase
 class VTK_FILTERING_EXPORT vtkGraph : public vtkDataObject
 {
 public:
-  vtkTypeRevisionMacro(vtkGraph, vtkDataObject);
+  vtkTypeMacro(vtkGraph, vtkDataObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -290,17 +292,17 @@ public:
 
   // Description:
   // These methods return the point (0,0,0) until the points structure
-  // is created, when it returns the actual point position. In a 
-  // distributed graph, only the points for local vertices can be 
+  // is created, when it returns the actual point position. In a
+  // distributed graph, only the points for local vertices can be
   // retrieved.
   double *GetPoint(vtkIdType ptId);
   void GetPoint(vtkIdType ptId, double x[3]);
 
   // Description:
   // Returns the points array for this graph.
-  // If points is not yet constructed, generates and returns 
-  // a new points array filled with (0,0,0) coordinates. In a 
-  // distributed graph, only the points for local vertices can be 
+  // If points is not yet constructed, generates and returns
+  // a new points array filled with (0,0,0) coordinates. In a
+  // distributed graph, only the points for local vertices can be
   // retrieved or modified.
   vtkPoints* GetPoints();
   virtual void SetPoints(vtkPoints *points);
@@ -331,13 +333,13 @@ public:
   // Description:
   // The total of all incoming and outgoing vertices for vertex v.
   // For undirected graphs, this is simply the number of edges incident
-  // to v. In a distributed graph, the vertex v must be local to this 
+  // to v. In a distributed graph, the vertex v must be local to this
   // processor.
   virtual vtkIdType GetDegree(vtkIdType v);
 
   // Description:
   // The number of outgoing edges from vertex v.
-  // For undirected graphs, returns the same as GetDegree(). In a 
+  // For undirected graphs, returns the same as GetDegree(). In a
   // distributed graph, the vertex v must be local to this processor.
   virtual vtkIdType GetOutDegree(vtkIdType v);
 
@@ -363,7 +365,7 @@ public:
 
   // Description:
   // The number of incoming edges to vertex v.
-  // For undirected graphs, returns the same as GetDegree(). In a 
+  // For undirected graphs, returns the same as GetDegree(). In a
   // distributed graph, the vertex v must be local to this processor.
   virtual vtkIdType GetInDegree(vtkIdType v);
 
@@ -389,13 +391,13 @@ public:
 
   // Description:
   // Initializes the edge list iterator to iterate over all
-  // edges in the graph. Edges may not be traversed in order of 
+  // edges in the graph. Edges may not be traversed in order of
   // increasing edge id. In a distributed graph, this returns edges
   // that are stored locally.
   virtual void GetEdges(vtkEdgeListIterator *it);
-  
+
   // Description:
-  // The number of edges in the graph. In a distributed graph, 
+  // The number of edges in the graph. In a distributed graph,
   // this returns the number of edges stored locally.
   virtual vtkIdType GetNumberOfEdges();
 
@@ -404,16 +406,16 @@ public:
   // vertices in the graph. In a distributed graph, the iterator
   // traverses all local vertices.
   virtual void GetVertices(vtkVertexListIterator *it);
-  
+
   // Description:
   // The number of vertices in the graph. In a distributed graph,
   // returns the number of local vertices in the graph.
   virtual vtkIdType GetNumberOfVertices();
-  
+
   // BTX
   // Description:
-  // Sets the distributed graph helper of this graph, turning it into a 
-  // distributed graph. This operation can only be executed on an empty 
+  // Sets the distributed graph helper of this graph, turning it into a
+  // distributed graph. This operation can only be executed on an empty
   // graph.
   void SetDistributedGraphHelper(vtkDistributedGraphHelper *helper);
 
@@ -422,14 +424,14 @@ public:
   vtkDistributedGraphHelper *GetDistributedGraphHelper();
   //ETX
 
-  //BTX
   // Description:
   // Retrieve the vertex with the given pedigree ID. If successful,
   // returns the ID of the vertex. Otherwise, either the vertex data
   // does not have a pedigree ID array or there is no vertex with the
   // given pedigree ID, so this function returns -1.
+  // If the graph is a distributed graph, this method will return the
+  // Distributed-ID of the vertex.
   vtkIdType FindVertex(const vtkVariant& pedigreeID);
-  //ETX
 
   // Description:
   // Shallow copies the data object into this graph.
@@ -440,7 +442,7 @@ public:
   // Deep copies the data object into this graph.
   // If it is an incompatible graph, reports an error.
   virtual void DeepCopy(vtkDataObject *obj);
-  
+
   // Description:
   // Does a shallow copy of the topological information,
   // but not the associated attributes.
@@ -451,14 +453,14 @@ public:
   // but instead of reporting an error for an incompatible graph,
   // returns false.
   virtual bool CheckedShallowCopy(vtkGraph *g);
-  
+
   // Description:
   // Performs the same operation as DeepCopy(),
   // but instead of reporting an error for an incompatible graph,
   // returns false.
   virtual bool CheckedDeepCopy(vtkGraph *g);
 
-  // Decription:
+  // Description:
   // Reclaim unused memory.
   virtual void Squeeze();
 
@@ -540,6 +542,43 @@ public:
   // this vtkGraph object.
   vtkGraphInternals *GetGraphInternals(bool modifying);
 
+  // Description:
+  // Fills a list of edge indices with the edges contained in the induced
+  // subgraph formed by the vertices in the vertex list.
+  void GetInducedEdges(vtkIdTypeArray* verts, vtkIdTypeArray* edges);
+
+  // Description:
+  // Returns the attributes of the data object as a vtkFieldData.
+  // This returns non-null values in all the same cases as GetAttributes,
+  // in addition to the case of FIELD, which will return the field data
+  // for any vtkDataObject subclass.
+  virtual vtkFieldData* GetAttributesAsFieldData(int type);
+
+  // Description:
+  // Get the number of elements for a specific attribute type (VERTEX, EDGE, etc.).
+  virtual vtkIdType GetNumberOfElements(int type);
+
+  // Description:
+  // Dump the contents of the graph to standard output.
+  void Dump();
+
+  // Description:
+  // Returns the Id of the edge between vertex a and vertex b.
+  // This is independent of directionality of the edge, that is,
+  // if edge A->B exists or if edge B->A exists, this function will
+  // return its Id. If multiple edges exist between a and b, here is no guarantee
+  // about which one will be returned.
+  // Returns -1 if no edge exists between a and b.
+  vtkIdType GetEdgeId(vtkIdType a, vtkIdType b);
+
+  // Description:
+  // Convert the graph to a directed graph.
+  bool ToDirectedGraph(vtkDirectedGraph* g);
+
+  // Description:
+  // Convert the graph to an undirected graph.
+  bool ToUndirectedGraph(vtkUndirectedGraph* g);
+
 protected:
   //BTX
   vtkGraph();
@@ -551,7 +590,7 @@ protected:
   // to the newly-added (or found) vertex. Note that if propertyArr is
   // non-null and the vertex data contains pedigree IDs, a vertex will
   // only be added if there is no vertex with that pedigree ID.
-  void AddVertexInternal(vtkVariantArray *propertyArr = 0, 
+  void AddVertexInternal(vtkVariantArray *propertyArr = 0,
                          vtkIdType *vertex = 0);
 
   // Description:
@@ -566,15 +605,33 @@ protected:
   // by mutable subclasses. If propertyArr is non-null, it specifies
   // the properties to be attached to the newly-created edge. If
   // non-null, edge will receive the newly-added edge.
-  void AddEdgeInternal(vtkIdType u, vtkIdType v, bool directed, 
+  void AddEdgeInternal(vtkIdType u, vtkIdType v, bool directed,
                        vtkVariantArray *propertyArr, vtkEdgeType *edge);
   void AddEdgeInternal(const vtkVariant& uPedigree, vtkIdType v, bool directed,
                        vtkVariantArray *propertyArr, vtkEdgeType *edge);
   void AddEdgeInternal(vtkIdType u, const vtkVariant& vPedigree, bool directed,
                        vtkVariantArray *propertyArr, vtkEdgeType *edge);
   void AddEdgeInternal(const vtkVariant& uPedigree, const vtkVariant& vPedigree,
-                       bool directed, vtkVariantArray *propertyArr, 
+                       bool directed, vtkVariantArray *propertyArr,
                        vtkEdgeType *edge);
+
+  // Description:
+  // Removes a vertex from the graph, along with any adjacent edges.
+  // This invalidates the id of the last vertex, since it is reassigned to v.
+  void RemoveVertexInternal(vtkIdType v, bool directed);
+
+  // Description:
+  // Removes an edge from the graph.
+  // This invalidates the id of the last edge, since it is reassigned to e.
+  void RemoveEdgeInternal(vtkIdType e, bool directed);
+
+  // Description:
+  // Removes a collection of vertices from the graph, along with any adjacent edges.
+  void RemoveVerticesInternal(vtkIdTypeArray* arr, bool directed);
+
+  // Description:
+  // Removes a collection of edges from the graph.
+  void RemoveEdgesInternal(vtkIdTypeArray* arr, bool directed);
   //ETX
 
   // Description:
@@ -620,9 +677,9 @@ protected:
   // Builds a mapping from edge id to source/target vertex id.
   void BuildEdgeList();
 
+  //BTX
   // Description:
   // Friend iterator classes.
-  //BTX
   friend class vtkAdjacentVertexIterator;
   friend class vtkEdgeListIterator;
   friend class vtkInEdgeIterator;
@@ -643,7 +700,7 @@ protected:
 
   // Description:
   // Time at which bounds were computed.
-  vtkTimeStamp ComputeTime; 
+  vtkTimeStamp ComputeTime;
 
   // Description:
   // The vertex locations.

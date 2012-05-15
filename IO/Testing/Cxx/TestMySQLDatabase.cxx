@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestMySQLDatabase.cxx,v $
+  Module:    TestMySQLDatabase.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,6 +20,18 @@
 // .SECTION Thanks
 // Thanks to Andrew Wilson and Philippe Pebay from Sandia National Laboratories 
 // for implementing this test.
+//
+// You should set VTK_MYSQL_TEST_URL to the address of a MySQL
+// database that you can use for testing.  For example, if you have
+// MySQL running on foo.mycompany.com, your test user is called
+// 'vtktest' and the database is called 'elephant', the URL looks like
+// 'mysql://vtktest@foo.mycompany.com/elephant'.
+//
+// We recommend creating a user and a 'vtktest' database, then giving
+// the user in question rights *only* to that database.  The password
+// 'vtktest' is hard-coded into this file for the moment until we
+// decide whether it's a good idea to put any kind of password in
+// CMake.
 
 #include "vtkMySQLDatabase.h"
 #include "vtkSQLQuery.h"
@@ -32,12 +44,12 @@
 #include "vtkVariantArray.h"
 #include "vtkToolkits.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 int TestMySQLDatabase( int, char ** const )
 {
   vtkMySQLDatabase* db = vtkMySQLDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( VTK_MYSQL_TEST_URL ) );
-  bool status = db->Open();
+  bool status = db->Open("vtktest");
 
   if ( ! status )
     {
@@ -173,7 +185,7 @@ int TestMySQLDatabase( int, char ** const )
   cerr << "@@ Converting the schema into a MySQL database...";
 
   db = vtkMySQLDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( VTK_MYSQL_TEST_URL ) );
-  status = db->Open();
+  status = db->Open("vtktest");
 
   if ( ! status )
     {
@@ -200,7 +212,7 @@ int TestMySQLDatabase( int, char ** const )
     return 1;
     }
 
-  vtkstd::vector<vtkStdString> tables;
+  std::vector<vtkStdString> tables;
   while ( query->NextRow() )
     {
     tables.push_back( query->DataValue( 0 ).ToString() );
@@ -485,7 +497,7 @@ int TestMySQLDatabase( int, char ** const )
   // 8. Drop tables
   cerr << "@@ Dropping these tables...";
 
-  for ( vtkstd::vector<vtkStdString>::iterator it = tables.begin();
+  for ( std::vector<vtkStdString>::iterator it = tables.begin();
         it != tables.end(); ++ it )
     {
     queryStr = "DROP TABLE ";

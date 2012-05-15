@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBYUReader.h,v $
+  Module:    vtkBYUReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IO_EXPORT vtkBYUReader : public vtkPolyDataAlgorithm
 public:
   static vtkBYUReader *New();
 
-  vtkTypeRevisionMacro(vtkBYUReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkBYUReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -80,6 +80,13 @@ public:
   // Set/Get the part number to be read.
   vtkSetClampMacro(PartNumber,int,1,VTK_LARGE_INTEGER);
   vtkGetMacro(PartNumber,int);
+
+  // Description:
+  // Returns 1 if this file can be read and 0 if the file cannot be read.
+  // Because BYU files do not have anything in the header specifying the file
+  // type, the result is not definitive.  Invalid files may still return 1
+  // although a valid file will never return 0.
+  static int CanReadFile(const char *filename);
 
 protected:
   vtkBYUReader();

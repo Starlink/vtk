@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericEdgeTable.cxx,v $
+  Module:    vtkGenericEdgeTable.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,10 +15,9 @@
 #include "vtkGenericEdgeTable.h"
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/vector>
+#include <vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkGenericEdgeTable, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkGenericEdgeTable);
 
 static int PRIME_NUMBERS[] = {1, 3, 7, 13, 31, 61, 127,  251,  509,  1021,
@@ -42,8 +41,8 @@ vtkGenericEdgeTable::PointEntry::PointEntry(int size)
 class vtkEdgeTablePoints
 {
 public:
-  typedef vtkstd::vector<vtkGenericEdgeTable::PointEntry> VectorPointTableType;
-  typedef vtkstd::vector<VectorPointTableType> PointTableType;
+  typedef std::vector<vtkGenericEdgeTable::PointEntry> VectorPointTableType;
+  typedef std::vector<VectorPointTableType> PointTableType;
 
   void Resize(vtkIdType size);
   void LoadFactor();
@@ -112,8 +111,8 @@ void vtkEdgeTablePoints::DumpPoints()
 class vtkEdgeTableEdge
 {
 public:
-  typedef vtkstd::vector<vtkGenericEdgeTable::EdgeEntry> VectorEdgeTableType;
-  typedef vtkstd::vector<VectorEdgeTableType> EdgeTableType;
+  typedef std::vector<vtkGenericEdgeTable::EdgeEntry> VectorEdgeTableType;
+  typedef std::vector<VectorEdgeTableType> EdgeTableType;
 
   void Resize(vtkIdType size);
   void LoadFactor();

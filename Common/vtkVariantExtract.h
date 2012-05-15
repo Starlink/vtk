@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantExtract.h,v $
+  Module:    vtkVariantExtract.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,23 +19,28 @@
 
 =========================================================================*/
 
-#ifndef __vtkVariantExtract_h
-#define __vtkVariantExtract_h
-
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
-// Description:
+// .NAME vtkVariantExtract
+// .SECTION Description
 // Performs an explicit conversion from a vtkVariant to the type that it contains.  Implicit
 // conversions are *not* performed, so casting a vtkVariant containing one type (e.g. double)
 // to a different type (e.g. string) will not convert between types.
 //
 // Callers should use the 'valid' flag to verify whether the extraction succeeded.
+
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
+#ifndef __vtkVariantExtract_h
+#define __vtkVariantExtract_h
+
 template<typename T>
 T vtkVariantExtract(const vtkVariant& value, bool& valid = 0)
 {
-  vtkGenericWarningMacro(<< "cannot cast vtkVariant containing " << value.GetTypeAsString() << " to unsupported type.");
+  vtkGenericWarningMacro(
+    << "Cannot convert vtkVariant containing [" << value.GetTypeAsString() << "] "
+    << "to unsupported type [" << typeid(T).name() << "].  "
+    << "Create a vtkVariantExtract<> specialization to eliminate this warning."
+    );
 
   valid = false;
   
@@ -155,6 +160,13 @@ inline vtkStdString vtkVariantExtract<vtkStdString>(const vtkVariant& value, boo
 {
   valid = value.IsString();
   return valid ? value.ToString() : vtkStdString();
+}
+
+template<>
+inline vtkUnicodeString vtkVariantExtract<vtkUnicodeString>(const vtkVariant& value, bool& valid)
+{
+  valid = value.IsUnicodeString();
+  return valid ? value.ToUnicodeString() : vtkUnicodeString();
 }
 
 template<>

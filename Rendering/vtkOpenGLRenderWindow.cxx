@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLRenderWindow.cxx,v $
+  Module:    vtkOpenGLRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,6 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 
-vtkCxxRevisionMacro(vtkOpenGLRenderWindow, "$Revision: 1.104 $");
 #endif
 
 vtkCxxSetObjectMacro(vtkOpenGLRenderWindow, ExtensionManager, vtkOpenGLExtensionManager);
@@ -101,6 +100,12 @@ vtkOpenGLRenderWindow::~vtkOpenGLRenderWindow()
   this->SetTextureUnitManager(0);
   this->SetExtensionManager(0);
   this->SetHardwareSupport(0);
+}
+
+// ----------------------------------------------------------------------------
+unsigned long vtkOpenGLRenderWindow::GetContextCreationTime()
+{
+  return this->ContextCreationTime.GetMTime();
 }
 
 // ----------------------------------------------------------------------------
@@ -233,38 +238,18 @@ void vtkOpenGLRenderWindow::StereoUpdate(void)
 
 void vtkOpenGLRenderWindow::OpenGLInit()
 {
-  // When a new OpenGL context is created, we want to get rid of the old OpenGL
-  // extension manager, if any.
-  this->SetExtensionManager(0);
+  OpenGLInitContext();
+  OpenGLInitState();
+}
 
-  this->ContextCreationTime.Modified();
+void vtkOpenGLRenderWindow::OpenGLInitState()
+{
   glMatrixMode( GL_MODELVIEW );
   glDepthFunc( GL_LEQUAL );
   glEnable( GL_DEPTH_TEST );
   glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
   // initialize blending for transparency
-  
-  // We have to set the function pointer to null, otherwise the following
-  // scenario would fail on Windows (and maybe other kind of configurations):
-  // 1. Render onscreen on GPU that supports OpenGL 1.4
-  // 2. Switch to offscreen with GDI Windows implementation (1.1)
-  vtkgl::BlendFuncSeparate=0;
-  
-  // Try to initialize vtkgl::BlendFuncSeparate() if available.
-  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
-  if (extensions->ExtensionSupported("GL_VERSION_1_4"))
-    {
-    extensions->LoadExtension("GL_VERSION_1_4");
-    }
-  else
-    {
-    if (extensions->ExtensionSupported("GL_EXT_blend_func_separate"))
-      {
-      extensions->LoadCorePromotedExtension("GL_EXT_blend_func_separate");
-      }
-    }
-  
   if(vtkgl::BlendFuncSeparate!=0)
     {
     vtkgl::BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
@@ -318,6 +303,34 @@ void vtkOpenGLRenderWindow::OpenGLInit()
   glPixelStorei(GL_PACK_ALIGNMENT,1);
 }
 
+void vtkOpenGLRenderWindow::OpenGLInitContext()
+{
+  // When a new OpenGL context is created, force an update
+  // of the extension manager by calling modified on it.
+  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
+  extensions->Modified();
+
+  this->ContextCreationTime.Modified();
+
+  // We have to set the function pointer to null, otherwise the following
+  // scenario would fail on Windows (and maybe other kind of configurations):
+  // 1. Render onscreen on GPU that supports OpenGL 1.4
+  // 2. Switch to offscreen with GDI Windows implementation (1.1)
+  vtkgl::BlendFuncSeparate=0;
+
+  // Try to initialize vtkgl::BlendFuncSeparate() if available.
+  if (extensions->ExtensionSupported("GL_VERSION_1_4"))
+    {
+    extensions->LoadExtension("GL_VERSION_1_4");
+    }
+  else
+    {
+    if (extensions->ExtensionSupported("GL_EXT_blend_func_separate"))
+      {
+      extensions->LoadCorePromotedExtension("GL_EXT_blend_func_separate");
+      }
+    }
+}
 
 void vtkOpenGLRenderWindow::PrintSelf(ostream& os, vtkIndent indent)
 {
@@ -613,13 +626,16 @@ int vtkOpenGLRenderWindow::SetPixelData(int x1, int y1, int x2, int y2,
     ;
     }
 
+  GLint buffer;
+  glGetIntegerv(GL_DRAW_BUFFER, &buffer);
+
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
   if (y1 < y2)
@@ -723,6 +739,8 @@ int vtkOpenGLRenderWindow::SetPixelData(int x1, int y1, int x2, int y2,
   // This seems to be necessary for the image to show up
   glFlush();  
 #endif
+
+  glDrawBuffer(buffer);
   
   if (glGetError() != GL_NO_ERROR)
     {
@@ -953,13 +971,16 @@ int vtkOpenGLRenderWindow::SetRGBAPixelData(int x1, int y1, int x2, int y2,
     ;
     }  
 
+  GLint buffer;
+  glGetIntegerv(GL_DRAW_BUFFER, &buffer);
+
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
   if (y1 < y2)
@@ -1019,6 +1040,8 @@ int vtkOpenGLRenderWindow::SetRGBAPixelData(int x1, int y1, int x2, int y2,
   
   // This seems to be necessary for the image to show up
   glFlush();  
+
+  glDrawBuffer(buffer);
 
   if (glGetError() != GL_NO_ERROR)
     {
@@ -1257,13 +1280,16 @@ int vtkOpenGLRenderWindow::SetRGBACharPixelData(int x1, int y1, int x2,
     ;
     }
 
+  GLint buffer;
+  glGetIntegerv(GL_DRAW_BUFFER, &buffer);
+
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
 
@@ -1340,6 +1366,8 @@ int vtkOpenGLRenderWindow::SetRGBACharPixelData(int x1, int y1, int x2,
 
   // This seems to be necessary for the image to show up
   glFlush();  
+
+  glDrawBuffer(buffer);
 
   if (glGetError() != GL_NO_ERROR)
     {
@@ -1955,4 +1983,13 @@ vtkTextureUnitManager *vtkOpenGLRenderWindow::GetTextureUnitManager()
     manager->Delete();
     }
   return this->TextureUnitManager;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Block the thread until the actual rendering is finished().
+// Useful for measurement only.
+void vtkOpenGLRenderWindow::WaitForCompletion()
+{
+  glFinish();
 }

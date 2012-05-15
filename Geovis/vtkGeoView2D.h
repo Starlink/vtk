@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoView2D.h,v $
+  Module:    vtkGeoView2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_GEOVIS_EXPORT vtkGeoView2D : public vtkRenderView
 {
 public:
   static vtkGeoView2D *New();
-  vtkTypeRevisionMacro(vtkGeoView2D,vtkRenderView);
+  vtkTypeMacro(vtkGeoView2D,vtkRenderView);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
 
   vtkGeoView2D();
@@ -57,18 +57,22 @@ public:
   virtual void SetSurface(vtkGeoTerrain2D* surf);
 
   // Description:
+  // Returns the transform associated with the surface.
+  virtual vtkAbstractTransform* GetTransform();
+
+  // Description:
   // Apply the view theme to this view.
   virtual void ApplyViewTheme(vtkViewTheme* theme);
+
+  // Description:
+  // Update and render the view.
+  virtual void Render();
 
 protected:
   vtkGeoTerrain2D* Surface;
   vtkAssembly* Assembly;
 
   virtual void PrepareForRendering();
-
-  // Description:
-  // Make the tranform the same as the terrain.
-  virtual void AddRepresentationInternal(vtkDataRepresentation* rep);
 
 private:
   vtkGeoView2D(const vtkGeoView2D&); // Not implemented

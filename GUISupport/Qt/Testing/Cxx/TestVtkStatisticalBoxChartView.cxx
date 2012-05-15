@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestVtkStatisticalBoxChartView.cxx,v $
+  Module:    TestVtkStatisticalBoxChartView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,7 @@
 -------------------------------------------------------------------------*/
 
 #include "vtkQtStatisticalBoxChartView.h"
-#include "vtkQtChartTableRepresentation.h"
+#include "vtkQtChartRepresentation.h"
 
 #include "vtkTable.h"
 #include "vtkDoubleArray.h"
@@ -71,8 +71,8 @@ int TestVtkStatisticalBoxChartView(int argc, char* argv[])
 
   // Here is one way to add the table to the view
   // by manually creating a chart representation.
-  vtkSmartPointer<vtkQtChartTableRepresentation> rep =
-    vtkSmartPointer<vtkQtChartTableRepresentation>::New();
+  vtkSmartPointer<vtkQtChartRepresentation> rep =
+    vtkSmartPointer<vtkQtChartRepresentation>::New();
   rep->SetInput(table);
   chartView->AddRepresentation(rep);
 

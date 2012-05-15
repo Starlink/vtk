@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetAttributes.h,v $
+  Module:    vtkDataSetAttributes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ public:
   // Construct object with copying turned on for all data.
   static vtkDataSetAttributes *New();
   
-  vtkTypeRevisionMacro(vtkDataSetAttributes,vtkFieldData);
+  vtkTypeMacro(vtkDataSetAttributes,vtkFieldData);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -90,6 +90,7 @@ public:
     TENSORS=4,
     GLOBALIDS=5,
     PEDIGREEIDS=6,
+    EDGEFLAG=7,
     NUM_ATTRIBUTES
   };
 
@@ -165,6 +166,7 @@ public:
   //  vtkDataSetAttributes::TENSORS = 4
   //  vtkDataSetAttributes::GLOBALIDS = 5
   //  vtkDataSetAttributes::PEDIGREEIDS = 6
+  //  vtkDataSetAttributes::EDGEFLAG = 7
   // Returns the index of the array if succesful, -1 if the array 
   // is not in the list of arrays.
   int SetActiveAttribute(const char* name, int attributeType);
@@ -203,6 +205,8 @@ public:
   // Description:
   // Remove an array (with the given name) from the list of arrays.
   virtual void RemoveArray(const char *name);
+  virtual void RemoveArray(int index);
+
 
   // Description:
   // Given an integer attribute type, this static method returns a string type
@@ -577,8 +581,6 @@ protected:
 
   int* TargetIndices;
 
-  virtual void RemoveArray(int index);
-
   static const int NumberOfAttributeComponents[NUM_ATTRIBUTES];
   static const int AttributeLimits[NUM_ATTRIBUTES];
   static const char AttributeNames[NUM_ATTRIBUTES][12];
@@ -598,6 +600,7 @@ public:
   // This public class is used to perform set operations, other misc. 
   // operations on fields. For example, vtkAppendFilter uses it to 
   // determine which attributes the input datasets share in common.
+  class vtkInternalComponentNames;
   class VTK_FILTERING_EXPORT FieldList
   {
   public:
@@ -608,12 +611,22 @@ public:
     void InitializeFieldList(vtkDataSetAttributes* dsa);
     void IntersectFieldList(vtkDataSetAttributes* dsa);
 
+    // Description:
+    // Similar to IntersectFieldList() except that it builds a union of the
+    // array list. To determine the active attributes, it still, however, takes
+    // an intersection.
+    // WARNING!!!-IntersectFieldList() and UnionFieldList() should not be
+    // intermixed. 
+    void UnionFieldList(vtkDataSetAttributes* dsa);
+
     //Determine whether data is available
     int IsAttributePresent(int attrType); //true/false attributes specified
     
     // Accessor methods.
     int GetNumberOfFields() { return this->NumberOfFields; }
     int GetFieldIndex(int i) { return this->FieldIndices[i]; }
+    const char* GetFieldName(int i) { return this->Fields[i]; }
+    int GetFieldComponents(int i) { return this->FieldComponents[i]; }
     int GetDSAIndex(int index, int i) { return this->DSAIndices[index][i]; }
     
     friend class vtkDataSetAttributes;
@@ -622,20 +635,25 @@ public:
     FieldList(const FieldList&) {} //prevent these methods from being used
     void operator=(const FieldList&) {}
 
+    void SetFieldIndex(int i, int index)
+      { this->FieldIndices[i] = index; }
   private:
     void SetField(int index, vtkAbstractArray *da);
     void RemoveField(const char *name);
     void ClearFields();
+    void GrowBy(unsigned int delta);
 
     int NumberOfFields; //the number of fields (including five named attributes)
     // These keep track of what is common across datasets. The first
-    // five items are always named attributes.
+    // six items are always named attributes.
     char** Fields;                     // the names of the fields
     int *FieldTypes;                   // the types of the fields
-    int *FieldComponents;              // the number of components in field
-    int *FieldIndices;                 // output data array index
+    int *FieldComponents;              // the number of components in field    
+    int *FieldIndices;                 // output data array index    
     vtkLookupTable **LUT;              // luts associated with each array
     vtkInformation **FieldInformation; // Information map associated with each array
+    
+    vtkInternalComponentNames **FieldComponentsNames;       // the name for each component in the field
 
     vtkIdType NumberOfTuples; // a running total of values
 
@@ -647,8 +665,8 @@ public:
     int **DSAIndices;
     int NumberOfDSAIndices;
     int CurrentInput;
-  };
-
+    
+  };  
 //ETX
 };
 

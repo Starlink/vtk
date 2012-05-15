@@ -4,14 +4,39 @@ VTK_MAKE_INSTANTIATOR3(vtk${KIT}Instantiator KitInstantiator_SRCS
                        VTK_${UKIT}_EXPORT
                        ${VTK_BINARY_DIR} "")
 
-ADD_LIBRARY(vtk${KIT} ${Kit_SRCS} ${Kit_EXTRA_SRCS} ${KitInstantiator_SRCS})
+VTK_ADD_LIBRARY(vtk${KIT} ${Kit_SRCS} ${Kit_EXTRA_SRCS} ${KitInstantiator_SRCS})
 SET(KIT_LIBRARY_TARGETS ${KIT_LIBRARY_TARGETS} vtk${KIT})
+
+# accumulate list of kit library target names
+# we export these in VTKConfig as VTK_LIBRARIES.
+set_property(GLOBAL APPEND PROPERTY VTK_LIBRARIES vtk${KIT})
+
+# Add target specific compile flags for ABI setttings
+IF(VTK_ABI_CXX_FLAGS)
+  SET_PROPERTY(TARGET vtk${KIT} APPEND
+    PROPERTY COMPILE_FLAGS "${VTK_ABI_CXX_FLAGS}")
+ENDIF(VTK_ABI_CXX_FLAGS)
 
 # Allow the user to customize their build with some local options
 #
 SET(LOCALUSERMACRODEFINED 0)
 INCLUDE (${VTK_BINARY_DIR}/${KIT}/LocalUserOptions.cmake OPTIONAL)
 INCLUDE (${VTK_SOURCE_DIR}/${KIT}/LocalUserOptions.cmake OPTIONAL)
+
+IF (VTK_WRAP_TCL OR VTK_WRAP_PYTHON OR VTK_WRAP_JAVA)
+  # set the include directories for the wrappers
+  SET(VTK_WRAP_INCLUDE_DIRS
+    ${VTK_INCLUDE_DIRS_BUILD_TREE}
+    ${VTK_INCLUDE_DIRS_SOURCE_TREE}
+    ${VTK_INCLUDE_DIRS_SYSTEM}
+  )
+  # if we are wrapping anything, then build hierarchy files
+  IF(VTK_IGNORE_BTX)
+  SET(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/vtk${KIT}Hierarchy.txt)
+  VTK_WRAP_HIERARCHY(vtk${KIT}Hierarchy
+    ${CMAKE_CURRENT_BINARY_DIR} "${Kit_SRCS}")
+  ENDIF(VTK_IGNORE_BTX)
+ENDIF (VTK_WRAP_TCL OR VTK_WRAP_PYTHON OR VTK_WRAP_JAVA)
 
 # if we are wrapping into Tcl then add the library and extra
 # source files
@@ -34,10 +59,11 @@ IF (VTK_WRAP_JAVA)
   INCLUDE(KitCommonJavaWrapBlock)
 ENDIF (VTK_WRAP_JAVA)
 
-TARGET_LINK_LIBRARIES(vtk${KIT} ${KIT_LIBS})
+TARGET_LINK_LIBRARIES(vtk${KIT} ${KIT_INTERFACE_LIBRARIES} ${KIT_LIBS})
 
 IF(NOT VTK_INSTALL_NO_LIBRARIES)
-  INSTALL(TARGETS vtk${KIT} 
+  INSTALL(TARGETS vtk${KIT}
+    EXPORT ${VTK_INSTALL_EXPORT_NAME}
     RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeLibraries
     LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries
     ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development)
@@ -57,7 +83,11 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     COMPONENT Development)
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
-VTK_EXPORT_KIT("${KIT}" "${UKIT}" "${Kit_SRCS}")
+IF(Kit_WRAP_HEADERS)
+  SET_SOURCE_FILES_PROPERTIES(${Kit_WRAP_HEADERS} PROPERTIES WRAP_HEADER 1)
+ENDIF(Kit_WRAP_HEADERS)
+SET(TMP_FILES ${Kit_SRCS} ${Kit_WRAP_HEADERS})
+VTK_EXPORT_KIT("${KIT}" "${UKIT}" "${TMP_FILES}")
 
 # If the user defined a custom macro, execute it now and pass in all the srcs
 #
@@ -75,3 +105,7 @@ IF(VTK_LIBRARY_PROPERTIES)
     ${VTK_LIBRARY_PROPERTIES}
     )
 ENDIF(VTK_LIBRARY_PROPERTIES)
+# Mark KIT_INTERFACE_LIBRARIES as LINK_INTERFACE_LIBRARIES such that any executable
+# or library that links vtk${KIT} also links against KIT_INTERFACE_LIBRARIES
+TARGET_LINK_LIBRARIES(vtk${KIT} LINK_INTERFACE_LIBRARIES ${KIT_INTERFACE_LIBRARIES})
+

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaForm.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAFORM_H
@@ -133,12 +128,12 @@ class METAIO_EXPORT MetaForm
             MET_FieldRecordType * mFw = new MET_FieldRecordType;
             MET_InitWriteField(mFw, _fieldName, _type, _length, _v);
             m_UserDefinedWriteFields.push_back(mFw);
-      
+
             MET_FieldRecordType * mFr = new MET_FieldRecordType;
             MET_InitReadField(mFr, _fieldName, _type, _required,
                               _dependsOn, _length);
             m_UserDefinedReadFields.push_back(mFr);
-      
+
             return true;
             }
 
@@ -171,7 +166,7 @@ class METAIO_EXPORT MetaForm
 
     char  m_FileName[255];
 
-    char  m_Comment[255];      
+    char  m_Comment[255];
 
     char  m_FormTypeName[255];
 
@@ -189,7 +184,7 @@ class METAIO_EXPORT MetaForm
     FieldsContainerType m_Fields;
     FieldsContainerType m_UserDefinedWriteFields;
     FieldsContainerType m_UserDefinedReadFields;
-    
+
     // protected functions
 
     virtual void M_Destroy(void);

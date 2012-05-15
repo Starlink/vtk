@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeCutter.cxx,v $
+  Module:    vtkHyperOctreeCutter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,8 +42,8 @@
 #include <math.h>
 #include <assert.h>
 #include "vtkHyperOctreeClipCutPointsGrabber.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeCutter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkHyperOctreeCutter);
 vtkCxxSetObjectMacro(vtkHyperOctreeCutter,CutFunction,vtkImplicitFunction);
 
@@ -144,7 +144,7 @@ int vtkHyperOctreeCutter::RequestData(vtkInformation *vtkNotUsed(request),
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   this->Input = vtkHyperOctree::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   this->Output=vtkPolyData::SafeDownCast(
@@ -1411,7 +1411,7 @@ void vtkHyperOctreeCutter::CutNode(vtkHyperOctreeCursor *cursor,
 //----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkHyperOctreeCutter::SetLocator(vtkPointLocator *locator)
+void vtkHyperOctreeCutter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator)
     {

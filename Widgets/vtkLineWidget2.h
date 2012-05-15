@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLineWidget2.h,v $
+  Module:    vtkLineWidget2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,7 @@
 // to position the points.
 //
 // To use this widget, you generally pair it with a vtkLineRepresentation
-// (or a subclass). Variuos options are available in the representation for 
+// (or a subclass). Various options are available in the representation for 
 // controlling how the widget appears, and how the widget functions.
 //
 // .SECTION Event Bindings
@@ -94,7 +94,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkLineWidget2,vtkAbstractWidget);
+  vtkTypeMacro(vtkLineWidget2,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -109,6 +109,11 @@ public:
   void SetRepresentation(vtkLineRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkLineRepresentation.
+  vtkLineRepresentation *GetLineRepresentation()
+    {return reinterpret_cast<vtkLineRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Create the default widget representation if one is not set. 
   void CreateDefaultRepresentation();

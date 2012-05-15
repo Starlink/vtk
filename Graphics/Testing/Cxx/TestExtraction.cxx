@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestExtraction.cxx,v $
+  Module:    TestExtraction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -133,6 +133,7 @@ int TestExtraction(int argc, char *argv[])
   //create a visualization pipeline to see the results
   renderer = vtkRenderer::New();  
   vtkRenderWindow *renwin = vtkRenderWindow::New();
+  renwin->SetMultiSamples(0);
   renwin->SetSize(600,600);
   renwin->AddRenderer(renderer);
   

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaArray.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.3 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAVECTOR_H
@@ -40,9 +35,9 @@
  *    REQUIRED: NDims, ByteOrderMSB, ElementDataType, DataFileName
  *
  * \author Stephen R. Aylward
- * 
+ *
  * \date August 29, 1999
- * 
+ *
  * Depends on:
  *    MetaUtils.h
  *    MetaForm.h
@@ -68,13 +63,13 @@ class METAIO_EXPORT MetaArray : public MetaForm
     ////
     MetaArray(void);
 
-    MetaArray(const char *_headerName);   
+    MetaArray(const char *_headerName);
 
-    MetaArray(MetaArray *_vector, 
+    MetaArray(MetaArray *_vector,
               bool _allocateElementData=false,
               bool _autoFreeElementData=false);
 
-    MetaArray(int _length, 
+    MetaArray(int _length,
               MET_ValueEnumType _elementType,
               int _elementNumberOfChannels=1,
               void *_elementData=NULL,
@@ -89,7 +84,7 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     void  Clear(void);
 
-    bool  InitializeEssential(int _nDims, 
+    bool  InitializeEssential(int _nDims,
                               MET_ValueEnumType _elementType,
                               int _elementNumberOfChannels=1,
                               void *_elementData=NULL,
@@ -165,11 +160,11 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     virtual bool Write(const char *_headName=NULL,
                        const char *_dataName=NULL,
-                       bool _writeElements=true, 
+                       bool _writeElements=true,
                        const void * _constElementData=NULL);
 
     virtual bool WriteStream(METAIO_STREAM::ofstream * _stream,
-                             bool _writeElements=true, 
+                             bool _writeElements=true,
                              const void * _constElementData=NULL);
 
   ////
@@ -187,7 +182,7 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     bool               m_AutoFreeElementData;
 
-    unsigned int       m_CompressedElementDataSize;
+    METAIO_STL::streamoff m_CompressedElementDataSize;
 
     char               m_ElementDataFileName[255];
 
@@ -207,7 +202,7 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     bool  M_WriteElements(METAIO_STREAM::ofstream * _fstream,
                           const void * _data,
-                          int _dataQuantity);
+                          METAIO_STL::streamoff _dataQuantity);
 
     };
 

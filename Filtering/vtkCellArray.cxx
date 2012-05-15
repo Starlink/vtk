@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellArray.cxx,v $
+  Module:    vtkCellArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkCellArray.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCellArray, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCellArray);
 
 //----------------------------------------------------------------------------
@@ -48,6 +47,14 @@ vtkCellArray::~vtkCellArray()
   this->Ia->Delete();
 }
 
+//----------------------------------------------------------------------------
+void vtkCellArray::Initialize()
+{
+  this->Ia->Initialize();
+  this->NumberOfCells = 0;
+  this->InsertLocation = 0;
+  this->TraversalLocation = 0;
+}
 
 //----------------------------------------------------------------------------
 // Returns the size of the largest cell. The size is the number of points
@@ -87,6 +94,34 @@ void vtkCellArray::SetCells(vtkIdType ncells, vtkIdTypeArray *cells)
 unsigned long vtkCellArray::GetActualMemorySize()
 {
   return this->Ia->GetActualMemorySize();
+}
+
+//----------------------------------------------------------------------------
+int vtkCellArray::GetNextCell(vtkIdList *pts)
+{
+  vtkIdType npts, *ppts;
+  if (this->GetNextCell(npts, ppts))
+    {
+    pts->SetNumberOfIds(npts);
+    for (vtkIdType i = 0; i < npts; i++)
+      {
+      pts->SetId(i, ppts[i]);
+      }
+    return 1;
+    }
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+void vtkCellArray::GetCell(vtkIdType loc, vtkIdList *pts)
+{
+  vtkIdType npts = this->Ia->GetValue(loc++);
+  vtkIdType *ppts = this->Ia->GetPointer(loc);
+  pts->SetNumberOfIds(npts);
+  for (vtkIdType i = 0; i < npts; i++)
+    {
+    pts->SetId(i, ppts[i]);
+    }
 }
 
 //----------------------------------------------------------------------------

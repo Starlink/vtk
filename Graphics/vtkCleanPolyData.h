@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCleanPolyData.h,v $
+  Module:    vtkCleanPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@
 //
 // If tolerance is specified precisely=0.0, then vtkCleanPolyData will use
 // the vtkMergePoints object to merge points (which is faster). Otherwise the
-// slower vtkPointLocator is used.  Before inserting points into the point
+// slower vtkIncrementalPointLocator is used.  Before inserting points into the point
 // locator, this class calls a function OperateOnPoint which can be used (in
 // subclasses) to further refine the cleaning process. See
 // vtkQuantizePolyDataPoints.
@@ -59,14 +59,14 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkCleanPolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkCleanPolyData *New();
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkCleanPolyData,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkCleanPolyData,vtkPolyDataAlgorithm);
 
   // Description:
   // By default ToleranceIsAbsolute is false and Tolerance is
@@ -78,28 +78,29 @@ public:
 
   // Description:
   // Specify tolerance in terms of fraction of bounding box length.
+  // Default is 0.0.
   vtkSetClampMacro(Tolerance,double,0.0,1.0);
   vtkGetMacro(Tolerance,double);
 
   // Description:
-  // Specify tolerance in absolute terms
+  // Specify tolerance in absolute terms. Default is 1.0.
   vtkSetClampMacro(AbsoluteTolerance,double,0.0,VTK_DOUBLE_MAX);
   vtkGetMacro(AbsoluteTolerance,double);
 
   // Description:
-  // Turn on/off conversion of degenerate lines to points
+  // Turn on/off conversion of degenerate lines to points. Default is On.
   vtkSetMacro(ConvertLinesToPoints,int);
   vtkBooleanMacro(ConvertLinesToPoints,int);
   vtkGetMacro(ConvertLinesToPoints,int);
 
   // Description:
-  // Turn on/off conversion of degenerate polys to lines
+  // Turn on/off conversion of degenerate polys to lines. Default is On.
   vtkSetMacro(ConvertPolysToLines,int);
   vtkBooleanMacro(ConvertPolysToLines,int);
   vtkGetMacro(ConvertPolysToLines,int);
 
   // Description:
-  // Turn on/off conversion of degenerate strips to polys
+  // Turn on/off conversion of degenerate strips to polys. Default is On.
   vtkSetMacro(ConvertStripsToPolys,int);
   vtkBooleanMacro(ConvertStripsToPolys,int);
   vtkGetMacro(ConvertStripsToPolys,int);
@@ -116,8 +117,8 @@ public:
   // Description:
   // Set/Get a spatial locator for speeding the search process. By
   // default an instance of vtkMergePoints is used.
-  virtual void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  virtual void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -164,7 +165,7 @@ protected:
   int ConvertPolysToLines;
   int ConvertStripsToPolys;
   int ToleranceIsAbsolute;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 
   int PieceInvariant;
 private:

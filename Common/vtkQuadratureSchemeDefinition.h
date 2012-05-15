@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadratureSchemeDefinition.h,v $
+  Module:    vtkQuadratureSchemeDefinition.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,15 +36,17 @@
 #include "vtkObject.h"
 
 class vtkInformationQuadratureSchemeDefinitionVectorKey;
+class vtkInformationStringKey;
 class vtkXMLDataElement;
 
 class VTK_COMMON_EXPORT vtkQuadratureSchemeDefinition : public vtkObject
 {
 public:
   // vtk stuff
-  vtkTypeRevisionMacro(vtkQuadratureSchemeDefinition,vtkObject);
+  vtkTypeMacro(vtkQuadratureSchemeDefinition,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkInformationQuadratureSchemeDefinitionVectorKey* DICTIONARY();
+  static vtkInformationStringKey* QUADRATURE_OFFSET_ARRAY_NAME();
 
   // Description:
   // New object in an unsuable state. You'll have to call
@@ -108,7 +110,7 @@ public:
     return this->ShapeFunctionWeights+idx;
   }
   // Description:
-  // Access to teh quadrature weights.
+  // Access to the quadrature weights.
   const double *GetQuadratureWeights() const { return this->QuadratureWeights; }
 
 protected:

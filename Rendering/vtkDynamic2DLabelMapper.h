@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDynamic2DLabelMapper.h,v $
+  Module:    vtkDynamic2DLabelMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -59,7 +59,7 @@ public:
   // Instantiate object with %%-#6.3g label format. By default, point ids
   // are labeled.
   static vtkDynamic2DLabelMapper *New();
-  vtkTypeRevisionMacro(vtkDynamic2DLabelMapper, vtkLabeledDataMapper);
+  vtkTypeMacro(vtkDynamic2DLabelMapper, vtkLabeledDataMapper);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

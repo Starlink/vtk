@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassThrough.cxx,v $
+  Module:    vtkPassThrough.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,12 +20,12 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPassThrough, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkPassThrough);
 
 //----------------------------------------------------------------------------
 vtkPassThrough::vtkPassThrough()
 {
+  this->DeepCopyInput = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -37,6 +37,8 @@ vtkPassThrough::~vtkPassThrough()
 void vtkPassThrough::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  os << indent << "DeepCopyInput: " 
+     << (this->DeepCopyInput ? "on" : "off") << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -49,6 +51,25 @@ int vtkPassThrough::RequestData(
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
   vtkDataObject* input = inInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkDataObject* output = outInfo->Get(vtkDataObject::DATA_OBJECT());
-  output->ShallowCopy(input);
+  if(this->DeepCopyInput)
+    {
+    output->DeepCopy(input);
+    }
+  else
+    {
+    output->ShallowCopy(input);
+    }
+
   return 1;
+}
+
+//----------------------------------------------------------------------------
+int vtkPassThrough::FillInputPortInformation(int port, vtkInformation* info)
+{
+    if (port == 0)
+    {
+        info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
+        return 1;
+    }
+    return 0;
 }

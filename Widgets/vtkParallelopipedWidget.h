@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParallelopipedWidget.h,v $
+  Module:    vtkParallelopipedWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -56,7 +56,7 @@ public:
   // Instantiate the object.
   static vtkParallelopipedWidget *New();
 
-  vtkTypeRevisionMacro(vtkParallelopipedWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkParallelopipedWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -75,6 +75,11 @@ public:
         reinterpret_cast<vtkWidgetRepresentation*>(r));
     }
   
+  // Description:
+  // Return the representation as a vtkParallelopipedRepresentation.
+  vtkParallelopipedRepresentation *GetParallelopipedRepresentation()
+    {return reinterpret_cast<vtkParallelopipedRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Enable/disable the creation of a chair on this widget. If off,
   // chairs cannot be created.

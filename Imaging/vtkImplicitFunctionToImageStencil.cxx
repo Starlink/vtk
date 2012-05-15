@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitFunctionToImageStencil.cxx,v $
+  Module:    vtkImplicitFunctionToImageStencil.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,12 +24,9 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImplicitFunctionToImageStencil, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkImplicitFunctionToImageStencil);
 vtkCxxSetObjectMacro(vtkImplicitFunctionToImageStencil, Input,
                      vtkImplicitFunction);
-vtkCxxSetObjectMacro(vtkImplicitFunctionToImageStencil, InformationInput,
-                     vtkImageData);
 
 //----------------------------------------------------------------------------
 vtkImplicitFunctionToImageStencil::vtkImplicitFunctionToImageStencil()
@@ -38,38 +35,11 @@ vtkImplicitFunctionToImageStencil::vtkImplicitFunctionToImageStencil()
   this->Threshold = 0;
 
   this->Input = NULL;
-  // InformationInput is an input used only for its information.
-  // The vtkImageStencilSource produces a structured data
-  // set with a specific "Spacing" and "Origin", and the
-  // InformationInput is a source of this information.
-  this->InformationInput = NULL;
-
-  // If no InformationInput is set, then the Spacing and Origin
-  // for the output must be set directly.
-  this->OutputOrigin[0] = 0;
-  this->OutputOrigin[1] = 0;
-  this->OutputOrigin[2] = 0;
-  this->OutputSpacing[0] = 1;
-  this->OutputSpacing[1] = 1;
-  this->OutputSpacing[2] = 1;
-
-  // The default output extent is essentially infinite, which allows
-  // this filter to produce any requested size.  This would not be a
-  // great source to connect to some sort of writer or viewer, it
-  // should only be connected to multiple-input filters that take
-  // compute their output extent from one of the other inputs.
-  this->OutputWholeExtent[0] = 0;
-  this->OutputWholeExtent[1] = VTK_LARGE_INTEGER >> 2;
-  this->OutputWholeExtent[2] = 0;
-  this->OutputWholeExtent[3] = VTK_LARGE_INTEGER >> 2;
-  this->OutputWholeExtent[4] = 0;
-  this->OutputWholeExtent[5] = VTK_LARGE_INTEGER >> 2;
 }
 
 //----------------------------------------------------------------------------
 vtkImplicitFunctionToImageStencil::~vtkImplicitFunctionToImageStencil()
 {
-  this->SetInformationInput(NULL);
   this->SetInput(NULL);
 }
 
@@ -79,55 +49,22 @@ void vtkImplicitFunctionToImageStencil::PrintSelf(ostream& os,
 {
   this->Superclass::PrintSelf(os,indent);
 
-    os << indent << "InformationInput: " << this->InformationInput << "\n";
-  os << indent << "OutputSpacing: " << this->OutputSpacing[0] << " " <<
-    this->OutputSpacing[1] << " " << this->OutputSpacing[2] << "\n";
-  os << indent << "OutputOrigin: " << this->OutputOrigin[0] << " " <<
-    this->OutputOrigin[1] << " " << this->OutputOrigin[2] << "\n";
-  os << indent << "OutputWholeExtent: " << this->OutputWholeExtent[0] << " " <<
-    this->OutputWholeExtent[1] << " " << this->OutputWholeExtent[2] << " " <<
-    this->OutputWholeExtent[3] << " " << this->OutputWholeExtent[4] << " " <<
-    this->OutputWholeExtent[5] << "\n";
   os << indent << "Input: " << this->Input << "\n";
   os << indent << "Threshold: " << this->Threshold << "\n";
 }
 
 //----------------------------------------------------------------------------
-int vtkImplicitFunctionToImageStencil::RequestInformation(
-  vtkInformation *,
-  vtkInformationVector **,
-  vtkInformationVector *outputVector)
+unsigned long vtkImplicitFunctionToImageStencil::GetMTime()
 {
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-  
-  int wholeExtent[6];
-  double spacing[3];
-  double origin[3];
+  unsigned long mTime = this->Superclass::GetMTime();
 
-  for (int i = 0; i < 3; i++)
+  if ( this->Input != NULL )
     {
-    wholeExtent[2*i] = this->OutputWholeExtent[2*i];
-    wholeExtent[2*i+1] = this->OutputWholeExtent[2*i+1];
-    spacing[i] = this->OutputSpacing[i];
-    origin[i] = this->OutputOrigin[i];
+    unsigned long nTime = this->Input->GetMTime();
+    mTime = ( nTime > mTime ? nTime : mTime );
     }
 
-  // If InformationInput is set, then get the spacing,
-  // origin, and whole extent from it.
-  if (this->InformationInput)
-    {
-    this->InformationInput->UpdateInformation();
-    this->InformationInput->GetWholeExtent(wholeExtent);
-    this->InformationInput->GetSpacing(spacing);
-    this->InformationInput->GetOrigin(origin);
-    }
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
-               wholeExtent, 6);
-  outInfo->Set(vtkDataObject::SPACING(), spacing, 3);
-  outInfo->Set(vtkDataObject::ORIGIN(), origin, 3);
-
-  return 1;
+  return mTime;
 }
 
 //----------------------------------------------------------------------------

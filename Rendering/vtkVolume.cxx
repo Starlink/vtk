@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolume.cxx,v $
+  Module:    vtkVolume.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolume, "$Revision: 1.88 $");
 vtkStandardNewMacro(vtkVolume);
 
 // Creates a Volume with the following defaults: origin(0,0,0) 
@@ -48,6 +47,7 @@ vtkVolume::vtkVolume()
     this->RGBArray[i]                    = NULL;
     this->GrayArray[i]                   = NULL;
     this->CorrectedScalarOpacityArray[i] = NULL;
+    this->GradientOpacityConstant[i]     = 0;
     }
   
   this->CorrectedStepSize           = -1;
@@ -191,9 +191,9 @@ void vtkVolume::SetMapper(vtkAbstractVolumeMapper *mapper)
     }
 }
 
-float vtkVolume::ComputeScreenCoverage( vtkViewport *vp )
+double vtkVolume::ComputeScreenCoverage( vtkViewport *vp )
 {
-  float coverage = 1.0;
+  double coverage = 1.0;
   
   vtkRenderer *ren = vtkRenderer::SafeDownCast( vp );
   
@@ -205,12 +205,12 @@ float vtkVolume::ComputeScreenCoverage( vtkViewport *vp )
     vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix( 
       aspect[0]/aspect[1], 0.0, 1.0 );
     double *bounds = this->GetBounds();
-    float minX =  1.0;
-    float maxX = -1.0;
-    float minY =  1.0;
-    float maxY = -1.0;
+    double minX =  1.0;
+    double maxX = -1.0;
+    double minY =  1.0;
+    double maxY = -1.0;
     int i, j, k;
-    float p[4];
+    double p[4];
     for ( k = 0; k < 2; k++ )
       {
       for ( j = 0; j < 2; j++ )
@@ -241,7 +241,6 @@ float vtkVolume::ComputeScreenCoverage( vtkViewport *vp )
     coverage = (coverage > 1.0 )?(1.0):(coverage);
     coverage = (coverage < 0.0 )?(0.0):(coverage);
     }
-  
   
   return coverage;
 }
@@ -275,20 +274,21 @@ double *vtkVolume::GetBounds()
   bbox[18] = bounds[0]; bbox[19] = bounds[2]; bbox[20] = bounds[4];
   bbox[21] = bounds[0]; bbox[22] = bounds[3]; bbox[23] = bounds[4];
   
-  // save the old transform
-  this->Transform->Push();
-  this->Transform->SetMatrix(this->GetMatrix());
+  // make sure matrix (transform) is up-to-date
+  this->ComputeMatrix();
 
   // and transform into actors coordinates
   fptr = bbox;
   for (n = 0; n < 8; n++) 
     {
-    this->Transform->TransformPoint(fptr,fptr);
+    double homogeneousPt[4] = {fptr[0], fptr[1], fptr[2], 1.0};
+    this->Matrix->MultiplyPoint(homogeneousPt, homogeneousPt);
+    fptr[0] = homogeneousPt[0] / homogeneousPt[3];
+    fptr[1] = homogeneousPt[1] / homogeneousPt[3];
+    fptr[2] = homogeneousPt[2] / homogeneousPt[3];
     fptr += 3;
     }
-  
-  this->Transform->Pop();  
-  
+
   // now calc the new bounds
   this->Bounds[0] = this->Bounds[2] = this->Bounds[4] = VTK_DOUBLE_MAX;
   this->Bounds[1] = this->Bounds[3] = this->Bounds[5] = -VTK_DOUBLE_MAX;
@@ -773,8 +773,9 @@ void vtkVolume::UpdateScalarOpacityforSampleSize( vtkRenderer *vtkNotUsed(ren),
         if (originalAlpha > 0.0001)
           {
           correctedAlpha = 
-            1.0-pow(static_cast<double>(1.0-originalAlpha),
-                    static_cast<double>(this->CorrectedStepSize));
+            1.0f-static_cast<float>(
+              pow(static_cast<double>(1.0f-originalAlpha),
+                  static_cast<double>(this->CorrectedStepSize)));
           }
         else
           {

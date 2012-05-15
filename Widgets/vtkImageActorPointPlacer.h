@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageActorPointPlacer.h,v $
+  Module:    vtkImageActorPointPlacer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkImageActorPointPlacer,vtkPointPlacer);
+  vtkTypeMacro(vtkImageActorPointPlacer,vtkPointPlacer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -111,7 +111,12 @@ public:
   // specified, they may lie anywhere on the supplied ImageActor.
   vtkSetVector6Macro( Bounds, double );
   vtkGetVector6Macro( Bounds, double );
-  
+
+  // Description:
+  // Set the world tolerance. This propagates it to the internal 
+  // BoundedPlanePointPlacer.
+  virtual void SetWorldTolerance( double s );
+    
 protected:
   vtkImageActorPointPlacer();
   ~vtkImageActorPointPlacer();

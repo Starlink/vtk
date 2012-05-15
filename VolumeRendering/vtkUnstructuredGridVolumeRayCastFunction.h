@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridVolumeRayCastFunction.h,v $
+  Module:    vtkUnstructuredGridVolumeRayCastFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class vtkUnstructuredGridVolumeRayCastIterator;
 class VTK_VOLUMERENDERING_EXPORT vtkUnstructuredGridVolumeRayCastFunction : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkUnstructuredGridVolumeRayCastFunction,vtkObject);
+  vtkTypeMacro(vtkUnstructuredGridVolumeRayCastFunction,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX

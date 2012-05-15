@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleTrackballCamera.h,v $
+  Module:    vtkInteractorStyleTrackballCamera.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleTrackballCamera : public vtkInterac
 {
 public:
   static vtkInteractorStyleTrackballCamera *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleTrackballCamera,vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleTrackballCamera,vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

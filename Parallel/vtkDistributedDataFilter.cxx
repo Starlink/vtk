@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDistributedDataFilter.cxx,v $
+  Module:    vtkDistributedDataFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,9 +58,8 @@
 #include "vtkMPIController.h"
 #endif
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkDistributedDataFilter, "$Revision: 1.52 $")
 
 vtkStandardNewMacro(vtkDistributedDataFilter)
 
@@ -68,15 +67,21 @@ vtkStandardNewMacro(vtkDistributedDataFilter)
 #define TEMP_INSIDE_BOX_FLAG      "___D3___WHERE"
 #define TEMP_NODE_ID_NAME         "___D3___GlobalNodeIds"
 
-#include <vtkstd/set>
-#include <vtkstd/map>
-#include <vtkstd/algorithm>
+#include <set>
+#include <map>
+#include <algorithm>
 
 class vtkDistributedDataFilterSTLCloak
 {
 public:
-  vtkstd::map<int, int> IntMap;
-  vtkstd::multimap<int, int> IntMultiMap;
+  std::map<int, int> IntMap;
+  std::multimap<int, int> IntMultiMap;
+};
+
+class vtkDistributedDataFilter::vtkInternals
+{
+public:
+  std::vector<int> UserRegionAssignments;
 };
 
 //----------------------------------------------------------------------------
@@ -104,6 +109,7 @@ vtkDistributedDataFilter::vtkDistributedDataFilter()
   this->UseMinimalMemory = 0;
 
   this->UserCuts = 0;
+  this->Internals = new vtkDistributedDataFilter::vtkInternals();
 }
 
 //----------------------------------------------------------------------------
@@ -140,6 +146,8 @@ vtkDistributedDataFilter::~vtkDistributedDataFilter()
     this->UserCuts->Delete();
     this->UserCuts = NULL;
     }
+  delete this->Internals;
+  this->Internals = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -165,6 +173,22 @@ void vtkDistributedDataFilter::SetCuts(vtkBSPCuts* cuts)
     this->Kdtree->SetCuts(cuts);
     }
   this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkDistributedDataFilter::SetUserRegionAssignments(
+  const int *map, int numRegions)
+{
+  std::vector<int> copy(this->Internals->UserRegionAssignments);
+  this->Internals->UserRegionAssignments.resize(numRegions);
+  for (int cc=0; cc < numRegions; cc++)
+    {
+    this->Internals->UserRegionAssignments[cc] = map[cc];
+    }
+  if (copy != this->Internals->UserRegionAssignments)
+    {
+    this->Modified();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -410,7 +434,7 @@ int vtkDistributedDataFilter::RequestData(
   this->GhostLevel = outInfo->Get(
     vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS());
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *inputDS = vtkDataSet::GetData(inputVector[0], 0);
   vtkUnstructuredGrid *outputUG = vtkUnstructuredGrid::GetData(outInfo);
   if (inputDS && outputUG)
@@ -439,7 +463,7 @@ int vtkDistributedDataFilter::RequestData(
   // Collect information about datatypes all the processes have at all the leaf
   // nodes. Ideally all processes will either have the same type or an empty
   // dataset. This assumes that all processes have the same composite structure.
-  vtkstd::vector<int> leafTypes;
+  std::vector<int> leafTypes;
   for (iter->InitTraversal(); !iter->IsDoneWithTraversal();
     iter->GoToNextItem())
     {
@@ -463,7 +487,7 @@ int vtkDistributedDataFilter::RequestData(
       {
       for (int cc=1; cc < numProcs; cc++)
         {
-        vtkstd::vector<int> receivedTypes;
+        std::vector<int> receivedTypes;
         receivedTypes.resize(numLeaves, -1);
         if (!this->Controller->Receive(&receivedTypes[0],
             numLeaves, cc, 1020202))
@@ -510,8 +534,8 @@ int vtkDistributedDataFilter::RequestData(
         continue;
         }
 
-      ds = vtkDataSet::SafeDownCast(
-        vtkDataObjectTypes::NewDataObject(leafTypes[cc]));
+      ds.TakeReference(vtkDataSet::SafeDownCast(
+        vtkDataObjectTypes::NewDataObject(leafTypes[cc])));
       }
     vtkSmartPointer<vtkUnstructuredGrid> ug =
       vtkSmartPointer<vtkUnstructuredGrid>::New();
@@ -760,8 +784,7 @@ int vtkDistributedDataFilter::PartitionDataAndAssignToProcesses(vtkDataSet *set)
   this->Kdtree->SetController(this->Controller);
   this->Kdtree->SetNumberOfRegionsOrMore(this->NumProcesses);
   this->Kdtree->SetMinCells(0);
-
-  this->Kdtree->SetDataSet(set); 
+  this->Kdtree->SetDataSet(set);
 
   // BuildLocator is smart enough to rebuild the k-d tree only if
   // the input geometry has changed, or the k-d tree build parameters
@@ -786,6 +809,22 @@ int vtkDistributedDataFilter::PartitionDataAndAssignToProcesses(vtkDataSet *set)
     this->Kdtree->Delete();
     this->Kdtree = NULL;
     return 1;
+    }
+
+  if (this->Internals->UserRegionAssignments.size() > 0)
+    {
+    if (
+      static_cast<int>(this->Internals->UserRegionAssignments.size()) !=
+      nregions)
+      {
+      vtkWarningMacro("Mismatch in number of user-defined regions and regions"
+        " the in KdTree. Ignoring user-defined regions.");
+      }
+    else
+      {
+      this->Kdtree->AssignRegions(
+        &this->Internals->UserRegionAssignments[0], nregions);
+      }
     }
 
   return 0;
@@ -844,7 +883,7 @@ vtkUnstructuredGrid *
   for (int localPtId = 0; localPtId < numPoints; localPtId++)
     {
     const int id = gnids[localPtId];
-    globalToLocalMap.IntMap.insert(vtkstd::pair<const int, int>(id, localPtId));
+    globalToLocalMap.IntMap.insert(std::pair<const int, int>(id, localPtId));
     }
 
   vtkUnstructuredGrid *expandedGrid= NULL;
@@ -3587,7 +3626,7 @@ vtkIdTypeArray **vtkDistributedDataFilter::MakeProcessLists(
 
   int nprocs = this->NumProcesses;
 
-  vtkstd::multimap<int, int>::iterator mapIt;
+  std::multimap<int, int>::iterator mapIt;
 
   vtkIdTypeArray **processList = new vtkIdTypeArray * [nprocs];
   memset(processList, 0, sizeof (vtkIdTypeArray *) * nprocs);
@@ -3613,26 +3652,23 @@ vtkIdTypeArray **vtkDistributedDataFilter::MakeProcessLists(
 
         mapIt = procs->IntMultiMap.find(gid);
 
-        if (mapIt != procs->IntMultiMap.end())
+        while (mapIt != procs->IntMultiMap.end() && mapIt->first == gid)
           {
-          while (mapIt->first == gid)
+          int processId = mapIt->second;
+
+          if (processId != i)
             {
-            int processId = mapIt->second;
-  
-            if (processId != i)
+            // Process "i" needs to know that process
+            // "processId" also has cells using this point
+
+            if (processList[i] == NULL)
               {
-              // Process "i" needs to know that process
-              // "processId" also has cells using this point
-  
-              if (processList[i] == NULL)
-                {
-                processList[i] = vtkIdTypeArray::New();
-                }
-              processList[i]->InsertNextValue(gid);
-              processList[i]->InsertNextValue(processId);
+              processList[i] = vtkIdTypeArray::New();
               }
-            ++mapIt;
+            processList[i]->InsertNextValue(gid);
+            processList[i]->InsertNextValue(processId);
             }
+          ++mapIt;
           }
         j += (2 + ncells);
         }
@@ -3798,7 +3834,7 @@ int vtkDistributedDataFilter::GlobalPointIdIsUsed(vtkUnstructuredGrid *grid,
 {
   int used = 1;
 
-  vtkstd::map<int, int>::iterator mapIt;
+  std::map<int, int>::iterator mapIt;
 
   mapIt = globalToLocal->IntMap.find(ptId);
 
@@ -3871,7 +3907,7 @@ vtkDistributedDataFilter::AddGhostCellsUniqueCellAssignment(
   
   vtkDistributedDataFilterSTLCloak *insidePointMap = 
     new vtkDistributedDataFilterSTLCloak;
-  vtkstd::multimap<int, int>::iterator mapIt;
+  std::multimap<int, int>::iterator mapIt;
 
   while (gl <= this->GhostLevel)
     {
@@ -3923,7 +3959,7 @@ vtkDistributedDataFilter::AddGhostCellsUniqueCellAssignment(
             {
             // map global point id to process ids
             const int id = (int)insideIds[i]->GetValue(j);
-            insidePointMap->IntMultiMap.insert(vtkstd::pair<const int, int>(id, i));
+            insidePointMap->IntMultiMap.insert(std::pair<const int, int>(id, i));
             }
           }
         }
@@ -4156,7 +4192,7 @@ vtkDistributedDataFilter::AddGhostCellsDuplicateCellAssignment(
   vtkIdTypeArray **ghostPointIds = NULL;
   vtkIdTypeArray **extraGhostPointIds = NULL;
 
-  vtkstd::map<int, int>::iterator mapIt;
+  std::map<int, int>::iterator mapIt;
 
   vtkPoints *pts = myGrid->GetPoints();
 
@@ -4341,7 +4377,7 @@ vtkIdList **vtkDistributedDataFilter::BuildRequestedGrids(
   // for each process, create a list of the ids of cells I need
   // to send to it
 
-  vtkstd::map<int, int>::iterator imap;
+  std::map<int, int>::iterator imap;
 
   vtkIdList *cellList = vtkIdList::New();
 
@@ -4364,7 +4400,7 @@ vtkIdList **vtkDistributedDataFilter::BuildRequestedGrids(
 
     vtkIdType *ptarray = globalPtIds[proc]->GetPointer(0);
 
-    vtkstd::set<vtkIdType> subGridCellIds;
+    std::set<vtkIdType> subGridCellIds;
 
     vtkIdType nYourCells = 0;
 
@@ -4429,7 +4465,7 @@ vtkIdList **vtkDistributedDataFilter::BuildRequestedGrids(
     sendCells[proc]->SetNumberOfIds(numUniqueCellIds);
     vtkIdType next = 0;
 
-    vtkstd::set<vtkIdType>::iterator it;
+    std::set<vtkIdType>::iterator it;
 
     for (it = subGridCellIds.begin(); it != subGridCellIds.end(); ++it)
       {
@@ -4553,7 +4589,7 @@ vtkUnstructuredGrid *vtkDistributedDataFilter::SetMergeGhostGrid(
     vtkIdType *gidPoints = this->GetGlobalNodeIds(mergedGrid);
     int npoints = mergedGrid->GetNumberOfPoints();
 
-    vtkstd::map<int, int>::iterator imap;
+    std::map<int, int>::iterator imap;
 
     for (i=0; i < npoints; i++)
       {
@@ -4708,8 +4744,6 @@ int vtkDistributedDataFilter::RequestDataObject(vtkInformation*,
         }
       newOutput->SetPipelineInformation(outInfo);
       newOutput->Delete();
-      this->GetOutputPortInformation(0)->Set(
-        vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
       }
     return 1;
     }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMCubesReader.h,v $
+  Module:    vtkMCubesReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,12 +52,12 @@
 #define VTK_FILE_BYTE_ORDER_BIG_ENDIAN 0
 #define VTK_FILE_BYTE_ORDER_LITTLE_ENDIAN 1
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_IO_EXPORT vtkMCubesReader : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkMCubesReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkMCubesReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -121,8 +121,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By default, 
   // an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -140,7 +140,7 @@ protected:
 
   char *FileName;
   char *LimitsFileName;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   int SwapBytes;
   int HeaderSize;
   int FlipNormals;

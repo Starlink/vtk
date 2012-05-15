@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaSurface.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.6 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METASURFACE_H
@@ -35,9 +30,9 @@
  *    Reads and Writes MetaSurfaceFiles.
  *
  * \author Julien Jomier
- * 
+ *
  * \date July 02, 2002
- * 
+ *
  */
 
 #if (METAIO_USE_NAMESPACE)
@@ -50,7 +45,7 @@ public:
 
   SurfacePnt(int dim);
   ~SurfacePnt();
-  
+
   unsigned int m_Dim;
   float* m_X;
   float* m_V;
@@ -78,10 +73,10 @@ class METAIO_EXPORT MetaSurface : public MetaObject
     ////
     MetaSurface(void);
 
-    MetaSurface(const char *_headerName);   
+    MetaSurface(const char *_headerName);
 
-    MetaSurface(const MetaSurface *_surface); 
-    
+    MetaSurface(const MetaSurface *_surface);
+
     MetaSurface(unsigned int dim);
 
     ~MetaSurface(void);
@@ -107,7 +102,7 @@ class METAIO_EXPORT MetaSurface : public MetaObject
 
     PointListType & GetPoints(void) {return m_PointList;}
     const PointListType & GetPoints(void) const {return m_PointList;}
-    
+
     MET_ValueEnumType ElementType(void) const;
     void  ElementType(MET_ValueEnumType _elementType);
 

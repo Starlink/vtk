@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLUtilities.h,v $
+  Module:    vtkXMLUtilities.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IO_EXPORT vtkXMLUtilities : public vtkObject
 {
 public:
   static vtkXMLUtilities* New();
-  vtkTypeRevisionMacro(vtkXMLUtilities, vtkObject);
+  vtkTypeMacro(vtkXMLUtilities, vtkObject);
 
   // Description:
   // Encode a string from one format to another 
@@ -74,6 +74,7 @@ public:
                                 vtkIndent *indent = 0);
   //ETX
 
+  //BTX
   // Description:
   // Read a vtkXMLDataElement from a stream, string or file.
   // The 'encoding' parameter will be used to set the internal encoding of the
@@ -84,7 +85,6 @@ public:
   // Return the root element on success, NULL otherwise.
   // Note that you have to call Delete() on the element returned by that
   // function to ensure it is freed properly.
-  //BTX
   static vtkXMLDataElement* ReadElementFromStream(
     istream&, int encoding = VTK_ENCODING_NONE);
   static vtkXMLDataElement* ReadElementFromString(
@@ -105,6 +105,7 @@ public:
         const char** atts,
         int encoding);
 
+  //BTX
   // Description:
   // Find all elements in 'tree' that are similar to 'elem' (using the
   // vtkXMLDataElement::IsEqualTo() predicate). 
@@ -112,7 +113,6 @@ public:
   // 'results' (automatically allocated).
   // Warning: the results do not include 'elem' if it was found in the tree ;
   // do not forget to deallocate 'results' if something was found.
-  //BTX
   static int FindSimilarElements(vtkXMLDataElement *elem, 
                                  vtkXMLDataElement *tree, 
                                  vtkXMLDataElement ***results);

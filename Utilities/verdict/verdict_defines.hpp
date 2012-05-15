@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Module:    $RCSfile: verdict_defines.hpp,v $
+  Module:    verdict_defines.hpp
 
   Copyright (c) 2006 Sandia Corporation.
   All rights reserved.
@@ -67,7 +67,7 @@ inline double v_determinant( VerdictVector v1,
 	xm22= (m22*mw11-m21*mw12)/detmw;
 
 
-static double v_sqrt_2 = sqrt( (double) 2. );
+static double v_sqrt_2 = sqrt(2.0);
 
 inline double normalize_jacobian( double jacobi,
     VerdictVector& v1,

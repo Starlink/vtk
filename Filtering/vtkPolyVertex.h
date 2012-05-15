@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyVertex.h,v $
+  Module:    vtkPolyVertex.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,12 +23,13 @@
 #include "vtkCell.h"
 
 class vtkVertex;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkPolyVertex : public vtkCell
 {
 public:
   static vtkPolyVertex *New();
-  vtkTypeRevisionMacro(vtkPolyVertex,vtkCell);
+  vtkTypeMacro(vtkPolyVertex,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -41,12 +42,12 @@ public:
   vtkCell *GetFace(int vtkNotUsed(faceId)) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *verts,
+            vtkIncrementalPointLocator *locator, vtkCellArray *verts,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);

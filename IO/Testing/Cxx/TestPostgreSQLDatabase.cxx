@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestPostgreSQLDatabase.cxx,v $
+  Module:    TestPostgreSQLDatabase.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@
 #include "vtkStringArray.h"
 #include "vtkToolkits.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 int TestPostgreSQLDatabase( int /*argc*/, char* /*argv*/[] )
 {
@@ -87,7 +87,7 @@ int TestPostgreSQLDatabase( int /*argc*/, char* /*argv*/[] )
   query->SetQuery( dropQuery.c_str() );
   if ( ! query->Execute() )
     {
-    cout << "Drop query did not succeed (this result was expected). The last message: " << endl;
+    cout << "Drop query did not succeed (this result *** was *** expected). The last message: " << endl;
     cout << "   " << query->GetLastErrorText() << endl;
     }
   else
@@ -270,7 +270,7 @@ int TestPostgreSQLDatabase( int /*argc*/, char* /*argv*/[] )
     return 1;
     }
 
-  vtkstd::vector<vtkStdString> tables;
+  std::vector<vtkStdString> tables;
   while ( query->NextRow() )
     {
     tables.push_back( query->DataValue( 0 ).ToString() ); 
@@ -515,7 +515,7 @@ int TestPostgreSQLDatabase( int /*argc*/, char* /*argv*/[] )
   // 9. Drop tables
   cerr << "@@ Dropping these tables...";
 
-  for ( vtkstd::vector<vtkStdString>::iterator it = tables.begin();
+  for ( std::vector<vtkStdString>::iterator it = tables.begin();
         it != tables.end(); ++ it )
     {
     queryStr = "DROP TABLE ";

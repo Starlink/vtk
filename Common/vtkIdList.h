@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIdList.h,v $
+  Module:    vtkIdList.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ public:
 
   void Initialize();
   int Allocate(const vtkIdType sz, const int strategy=0);
-  vtkTypeRevisionMacro(vtkIdList,vtkObject);
+  vtkTypeMacro(vtkIdList,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -100,7 +100,13 @@ public:
   // Description:
   // Intersect this list with another vtkIdList. Updates current list according
   // to result of intersection operation.
-  void IntersectWith(vtkIdList& otherIds);
+  void IntersectWith(vtkIdList* otherIds);
+
+  //BTX
+  // This method should become legacy
+  void IntersectWith(vtkIdList& otherIds) {
+    return this->IntersectWith(&otherIds); };
+  //ETX
 
 protected:
   vtkIdList();

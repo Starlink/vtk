@@ -1,7 +1,7 @@
 /*=============================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoTerrainNode.cxx,v $
+  Module:    vtkGeoTerrainNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkGeoMath.h"
 #include "vtkGeoTerrainNode.h"
 
-vtkCxxRevisionMacro(vtkGeoTerrainNode, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkGeoTerrainNode);
 
 
@@ -291,4 +290,16 @@ void vtkGeoTerrainNode::DeepCopy(vtkGeoTreeNode *src)
     }
 
   this->Superclass::DeepCopy(src);
+}
+
+//-----------------------------------------------------------------------------
+bool vtkGeoTerrainNode::HasData()
+{
+  return (this->Model != 0);
+}
+
+//-----------------------------------------------------------------------------
+void vtkGeoTerrainNode::DeleteData()
+{
+  this->Model = 0;
 }

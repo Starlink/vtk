@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestCosmicTreeLayoutStrategy.cxx,v $
+  Module:    TestCosmicTreeLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -157,7 +157,7 @@ int TestCosmicTreeLayoutStrategy(int argc, char* argv[])
 
   VTK_CREATE(vtkGraphMapper, mapper);
   mapper->SetInputConnection( layout->GetOutputPort() );
-  mapper->SetScalingArrayName( "inputRadiusTreeRadius" );
+  mapper->SetScalingArrayName( "TreeRadius" );
   mapper->ScaledGlyphsOn();
   mapper->SetVertexColorArrayName( "id" );
   mapper->ColorVerticesOn();

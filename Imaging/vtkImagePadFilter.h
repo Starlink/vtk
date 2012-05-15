@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImagePadFilter.h,v $
+  Module:    vtkImagePadFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImagePadFilter : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImagePadFilter *New();
-  vtkTypeRevisionMacro(vtkImagePadFilter,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImagePadFilter,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

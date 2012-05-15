@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProperty.cxx,v $
+  Module:    vtkProperty.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,22 +37,21 @@
 #include <stdlib.h>
 #include <vtksys/ios/sstream>
 
-#include <vtkstd/map>
+#include <map>
 #include <vtksys/SystemTools.hxx>
 
 class vtkPropertyInternals
 {
 public:
   // key==texture unit, value==texture
-  typedef vtkstd::map<int, vtkSmartPointer<vtkTexture> > MapOfTextures;
+  typedef std::map<int, vtkSmartPointer<vtkTexture> > MapOfTextures;
   MapOfTextures Textures;
 
   // key==texture name, value==texture-unit.
-  typedef vtkstd::map<vtkStdString, int> MapOfTextureNames;
+  typedef std::map<vtkStdString, int> MapOfTextureNames;
   MapOfTextureNames TextureNames;
 };
 
-vtkCxxRevisionMacro(vtkProperty, "$Revision: 1.77 $");
 vtkCxxSetObjectMacro(vtkProperty, ShaderProgram, vtkShaderProgram);
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -178,6 +177,11 @@ static IVarEnum XMLMemberToIvar( const char* name )
 // and surface representation. Backface and frontface culling are off.
 vtkProperty::vtkProperty()
 {
+  // Really should initialize all colors including Color[3]
+  this->Color[0] = 1;
+  this->Color[1] = 1;
+  this->Color[2] = 1;
+
   this->AmbientColor[0] = 1;
   this->AmbientColor[1] = 1;
   this->AmbientColor[2] = 1;
@@ -282,6 +286,11 @@ vtkProperty *vtkProperty::New()
 //----------------------------------------------------------------------------
 void vtkProperty::SetColor(double R,double G,double B)
 {
+  // Really should set the placeholder Color[3] variable
+  this->Color[0] = R;
+  this->Color[1] = G;
+  this->Color[2] = B;
+
   // Use Set macros to insure proper modified time behavior
   this->SetAmbientColor(R,G,B);
   this->SetDiffuseColor(R,G,B);

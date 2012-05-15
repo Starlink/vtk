@@ -4,7 +4,7 @@
 # executable.
 #
 # Program:   Visualization Toolkit
-# Module:    $RCSfile: CMakeLists.txt,v $
+# Module:    CMakeLists.txt
 #
 # Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 # All rights reserved.
@@ -29,13 +29,7 @@ IF(NOT CMAKE_CROSSCOMPILING)
   ENDIF(COMPILE_TOOLS_TARGET)
 ENDIF(NOT CMAKE_CROSSCOMPILING)
 
-IF(CMAKE_CROSSCOMPILING)
-  SET(PARSEOGLEXT_EXE vtkParseOGLExt)
-ELSE(CMAKE_CROSSCOMPILING)
-  GET_TARGET_PROPERTY(PARSEOGLEXT_EXE vtkParseOGLExt LOCATION)
-ENDIF(CMAKE_CROSSCOMPILING)
-SET(VTK_PARSEOGLEXT_EXE ${PARSEOGLEXT_EXE}
-  CACHE INTERNAL "OpenGL extensions parser." FORCE)
+SET(PARSEOGLEXT_EXE vtkParseOGLExt)
 
 SET(VTK_GLEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/headers/glext.h" CACHE FILEPATH 
   "Location of the OpenGL extensions header file (glext.h).")

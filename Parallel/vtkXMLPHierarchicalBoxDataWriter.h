@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPHierarchicalBoxDataWriter.h,v $
+  Module:    vtkXMLPHierarchicalBoxDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_PARALLEL_EXPORT vtkXMLPHierarchicalBoxDataWriter : public vtkXMLHierar
 {
 public:
   static vtkXMLPHierarchicalBoxDataWriter* New();
-  vtkTypeRevisionMacro(vtkXMLPHierarchicalBoxDataWriter, vtkXMLHierarchicalBoxDataWriter);
+  vtkTypeMacro(vtkXMLPHierarchicalBoxDataWriter, vtkXMLHierarchicalBoxDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -42,6 +42,12 @@ public:
   // to the meta-file.
   virtual void SetController(vtkMultiProcessController*);
   vtkGetObjectMacro(Controller, vtkMultiProcessController);
+
+  // Description:
+  // Set whether this instance will write the meta-file. WriteMetaFile
+  // is set to flag only on process 0 and all other processes have
+  // WriteMetaFile set to 0 by default.
+  virtual void SetWriteMetaFile(int flag);
 
 //BTX
 protected:

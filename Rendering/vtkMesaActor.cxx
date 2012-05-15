@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaActor.cxx,v $
+  Module:    vtkMesaActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,6 @@
 #include "vtkOpenGLActor.cxx"
 #undef vtkOpenGLActor
 
-vtkCxxRevisionMacro(vtkMesaActor, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkMesaActor);
 
 vtkProperty* vtkMesaActor::MakeProperty()

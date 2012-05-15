@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPImageWriter.cxx,v $
+  Module:    vtkPImageWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,6 +17,9 @@
 #include "vtkObjectFactory.h"
 #include "vtkPipelineSize.h"
 #include "vtkImageData.h"
+#include "vtkInformation.h"
+#include "vtkAlgorithmOutput.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
 #define vtkPIWCloseFile \
     if (file && fileOpenedHere) \
@@ -27,7 +30,6 @@
       file = NULL; \
       } \
 
-vtkCxxRevisionMacro(vtkPImageWriter, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkPImageWriter);
 
 #ifdef write
@@ -77,7 +79,6 @@ void vtkPImageWriter::RecursiveWrite(int axis, vtkImageData *cache,
   int             min, max, mid;
   vtkImageData    *data;
   int             fileOpenedHere = 0;
-  int             *ext;
   unsigned long   inputMemorySize;
 
   // if we need to open another slice, do it
@@ -120,8 +121,30 @@ void vtkPImageWriter::RecursiveWrite(int axis, vtkImageData *cache,
     ++this->FileNumber;
     }
   
-  // Propagate the update extent so we can determine pipeline size
-  this->GetInput()->PropagateUpdateExtent();
+  // Get the pipeline information for the input
+  vtkImageData *input = this->GetInput();
+  vtkAlgorithm *alg = input->GetProducerPort()->GetProducer();
+  int idx = input->GetProducerPort()->GetIndex();
+  vtkStreamingDemandDrivenPipeline *exec =
+    vtkStreamingDemandDrivenPipeline::SafeDownCast(alg->GetExecutive());
+
+  if (exec)
+    {
+    vtkInformation *info = exec->GetOutputInformation(idx);
+
+    // Set a hint not to combine with previous requests
+    info->Set(
+       vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT_INITIALIZED(),
+       VTK_UPDATE_EXTENT_REPLACE);
+
+    // Propagate the update extent so we can determine pipeline size
+    exec->PropagateUpdateExtent(idx);
+
+    // Go back to the previous behaviour
+    info->Set(
+       vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT_INITIALIZED(),
+       VTK_UPDATE_EXTENT_COMBINE);
+    }
 
   // Now we can ask how big the pipeline will be
   inputMemorySize = this->SizeEstimator->GetEstimatedSize(this,0,0);
@@ -130,7 +153,9 @@ void vtkPImageWriter::RecursiveWrite(int axis, vtkImageData *cache,
   // if so the just get the data and write it out
   if ( inputMemorySize < this->MemoryLimit )
     {
-    ext = cache->GetUpdateExtent();
+#ifndef NDEBUG
+    int *ext = cache->GetUpdateExtent();
+#endif
     vtkDebugMacro("Getting input extent: " << ext[0] << ", " << ext[1] << ", " << ext[2] << ", " << ext[3] << ", " << ext[4] << ", " << ext[5] << endl);
     cache->Update();
     data = cache;

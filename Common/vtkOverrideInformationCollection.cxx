@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOverrideInformationCollection.cxx,v $
+  Module:    vtkOverrideInformationCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,5 +15,4 @@
 #include "vtkOverrideInformationCollection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkOverrideInformationCollection, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkOverrideInformationCollection);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDataSetReader.cxx,v $
+  Module:    vtkPDataSetReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkExtentTranslator.h"
 
-vtkCxxRevisionMacro(vtkPDataSetReader, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkPDataSetReader);
 
 //----------------------------------------------------------------------------
@@ -200,8 +199,6 @@ int vtkPDataSetReader::RequestDataObject(
     }
   
   newOutput->SetPipelineInformation(info);
-  this->GetOutputPortInformation(0)->Set(
-    vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
   newOutput->Delete();
 
   return 1;

@@ -48,7 +48,6 @@
 *
 * revision history - 
 *
-*  $Id: expsp.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
 *
 *****************************************************************************/
 
@@ -71,5 +70,5 @@ int ex_put_side_set_param (int exoid,
                            int num_dist_fact_in_set)
 {
   return ex_put_set_param(exoid, EX_SIDE_SET, side_set_id,
-			  num_side_in_set, num_dist_fact_in_set);
+        num_side_in_set, num_dist_fact_in_set);
 }

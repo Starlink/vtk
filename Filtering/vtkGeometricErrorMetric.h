@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeometricErrorMetric.h,v $
+  Module:    vtkGeometricErrorMetric.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ public:
   
   // Description:
   // Standard VTK type and error macros.
-  vtkTypeRevisionMacro(vtkGeometricErrorMetric,vtkGenericSubdivisionErrorMetric);
+  vtkTypeMacro(vtkGeometricErrorMetric,vtkGenericSubdivisionErrorMetric);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalDataSetCache.h,v $
+  Module:    vtkTemporalDataSetCache.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,13 +30,13 @@
 
 #include "vtkTemporalDataSetAlgorithm.h"
 
-#include <vtkstd/map> // used for the cache
+#include <map> // used for the cache
 
 class VTK_HYBRID_EXPORT vtkTemporalDataSetCache : public vtkTemporalDataSetAlgorithm
 {
 public:
   static vtkTemporalDataSetCache *New();
-  vtkTypeRevisionMacro(vtkTemporalDataSetCache, vtkTemporalDataSetAlgorithm);
+  vtkTypeMacro(vtkTemporalDataSetCache, vtkTemporalDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -52,7 +52,7 @@ protected:
   int CacheSize;
 
 //BTX
-  typedef vtkstd::map<double,vtkstd::pair<unsigned long,vtkDataObject *> >
+  typedef std::map<double,std::pair<unsigned long,vtkDataObject *> >
   CacheType;
   CacheType Cache;
 //ETX

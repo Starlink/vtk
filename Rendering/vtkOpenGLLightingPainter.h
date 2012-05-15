@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLLightingPainter.h,v $
+  Module:    vtkOpenGLLightingPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLLightingPainter : public vtkLightingPainter
 {
 public:
   static vtkOpenGLLightingPainter* New();
-  vtkTypeRevisionMacro(vtkOpenGLLightingPainter, vtkLightingPainter);
+  vtkTypeMacro(vtkOpenGLLightingPainter, vtkLightingPainter);
   void PrintSelf(ostream& os ,vtkIndent indent);
 
   // Description:

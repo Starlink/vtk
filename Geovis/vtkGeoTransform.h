@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoTransform.h,v $
+  Module:    vtkGeoTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_GEOVIS_EXPORT vtkGeoTransform : public vtkAbstractTransform
 public:
   static vtkGeoTransform* New();
   virtual void PrintSelf( ostream& os, vtkIndent indent );
-  vtkTypeRevisionMacro(vtkGeoTransform,vtkAbstractTransform);
+  vtkTypeMacro(vtkGeoTransform,vtkAbstractTransform);
 
   // Description:
   // The source geographic projection.

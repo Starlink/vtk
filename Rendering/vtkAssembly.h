@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssembly.h,v $
+  Module:    vtkAssembly.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -65,7 +65,7 @@ class VTK_RENDERING_EXPORT vtkAssembly : public vtkProp3D
 public:
   static vtkAssembly *New();
 
-  vtkTypeRevisionMacro(vtkAssembly,vtkProp3D);
+  vtkTypeMacro(vtkAssembly,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

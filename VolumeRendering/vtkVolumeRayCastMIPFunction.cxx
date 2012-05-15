@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastMIPFunction.cxx,v $
+  Module:    vtkVolumeRayCastMIPFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolumeRayCastMIPFunction, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkVolumeRayCastMIPFunction);
 
 // This is the templated function that actually casts a ray and computes
@@ -32,12 +31,12 @@ void vtkCastMaxScalarValueRay( T *data_ptr, vtkVolumeRayCastDynamicInfo *dynamic
   int       max = 0;;
   float     max_opacity;
   int       loop;
-  int       xinc, yinc, zinc;
+  vtkIdType xinc, yinc, zinc;
   int       voxel[3], prev_voxel[3];
   float     ray_position[3];
   T         A, B, C, D, E, F, G, H;
   float     t00, t01, t10, t11, t0, t1;
-  int       Binc, Cinc, Dinc, Einc, Finc, Ginc, Hinc;
+  vtkIdType Binc, Cinc, Dinc, Einc, Finc, Ginc, Hinc;
   float     xoff, yoff, zoff;
   T         *dptr;
   int       num_steps;

@@ -13,6 +13,36 @@ SET(EXODUSII_VERSION_FULL "${EXODUSII_VERSION}.${EXODUSII_VERSION_PATCH}")
 
 SET(EXODUSII_BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS}")
 
+#-----------------------------------------------------------------------------
+# Option to allow the user to disable compiler warnings
+#-----------------------------------------------------------------------------
+OPTION (EXODUSII_DISABLE_COMPILER_WARNINGS "Disable compiler warnings" ON)
+MARK_AS_ADVANCED(EXODUSII_DISABLE_COMPILER_WARNINGS)
+
+IF (EXODUSII_DISABLE_COMPILER_WARNINGS)
+  # MSVC uses /w to suppress warnings.  It also complains if another
+  # warning level is given, so remove it.
+  IF (MSVC)
+    SET (EXODUSII_WARNINGS_BLOCKED 1)
+    STRING (REGEX REPLACE "(^| )([/-])W[0-9]( |$)" " "
+        CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /w")
+  ENDIF (MSVC)
+  IF(WIN32)
+    ADD_DEFINITIONS (-D_CRT_SECURE_NO_WARNINGS)
+  ENDIF(WIN32)
+  # Borland uses -w- to suppress warnings.
+  IF (BORLAND)
+    SET (EXODUSII_WARNINGS_BLOCKED 1)
+    SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w-")
+  ENDIF (BORLAND)
+
+  # Most compilers use -w to suppress warnings.
+  IF (NOT EXODUSII_WARNINGS_BLOCKED)
+    SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+  ENDIF (NOT EXODUSII_WARNINGS_BLOCKED)
+ENDIF (EXODUSII_DISABLE_COMPILER_WARNINGS)
+
 CONFIGURE_FILE(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/exodusII_cfg.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/exodusII_cfg.h
@@ -21,8 +51,6 @@ CONFIGURE_FILE(
 INCLUDE_DIRECTORIES(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_BINARY_DIR}/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../netcdf/netcdf-3.6.1/src/libsrc"
-  "${CMAKE_CURRENT_BINARY_DIR}/../../netcdf/netcdf-3.6.1/src/libsrc"
 )
 
 SET(cbind_SRCS
@@ -188,6 +216,19 @@ SET(cbind_SRCS
   expvarnams.c
   expvarparam.c
   expvartab.c
+  exgcssc.c 
+  exgecpp.c 
+  exgnconn.c 
+  exgncor.c 
+  exgnnv.c 
+  exgnoatt.c 
+  exgnvar.c 
+  expecpp.c 
+  expncor.c 
+  expnnv.c 
+  expnoatt.c 
+  expnvar.c 
+  exppsetd.c
 )
 
 
@@ -199,7 +240,7 @@ IF(APPLE)
 ENDIF(APPLE)
 
 
-ADD_LIBRARY(vtkexoIIc ${cbind_SRCS})
+VTK_ADD_LIBRARY(vtkexoIIc ${cbind_SRCS})
 TARGET_LINK_LIBRARIES(vtkexoIIc vtkNetCDF)
 
 # Apply user-defined properties to the library target.
@@ -209,6 +250,7 @@ ENDIF(VTK_LIBRARY_PROPERTIES)
 
 IF(NOT VTK_INSTALL_NO_LIBRARIES)
   INSTALL(TARGETS vtkexoIIc
+    EXPORT ${VTK_INSTALL_EXPORT_NAME}
     RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeLibraries
     LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries
     ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development)
@@ -222,6 +264,6 @@ ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 # Turned off until ExoIICTests.cxx problem is fixed.
 #IF (BUILD_TESTING)
 #  ENABLE_TESTING()
-#  SUBDIRS(test)
+#  ADD_SUBDIRECTORY(test)
 #ENDIF (BUILD_TESTING)
 

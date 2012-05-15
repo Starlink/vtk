@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTable.cxx,v $
+  Module:    TestTable.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,8 +25,8 @@
 #include "vtkVariantArray.h"
 
 #include <time.h>
-#include <vtkstd/vector>
-using namespace vtkstd;
+#include <vector>
+using namespace std;
 
 void CheckEqual(vtkTable* table, vector<vector<double> > & stdTable)
 {

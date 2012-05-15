@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Module:    $RCSfile: V_PyramidMetric.cpp,v $
+  Module:    V_PyramidMetric.cpp
 
   Copyright (c) 2006 Sandia Corporation.
   All rights reserved.
@@ -21,8 +21,6 @@
  *
  */
 
-
-#define VERDICT_EXPORTS
 
 #include "verdict.h"
 #include "VerdictVector.hpp"

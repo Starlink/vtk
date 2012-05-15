@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeDualGridContourFilter.cxx,v $
+  Module:    vtkHyperOctreeDualGridContourFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -13,7 +13,7 @@
 
 =========================================================================*/
 #include "vtkHyperOctreeDualGridContourFilter.h"
-#include "vtkMarchingCubesCases.h"
+#include "vtkMarchingCubesTriangleCases.h"
 
 #include "vtkHyperOctree.h"
 #include "vtkCellArray.h"
@@ -41,9 +41,10 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include <math.h>
 #include <assert.h>
-#include <vtkstd/set>
+#include <set>
 #include "vtkBitArray.h"
 #include "vtkTimerLog.h"
+#include "vtkIncrementalPointLocator.h"
 
 
 
@@ -69,10 +70,9 @@ void vtkHyperOctreeDualGridContourFilter::PrintSelf(ostream& os,
 class vtkHyperOctreeIdSet // Pimpl idiom
 {
 public:
-  vtkstd::set<vtkIdType> Set;
+  std::set<vtkIdType> Set;
 };
 
-vtkCxxRevisionMacro(vtkHyperOctreeDualGridContourFilter, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkHyperOctreeDualGridContourFilter);
 
 //----------------------------------------------------------------------------
@@ -385,7 +385,7 @@ void vtkHyperOctreeDualGridContourFilter::EvaluatePoint(
     //                     this->InPD, this->OutPD, this->InPD,
     //                     this->InCellCount, this->OutCD);
     // Contour the voxel our self.
-    // Some voxels will be degenerate with points shared between corners.
+    // Some voxels will be degenerated with points shared between corners.
     // Appropriate faces will always line up. 
     vtkMarchingCubesTriangleCases *triCase;
     EDGE_LIST  *edge;
@@ -607,7 +607,7 @@ int vtkHyperOctreeDualGridContourFilter::RequestData(
 //----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkHyperOctreeDualGridContourFilter::SetLocator(vtkPointLocator *locator)
+void vtkHyperOctreeDualGridContourFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator)
     {

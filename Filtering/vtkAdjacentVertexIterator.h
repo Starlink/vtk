@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAdjacentVertexIterator.h,v $
+  Module:    vtkAdjacentVertexIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_FILTERING_EXPORT vtkAdjacentVertexIterator : public vtkObject
 {
 public:
   static vtkAdjacentVertexIterator *New();
-  vtkTypeRevisionMacro(vtkAdjacentVertexIterator, vtkObject);
+  vtkTypeMacro(vtkAdjacentVertexIterator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

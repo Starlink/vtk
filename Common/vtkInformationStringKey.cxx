@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationStringKey.cxx,v $
+  Module:    vtkInformationStringKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,9 +16,8 @@
 
 #include "vtkInformation.h"
 
-#include <vtkstd/string>
+#include <string>
 
-vtkCxxRevisionMacro(vtkInformationStringKey, "$Revision: 1.9 $");
 
 //----------------------------------------------------------------------------
 vtkInformationStringKey::vtkInformationStringKey(const char* name, const char* location):
@@ -43,7 +42,7 @@ class vtkInformationStringValue: public vtkObjectBase
 {
 public:
   vtkTypeMacro(vtkInformationStringValue, vtkObjectBase);
-  vtkstd::string Value;
+  std::string Value;
 };
 
 //----------------------------------------------------------------------------

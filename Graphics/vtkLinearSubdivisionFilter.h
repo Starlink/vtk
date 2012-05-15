@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinearSubdivisionFilter.h,v $
+  Module:    vtkLinearSubdivisionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ public:
   // Description:
   // Construct object with NumberOfSubdivisions set to 1.
   static vtkLinearSubdivisionFilter *New();
-  vtkTypeRevisionMacro(vtkLinearSubdivisionFilter,vtkInterpolatingSubdivisionFilter);
+  vtkTypeMacro(vtkLinearSubdivisionFilter,vtkInterpolatingSubdivisionFilter);
 
 protected:
   vtkLinearSubdivisionFilter () {};

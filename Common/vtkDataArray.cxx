@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataArray.cxx,v $
+  Module:    vtkDataArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkDataArray.h"
 #include "vtkBitArray.h"
 #include "vtkCharArray.h"
-#include "vtkCriticalSection.h"
 #include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 #include "vtkInformation.h"
@@ -39,7 +38,6 @@ vtkInformationKeyMacro(vtkDataArray, PER_COMPONENT, InformationVector);
 vtkInformationKeyRestrictedMacro(vtkDataArray, COMPONENT_RANGE, DoubleVector, 2);
 vtkInformationKeyRestrictedMacro(vtkDataArray, L2_NORM_RANGE, DoubleVector, 2);
 
-vtkCxxRevisionMacro(vtkDataArray, "$Revision: 1.83 $");
 
 //----------------------------------------------------------------------------
 // Construct object with default tuple dimension (number of components) of 1.
@@ -1184,6 +1182,7 @@ double vtkDataArray::GetDataTypeMin(int type)
 #endif
     case VTK_FLOAT:              return static_cast<double>(VTK_FLOAT_MIN);
     case VTK_DOUBLE:             return static_cast<double>(VTK_DOUBLE_MIN);
+    case VTK_ID_TYPE:            return static_cast<double>(-VTK_LARGE_ID-1);
     default: return 0;
     }
 }
@@ -1215,6 +1214,7 @@ double vtkDataArray::GetDataTypeMax(int type)
 #endif
     case VTK_FLOAT:              return static_cast<double>(VTK_FLOAT_MAX);
     case VTK_DOUBLE:             return static_cast<double>(VTK_DOUBLE_MAX);
+    case VTK_ID_TYPE:            return static_cast<double>(VTK_LARGE_ID);
     default: return 1;
     }
 }

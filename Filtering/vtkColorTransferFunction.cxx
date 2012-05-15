@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkColorTransferFunction.cxx,v $
+  Module:    vtkColorTransferFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,14 +16,15 @@
 
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include <vtkstd/vector>
-#include <vtkstd/set>
-#include <vtkstd/algorithm>
-#include <vtkstd/iterator>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <iterator>
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkColorTransferFunction, "$Revision: 1.80 $");
 vtkStandardNewMacro(vtkColorTransferFunction);
+
+#define MY_MAX(x, y) ((x) > (y) ? (x) : (y))
 
 //=============================================================================
 class vtkCTFNode
@@ -84,7 +85,7 @@ public:
 class vtkColorTransferFunctionInternals
 {
 public:
-  vtkstd::vector<vtkCTFNode*> Nodes;
+  std::vector<vtkCTFNode*> Nodes;
   vtkCTFCompareNodes          CompareNodes;
   vtkCTFFindNodeEqual         FindNodeEqual;
   vtkCTFFindNodeInRange       FindNodeInRange;
@@ -181,14 +182,16 @@ inline void vtkColorTransferFunctionInterpolateDiverging(double s,
     {
     // Insert the white midpoint by setting one end to white and adjusting the
     // scalar value.
+    double Mmid = MY_MAX(msh1[0], msh2[0]);
+    Mmid = MY_MAX(88.0, Mmid);
     if (s < 0.5)
       {
-      msh2[0] = 95.0;  msh2[1] = 0.0;  msh2[2] = 0.0;
+      msh2[0] = Mmid;  msh2[1] = 0.0;  msh2[2] = 0.0;
       s = 2.0*s;
       }
     else
       {
-      msh1[0] = 95.0;  msh1[1] = 0.0;  msh1[2] = 0.0;
+      msh1[0] = Mmid;  msh1[1] = 0.0;  msh1[2] = 0.0;
       s = 2.0*s - 1.0;
       }
     }
@@ -233,6 +236,10 @@ vtkColorTransferFunction::vtkColorTransferFunction()
   this->HSVWrap = 1; //By default HSV will be wrap
 
   this->Scale = VTK_CTF_LINEAR;
+
+  this->NanColor[0] = 0.5;
+  this->NanColor[1] = 0.0;
+  this->NanColor[2] = 0.0;
   
   this->Function = NULL;
 
@@ -400,10 +407,24 @@ int vtkColorTransferFunction::AddHSVPoint( double x, double h,
 // the Range
 void vtkColorTransferFunction::SortAndUpdateRange()
 {
-  vtkstd::sort( this->Internal->Nodes.begin(),
+  std::sort( this->Internal->Nodes.begin(),
                 this->Internal->Nodes.end(),
                 this->Internal->CompareNodes );
-  
+  bool modifiedInvoked = this->UpdateRange();
+  // If range is updated, Modified() has been called, don't call it again.
+  if (!modifiedInvoked)
+    {
+    this->Modified();
+    }
+}
+
+//----------------------------------------------------------------------------
+bool vtkColorTransferFunction::UpdateRange()
+{
+  double oldRange[2];
+  oldRange[0] = this->Range[0];
+  oldRange[1] = this->Range[1];
+
   int size = static_cast<int>(this->Internal->Nodes.size());
   if ( size )
     {
@@ -415,8 +436,15 @@ void vtkColorTransferFunction::SortAndUpdateRange()
     this->Range[0] = 0;
     this->Range[1] = 0;
     }
-  
-  this->Modified();  
+
+  // If the range is the same, then no need to call Modified()
+  if (oldRange[0] == this->Range[0] && oldRange[1] == this->Range[1])
+    {
+    return false;
+    }
+
+  this->Modified();
+  return true;
 }
 
 //----------------------------------------------------------------------------
@@ -449,8 +477,8 @@ int vtkColorTransferFunction::RemovePoint( double x )
   // Now use STL to find it, so that we can remove it
   this->Internal->FindNodeEqual.X = x;
   
-  vtkstd::vector<vtkCTFNode*>::iterator iter = 
-    vtkstd::find_if(this->Internal->Nodes.begin(),
+  std::vector<vtkCTFNode*>::iterator iter =
+    std::find_if(this->Internal->Nodes.begin(),
                     this->Internal->Nodes.end(),
                     this->Internal->FindNodeEqual );
   
@@ -459,7 +487,17 @@ int vtkColorTransferFunction::RemovePoint( double x )
     {
     delete *iter;
     this->Internal->Nodes.erase(iter);
-    this->Modified();
+    // If the first or last point has been removed, then we update the range
+    // No need to sort here as the order of points hasn't changed.
+    bool modifiedInvoked = false;
+    if (i == 0 || i == this->Internal->Nodes.size())
+      {
+      modifiedInvoked = this->UpdateRange();
+      }
+    if (!modifiedInvoked)
+      {
+      this->Modified();
+      }
     }
   else
      {
@@ -525,8 +563,8 @@ void vtkColorTransferFunction::AddRGBSegment( double x1, double r1,
     this->Internal->FindNodeInRange.X1 = x1;
     this->Internal->FindNodeInRange.X2 = x2;
   
-    vtkstd::vector<vtkCTFNode*>::iterator iter = 
-      vtkstd::find_if(this->Internal->Nodes.begin(),
+    std::vector<vtkCTFNode*>::iterator iter =
+      std::find_if(this->Internal->Nodes.begin(),
                       this->Internal->Nodes.end(),
                       this->Internal->FindNodeInRange );
   
@@ -618,6 +656,23 @@ void vtkColorTransferFunction::GetTable( double xStart, double xEnd,
                                          int size, double* table )
 {
   int i, j;
+
+  // Special case: If either the start or end is a NaN, then all any
+  // interpolation done on them is also a NaN.  Therefore, fill the table with
+  // the NaN color.
+  if (vtkMath::IsNan(xStart) || vtkMath::IsNan(xEnd))
+    {
+    double *tableEntry = table;
+    for (i = 0; i < size; i++)
+      {
+      tableEntry[0] = this->NanColor[0];
+      tableEntry[1] = this->NanColor[1];
+      tableEntry[2] = this->NanColor[2];
+      tableEntry += 3;
+      }
+    return;
+    }
+
   int idx = 0;
   int numNodes = static_cast<int>(this->Internal->Nodes.size());
   
@@ -1129,6 +1184,7 @@ int vtkColorTransferFunction::SetNodeValue( int index, double val[6] )
     return -1;
     }
   
+  double oldX = this->Internal->Nodes[index]->X;
   this->Internal->Nodes[index]->X = val[0];
   this->Internal->Nodes[index]->R = val[1];
   this->Internal->Nodes[index]->G = val[2];
@@ -1136,14 +1192,32 @@ int vtkColorTransferFunction::SetNodeValue( int index, double val[6] )
   this->Internal->Nodes[index]->Midpoint = val[4];
   this->Internal->Nodes[index]->Sharpness = val[5];
 
-  this->Modified();
+  if (oldX != val[0])
+    {
+    // The point has been moved, the order of points or the range might have
+    // been modified.
+    this->SortAndUpdateRange();
+    // No need to call Modified() here because SortAndUpdateRange() has done it
+    // already.
+    }
+  else
+    {
+    this->Modified();
+    }
 
   return 1;
 }
 
 //----------------------------------------------------------------------------
-void vtkColorTransferFunction::DeepCopy( vtkColorTransferFunction *f )
+void vtkColorTransferFunction::DeepCopy( vtkScalarsToColors *o )
 {
+  vtkColorTransferFunction *f = NULL;
+  if (o)
+    {
+    this->Superclass::DeepCopy(o);
+    f = vtkColorTransferFunction::SafeDownCast(o);
+    }
+
   if (f != NULL)
     {
     this->Clamping     = f->Clamping;
@@ -1168,6 +1242,8 @@ void vtkColorTransferFunction::ShallowCopy( vtkColorTransferFunction *f )
 {
   if (f != NULL)
     {
+    this->Superclass::DeepCopy(f);
+
     this->Clamping     = f->Clamping;
     this->ColorSpace   = f->ColorSpace;
     this->HSVWrap      = f->HSVWrap;
@@ -1365,38 +1441,6 @@ void vtkColorTransferFunctionMapData(vtkColorTransferFunction* self,
 }
 
 //----------------------------------------------------------------------------
-// An expensive magnitude calculation (similar to
-// vtkLookupTable.cxx (vtkLookupTableMapMag).
-template <class T>
-void vtkColorTransferFunctionMagMapData(vtkColorTransferFunction* self,
-                                     T* input,
-                                     unsigned char* output,
-                                     int length, int inIncr,
-                                     int outFormat, int v)
-{
-  double tmp, sum;
-  double *mag;
-  int i, j;
-
-  mag = new double[length];
-  for (i = 0; i < length; ++i)
-    {
-    sum = 0;
-    for (j = 0; j < inIncr; ++j)
-      {
-      tmp = static_cast<double>(*input);  
-      sum += (tmp * tmp);
-      ++input;
-      }
-    mag[i] = sqrt(sum);
-    }
-
-  vtkColorTransferFunctionMapData(self, mag, output, length, 1, outFormat, v);
-
-  delete [] mag;
-}
-
-//----------------------------------------------------------------------------
 void vtkColorTransferFunction::MapScalarsThroughTable2(void *input, 
                                                        unsigned char *output,
                                                        int inputDataType, 
@@ -1404,23 +1448,11 @@ void vtkColorTransferFunction::MapScalarsThroughTable2(void *input,
                                                        int inputIncrement,
                                                        int outputFormat)
 {
-  if (this->UseMagnitude && inputIncrement > 1)
+  if(this->GetSize() == 0)
     {
-    switch (inputDataType)
-      {
-      vtkTemplateMacro(
-        vtkColorTransferFunctionMagMapData(this, static_cast<VTK_TT*>(input),
-          output, numberOfValues, inputIncrement, outputFormat, 1);
-        return
-      );
-    case VTK_BIT:
-      vtkErrorMacro("Cannot compute magnitude of bit array.");
-      break;
-    default:
-      vtkErrorMacro(<< "MapImageThroughTable: Unknown input ScalarType");
-      }
+    vtkDebugMacro("Transfer Function Has No Points!");
+    return;
     }
-
   switch (inputDataType)
     {
     vtkTemplateMacro(
@@ -1432,6 +1464,19 @@ void vtkColorTransferFunction::MapScalarsThroughTable2(void *input,
       vtkErrorMacro(<< "MapImageThroughTable: Unknown input ScalarType");
       return;
     }
+}
+
+//----------------------------------------------------------------------------
+vtkIdType vtkColorTransferFunction::GetNumberOfAvailableColors()
+{
+  if(this->Table)
+    {
+    // Not sure if this is correct since it is only set if
+    // "const unsigned char *::GetTable( double xStart, double xEnd,int size)"
+    // has been called.
+    return static_cast<vtkIdType>(this->TableSize);
+    }
+  return 16777216;  //2^24
 }
 
 //----------------------------------------------------------------------------
@@ -1498,8 +1543,8 @@ int vtkColorTransferFunction::AdjustRange(double range[2])
     this->Internal->FindNodeOutOfRange.X1 = range[0];
     this->Internal->FindNodeOutOfRange.X2 = range[1];
   
-    vtkstd::vector<vtkCTFNode*>::iterator iter = 
-      vtkstd::find_if(this->Internal->Nodes.begin(),
+    std::vector<vtkCTFNode*>::iterator iter =
+      std::find_if(this->Internal->Nodes.begin(),
                       this->Internal->Nodes.end(),
                       this->Internal->FindNodeOutOfRange );
   
@@ -1564,6 +1609,10 @@ void vtkColorTransferFunction::PrintSelf(ostream& os, vtkIndent indent)
      << this->Range[1] << endl;
 
   os << indent << "AllowDuplicateScalars: " << this->AllowDuplicateScalars << endl;
+
+  os << indent << "NanColor: "
+     << this->NanColor[0] << ", " << this->NanColor[1] << ", "
+     << this->NanColor[2] << endl;
 
   unsigned int i;
   for( i = 0; i < this->Internal->Nodes.size(); i++ )

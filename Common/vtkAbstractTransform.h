@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractTransform.h,v $
+  Module:    vtkAbstractTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_COMMON_EXPORT vtkAbstractTransform : public vtkObject
 {
 public:
 
-  vtkTypeRevisionMacro(vtkAbstractTransform,vtkObject);
+  vtkTypeMacro(vtkAbstractTransform,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -178,6 +178,8 @@ if test "x$PERL_PROG" != "xNOTFOUND" ; then
     "$PERL_PROG" "$PATH_TO_VTK_DOX_SCRIPTS/doc_header2doxygen.pl" \
         --to "$INTERMEDIATE_DOX_DIR" \
         --relativeto "$SOURCE_DIR/$REL_PATH_TO_TOP" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Charts" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Chemistry" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Common" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Filtering" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/GenericFiltering" \
@@ -191,10 +193,11 @@ if test "x$PERL_PROG" != "xNOTFOUND" ; then
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Infovis" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/IO" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Parallel" \
-        "$SOURCE_DIR/$REL_PATH_TO_TOP/Widgets" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Rendering" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/TextAnalysis" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Views" \
-        "$SOURCE_DIR/$REL_PATH_TO_TOP/VolumeRendering"
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/VolumeRendering" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Widgets"
 fi
 
 # ----------------------------------------------------------------------------
@@ -214,6 +217,8 @@ if test "x$PERL_PROG" != "xNOTFOUND" ; then
         --to "$INTERMEDIATE_DOX_DIR" \
         --unique "v" \
         --relativeto "$SOURCE_DIR/$REL_PATH_TO_TOP" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Charts" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Chemistry" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Common" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Filtering" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/GenericFiltering" \
@@ -242,6 +247,8 @@ if test "x$PERL_PROG" != "xNOTFOUND" ; then
         --stop  "$PATH_TO_VTK_DOX_SCRIPTS/doc_index.stop" \
         --store "doc_""$PROJECT_NAME""_index.dox" \
         --to "$INTERMEDIATE_DOX_DIR" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Charts" \
+        "$SOURCE_DIR/$REL_PATH_TO_TOP/Chemistry" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Common" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/Filtering" \
         "$SOURCE_DIR/$REL_PATH_TO_TOP/GenericFiltering" \

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageCast.h,v $
+  Module:    vtkImageCast.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,6 +18,11 @@
 // the image processing pipeline.  The filter does nothing if the input
 // already has the correct type.  To specify the "CastTo" type,
 // use "SetOutputScalarType" method.
+//
+// .SECTION Warning
+// As vtkImageCast only casts values without rescaling them, its use is not
+// recommented. vtkImageShiftScale is the recommented way to change the type
+// of an image data.
 
 // .SECTION See Also
 // vtkImageThreshold vtkImageShiftScale
@@ -32,7 +37,7 @@ class VTK_IMAGING_EXPORT vtkImageCast : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageCast *New();
-  vtkTypeRevisionMacro(vtkImageCast,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageCast,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

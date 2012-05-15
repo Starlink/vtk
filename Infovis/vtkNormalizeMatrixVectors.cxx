@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkNormalizeMatrixVectors.cxx,v $
+  Module:    vtkNormalizeMatrixVectors.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,11 +31,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 // vtkNormalizeMatrixVectors
 
-vtkCxxRevisionMacro(vtkNormalizeMatrixVectors, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkNormalizeMatrixVectors);
 
 vtkNormalizeMatrixVectors::vtkNormalizeMatrixVectors() :
-  VectorDimension(1)
+  VectorDimension(1),
+  PValue(2)
 {
 }
 
@@ -47,6 +47,7 @@ void vtkNormalizeMatrixVectors::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   os << indent << "VectorDimension: " << this->VectorDimension << endl;
+  os << indent << "PValue: " << this->PValue << endl;
 }
 
 int vtkNormalizeMatrixVectors::RequestData(
@@ -54,12 +55,18 @@ int vtkNormalizeMatrixVectors::RequestData(
   vtkInformationVector** inputVector, 
   vtkInformationVector* outputVector)
 {
+  int vector_dimension = std::min(1, std::max(0, this->VectorDimension));
+  double p_value = std::max(1.0, this->PValue);
+
   vtkArrayData* const input = vtkArrayData::GetData(inputVector[0]);
-  vtkArrayData* const output = vtkArrayData::GetData(outputVector);
+  if(input->GetNumberOfArrays() != 1)
+    {
+    vtkErrorMacro(<< "vtkNormalizeMatrixVectors requires vtkArrayData containing exactly one array as input.");
+    return 0;
+    }
 
-  int vector_dimension = vtkstd::min(1, vtkstd::max(0, this->VectorDimension));
-
-  vtkTypedArray<double>* const input_array = vtkTypedArray<double>::SafeDownCast(input->GetArray());
+  vtkTypedArray<double>* const input_array = vtkTypedArray<double>::SafeDownCast(
+    input->GetArray(static_cast<vtkIdType>(0)));
   if(!input_array)
     {
     vtkErrorMacro(<< "vtkNormalizeMatrixVectors requires a vtkTypedArray<double> as input.");
@@ -72,27 +79,25 @@ int vtkNormalizeMatrixVectors::RequestData(
     }
 
   vtkTypedArray<double>* const output_array = vtkTypedArray<double>::SafeDownCast(input_array->DeepCopy());
-  output->SetArray(output_array);
-  output_array->Delete();
 
-  const vtkIdType vector_count = input_array->GetExtents()[vector_dimension];
+  const vtkArrayRange vectors = input_array->GetExtent(vector_dimension);
   const vtkIdType value_count = input_array->GetNonNullSize();
   
   // Create temporary storage for computed vector weights ...
-  vtkstd::vector<double> weight(vector_count, 0.0);
+  std::vector<double> weight(vectors.GetSize(), 0.0);
 
   // Store the sum of the squares of each vector value ...
   vtkArrayCoordinates coordinates;
   for(vtkIdType n = 0; n != value_count; ++n)
     {
     output_array->GetCoordinatesN(n, coordinates);
-    weight[coordinates[vector_dimension]] += pow(output_array->GetValueN(n), 2);
+    weight[coordinates[vector_dimension] - vectors.GetBegin()] += pow(output_array->GetValueN(n), p_value);
     }
 
   // Convert the sums into weights, avoiding divide-by-zero ...
-  for(vtkIdType i = 0; i != vector_count; ++i)
+  for(vtkIdType i = 0; i != vectors.GetSize(); ++i)
     {
-    const double length = sqrt(weight[i]);
+    const double length = pow(weight[i],1.0/p_value);
     weight[i] = length ? 1.0 / length : 0.0;
     }
 
@@ -100,9 +105,14 @@ int vtkNormalizeMatrixVectors::RequestData(
   for(vtkIdType n = 0; n != value_count; ++n)
     {
     output_array->GetCoordinatesN(n, coordinates);
-    output_array->SetValueN(n, output_array->GetValueN(n) * weight[coordinates[vector_dimension]]);
+    output_array->SetValueN(n, output_array->GetValueN(n) * weight[coordinates[vector_dimension] - vectors.GetBegin()]);
     }
   
+  vtkArrayData* const output = vtkArrayData::GetData(outputVector);
+  output->ClearArrays();
+  output->AddArray(output_array);
+  output_array->Delete();
+
   return 1;
 }
 

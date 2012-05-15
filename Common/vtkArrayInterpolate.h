@@ -1,8 +1,8 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayInterpolate.h,v $
-  
+  Module:    vtkArrayInterpolate.h
+
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -19,19 +19,8 @@
 
 =========================================================================*/
 
-#ifndef __vtkArrayInterpolate_h
-#define __vtkArrayInterpolate_h
-
-#include "vtkTypedArray.h"
-
-class vtkArraySlice;
-class vtkArraySlices;
-class vtkArrayWeights;
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
-// Description:
+// .NAME vtkArrayInterpolate
+// .SECTION Description
 // Computes the weighted sum of a collection of slices from a source
 // array, and stores the results in a slice of a target array.  Note that
 // the number of source slices and weights must match, and the extents of
@@ -39,19 +28,34 @@ class vtkArrayWeights;
 //
 // Note: The implementation assumes that operator*(T, double) is defined,
 // and that there is an implicit conversion from its result back to T.
-// 
+//
 // If you need to interpolate arrays of T other than double, you will
 // likely want to create your own specialization of this function.
 //
 // The implementation should produce correct results for dense and sparse
 // arrays, but may perform poorly on sparse.
 
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National
+// Laboratories.
+
+#ifndef __vtkArrayInterpolate_h
+#define __vtkArrayInterpolate_h
+
+#include "vtkTypedArray.h"
+
+class vtkArrayExtents;
+class vtkArraySlices;
+class vtkArrayWeights;
+
+// 
+
 template<typename T>
 void vtkInterpolate(
   vtkTypedArray<T>* source_array,
   const vtkArraySlices& source_slices,
   const vtkArrayWeights& source_weights,
-  const vtkArraySlice& target_slice,
+  const vtkArrayExtents& target_slice,
   vtkTypedArray<T>* target_array);
 
 #include "vtkArrayInterpolate.txx"

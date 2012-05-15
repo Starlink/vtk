@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkTkAppInit.cxx,v $
+Module:    vtkTkAppInit.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -215,6 +215,18 @@ extern "C" int Vtkinfovistcl_Init(Tcl_Interp *interp);
 extern "C" int Vtkviewstcl_Init(Tcl_Interp *interp);
 #endif
 
+#ifdef VTK_USE_CHARTS
+extern "C" int Vtkchartstcl_Init(Tcl_Interp *interp);
+#endif
+
+#ifdef VTK_USE_CHEMISTRY
+extern "C" int Vtkchemistrytcl_Init(Tcl_Interp *interp);
+#endif
+
+#ifdef VTK_USE_TEXT_ANALYSIS
+extern "C" int Vtktextanalysistcl_Init(Tcl_Interp *interp);
+#endif
+
 void help()
 {
 }
@@ -328,6 +340,27 @@ int Tcl_AppInit(Tcl_Interp *interp)
     return TCL_ERROR;
     }
 #endif
+
+#ifdef VTK_USE_CHARTS
+  if (Vtkchartstcl_Init(interp) == TCL_ERROR)
+    {
+    return TCL_ERROR;
+    }
+#endif
+
+#ifdef VTK_USE_CHEMISTRY
+  if (Vtkchemistrytcl_Init(interp) == TCL_ERROR)
+    {
+    return TCL_ERROR;
+    }
+#endif
+
+#ifdef VTK_USE_TEXT_ANALYSIS
+  if (Vtktextanalysistcl_Init(interp) == TCL_ERROR)
+    {
+    return TCL_ERROR;
+    }
+#endif
  
 #ifdef VTK_EXTRA_TCL_INIT
   VTK_EXTRA_TCL_INIT;
@@ -338,6 +371,7 @@ int Tcl_AppInit(Tcl_Interp *interp)
    */
   static char script[] =
     "foreach dir [list "
+    " [file dirname [file dirname [info nameofexecutable]]]"
 #if defined(CMAKE_INTDIR)
     " [file join [file dirname [file dirname [file dirname [info nameofexecutable]]]] Wrapping Tcl " CMAKE_INTDIR "]"
 #else

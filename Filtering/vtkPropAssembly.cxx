@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPropAssembly.cxx,v $
+  Module:    vtkPropAssembly.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkPropCollection.h"
 #include "vtkViewport.h"
 
-vtkCxxRevisionMacro(vtkPropAssembly, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkPropAssembly);
 
 // Construct object with no children.
@@ -35,6 +34,14 @@ vtkPropAssembly::vtkPropAssembly()
 
 vtkPropAssembly::~vtkPropAssembly()
 {
+  vtkCollectionSimpleIterator pit;
+  vtkProp *part;
+  for ( this->Parts->InitTraversal(pit);
+       (part=this->Parts->GetNextProp(pit)); )
+    {
+    part->RemoveConsumer(this);
+    }
+
   this->Parts->Delete();
   this->Parts = NULL;
 }
@@ -45,6 +52,7 @@ void vtkPropAssembly::AddPart(vtkProp *prop)
   if ( ! this->Parts->IsItemPresent(prop) )
     {
     this->Parts->AddItem(prop);
+    prop->AddConsumer(this);
     this->Modified();
     } 
 }
@@ -54,6 +62,7 @@ void vtkPropAssembly::RemovePart(vtkProp *prop)
 {
   if ( this->Parts->IsItemPresent(prop) )
     {
+    prop->RemoveConsumer(this);
     this->Parts->RemoveItem(prop);
     this->Modified();
     } 
@@ -324,14 +333,20 @@ unsigned long int vtkPropAssembly::GetMTime()
 void vtkPropAssembly::ShallowCopy(vtkProp *prop)
 {
   vtkPropAssembly *propAssembly = vtkPropAssembly::SafeDownCast(prop);
-  if ( propAssembly != NULL )
+  if ( propAssembly != NULL && propAssembly != this )
     {
-    this->Parts->RemoveAllItems();
     vtkCollectionSimpleIterator pit;
-    propAssembly->Parts->InitTraversal(pit);
-    for (int i=0; i<0; i++)
+    vtkProp *part;
+    for ( this->Parts->InitTraversal(pit);
+        (part=this->Parts->GetNextProp(pit)); )
       {
-      this->AddPart(propAssembly->Parts->GetNextProp(pit));
+      part->RemoveConsumer(this);
+      }
+    this->Parts->RemoveAllItems();
+    for ( propAssembly->Parts->InitTraversal(pit);
+        (part=propAssembly->Parts->GetNextProp(pit)); )
+      {
+      this->AddPart(part);
       }
     }
 

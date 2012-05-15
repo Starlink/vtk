@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkShadowMapPassShader_fs.glsl,v $
+//  Module:    vtkShadowMapPassShader_fs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -14,6 +14,8 @@
 // ============================================================================
 
 // Fragment shader used by the shadow mapping render pass.
+
+#version 110
 
 // NOTE: this shader is concatened on the fly by vtkShadowMapPass.cxx by adding
 // a line at the beginning like:

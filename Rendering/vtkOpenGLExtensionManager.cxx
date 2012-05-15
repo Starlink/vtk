@@ -1,9 +1,7 @@
-// -*- c++ -*-
-
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLExtensionManager.cxx,v $
+  Module:    vtkOpenGLExtensionManager.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +29,7 @@
 
 #include <string.h>
 
-#include <vtkstd/string>
+#include <string>
 
 #include <assert.h>
 
@@ -41,8 +39,8 @@ extern "C" vtkglX::__GLXextFuncPtr glXGetProcAddressARB(const GLubyte *);
 
 #ifdef VTK_USE_VTK_DYNAMIC_LOADER
 #include "vtkDynamicLoader.h"
-#include <vtkstd/string>
-#include <vtkstd/list>
+#include <string>
+#include <list>
 #endif
 
 #ifdef VTK_USE_APPLE_LOADER
@@ -57,7 +55,6 @@ extern "C" vtkglX::__GLXextFuncPtr glXGetProcAddressARB(const GLubyte *);
 // GLU is currently not linked in VTK.  We do not support it here.
 #define GLU_SUPPORTED   0
 
-vtkCxxRevisionMacro(vtkOpenGLExtensionManager, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkOpenGLExtensionManager);
 
 namespace vtkgl
@@ -67,6 +64,11 @@ namespace vtkgl
 // of the core-promoted extension.
 int LoadCorePromotedExtension(const char *name,
                               vtkOpenGLExtensionManager *manager);
+// Description:
+// Set the ARB function pointers with the function pointers
+// of a EXT extension.
+int LoadAsARBExtension(const char *name,
+                       vtkOpenGLExtensionManager *manager);
 }
 
 vtkOpenGLExtensionManager::vtkOpenGLExtensionManager()
@@ -168,6 +170,24 @@ int vtkOpenGLExtensionManager::ExtensionSupported(const char *name)
     p += n;
     }
   
+  // Woraround for a nVidia bug in indirect/remote rendering mode (ssh -X)
+  // The version returns is not the one actually supported.
+  // For example, the version returns is greater or equal to 2.1
+  // but where PBO (which are core in 2.1) are not actually supported.
+  // In this case, force the version to be 1.1 (minimal). Anything above
+  // will be requested only through extensions.
+  // See ParaView bug 
+  if(result && !this->RenderWindow->IsDirect())
+    {
+    if (result && strncmp(name, "GL_VERSION_",11) == 0)
+      {
+      // whatever is the OpenGL version, return false.
+      // (nobody asks for GL_VERSION_1_1)
+      result=0;
+      }
+    }
+  
+  
   // Workaround for a bug on Mac PowerPC G5 with nVidia GeForce FX 5200
   // Mac OS 10.3.9 and driver 1.5 NVIDIA-1.3.42. It reports it supports
   // OpenGL>=1.4 but querying for glPointParameteri and glPointParameteriv
@@ -180,6 +200,9 @@ int vtkOpenGLExtensionManager::ExtensionSupported(const char *name)
       this->GetProcAddress("glPointParameteriv")!=0;
     }
   
+  const char *gl_renderer=
+    reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+
   // Workaround for a bug on renderer string="Quadro4 900 XGL/AGP/SSE2"
   // version string="1.5.8 NVIDIA 96.43.01" or "1.5.6 NVIDIA 87.56"
   // The driver reports it supports 1.5 but the 1.4 core promoted extension
@@ -188,14 +211,41 @@ int vtkOpenGLExtensionManager::ExtensionSupported(const char *name)
   // in GeForce4 and Quadro4.
   // It will make this method return false with "GL_VERSION_1_4" and true
   // with "GL_VERSION_1_5".
-  const char *gl_renderer=
-    reinterpret_cast<const char *>(glGetString(GL_RENDERER));
   if (result && strcmp(name, "GL_VERSION_1_4") == 0)
     {
     result=strstr(gl_renderer,"Quadro4")==0 &&
       strstr(gl_renderer,"GeForce4")==0;
     }
   
+  const char *gl_version=
+    reinterpret_cast<const char *>(glGetString(GL_VERSION));
+  const char *gl_vendor=
+    reinterpret_cast<const char *>(glGetString(GL_VENDOR));
+
+  // Workaround for a bug on renderer string="ATI Radeon X1600 OpenGL Engine"
+  // version string="2.0 ATI-1.4.58" vendor string="ATI Technologies Inc."
+  // It happens on a Apple iMac Intel Core Duo (early 2006) with Mac OS X
+  // 10.4.11 (Tiger) and an ATI Radeon X1600 128MB.
+  // The driver reports it supports 2.0 (where GL_ARB_texture_non_power_of_two
+  // extension has been promoted to core) and that it supports extension
+  // GL_ARB_texture_non_power_of_two. Reality is that non power of two
+  // textures just don't work in this OS/driver/card.
+  // It will make this method returns false with "GL_VERSION_2_0" and true
+  // with "GL_VERSION_2_1".
+  // It will make this method returns false with
+  // "GL_ARB_texture_non_power_of_two".
+  if (result && strcmp(name, "GL_VERSION_2_0") == 0)
+    {
+    result=!(strcmp(gl_renderer,"ATI Radeon X1600 OpenGL Engine")==0 &&
+             strcmp(gl_version,"2.0 ATI-1.4.58")==0 &&
+             strcmp(gl_vendor,"ATI Technologies Inc.")==0);
+    }
+  if (result && strcmp(name, "GL_ARB_texture_non_power_of_two") == 0)
+    {
+    result=!(strcmp(gl_renderer,"ATI Radeon X1600 OpenGL Engine")==0 &&
+             strcmp(gl_version,"2.0 ATI-1.4.58")==0 &&
+             strcmp(gl_vendor,"ATI Technologies Inc.")==0);
+    }
   return result;
 }
 
@@ -259,8 +309,8 @@ vtkOpenGLExtensionManager::GetProcAddress(const char *fname)
 #endif //MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_3
 #endif //VTK_USE_APPLE_LOADER
 
-
-#ifdef VTK_USE_GLX_GET_PROC_ADDRESS
+#ifdef VTK_USE_X
+ #ifdef VTK_USE_GLX_GET_PROC_ADDRESS
   // In a perfect world, it should be 
   // return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
   // but glx.h of Solaris 10 has line 209 wrong: it is
@@ -268,35 +318,33 @@ vtkOpenGLExtensionManager::GetProcAddress(const char *fname)
   // when it should be:
   // extern void (*glXGetProcAddress(const GLubyte *procname))(void);
   return reinterpret_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddress(reinterpret_cast<const GLubyte *>(fname)));
-#else
-#ifdef VTK_USE_GLX_GET_PROC_ADDRESS_ARB
-  return static_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddressARB(reinterpret_cast<const GLubyte *>(fname)));
-#endif //VTK_USE_GLX_GET_PROC_ADDRESS_ARB
-#endif //VTK_USE_GLX_GET_PROC_ADDRESS
-
-
+ #endif //VTK_USE_GLX_GET_PROC_ADDRESS
+ #ifdef VTK_USE_GLX_GET_PROC_ADDRESS_ARB
+  return reinterpret_cast<vtkOpenGLExtensionManagerFunctionPointer>(glXGetProcAddressARB(reinterpret_cast<const GLubyte *>(fname)));
+ #endif //VTK_USE_GLX_GET_PROC_ADDRESS_ARB
+#endif
 
 #ifdef VTK_USE_VTK_DYNAMIC_LOADER
   // If the GLX implementation cannot load procedures for us, load them
   // directly from the dynamic libraries.
-  static vtkstd::list<vtkstd::string> ogl_libraries;
+  static std::list<std::string> ogl_libraries;
 
   if (ogl_libraries.empty())
     {
     const char *ext = vtkDynamicLoader::LibExtension();
-    vtkstd::string::size_type ext_size = strlen(ext);
+    std::string::size_type ext_size = strlen(ext);
     // Must be the first function we tried to load.  Fill this list with
     // the OpenGL libraries we linked against.
-    vtkstd::string l(OPENGL_LIBRARIES);
-    vtkstd::string::size_type filename_start = 0;
+    std::string l(OPENGL_LIBRARIES);
+    std::string::size_type filename_start = 0;
     while (1)
       {
-      vtkstd::string::size_type filename_end = l.find(';', filename_start);
-      if (filename_end == vtkstd::string::npos)
+      std::string::size_type filename_end = l.find(';', filename_start);
+      if (filename_end == std::string::npos)
         {
         break;
         }
-      vtkstd::string possible_file = l.substr(filename_start,
+      std::string possible_file = l.substr(filename_start,
                                               filename_end-filename_start);
       // Make sure this is actually a library.  Do this by making sure it
       // has an appropriate extension.  This is by no means definitive, but
@@ -312,7 +360,7 @@ vtkOpenGLExtensionManager::GetProcAddress(const char *fname)
     }
 
   // Look for the function in each library.
-  for (vtkstd::list<vtkstd::string>::iterator i = ogl_libraries.begin();
+  for (std::list<std::string>::iterator i = ogl_libraries.begin();
        i != ogl_libraries.end(); i++)
     {
     vtkLibHandle lh = vtkDynamicLoader::OpenLibrary((*i).c_str());
@@ -383,6 +431,21 @@ void vtkOpenGLExtensionManager::LoadCorePromotedExtension(const char *name)
     }
 }
 
+void vtkOpenGLExtensionManager::LoadAsARBExtension(const char *name)
+{
+  if (!this->ExtensionSupported(name))
+    {
+    vtkWarningMacro("Attempting to load " << name
+                    << ", which is not supported.");
+    }
+  int success = vtkgl::LoadAsARBExtension(name, this);
+
+  if (!success)
+    {
+    vtkErrorMacro("Extension " << name << " could not be loaded.");
+    }
+}
+
 void vtkOpenGLExtensionManager::ReadOpenGLExtensions()
 {
   vtkDebugMacro("ReadOpenGLExtensions");
@@ -401,18 +464,38 @@ void vtkOpenGLExtensionManager::ReadOpenGLExtensions()
       {
       // If the render window is not OpenGL, then it obviously has no
       // extensions.
+      if (this->ExtensionsString)
+        {
+        delete[] this->ExtensionsString;
+        }
       this->ExtensionsString = new char[1];
       this->ExtensionsString[0] = '\0';
       return;
       }
-    if (this->RenderWindow->GetNeverRendered())
+    this->RenderWindow->MakeCurrent();
+    if (!this->RenderWindow->IsCurrent())
       {
+      // Really should create a method in the render window to create
+      // the graphics context instead of forcing a full render.
       this->RenderWindow->Render();
       }
-    this->RenderWindow->MakeCurrent();
+    if (!this->RenderWindow->IsCurrent())
+      {
+      // this case happens with a headless Mac: a mac with a graphics card
+      // with no monitor attached to it, connected to it with "Screen Sharing"
+      // (VNC-like feature added in Mac OS 10.5)
+      // see bug 8554.
+      if (this->ExtensionsString)
+        {
+        delete[] this->ExtensionsString;
+        }
+      this->ExtensionsString = new char[1];
+      this->ExtensionsString[0] = '\0';
+      return;
+      }
     }
 
-  vtkstd::string extensions_string;
+  std::string extensions_string;
 
   const char *gl_extensions;
   const char *glu_extensions = "";
@@ -478,23 +561,24 @@ void vtkOpenGLExtensionManager::ReadOpenGLExtensions()
 
   // We build special extension identifiers for OpenGL versions.  Check to
   // see which are supported.
-  vtkstd::string version_extensions;
-  vtkstd::string::size_type beginpos, endpos;
+  std::string version_extensions;
+  std::string::size_type beginpos, endpos;
 
   const char *version =
     reinterpret_cast<const char *>(glGetString(GL_VERSION));
-  int driverMajor, driverMinor;
+  int driverMajor = 0;
+  int driverMinor = 0;
   sscanf(version, "%d.%d", &driverMajor, &driverMinor);
 
   version_extensions = vtkgl::GLVersionExtensionsString();
   endpos = 0;
-  while (endpos != vtkstd::string::npos)
+  while (endpos != std::string::npos)
     {
     beginpos = version_extensions.find_first_not_of(' ', endpos);
-    if (beginpos == vtkstd::string::npos) break;
+    if (beginpos == std::string::npos) break;
     endpos = version_extensions.find_first_of(' ', beginpos);
 
-    vtkstd::string ve = version_extensions.substr(beginpos, endpos-beginpos);
+    std::string ve = version_extensions.substr(beginpos, endpos-beginpos);
     int tryMajor, tryMinor;
     sscanf(ve.c_str(), "GL_VERSION_%d_%d", &tryMajor, &tryMinor);
     if (   (driverMajor > tryMajor)
@@ -535,13 +619,13 @@ void vtkOpenGLExtensionManager::ReadOpenGLExtensions()
 
     version_extensions = vtkgl::GLXVersionExtensionsString();
     endpos = 0;
-    while (endpos != vtkstd::string::npos)
+    while (endpos != std::string::npos)
       {
       beginpos = version_extensions.find_first_not_of(' ', endpos);
-      if (beginpos == vtkstd::string::npos) break;
+      if (beginpos == std::string::npos) break;
       endpos = version_extensions.find_first_of(' ', beginpos);
       
-      vtkstd::string ve = version_extensions.substr(beginpos, endpos-beginpos);
+      std::string ve = version_extensions.substr(beginpos, endpos-beginpos);
       int tryMajor, tryMinor;
       sscanf(ve.c_str(), "GLX_VERSION_%d_%d", &tryMajor, &tryMinor);
       if (   (driverMajor > tryMajor)
@@ -560,6 +644,10 @@ void vtkOpenGLExtensionManager::ReadOpenGLExtensions()
 #endif //VTK_USE_X
 
   // Store extensions string.
+  if (this->ExtensionsString)
+    {
+    delete[] this->ExtensionsString;
+    }
   this->ExtensionsString = new char[extensions_string.length()+1];
   strcpy(this->ExtensionsString, extensions_string.c_str());
 
@@ -580,7 +668,12 @@ int vtkOpenGLExtensionManager::SafeLoadExtension(const char *name)
     vtkgl::TexImage3D = reinterpret_cast<vtkgl::PFNGLTEXIMAGE3DPROC>(this->GetProcAddress("glTexImage3D"));
     vtkgl::TexSubImage3D = reinterpret_cast<vtkgl::PFNGLTEXSUBIMAGE3DPROC>(this->GetProcAddress("glTexSubImage3D"));
     vtkgl::CopyTexSubImage3D = reinterpret_cast<vtkgl::PFNGLCOPYTEXSUBIMAGE3DPROC>(this->GetProcAddress("glCopyTexSubImage3D"));
-    return (vtkgl::DrawRangeElements != NULL) && (vtkgl::TexImage3D != NULL) && (vtkgl::TexSubImage3D != NULL) && (vtkgl::CopyTexSubImage3D != NULL);
+    
+    // rely on the generated function for most of the OpenGL 1.2 functions.
+    int success=vtkgl::LoadExtension(name, this);
+    success=success && vtkgl::LoadExtension("GL_VERSION_1_2_DEPRECATED", this);
+    
+    return success && (vtkgl::DrawRangeElements != NULL) && (vtkgl::TexImage3D != NULL) && (vtkgl::TexSubImage3D != NULL) && (vtkgl::CopyTexSubImage3D != NULL);
     }
   if (strcmp(name, "GL_ARB_imaging") == 0)
     {
@@ -620,10 +713,27 @@ int vtkOpenGLExtensionManager::SafeLoadExtension(const char *name)
     vtkgl::ResetMinmax = reinterpret_cast<vtkgl::PFNGLRESETMINMAXPROC>(this->GetProcAddress("glResetMinmax"));
     return (vtkgl::BlendColor != NULL) && (vtkgl::BlendEquation != NULL) && (vtkgl::ColorTable != NULL) && (vtkgl::ColorTableParameterfv != NULL) && (vtkgl::ColorTableParameteriv != NULL) && (vtkgl::CopyColorTable != NULL) && (vtkgl::GetColorTable != NULL) && (vtkgl::GetColorTableParameterfv != NULL) && (vtkgl::GetColorTableParameteriv != NULL) && (vtkgl::ColorSubTable != NULL) && (vtkgl::CopyColorSubTable != NULL) && (vtkgl::ConvolutionFilter1D != NULL) && (vtkgl::ConvolutionFilter2D != NULL) && (vtkgl::ConvolutionParameterf != NULL) && (vtkgl::ConvolutionParameterfv != NULL) && (vtkgl::ConvolutionParameteri != NULL) && (vtkgl::ConvolutionParameteriv != NULL) && (vtkgl::CopyConvolutionFilter1D != NULL) && (vtkgl::CopyConvolutionFilter2D != NULL) && (vtkgl::GetConvolutionFilter != NULL) && (vtkgl::GetConvolutionParameterfv != NULL) && (vtkgl::GetConvolutionParameteriv != NULL) && (vtkgl::GetSeparableFilter != NULL) && (vtkgl::SeparableFilter2D != NULL) && (vtkgl::GetHistogram != NULL) && (vtkgl::GetHistogramParameterfv != NULL) && (vtkgl::GetHistogramParameteriv != NULL) && (vtkgl::GetMinmax != NULL) && (vtkgl::GetMinmaxParameterfv != NULL) && (vtkgl::GetMinmaxParameteriv != NULL) && (vtkgl::Histogram != NULL) && (vtkgl::Minmax != NULL) && (vtkgl::ResetHistogram != NULL) && (vtkgl::ResetMinmax != NULL);
     }
+  
+  if (strcmp(name, "GL_VERSION_1_3") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success && vtkgl::LoadExtension("GL_VERSION_1_3_DEPRECATED", this);
+    }
+
+  if (strcmp(name, "GL_ARB_fragment_program") == 0)
+    {
+    // fragment_program is loaded as part of vertex_program
+    int success=vtkgl::LoadExtension("GL_ARB_vertex_program", this);
+    return success && vtkgl::LoadExtension(name, this);
+    }
+
   if (strcmp(name, "GL_VERSION_1_4") == 0)
     {
     // rely on the generated function for most of the OpenGL 1.4 functions.
     int success=vtkgl::LoadExtension(name, this);
+    
+    success=success && vtkgl::LoadExtension("GL_VERSION_1_4_DEPRECATED", this);
+    
     // The following functions that used to be optional in OpenGL 1.2 and 1.3
     // and only available through GL_ARB_imaging are now core features in
     // OpenGL 1.4.
@@ -632,9 +742,36 @@ int vtkOpenGLExtensionManager::SafeLoadExtension(const char *name)
     vtkgl::BlendEquation = reinterpret_cast<vtkgl::PFNGLBLENDEQUATIONPROC>(this->GetProcAddress("glBlendEquation"));
     return success && (vtkgl::BlendColor != NULL) && (vtkgl::BlendEquation != NULL);
     }
+  if (strcmp(name, "GL_VERSION_1_5") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success && vtkgl::LoadExtension("GL_VERSION_1_5_DEPRECATED", this);
+    }
+  if (strcmp(name, "GL_VERSION_2_0") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success && vtkgl::LoadExtension("GL_VERSION_2_0_DEPRECATED", this);
+    }
+  if (strcmp(name, "GL_VERSION_2_1") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success && vtkgl::LoadExtension("GL_VERSION_2_1_DEPRECATED", this);
+    }
+  if (strcmp(name, "GL_VERSION_3_0") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success && vtkgl::LoadExtension("GL_VERSION_3_0_DEPRECATED", this);
+    }
+   if (strcmp(name, "GL_ARB_framebuffer_object") == 0)
+    {
+    int success=vtkgl::LoadExtension(name, this);
+    return success &&
+      vtkgl::LoadExtension("GL_ARB_framebuffer_object_DEPRECATED", this);
+    }
   
   // For all other cases, rely on the generated function.
-  return vtkgl::LoadExtension(name, this);
+  int result=vtkgl::LoadExtension(name, this);
+  return result;
 }
 
 // Those two functions are part of OpenGL2.0 but don't have direct
@@ -1260,5 +1397,31 @@ int vtkgl::LoadCorePromotedExtension(const char *name,
     return 1;
     }
   
+  return 0;
+}
+
+// ----------------------------------------------------------------------------
+int vtkgl::LoadAsARBExtension(const char *name,
+                              vtkOpenGLExtensionManager *manager)
+{
+  assert("pre: name_exists" && name!=NULL);
+  assert("pre: manager_exists" && manager!=NULL);
+
+  if (strcmp(name, "GL_EXT_geometry_shader4") == 0)
+    {
+    vtkgl::ProgramParameteriARB = reinterpret_cast<vtkgl::PFNGLPROGRAMPARAMETERIARBPROC>(manager->GetProcAddress("glProgramParameteriEXT"));
+
+    // FramebufferTextureEXT(), FramebufferTextureLayerEXT() and
+    // FramebufferTextureFaceEXT() are also define by extension
+    // GL_NV_geometry_program4. Weird. Spec mistake.
+
+    vtkgl::FramebufferTextureARB = reinterpret_cast<vtkgl::PFNGLFRAMEBUFFERTEXTUREARBPROC>(manager->GetProcAddress("glFramebufferTextureEXT"));
+
+    vtkgl::FramebufferTextureLayerARB = reinterpret_cast<vtkgl::PFNGLFRAMEBUFFERTEXTURELAYERARBPROC>(manager->GetProcAddress("glFramebufferTextureLayerEXT"));
+
+    vtkgl::FramebufferTextureFaceARB = reinterpret_cast<vtkgl::PFNGLFRAMEBUFFERTEXTUREFACEARBPROC>(manager->GetProcAddress("glFramebufferTextureFaceEXT"));
+
+    return 1;
+    }
   return 0;
 }

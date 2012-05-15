@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLookupTable.h,v $
+  Module:    vtkLookupTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,7 @@
 // alpha range and generating a table.
 //
 // .SECTION Caveats
-// You need to explicitely call Build() when constructing the LUT by hand.
+// You need to explicitly call Build() when constructing the LUT by hand.
 //
 // .SECTION See Also
 // vtkLogLookupTable vtkWindowLevelLookupTable
@@ -47,7 +47,7 @@ public:
   // (from red to blue).
   static vtkLookupTable *New();
   
-  vtkTypeRevisionMacro(vtkLookupTable,vtkScalarsToColors);
+  vtkTypeMacro(vtkLookupTable,vtkScalarsToColors);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -129,6 +129,12 @@ public:
   vtkGetVector2Macro(AlphaRange,double);
 
   // Description:
+  // Set the color to use when a NaN (not a number) is encountered.  This is an
+  // RGBA 4-tuple color of doubles in the range [0,1].
+  vtkSetVector4Macro(NanColor, double);
+  vtkGetVector4Macro(NanColor, double);
+
+  // Description:
   // Map one value through the lookup table.
   unsigned char *MapValue(double v);
 
@@ -193,6 +199,20 @@ public:
   void SetRange(double min, double max) { this->SetTableRange(min, max); };
   void SetRange(double rng[2]) { this->SetRange(rng[0], rng[1]); };
 
+  //BTX
+  // Description:
+  // Returns the log of \c range in \c log_range.
+  // There is a little more to this than simply taking the log10 of the
+  // two range values: we do conversion of negative ranges to positive
+  // ranges, and conversion of zero to a 'very small number'.
+  static void GetLogRange(const double range[2], double log_range[2]);
+
+  // Description:
+  // Apply log to value, with appropriate constraints.
+  static double ApplyLogScale(double v, const double range[2],
+    const double log_range[2]);
+  //ETX
+
   // Description:
   // Set the number of colors in the lookup table.  Use
   // SetNumberOfTableValues() instead, it can be used both before and
@@ -216,7 +236,7 @@ public:
 
   // Description:
   // Copy the contents from another LookupTable
-  void DeepCopy(vtkLookupTable *lut);
+  void DeepCopy(vtkScalarsToColors *lut);
 
   // Description:
   // This should return 1 is the subclass is using log scale for mapping scalars
@@ -225,6 +245,10 @@ public:
     {
     return (this->GetScale() == VTK_SCALE_LOG10)? 1 : 0;
     }
+
+  // Description:
+  // Get the number of available colors for mapping to.
+  virtual vtkIdType GetNumberOfAvailableColors();
 
 protected:
   vtkLookupTable(int sze=256, int ext=256);
@@ -237,6 +261,7 @@ protected:
   double SaturationRange[2];
   double ValueRange[2];
   double AlphaRange[2];
+  double NanColor[4];
   int Scale;
   int Ramp;
   vtkTimeStamp InsertTime;

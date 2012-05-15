@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaDTITube.cxx,v $
-  Language:  C++
-  Date:      $Date: 2008-04-25 13:31:38 $
-  Version:   $Revision: 1.12 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning ( disable : 4786 )
 #pragma warning ( disable : 4702 )
@@ -36,13 +31,13 @@ DTITubePnt(int dim)
   m_Dim = dim;
   m_X = new float[m_Dim];
   m_TensorMatrix = new float[6];
- 
+
   unsigned int i=0;
   for(i=0;i<m_Dim;i++)
     {
     m_X[i] = 0;
     }
-  
+
   // Initialize the tensor matrix to identity
   for(i=0;i<6;i++)
     {
@@ -61,9 +56,9 @@ DTITubePnt::
   m_ExtraFields.clear();
 }
 
-const DTITubePnt::FieldListType & 
+const DTITubePnt::FieldListType &
 DTITubePnt::
-GetExtraFields() const 
+GetExtraFields() const
 {
   return m_ExtraFields;
 }
@@ -141,7 +136,7 @@ MetaDTITube::
     DTITubePnt* pnt = *it;
     it++;
     delete pnt;
-  }  
+  }
   m_PointList.clear();
   M_Destroy();
 }
@@ -160,7 +155,7 @@ PrintInfo() const
     {
     METAIO_STREAM::cout << "Root = " << "True" << METAIO_STREAM::endl;
     }
-  METAIO_STREAM::cout << "PointDim = " << m_PointDim.c_str() 
+  METAIO_STREAM::cout << "PointDim = " << m_PointDim.c_str()
                       << METAIO_STREAM::endl;
   METAIO_STREAM::cout << "NPoints = " << m_NPoints << METAIO_STREAM::endl;
   char str[255];
@@ -174,14 +169,14 @@ CopyInfo(const MetaObject * _object)
   MetaObject::CopyInfo(_object);
 }
 
-    
+
 
 void MetaDTITube::
 PointDim(const char* pointDim)
 {
   m_PointDim = pointDim;
 }
-    
+
 const char* MetaDTITube::
 PointDim(void) const
 {
@@ -205,8 +200,8 @@ Root(bool root)
 {
   m_Root = root;
 }
-    
-bool MetaDTITube:: 
+
+bool MetaDTITube::
 Root(void) const
 {
   return m_Root;
@@ -238,7 +233,7 @@ Clear(void)
     DTITubePnt* pnt = *it;
     it++;
     delete pnt;
-  }  
+  }
   m_PointList.clear();
 
   m_ParentPoint= -1;
@@ -247,7 +242,7 @@ Clear(void)
   m_PointDim = "x y z tensor1 tensor2 tensor3 tensor4 tensor5 tensor6";
   m_ElementType = MET_FLOAT;
 }
-        
+
 /** Destroy DTITube information */
 void MetaDTITube::
 M_Destroy(void)
@@ -321,9 +316,9 @@ M_SetupWriteFields(void)
 
   // Create the new PointDim field
   m_PointDim = "x y z tensor1 tensor2 tensor3 tensor4 tensor5 tensor6";
-  
+
   // All the points in the tube have the same number of fields
-  const DTITubePnt::FieldListType & extraList = 
+  const DTITubePnt::FieldListType & extraList =
                                     (*(m_PointList.begin()))->GetExtraFields();
   DTITubePnt::FieldListType::const_iterator itFields = extraList.begin();
   DTITubePnt::FieldListType::const_iterator itFieldsEnd = extraList.end();
@@ -388,9 +383,9 @@ M_Read(void)
     {
     METAIO_STREAM::cout << "MetaDTITube: M_Read: Parsing Header" << METAIO_STREAM::endl;
     }
- 
+
   MET_FieldRecordType * mF;
- 
+
   mF = MET_GetFieldRecord("ParentPoint", &m_Fields);
   if(mF->defined)
     {
@@ -401,7 +396,7 @@ M_Read(void)
   mF = MET_GetFieldRecord("Root", &m_Fields);
   if(mF->defined)
     {
-    if(*((char *)(mF->value)) == 'T' 
+    if(*((char *)(mF->value)) == 'T'
       || *((char*)(mF->value)) == 't'
       || *((char*)(mF->value)) == '1')
       {
@@ -426,7 +421,7 @@ M_Read(void)
     }
 
   int i;
-  
+
   int pntDim;
   char** pntVal = NULL;
   char pointDim[255];
@@ -437,16 +432,16 @@ M_Read(void)
     }
   pointDim[m_PointDim.size()] = '\0';
 
-  MET_StringToWordArray(pointDim, &pntDim, &pntVal); 
+  MET_StringToWordArray(pointDim, &pntDim, &pntVal);
 
   if(META_DEBUG)
-    { 
-    METAIO_STREAM::cout << "MetaDTITube: Parsing point dim" << METAIO_STREAM::endl; 
+    {
+    METAIO_STREAM::cout << "MetaDTITube: Parsing point dim" << METAIO_STREAM::endl;
     }
 
   int j;
   m_Positions.clear();
-  for(j = 0; j < pntDim; j++) 
+  for(j = 0; j < pntDim; j++)
     {
     PositionType p(pntVal[j],j);
     m_Positions.push_back(p);
@@ -459,7 +454,7 @@ M_Read(void)
   delete [] pntVal;
 
   float v[50];
-  
+
   if(m_Event)
     {
     m_Event->StartReading(m_NPoints);
@@ -477,9 +472,9 @@ M_Read(void)
     int gc = m_ReadStream->gcount();
     if(gc != readSize)
       {
-      METAIO_STREAM::cout << "MetaLine: m_Read: data not read completely" 
+      METAIO_STREAM::cout << "MetaLine: m_Read: data not read completely"
                 << METAIO_STREAM::endl;
-      METAIO_STREAM::cout << "   ideal = " << readSize 
+      METAIO_STREAM::cout << "   ideal = " << readSize
                 << " : actual = " << gc << METAIO_STREAM::endl;
       return false;
       }
@@ -487,36 +482,34 @@ M_Read(void)
     i=0;
     int d;
     unsigned int k;
-    for(j=0; j<m_NPoints; j++) 
+    for(j=0; j<m_NPoints; j++)
       {
       DTITubePnt* pnt = new DTITubePnt(m_NDims);
-      
+
       for(d=0; d<m_NDims; d++)
         {
-        char* num = new char[sizeof(float)];
+        float td;
+        char * const num = (char *)(&td);
         for(k=0;k<sizeof(float);k++)
           {
           num[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-        i+=sizeof(float); 
+        i+=sizeof(float);
         pnt->m_X[d] = (float)td;
-        delete [] num;
-        } 
-    
+        }
+
       for(d=0; d<6; d++)
         {
-        char* num = new char[sizeof(float)];
+        float td;
+        char * const num = (char *)(&td);
         for(k=0;k<sizeof(float);k++)
           {
           num[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-        i+=sizeof(float); 
+        i+=sizeof(float);
         pnt->m_TensorMatrix[d] = (float)td;
-        delete [] num;
         }
 
       METAIO_STL::vector<PositionType>::const_iterator itFields =
@@ -525,27 +518,26 @@ M_Read(void)
                                                            m_Positions.end();
       while(itFields !=  itFieldsEnd)
         {
-        if(strcmp((*itFields).first.c_str(),"x") 
-          && strcmp((*itFields).first.c_str(),"y") 
-          && strcmp((*itFields).first.c_str(),"z") 
-          && strcmp((*itFields).first.c_str(),"tensor1") 
-          && strcmp((*itFields).first.c_str(),"tensor2") 
-          && strcmp((*itFields).first.c_str(),"tensor3") 
-          && strcmp((*itFields).first.c_str(),"tensor4") 
-          && strcmp((*itFields).first.c_str(),"tensor5") 
-          && strcmp((*itFields).first.c_str(),"tensor6") 
+        if(strcmp((*itFields).first.c_str(),"x")
+          && strcmp((*itFields).first.c_str(),"y")
+          && strcmp((*itFields).first.c_str(),"z")
+          && strcmp((*itFields).first.c_str(),"tensor1")
+          && strcmp((*itFields).first.c_str(),"tensor2")
+          && strcmp((*itFields).first.c_str(),"tensor3")
+          && strcmp((*itFields).first.c_str(),"tensor4")
+          && strcmp((*itFields).first.c_str(),"tensor5")
+          && strcmp((*itFields).first.c_str(),"tensor6")
           )
           {
-          char* num = new char[sizeof(float)];
+          float td;
+          char * const num = (char *)(&td);
           for(k=0;k<sizeof(float);k++)
             {
             num[k] = _data[i+k];
             }
-          float td = (float)((float*)num)[0];
           MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-          i+=sizeof(float); 
+          i+=sizeof(float);
           pnt->AddField((*itFields).first.c_str(),(float)td);
-          delete [] num;
           }
         itFields++;
         }
@@ -556,7 +548,7 @@ M_Read(void)
     }
   else
     {
-    for(j=0; j<m_NPoints; j++) 
+    for(j=0; j<m_NPoints; j++)
       {
       if(m_Event)
         {
@@ -571,47 +563,67 @@ M_Read(void)
         m_ReadStream->get();
         }
 
-     
-      pnt->m_X[0] = v[this->GetPosition("x")];
-      pnt->m_X[1] = v[this->GetPosition("y")];
+
+      const int positionOfX = this->GetPosition("x");
+      const int positionOfY = this->GetPosition("y");
+
+      if( positionOfX < 0 )
+        {
+        METAIO_STREAM::cerr << "MetaDTITube: M_Read: 'x' not found." << METAIO_STREAM::endl;
+        }
+
+      if( positionOfY < 0 )
+        {
+        METAIO_STREAM::cerr << "MetaDTITube: M_Read: 'y' not found." << METAIO_STREAM::endl;
+        }
+
+      pnt->m_X[0] = v[positionOfX];
+      pnt->m_X[1] = v[positionOfY];
 
       if(m_NDims == 3)
         {
-        pnt->m_X[2] = v[this->GetPosition("z")];
+        const int positionOfZ = this->GetPosition("z");
+
+        if( positionOfZ < 0 )
+          {
+          METAIO_STREAM::cerr << "MetaDTITube: M_Read: 'z' not found." << METAIO_STREAM::endl;
+          }
+
+        pnt->m_X[2] = v[positionOfZ];
         }
 
       // Read tensor1
-      if(this->GetPosition("tensor1") >= 0 
+      if(this->GetPosition("tensor1") >= 0
          && this->GetPosition("tensor1") < pntDim)
         {
         pnt->m_TensorMatrix[0] = v[this->GetPosition("tensor1")];
         }
       // Read tensor2
-      if(this->GetPosition("tensor2") >= 0 
+      if(this->GetPosition("tensor2") >= 0
          && this->GetPosition("tensor2") < pntDim)
         {
         pnt->m_TensorMatrix[1] = v[this->GetPosition("tensor2")];
         }
       // Read tensor3
-      if(this->GetPosition("tensor3") >= 0 
+      if(this->GetPosition("tensor3") >= 0
          && this->GetPosition("tensor3") < pntDim)
         {
         pnt->m_TensorMatrix[2] = v[this->GetPosition("tensor3")];
         }
       // Read tensor4
-      if(this->GetPosition("tensor4") >= 0 
+      if(this->GetPosition("tensor4") >= 0
          && this->GetPosition("tensor4") < pntDim)
         {
         pnt->m_TensorMatrix[3] = v[this->GetPosition("tensor4")];
         }
       // Read tensor5
-      if(this->GetPosition("tensor5") >= 0 
+      if(this->GetPosition("tensor5") >= 0
          && this->GetPosition("tensor5") < pntDim)
         {
         pnt->m_TensorMatrix[4] = v[this->GetPosition("tensor5")];
         }
       // Read tensor6
-      if(this->GetPosition("tensor6") >= 0 
+      if(this->GetPosition("tensor6") >= 0
          && this->GetPosition("tensor6") < pntDim)
         {
         pnt->m_TensorMatrix[5] = v[this->GetPosition("tensor6")];
@@ -624,15 +636,15 @@ M_Read(void)
                                                            m_Positions.end();
       while(itFields != itFieldsEnd)
         {
-        if(strcmp((*itFields).first.c_str(),"x") 
-          && strcmp((*itFields).first.c_str(),"y") 
-          && strcmp((*itFields).first.c_str(),"z") 
-          && strcmp((*itFields).first.c_str(),"tensor1") 
-          && strcmp((*itFields).first.c_str(),"tensor2") 
-          && strcmp((*itFields).first.c_str(),"tensor3") 
-          && strcmp((*itFields).first.c_str(),"tensor4") 
-          && strcmp((*itFields).first.c_str(),"tensor5") 
-          && strcmp((*itFields).first.c_str(),"tensor6") 
+        if(strcmp((*itFields).first.c_str(),"x")
+          && strcmp((*itFields).first.c_str(),"y")
+          && strcmp((*itFields).first.c_str(),"z")
+          && strcmp((*itFields).first.c_str(),"tensor1")
+          && strcmp((*itFields).first.c_str(),"tensor2")
+          && strcmp((*itFields).first.c_str(),"tensor3")
+          && strcmp((*itFields).first.c_str(),"tensor4")
+          && strcmp((*itFields).first.c_str(),"tensor5")
+          && strcmp((*itFields).first.c_str(),"tensor6")
           )
           {
           pnt->AddField((*itFields).first.c_str(),
@@ -650,7 +662,7 @@ M_Read(void)
       c = m_ReadStream->get();// to avoid unrecognize charactere
       }
     }
-  
+
   if(m_Event)
     {
     m_Event->StopReading();
@@ -689,7 +701,7 @@ M_Write(void)
     int elementSize;
     MET_SizeOfType(m_ElementType, &elementSize);
 
-    unsigned int pntDim = m_NDims+6; 
+    unsigned int pntDim = m_NDims+6;
     const DTITubePnt::FieldListType & extraList =
                                     (*(m_PointList.begin()))->GetExtraFields();
     pntDim += static_cast<unsigned int>(extraList.size());
@@ -702,15 +714,15 @@ M_Write(void)
       for(d = 0; d < m_NDims; d++)
         {
         float x = (*it)->m_X[d];
-        MET_SwapByteIfSystemMSB(&x,MET_FLOAT);     
-        MET_DoubleToValue((double)x,m_ElementType,data,i++);  
+        MET_SwapByteIfSystemMSB(&x,MET_FLOAT);
+        MET_DoubleToValue((double)x,m_ElementType,data,i++);
         }
 
       for(d = 0; d < 6; d++)
         {
         float x = (*it)->m_TensorMatrix[d];
-        MET_SwapByteIfSystemMSB(&x,MET_FLOAT);        
-        MET_DoubleToValue((double)x,m_ElementType, data, i++);  
+        MET_SwapByteIfSystemMSB(&x,MET_FLOAT);
+        MET_DoubleToValue((double)x,m_ElementType, data, i++);
         }
 
       // Add the extra fields
@@ -721,7 +733,7 @@ M_Write(void)
         {
         float x = (*itFields).second;
         MET_SwapByteIfSystemMSB(&x,MET_FLOAT);
-        MET_DoubleToValue((double)x,m_ElementType,data,i++);  
+        MET_DoubleToValue((double)x,m_ElementType,data,i++);
         itFields++;
         }
 
@@ -736,7 +748,7 @@ M_Write(void)
     {
     PointListType::const_iterator it = m_PointList.begin();
     PointListType::const_iterator itEnd = m_PointList.end();
-  
+
     int d;
     while(it != itEnd)
       {
@@ -744,7 +756,7 @@ M_Write(void)
         {
         *m_WriteStream << (*it)->m_X[d] << " ";
         }
-      
+
       for(d = 0; d < 6; d++)
         {
         *m_WriteStream << (*it)->m_TensorMatrix[d] << " ";

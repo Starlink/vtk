@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStreamingDemandDrivenPipeline.h,v $
+  Module:    vtkStreamingDemandDrivenPipeline.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,20 +25,24 @@
 
 #include "vtkDemandDrivenPipeline.h"
 
+#define VTK_UPDATE_EXTENT_COMBINE 1
+#define VTK_UPDATE_EXTENT_REPLACE 2
+
 class vtkExtentTranslator;
 class vtkInformationDoubleKey;
 class vtkInformationDoubleVectorKey;
+class vtkInformationIdTypeKey;
 class vtkInformationIntegerKey;
 class vtkInformationIntegerVectorKey;
 class vtkInformationObjectBaseKey;
 class vtkInformationStringKey;
-class vtkInformationIdTypeKey;
+class vtkInformationUnsignedLongKey;
 
 class VTK_FILTERING_EXPORT vtkStreamingDemandDrivenPipeline : public vtkDemandDrivenPipeline
 {
 public:
   static vtkStreamingDemandDrivenPipeline* New();
-  vtkTypeRevisionMacro(vtkStreamingDemandDrivenPipeline,vtkDemandDrivenPipeline);
+  vtkTypeMacro(vtkStreamingDemandDrivenPipeline,vtkDemandDrivenPipeline);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -108,20 +112,9 @@ public:
   int GetUpdateNumberOfPieces(vtkInformation *);
   int SetUpdateGhostLevel(vtkInformation *, int n);
   int GetUpdateGhostLevel(vtkInformation *);
-
-  // Description:
-  // Convenience method to set a particular minor update piece within
-  // a particular major update piece. For example, when streaming in
-  // parallel. This is needed in paraview, to let each processor set 
-  // their own piece locally, independent of processor.
-  int SetSplitUpdateExtent(int port, 
-                           int major, int minor,
-                           int numPieces, 
-                           int ghostLevel)
-  {
-    return this->SetUpdateExtent(port, major+minor, numPieces, ghostLevel);
-  }
-  
+  int SetUpdateResolution(int port, double r);
+  int SetUpdateResolution(vtkInformation *, double r);
+  double GetUpdateResolution(vtkInformation *);
 
   // Description:
   // Get/Set the update extent for output ports that use Temporal Extents
@@ -172,6 +165,11 @@ public:
   // Key defining a request to propagate information about the update
   // extent downstream.
   static vtkInformationRequestKey* REQUEST_UPDATE_EXTENT_INFORMATION();
+  static vtkInformationRequestKey* REQUEST_MANAGE_INFORMATION();
+
+  // Description:
+  // Key defining to propagate resolution changes up the pipeline.
+  static vtkInformationRequestKey* REQUEST_RESOLUTION_PROPAGATE();
 
   // Description:
   // Key for an algorithm to store in a request to tell this executive
@@ -191,6 +189,11 @@ public:
   static vtkInformationIntegerKey* UPDATE_NUMBER_OF_GHOST_LEVELS();
 
   // Description:
+  // Key for combining the update extents requested by all consumers,
+  // so that the final extent that is produced satisfies all consumers.
+  static vtkInformationIntegerVectorKey* COMBINED_UPDATE_EXTENT();
+
+  // Description:
   // This is set if the extent was set through extent translation.
   // GenerateGhostLevelArray() is called only when this is set.
   static vtkInformationIntegerKey* UPDATE_EXTENT_TRANSLATED();
@@ -198,6 +201,12 @@ public:
   // Description:
   // Key to store the whole extent provided in pipeline information.
   static vtkInformationIntegerVectorKey* WHOLE_EXTENT();
+
+  // Description:
+  // This is set if the update extent is not restricted to the
+  // whole extent, for sources that can generate an extent of
+  // any requested size.
+  static vtkInformationIntegerKey* UNRESTRICTED_UPDATE_EXTENT();
 
   // Description:
   // Key to store the maximum number of pieces provided in pipeline
@@ -210,9 +219,13 @@ public:
   static vtkInformationDoubleVectorKey* WHOLE_BOUNDING_BOX();
 
   // Description:
-  // Key to store the bounding box of a portion of the data set in 
+  // Key to store the bounding box of a portion of the data set in
   // pipeline information.
   static vtkInformationDoubleVectorKey* PIECE_BOUNDING_BOX();
+
+  // Description:
+  // Key used to reject unimportant pieces in streaming.
+  static vtkInformationDoubleVectorKey* PIECE_NORMAL();
 
   // Description:
   // Key to specify the request for exact extent in pipeline information.
@@ -231,11 +244,23 @@ public:
   static vtkInformationDoubleVectorKey* UPDATE_TIME_STEPS();
 
   // Description:
-  // Key to specify from 0 to 1 the priority of this update extent
+  // Key that specifies from 0.0 to 1.0 the pipeline computed priority
+  // of this update extent. 0.0 means does not contribute and can
+  // be skipped.
   static vtkInformationDoubleKey* PRIORITY();
 
   // Description:
-  // Used internally to help validate meta information as it flows through pipeline.
+  // Key that specifies how many cells were in the piece at the head of the
+  // pipeline, so that work estimates can be made.
+  static vtkInformationUnsignedLongKey* ORIGINAL_NUMBER_OF_CELLS();
+
+  // Description:
+  // Key that specifies a requested resolution level for this update
+  // extent. 0.0 is very low and 1.0 is full resolution.
+  static vtkInformationDoubleKey* UPDATE_RESOLUTION();
+
+  // Description:
+  // Used internally to validate meta information as it flows through pipeline
   static vtkInformationIntegerKey* REMOVE_ATTRIBUTE_INFORMATION();
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleScalarTree.h,v $
+  Module:    vtkSimpleScalarTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ public:
 
   // Description:
   // Standard type related macros and PrintSelf() method.
-  vtkTypeRevisionMacro(vtkSimpleScalarTree,vtkScalarTree);
+  vtkTypeMacro(vtkSimpleScalarTree,vtkScalarTree);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

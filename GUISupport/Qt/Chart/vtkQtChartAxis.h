@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartAxis.h,v $
+  Module:    vtkQtChartAxis.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -190,7 +190,7 @@ public:
   ///   marks.
   ///
   /// This setting does not affect the best-fit layout. Extra space is
-  /// added before the minimum and after the maximum. This is usefull
+  /// added before the minimum and after the maximum. This is useful
   /// for chart objects that expand around the tick mark like the bar
   /// in a bar chart.
   ///

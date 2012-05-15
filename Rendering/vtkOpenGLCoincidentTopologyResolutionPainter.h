@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLCoincidentTopologyResolutionPainter.h,v $
+  Module:    vtkOpenGLCoincidentTopologyResolutionPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLCoincidentTopologyResolutionPainter :
 {
 public:
   static vtkOpenGLCoincidentTopologyResolutionPainter* New();
-  vtkTypeRevisionMacro(vtkOpenGLCoincidentTopologyResolutionPainter,
+  vtkTypeMacro(vtkOpenGLCoincidentTopologyResolutionPainter,
     vtkCoincidentTopologyResolutionPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -42,6 +42,12 @@ protected:
   // has been called.
   virtual void RenderInternal(vtkRenderer* renderer, vtkActor* actor, 
                               unsigned long typeflags, bool forceCompileOnly);
+
+  void RenderPolygonOffset(vtkRenderer *renderer, vtkActor *actor,
+    unsigned long typeflags, bool forceCompileOnly);
+  void RenderShiftZBuffer(vtkRenderer *renderer, vtkActor *actor,
+    unsigned long typeflags, bool forceCompileOnly);
+
 private:
   vtkOpenGLCoincidentTopologyResolutionPainter(
     const vtkOpenGLCoincidentTopologyResolutionPainter&); // Not implemented.

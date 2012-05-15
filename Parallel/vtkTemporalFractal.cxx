@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkTemporalFractal.cxx,v $
+  Module:    vtkTemporalFractal.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -37,7 +37,6 @@
 
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkTemporalFractal, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkTemporalFractal);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartArea.h,v $
+  Module:    vtkQtChartArea.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -169,12 +169,24 @@ public:
   /// Notifies the chart layers that a resize interaction has finished.
   void finishInteractiveResize();
   //@}
-  
+
+  /// \name Style Methods
+  //@{
   /// \brief
   ///   Gets the style manager for layers that want unique styles.
   /// \return
   ///   A pointer to the style manager.
   vtkQtChartStyleManager *getStyleManager() const;
+
+  /// \brief
+  ///   Sets the style manager for layers that want unique styles.
+  /// \param manager The new style manager.
+  void setStyleManager(vtkQtChartStyleManager *manager);
+  //@}
+
+  /// \brief 
+  ///   Enabled OpenGL is available.
+  void setUseOpenGLIfAvailable(bool useOpenGL);
 
 public slots:
   /// Calculates the axis and chart layout.

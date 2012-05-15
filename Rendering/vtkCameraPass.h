@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCameraPass.h,v $
+  Module:    vtkCameraPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,13 +35,15 @@ class VTK_RENDERING_EXPORT vtkCameraPass : public vtkRenderPass
 {
 public:
   static vtkCameraPass *New();
-  vtkTypeRevisionMacro(vtkCameraPass,vtkRenderPass);
+  vtkTypeMacro(vtkCameraPass,vtkRenderPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
   // Description:
   // Release graphics resources and ask components to release their own
@@ -57,7 +59,12 @@ public:
   // Initial value is a NULL pointer.
   vtkGetObjectMacro(DelegatePass,vtkRenderPass);
   virtual void SetDelegatePass(vtkRenderPass *delegatePass);
-  
+ 
+  // Description:
+  // Used to override the aspect ratio used when computing the projection
+  // matrix. This is useful when rendering for tile-displays for example.
+  vtkSetMacro(AspectRatioOverride, double);
+  vtkGetMacro(AspectRatioOverride, double);
  protected:
   // Description:
   // Default constructor. DelegatePass is set to NULL.
@@ -66,9 +73,14 @@ public:
   // Description:
   // Destructor.
   virtual ~vtkCameraPass();
-  
+  virtual void GetTiledSizeAndOrigin(
+    const vtkRenderState* render_state,
+    int* width, int* height, int *originX,
+    int* originY);
+
   vtkRenderPass *DelegatePass;
   
+  double AspectRatioOverride;
  private:
   vtkCameraPass(const vtkCameraPass&);  // Not implemented.
   void operator=(const vtkCameraPass&);  // Not implemented.

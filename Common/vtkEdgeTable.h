@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEdgeTable.h,v $
+  Module:    vtkEdgeTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ public:
   // Instantiate object assuming that 1000 edges are to be inserted.
   static vtkEdgeTable *New();
 
-  vtkTypeRevisionMacro(vtkEdgeTable,vtkObject);
+  vtkTypeMacro(vtkEdgeTable,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

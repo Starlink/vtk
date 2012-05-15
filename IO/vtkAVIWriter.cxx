@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAVIWriter.cxx,v $
+  Module:    vtkAVIWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,6 @@ public:
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkAVIWriter);
-vtkCxxRevisionMacro(vtkAVIWriter, "$Revision: 1.10 $");
 
 //---------------------------------------------------------------------------
 vtkAVIWriter::vtkAVIWriter()
@@ -52,12 +51,12 @@ vtkAVIWriter::vtkAVIWriter()
   this->Internals->StreamCompressed = NULL;
   this->Internals->AVIFile = NULL;
   this->Time = 0;
-  this->Quality = 2;
-  this->Rate = 15;
+  this->Quality = 10000;
+  this->Rate = 1000;
   this->Internals->hDIB = NULL;  // handle to DIB, temp handle
   this->PromptCompressionOptions = 0;
   this->CompressorFourCC = NULL;
-  this->SetCompressorFourCC("msvc");
+  this->SetCompressorFourCC("MSVC");
 }
 
 //---------------------------------------------------------------------------

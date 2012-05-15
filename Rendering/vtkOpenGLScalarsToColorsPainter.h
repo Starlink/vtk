@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLScalarsToColorsPainter.h,v $
+  Module:    vtkOpenGLScalarsToColorsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLScalarsToColorsPainter :
 {
 public:
   static vtkOpenGLScalarsToColorsPainter* New();
-  vtkTypeRevisionMacro(vtkOpenGLScalarsToColorsPainter, 
+  vtkTypeMacro(vtkOpenGLScalarsToColorsPainter,
     vtkScalarsToColorsPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
@@ -42,6 +42,11 @@ public:
   virtual void ReleaseGraphicsResources(vtkWindow *);
   
   virtual int GetPremultiplyColorsWithAlpha(vtkActor* actor);
+
+  // Description:
+  // Return the texture size limit, i.e. GL_MAX_TEXTURE_SIZE.
+  virtual vtkIdType GetTextureSizeLimit();
+
 protected:
   vtkOpenGLScalarsToColorsPainter();
   ~vtkOpenGLScalarsToColorsPainter();

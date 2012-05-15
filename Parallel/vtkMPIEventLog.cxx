@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPIEventLog.cxx,v $
+  Module:    vtkMPIEventLog.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,11 +16,11 @@
 #include "vtkMPIEventLog.h"
 #include "vtkMPIController.h"
 #include "vtkObjectFactory.h"
+#include "mpi.h" // required before "mpe.h" to avoid "C vs C++" conflicts
 #include "mpe.h"
 
 int vtkMPIEventLog::LastEventId = 0;
 
-vtkCxxRevisionMacro(vtkMPIEventLog, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkMPIEventLog);
 
 void vtkMPIEventLog::PrintSelf(ostream& os, vtkIndent indent)

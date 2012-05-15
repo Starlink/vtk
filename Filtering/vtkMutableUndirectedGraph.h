@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMutableUndirectedGraph.h,v $
+  Module:    vtkMutableUndirectedGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,213 +40,263 @@ class VTK_FILTERING_EXPORT vtkMutableUndirectedGraph : public vtkUndirectedGraph
 {
 public:
   static vtkMutableUndirectedGraph *New();
-  vtkTypeRevisionMacro(vtkMutableUndirectedGraph, vtkUndirectedGraph);
+  vtkTypeMacro(vtkMutableUndirectedGraph, vtkUndirectedGraph);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Adds a new vertex to the graph and returns the id of that vertex.
-  // If non-null, propertyArr provides properties that will be attached
-  // to this vertex. The values in propertyArr must match up with the
-  // arrays in the vertex data retrieved by GetVertexData.
-  // In a distributed graph, this routine cannot be used to add a vertex
+  // Allocates space for the specified number of vertices in the graph's
+  // internal data structures.
+  // The previous number of vertices is returned on success and -1
+  // is returned on failure.
+  //
+  // This has no effect on the number of vertex coordinate tuples or
+  // vertex attribute tuples allocated; you are responsible for
+  // guaranteeing these match.
+  // Also, this call is not implemented for distributed-memory graphs since
+  // the semantics are unclear; calling this function on a graph with a
+  // non-NULL DistributedGraphHelper will generate an error message,
+  // no allocation will be performed, and a value of -1 will be returned.
+  virtual vtkIdType SetNumberOfVertices( vtkIdType numVerts );
+
+  // Description:
+  // Adds a vertex to the graph and returns the index of the new vertex.
+  //
+  // \note In a distributed graph (i.e. a graph whose DistributedHelper
+  // is non-null), this routine cannot be used to add a vertex
   // if the vertices in the graph have pedigree IDs, because this routine
   // will always add the vertex locally, which may conflict with the
   // proper location of the vertex based on the distribution of the
   // pedigree IDs.
   vtkIdType AddVertex();
-  
+
   // Description:
-  // Adds a new vertex to the graph and returns the id of that vertex.
-  // If non-null, propertyArr provides properties that will be attached
-  // to this vertex. The values in propertyArr must match up with the
-  // arrays in the vertex data retrieved by GetVertexData.
-  // If the graph has pedigree IDs for its vertices, and a vertex with 
-  // the given pedigree ID already exists, its properties will be
-  // overwritten with the properties in propertyArr and its ID will be
-  // returned. Note that, in a distributed graph with pedigree IDs,
-  // the vertex added or found might not be local. In this case,
+  // Adds a vertex to the graph with associated properties defined in
+  // \p propertyArr and returns the index of the new vertex.
+  // The number and order of values in \p propertyArr must match up with the
+  // arrays in the vertex data retrieved by GetVertexData().
+  //
+  // If a vertex with the given pedigree ID already exists, its properties will be
+  // overwritten with the properties in \p propertyArr and the existing
+  // vertex index will be returned.
+  //
+  // \note In a distributed graph (i.e. a graph whose DistributedHelper
+  // is non-null) the vertex added or found might not be local. In this case,
   // AddVertex will wait until the vertex can be added or found
-  // remotely, so that the proper vertex ID can be returned. If you
-  // don't actually need to use the vertex ID, consider calling
+  // remotely, so that the proper vertex index can be returned. If you
+  // don't actually need to use the vertex index, consider calling
   // LazyAddVertex, which provides better performance by eliminating
-  // the delays associated with returning the vertex ID.
+  // the delays associated with returning the vertex index.
   vtkIdType AddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
-  // Adds a vertex with the given pedigree ID to the graph (if a
-  // vertex with that pedigree ID does not already exist) and returns
-  // the id the vertex with that pedigree ID. If a vertex with the
-  // given pedigree ID already exists, its ID will be returned. Note
-  // that, in a distributed graph, 
-  // the vertex added or found might not be local. In this case,
+  // Adds a vertex with the given \p pedigreeID to the graph and
+  // returns the index of the new vertex.
+  //
+  // If a vertex with the given pedigree ID already exists,
+  // the existing vertex index will be returned.
+  //
+  // \note In a distributed graph (i.e. a graph whose DistributedHelper
+  // is non-null) the vertex added or found might not be local. In this case,
   // AddVertex will wait until the vertex can be added or found
-  // remotely, so that the proper vertex ID can be returned. If you
-  // don't actually need to use the vertex ID, consider calling
+  // remotely, so that the proper vertex index can be returned. If you
+  // don't actually need to use the vertex index, consider calling
   // LazyAddVertex, which provides better performance by eliminating
-  // the delays associated with returning the vertex ID.
+  // the delays associated with returning the vertex index.
   vtkIdType AddVertex(const vtkVariant& pedigreeId);
-  //ETX
 
-  // Description:
-  // Adds an undirected edge from u to v to the graph and returns a
-  // vtkEdgeType structure for that edge. If provided, propertyArr
-  // provides edge properties for the newly-created edge. The values
-  // in propertyArr must match up with the arrays in the edge data
-  // returned by GetEdgeData. Both u and v must refer to vertices
-  // already in the graph.
-  vtkEdgeType AddEdge(vtkIdType u, vtkIdType v);
-  
-  // Description:
-  // Adds an undirected edge from u to v to the graph and returns a
-  // vtkEdgeType structure for that edge. If provided, propertyArr
-  // provides edge properties for the newly-created edge. The values
-  // in propertyArr must match up with the arrays in the edge data
-  // returned by GetEdgeData. Both u and v must refer to vertices
-  // already in the graph.
-  vtkEdgeType AddEdge(vtkIdType u, vtkIdType v, 
-                      vtkVariantArray *propertyArr);
-  
   //BTX
   // Description:
-  // Adds an undirected edge from u to v to the graph and returns a
-  // vtkEdgeType structure for that edge. uPedigreeId is the pedigree
-  // ID of a vertex, which will be automatically added if it does not
-  // already exist. v must refer to a vertex already in the graph.
-  // If provided, propertyArr provides edge properties
-  // for the newly-created edge. The values in propertyArr must match
-  // up with the arrays in the edge data returned by GetEdgeData.
-  vtkEdgeType AddEdge(const vtkVariant& uPedigreeId, vtkIdType v, 
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u and \p v are vertex indices,
+  // and returns a \p vtkEdgeType structure describing that edge.
+  //
+  // \p vtkEdgeType contains fields for \p Source vertex index,
+  // \p Target vertex index, and edge index \p Id.
+  vtkEdgeType AddEdge(vtkIdType u, vtkIdType v);
+
+  // Description:
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u and \p v are vertex indices,
+  // with associated properties defined in \p propertyArr
+  // and returns a \p vtkEdgeType structure describing that edge.
+  //
+  // The number and order of values in \p propertyArr must match up with the
+  // arrays in the edge data retrieved by GetEdgeData().
+  //
+  // \p vtkEdgeType contains fields for \p Source vertex index,
+  // \p Target vertex index, and edge index \p Id.
+  vtkEdgeType AddEdge(vtkIdType u, vtkIdType v,
+                      vtkVariantArray *propertyArr);
+
+  // Description:
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u is a vertex pedigree ID and \p v is a vertex index,
+  // and returns a \p vtkEdgeType structure describing that edge.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // \p vtkEdgeType contains fields for \p Source vertex index,
+  // \p Target vertex index, and edge index \p Id.
+  vtkEdgeType AddEdge(const vtkVariant& u, vtkIdType v,
                       vtkVariantArray *propertyArr = 0);
 
   // Description:
-  // Adds an undirected edge from u to v to the graph and returns a
-  // vtkEdgeType structure for that edge. vPedigreeId is the pedigree
-  // ID of a vertex, which will be automatically added if it does not
-  // already exist. u must refer to a vertex already in the graph.
-  // If provided, propertyArr provides edge properties
-  // for the newly-created edge. The values in propertyArr must match
-  // up with the arrays in the edge data returned by GetEdgeData.
-  vtkEdgeType AddEdge(vtkIdType u, const vtkVariant& vPedigreeId, 
+  // Adds a directed edge from \p u to \p v,
+  // where \p u is a vertex index and \p v is a vertex pedigree ID,
+  // and returns a \p vtkEdgeType structure describing that edge.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // \p vtkEdgeType contains fields for \p Source vertex index,
+  // \p Target vertex index, and edge index \p Id.
+  vtkEdgeType AddEdge(vtkIdType u, const vtkVariant& v,
                       vtkVariantArray *propertyArr = 0);
 
   // Description:
-  // Adds an undirected edge from u to v to the graph and returns a
-  // vtkEdgeType structure for that edge. uPedigreeId and vPedigreeId
-  // are the pedigree IDs of vertices u and v, which will be
-  // automatically added if they do not already exist. If provided,
-  // propertyArr provides edge properties for the newly-created
-  // edge. The values in propertyArr must match up with the arrays in
-  // the edge data returned by GetEdgeData.
-  vtkEdgeType AddEdge(const vtkVariant& uPedigreeId, 
-                      const vtkVariant& vPedigreeId, 
+  // Adds a directed edge from \p u to \p v,
+  // where \p u and \p v are vertex pedigree IDs,
+  // and returns a \p vtkEdgeType structure describing that edge.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // \p vtkEdgeType contains fields for \p Source vertex index,
+  // \p Target vertex index, and edge index \p Id.
+  vtkEdgeType AddEdge(const vtkVariant& u,
+                      const vtkVariant& v,
                       vtkVariantArray *propertyArr = 0);
+
   //ETX
 
   // Description:
-  // Adds a vertex to the graph, and returns the id of that vertex.
-  // If non-null, propertyArr provides properties that will be attached
-  // to this vertex. The values in propertyArr must match up with the
-  // arrays in the vertex data retrieved by GetVertexData.
-  // In a distributed graph, this routine cannot be used to add a vertex
-  // if the vertices in the graph have pedigree IDs, because this routine
-  // will always add the vertex locally, which may conflict with the
-  // proper location of the vertex based on the distribution of the
-  // pedigree IDs.
+  // Adds a vertex to the graph.
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
   void LazyAddVertex();
-  
+
   // Description:
-  // Adds a vertex to the graph, and returns the id of that vertex.
-  // If non-null, propertyArr provides properties that will be attached
-  // to this vertex. The values in propertyArr must match up with the
-  // arrays in the vertex data retrieved by GetVertexData.
-  // If the graph has pedigree IDs for its vertices, and a vertex with 
-  // the given pedigree ID already exists, its properties will be
-  // overwritten with the properties in propertyArr. Note that, in a
-  // distributed graph with pedigree IDs, the vertex added or found
-  // might not be local. In these cases, LazyAddVertex can be
-  // significantly faster than AddVertex, because it does not have to
-  // return the resulting vertex ID to the caller.
+  // Adds a vertex to the graph with associated properties defined in
+  // \p propertyArr.
+  // The number and order of values in \p propertyArr must match up with the
+  // arrays in the vertex data retrieved by GetVertexData().
+  //
+  // If a vertex with the given pedigree ID already exists, its properties will be
+  // overwritten with the properties in \p propertyArr.
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
   void LazyAddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
-  // Adds a vertex with the given pedigree ID to the graph (if a
-  // vertex with that pedigree ID does not already exist). Note that,
-  // in a distributed graph, the vertex added or found might not be
-  // local. In these cases, LazyAddVertex can be
-  // significantly faster than AddVertex, because it does not have to
-  // return the resulting vertex ID to the caller.
+  // Adds a vertex with the given \p pedigreeID to the graph.
+  //
+  // If a vertex with the given pedigree ID already exists,
+  // no operation is performed.
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
   void LazyAddVertex(const vtkVariant& pedigreeId);
-  //ETX
 
   // Description:
-  // Adds an undirected edge from u to v to the graph. The edge may not
-  // be added immediately, which provides more optimization
-  // opportunities for distributed graphs; consequently, the edge
-  // itself is not actually returned. u and v must refer to vertices
-  // in the graph.
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u and \p v are vertex indices.
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
   void LazyAddEdge(vtkIdType u, vtkIdType v);
-  
+
   // Description:
-  // Adds an undirected edge from u to v to the graph. The edge may not
-  // be added immediately, which provides more optimization
-  // opportunities for distributed graphs; consequently, the edge
-  // itself is not actually returned. u and v must refer to vertices
-  // in the graph. If non-NULL, propertyArr
-  // provides edge properties for the newly-created edge. The values
-  // in propertyArr must match up with the arrays in the edge data
-  // returned by GetEdgeData.
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u and \p v are vertex indices.
+  //
+  // The number and order of values in
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
   void LazyAddEdge(vtkIdType u, vtkIdType v, vtkVariantArray *propertyArr);
 
-  //BTX  
   // Description:
-  // Adds an undirected edge from u to v to the graph. The edge may not
-  // be added immediately, which provides more optimization
-  // opportunities for distributed graphs; consequently, the edge
-  // itself is not actually returned. uPedigreeId is the pedigree
-  // ID of a vertex, which will be automatically added if it does not
-  // already exist. v must refer to a vertex in the graph. If
-  // provided, propertyArr provides edge properties 
-  // for the newly-created edge. The values in propertyArr must match
-  // up with the arrays in the edge data returned by GetEdgeData.
-  void LazyAddEdge(const vtkVariant& uPedigreeId, vtkIdType v, 
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u is a vertex pedigree ID and \p v is a vertex index.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
+  void LazyAddEdge(const vtkVariant& u, vtkIdType v,
                    vtkVariantArray *propertyArr = 0);
 
   // Description:
-  // Adds an undirected edge from u to v to the graph. The edge may not
-  // be added immediately, which provides more optimization
-  // opportunities for distributed graphs; consequently, the edge
-  // itself is not actually returned. vPedigreeId is the pedigree
-  // ID of a vertex, which will be automatically added if it does not
-  // already exist. u must refer to a vertex in the graph. If
-  // provided, propertyArr provides edge properties
-  // for the newly-created edge. The values in propertyArr must match
-  // up with the arrays in the edge data returned by GetEdgeData.
-  void LazyAddEdge(vtkIdType u, const vtkVariant& vPedigreeId, 
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u is a vertex index and \p v is a vertex pedigree ID.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
+  void LazyAddEdge(vtkIdType u, const vtkVariant& v,
                    vtkVariantArray *propertyArr = 0);
 
   // Description:
-  // Adds an undirected edge from u to v to the graph. The edge may not
-  // be added immediately, which provides more optimization
-  // opportunities for distributed graphs; consequently, the edge
-  // itself is not actually returned. uPedigreeId and vPedigreeId
-  // are the pedigree IDs of vertices u and v, which will be
-  // automatically added if they do not already exist. If provided,
-  // propertyArr provides edge properties for the newly-created
-  // edge. The values in propertyArr must match up with the arrays in
-  // the edge data returned by GetEdgeData.
-  void LazyAddEdge(const vtkVariant& uPedigreeId, 
-                   const vtkVariant& vPedigreeId, 
+  // Adds an undirected edge from \p u to \p v,
+  // where \p u and \p v are vertex pedigree IDs.
+  //
+  // The number and order of values in the optional parameter
+  // \p propertyArr must match up with the arrays in the edge data
+  // retrieved by GetEdgeData().
+  //
+  // This method is lazily evaluated for distributed graphs (i.e. graphs
+  // whose DistributedHelper is non-null) the next time Synchronize is
+  // called on the helper.
+  void LazyAddEdge(const vtkVariant& u,
+                   const vtkVariant& v,
                    vtkVariantArray *propertyArr = 0);
-  //ETX
 
   // Description:
-  // Version of AddEdge that returns a heavyweight vtkGraphEdge
-  // for use with wrappers.
+  // Variant of AddEdge() that returns a heavyweight \p vtkGraphEdge object.
   // The graph owns the reference of the edge and will replace
-  // its contents on the next call to AddGraphEdge.
+  // its contents on the next call to AddGraphEdge().
+  //
+  // \note This is a less efficient method for use with wrappers.
+  // In C++ you should use the faster AddEdge().
   vtkGraphEdge *AddGraphEdge(vtkIdType u, vtkIdType v);
+
+  // Description:
+  // Removes the vertex from the graph along with any connected edges.
+  // Note: This invalidates the last vertex index, which is reassigned to v.
+  void RemoveVertex(vtkIdType v);
+
+  // Description:
+  // Removes the edge from the graph.
+  // Note: This invalidates the last edge index, which is reassigned to e.
+  void RemoveEdge(vtkIdType e);
+
+  // Description:
+  // Removes a collection of vertices from the graph along with any connected edges.
+  void RemoveVertices(vtkIdTypeArray* arr);
+
+  // Description:
+  // Removes a collection of edges from the graph.
+  void RemoveEdges(vtkIdTypeArray* arr);
 
 protected:
   vtkMutableUndirectedGraph();

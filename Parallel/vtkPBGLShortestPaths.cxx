@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLShortestPaths.cxx,v $
+  Module:    vtkPBGLShortestPaths.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,16 +47,17 @@
 #include "vtkUndirectedGraph.h"
 #include "vtkVertexListIterator.h"
 
+#include <boost/graph/use_mpi.hpp>
+
 #include <boost/graph/distributed/delta_stepping_shortest_paths.hpp>
-#include <boost/parallel/algorithm.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/graph/parallel/algorithm.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLShortestPaths, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPBGLShortestPaths);
 
 // Function object used to reduce (vertex, distance) pairs to find
@@ -69,9 +70,9 @@ public:
 
   furthest_vertex_double(vtkGraph *g) : graph(g) { }
 
-  vtkstd::pair<vtkIdType, double>
-  operator()(vtkstd::pair<vtkIdType, double> x,
-             vtkstd::pair<vtkIdType, double> y) const
+  std::pair<vtkIdType, double>
+  operator()(std::pair<vtkIdType, double> x,
+             std::pair<vtkIdType, double> y) const
   {
     vtkDistributedGraphHelper *helper = graph->GetDistributedGraphHelper();
     if (x.second > y.second
@@ -201,7 +202,7 @@ int vtkPBGLShortestPaths::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
       inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(
@@ -469,7 +470,7 @@ int vtkPBGLShortestPaths::RequestData(
       // processes.
       using namespace boost::parallel;
       maxFromRootVertex = all_reduce(pbglHelper->GetProcessGroup(),
-                                     vtkstd::make_pair(maxFromRootVertex,
+                                     std::make_pair(maxFromRootVertex,
                                                        maxDistance),
                                      furthest_vertex_double(output)).first;
 

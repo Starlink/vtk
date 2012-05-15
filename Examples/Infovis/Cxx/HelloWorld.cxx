@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: HelloWorld.cxx,v $
+  Module:    HelloWorld.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,13 +29,12 @@ int main(int, char*[])
   view->SetRepresentationFromInputConnection(
     source->GetOutputPort());
   
-  vtkRenderWindow* window = vtkRenderWindow::New();
-  view->SetupRenderWindow(window);
-  window->GetInteractor()->Start();
+  view->ResetCamera();
+  view->Render();
+  view->GetInteractor()->Start();
   
   source->Delete();
   view->Delete();
-  window->Delete();
   
   return 0;
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSeedWidget.h,v $
+  Module:    vtkSeedWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,8 +16,8 @@
 // .SECTION Description
 // The vtkSeedWidget is used to placed multiple seed points in the scene.
 // The seed points can be used for operations like connectivity, segmentation,
-// and region growing. 
-// 
+// and region growing.
+//
 // To use this widget, specify an instance of vtkSeedWidget and a
 // representation (a subclass of vtkSeedRepresentation). The widget is
 // implemented using multiple instances of vtkHandleWidget which can be used
@@ -36,7 +36,7 @@
 // </pre>
 //
 // Note that the event bindings described above can be changed using this
-// class's vtkWidgetEventTranslator. This class translates VTK events 
+// class's vtkWidgetEventTranslator. This class translates VTK events
 // into the vtkSeedWidget's widget events:
 // <pre>
 //   vtkWidgetEvent::AddPoint -- add one point; depending on the state
@@ -53,7 +53,7 @@
 //   vtkCommand::StartInteractionEvent (beginning to interact)
 //   vtkCommand::EndInteractionEvent (completing interaction)
 //   vtkCommand::InteractionEvent (moving after selecting something)
-//   vtkCommand::PlacePointEvent (after point is positioned; 
+//   vtkCommand::PlacePointEvent (after point is positioned;
 //                                call data includes handle id (0,1))
 // </pre>
 
@@ -81,11 +81,11 @@ public:
 
   // Description:
   // Standard methods for a VTK class.
-  vtkTypeRevisionMacro(vtkSeedWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkSeedWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // The method for activiating and deactiviating this widget. This method
+  // The method for activating and deactivating this widget. This method
   // must be overridden because it is a composite widget and does more than
   // its superclasses' vtkAbstractWidget::SetEnabled() method.
   virtual void SetEnabled(int);
@@ -111,7 +111,12 @@ public:
     }
 
   // Description:
-  // Create the default widget representation if one is not set. 
+  // Return the representation as a vtkSeedRepresentation.
+  vtkSeedRepresentation *GetSeedRepresentation()
+    {return reinterpret_cast<vtkSeedRepresentation*>(this->WidgetRep);}
+
+  // Description:
+  // Create the default widget representation if one is not set.
   void CreateDefaultRepresentation();
 
   // Description:
@@ -121,19 +126,22 @@ public:
 
   // Description:
   // Method to be called when the seed widget should stop responding to
-  // the interaction. The seed widget, when defined allows you place seeds
-  // by clicking on the render window. Use this method to indicate that
-  // you would like to stop placing seeds interactively. 
+  // the place point interaction. The seed widget, when defined allows you
+  // place seeds by clicking on the render window. Use this method to
+  // indicate that you would like to stop placing seeds interactively. If
+  // you'd like the widget to stop responding to *any* user interaction
+  // simply disable event processing by the widget by calling
+  //   widget->ProcessEventsOff()
   virtual void CompleteInteraction();
 
   // Description:
   // Method to be called when the seed widget should start responding
-  // to the interaction.  
+  // to the interaction.
   virtual void RestartInteraction();
 
   // Description:
-  // Use this method to programmatically create a new handle. In interactive 
-  // mode, (when the widget is in the PlacingSeeds state) this method is 
+  // Use this method to programmatically create a new handle. In interactive
+  // mode, (when the widget is in the PlacingSeeds state) this method is
   // automatically invoked. The method returns the handle created.
   // A valid seed representation must exist for the widget to create a new
   // handle.
@@ -147,20 +155,26 @@ public:
   // Get the nth seed
   vtkHandleWidget * GetSeed( int n );
 
+  // Description:
+  // Get the widget state.
+  vtkGetMacro( WidgetState, int );
+
+  // The state of the widget
+  //BTX
+  enum
+    {
+    Start = 1,
+    PlacingSeeds = 2,
+    PlacedSeeds = 4,
+    MovingSeed = 8
+    };
+  //ETX
+
 protected:
   vtkSeedWidget();
   ~vtkSeedWidget();
 
-  // The state of the widget
-//BTX
-  enum
-    {
-    Start = 0,
-    PlacingSeeds,
-    PlacedSeeds,
-    MovingSeed
-    };
-//ETX
+
   int WidgetState;
 
   // Callback interface to capture events when
@@ -170,10 +184,13 @@ protected:
   static void MoveAction( vtkAbstractWidget* );
   static void EndSelectAction( vtkAbstractWidget* );
   static void DeleteAction( vtkAbstractWidget* );
-  
+
   // The positioning handle widgets
   vtkSeedList *Seeds;
-  
+
+  // Manipulating or defining ?
+  int Defining;
+
 private:
   vtkSeedWidget(const vtkSeedWidget&);  //Not implemented
   void operator=(const vtkSeedWidget&);  //Not implemented

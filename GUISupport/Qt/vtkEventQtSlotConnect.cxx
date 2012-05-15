@@ -29,12 +29,12 @@
 #include "vtkCallbackCommand.h"
 #include "vtkQtConnection.h"
 
-#include "vtkstd/vector"
+#include <vector>
 
 #include <qobject.h>
 
 // hold all the connections
-class vtkQtConnections : public vtkstd::vector< vtkQtConnection* > {};
+class vtkQtConnections : public std::vector< vtkQtConnection* > {};
 
 vtkStandardNewMacro(vtkEventQtSlotConnect)
 
@@ -61,11 +61,7 @@ void vtkEventQtSlotConnect::Connect(
   vtkObject* vtk_obj, unsigned long event,
   const QObject* qt_obj, const char* slot, 
   void* client_data, float priority
-#if QT_VERSION >= 0x040000
   , Qt::ConnectionType type)
-#else
-  )
-#endif
 {
   if (!vtk_obj || !qt_obj)
     {
@@ -75,11 +71,7 @@ void vtkEventQtSlotConnect::Connect(
   vtkQtConnection* connection = new vtkQtConnection(this);
   connection->SetConnection(
     vtk_obj, event, qt_obj, slot, client_data, priority
-#if QT_VERSION >= 0x040000
     , type);
-#else
-    );
-#endif
   Connections->push_back(connection);
 }
 
@@ -148,5 +140,10 @@ void vtkEventQtSlotConnect::RemoveConnection(vtkQtConnection* conn)
       return;
       }
     }
+}
+
+int vtkEventQtSlotConnect::GetNumberOfConnections() const
+{
+  return static_cast<int>(this->Connections->size());
 }
 

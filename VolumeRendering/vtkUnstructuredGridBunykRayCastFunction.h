@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridBunykRayCastFunction.h,v $
+  Module:    vtkUnstructuredGridBunykRayCastFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -80,7 +80,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkUnstructuredGridBunykRayCastFunction : publi
 { 
 public:
   static vtkUnstructuredGridBunykRayCastFunction *New();
-  vtkTypeRevisionMacro(vtkUnstructuredGridBunykRayCastFunction,vtkUnstructuredGridVolumeRayCastFunction);
+  vtkTypeMacro(vtkUnstructuredGridBunykRayCastFunction,vtkUnstructuredGridVolumeRayCastFunction);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX
@@ -203,6 +203,8 @@ protected:
   // TetraTriangles. We also keep a duplicate list of points 
   // (transformed into view space) - these are the Points. 
   Triangle **TetraTriangles;
+  vtkIdType TetraTrianglesSize;
+  
   Triangle  *TriangleList;
 
   // Compute whether a boundary triangle is front facing by

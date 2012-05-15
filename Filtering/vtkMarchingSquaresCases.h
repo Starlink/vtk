@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMarchingSquaresCases.h,v $
+  Module:    vtkMarchingSquaresCases.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,17 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#ifndef __vtkMarchingSquaresCases_h
-#define __vtkMarchingSquaresCases_h
-//
-// marching squares cases for generating isolines
-//
 
-typedef int EDGE_LIST;
-struct VTK_FILTERING_EXPORT vtkMarchingSquaresLineCases 
-{
-  EDGE_LIST edges[5];
-  static vtkMarchingSquaresLineCases* GetCases();
-};
-
+#include "vtkSystemIncludes.h"
+// Retained for compatibility, deprecated in VTK 5.10, remove in VTK 6.0.
+#ifndef VTK_LEGACY_REMOVE
+# include "vtkMarchingSquaresLineCases.h"
 #endif

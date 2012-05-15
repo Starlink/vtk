@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageNormalize.h,v $
+  Module:    vtkImageNormalize.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImageNormalize : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageNormalize *New();
-  vtkTypeRevisionMacro(vtkImageNormalize,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageNormalize,vtkThreadedImageAlgorithm);
 
 protected:
   vtkImageNormalize();

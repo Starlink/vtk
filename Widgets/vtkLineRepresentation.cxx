@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLineRepresentation.cxx,v $
+  Module:    vtkLineRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,6 +15,7 @@
 #include "vtkLineRepresentation.h"
 #include "vtkPointHandleRepresentation3D.h"
 #include "vtkActor.h"
+#include "vtkCamera.h"
 #include "vtkLineSource.h"
 #include "vtkSphereSource.h"
 #include "vtkPolyDataMapper.h"
@@ -35,7 +36,6 @@
 #include "vtkCellPicker.h"
 #include "vtkPolyDataMapper.h"
 
-vtkCxxRevisionMacro(vtkLineRepresentation, "$Revision: 1.18.2.1 $");
 vtkStandardNewMacro(vtkLineRepresentation);
 
 vtkCxxSetObjectMacro(vtkLineRepresentation,HandleRepresentation,vtkPointHandleRepresentation3D);
@@ -90,8 +90,8 @@ vtkLineRepresentation::vtkLineRepresentation()
   // Pass the initial properties to the actors.
   this->Handle[0]->SetProperty(this->EndPointProperty);
   this->Point1Representation->SetProperty(this->EndPointProperty);
-  this->Handle[1]->SetProperty(this->EndPointProperty);
-  this->Point2Representation->SetProperty(this->EndPointProperty);
+  this->Handle[1]->SetProperty(this->EndPoint2Property);
+  this->Point2Representation->SetProperty(this->EndPoint2Property);
   this->LineHandleRepresentation->SetProperty(this->EndPointProperty);
   this->LineActor->SetProperty(this->LineProperty);
 
@@ -177,6 +177,8 @@ vtkLineRepresentation::~vtkLineRepresentation()
 
   this->EndPointProperty->Delete();
   this->SelectedEndPointProperty->Delete();
+  this->EndPoint2Property->Delete();
+  this->SelectedEndPoint2Property->Delete();
   this->LineProperty->Delete();
   this->SelectedLineProperty->Delete();
 
@@ -512,7 +514,31 @@ void vtkLineRepresentation::PlaceWidget(double bds[6])
 //----------------------------------------------------------------------------
 int vtkLineRepresentation::ComputeInteractionState(int X, int Y, int vtkNotUsed(modify))
 {
-  // See if we are near one of the end points or outside
+  // Check if we are on end points. Use the handles to determine this.
+  int p1State = this->Point1Representation->ComputeInteractionState(X,Y,0);
+  int p2State = this->Point2Representation->ComputeInteractionState(X,Y,0);
+  if ( p1State == vtkHandleRepresentation::Nearby )
+    {
+    this->InteractionState = vtkLineRepresentation::OnP1;
+    this->SetRepresentationState(vtkLineRepresentation::OnP1);
+    }
+  else if ( p2State == vtkHandleRepresentation::Nearby )
+    {
+    this->InteractionState = vtkLineRepresentation::OnP2;
+    this->SetRepresentationState(vtkLineRepresentation::OnP2);
+    }
+  else
+    {
+    this->InteractionState = vtkLineRepresentation::Outside;
+    }
+
+  // Okay if we're near a handle return, otherwise test the line
+  if ( this->InteractionState != vtkLineRepresentation::Outside )
+    {
+    return this->InteractionState;
+    }
+
+  // Check if we are on edges
   double pos1[3], pos2[3];
   this->GetPoint1DisplayPosition(pos1);
   this->GetPoint2DisplayPosition(pos2);
@@ -528,21 +554,7 @@ int vtkLineRepresentation::ComputeInteractionState(int X, int Y, int vtkNotUsed(
   xyz[2] = p1[2] = p2[2] = 0.0;
 
   double tol2 = this->Tolerance*this->Tolerance;
-  // Check if we are on end points
-  if ( vtkMath::Distance2BetweenPoints(xyz,p1) <= tol2 )
-    {
-    this->InteractionState = vtkLineRepresentation::OnP1;
-    this->SetRepresentationState(vtkLineRepresentation::OnP1);
-    return this->InteractionState;
-    }
-  else if ( vtkMath::Distance2BetweenPoints(xyz,p2) <= tol2 )
-    {
-    this->InteractionState = vtkLineRepresentation::OnP2;
-    this->SetRepresentationState(vtkLineRepresentation::OnP2);
-    return this->InteractionState;
-    }
 
-  // Check if we are on edges
   int onLine = (vtkLine::DistanceToLine(xyz,p1,p2,t,closest) <= tol2);
   if ( onLine && t < 1.0 && t > 0.0 )
     {
@@ -550,11 +562,6 @@ int vtkLineRepresentation::ComputeInteractionState(int X, int Y, int vtkNotUsed(
     this->SetRepresentationState(vtkLineRepresentation::OnLine);
     this->GetPoint1WorldPosition(pos1);
     this->GetPoint2WorldPosition(pos2);
-
-    // Consider the two infinite lines :
-    //   L1: pos1 to pos2
-    //   L2: camera_position to focal_point
-    // The line handle will lie on the closest point on L1.
 
     this->LinePicker->Pick(X,Y,0.0,this->Renderer);
     this->LinePicker->GetPickPosition(closest);
@@ -638,6 +645,12 @@ void vtkLineRepresentation::CreateDefaultProperties()
   this->SelectedEndPointProperty = vtkProperty::New();
   this->SelectedEndPointProperty->SetColor(0,1,0);
 
+  this->EndPoint2Property = vtkProperty::New();
+  this->EndPoint2Property->SetColor(1,1,1);
+
+  this->SelectedEndPoint2Property = vtkProperty::New();
+  this->SelectedEndPoint2Property->SetColor(0,1,0);
+  
   // Line properties
   this->LineProperty = vtkProperty::New();
   this->LineProperty->SetAmbient(1.0);
@@ -670,7 +683,8 @@ void vtkLineRepresentation::BuildRepresentation()
        this->Point2Representation->GetMTime() > this->BuildTime ||
        this->LineHandleRepresentation->GetMTime() > this->BuildTime ||
        (this->Renderer && this->Renderer->GetVTKWindow() &&
-        this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime) )
+        (this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime ||
+        this->Renderer->GetActiveCamera()->GetMTime() > this->BuildTime)) )
     {
     if ( ! this->InitializedDisplayPosition && this->Renderer )
       {
@@ -680,6 +694,12 @@ void vtkLineRepresentation::BuildRepresentation()
       this->InitializedDisplayPosition = 1;
       }
 
+    // Make sure that tolerance is consistent between handles and this representation
+    this->Point1Representation->SetTolerance(this->Tolerance);
+    this->Point2Representation->SetTolerance(this->Tolerance);
+    this->LineHandleRepresentation->SetTolerance(this->Tolerance);
+
+    // Retrieve end point information
     double x1[3], x2[3];
     this->GetPoint1WorldPosition(x1);
     this->LineSource->SetPoint1(x1);
@@ -737,13 +757,13 @@ void vtkLineRepresentation::HighlightPoint(int ptId, int highlight)
     {
     if ( highlight )
       {
-      this->Handle[1]->SetProperty(this->SelectedEndPointProperty);
-      this->Point2Representation->SetSelectedProperty(this->SelectedEndPointProperty);
+      this->Handle[1]->SetProperty(this->SelectedEndPoint2Property);
+      this->Point2Representation->SetSelectedProperty(this->SelectedEndPoint2Property);
       }
     else
       {
-      this->Handle[1]->SetProperty(this->EndPointProperty);
-      this->Point2Representation->SetProperty(this->EndPointProperty);
+      this->Handle[1]->SetProperty(this->EndPoint2Property);
+      this->Point2Representation->SetProperty(this->EndPoint2Property);
       }
     }
   else //if ( ptId == 2 )
@@ -771,6 +791,15 @@ void vtkLineRepresentation::HighlightLine(int highlight)
     this->LineActor->SetProperty(this->LineProperty);
     }
 }
+
+//----------------------------------------------------------------------------
+void vtkLineRepresentation::SetLineColor(double r, double g, double b)
+{
+  if(this->GetLineProperty())
+    {
+    this->GetLineProperty()->SetColor(r, g, b);
+    }
+}  
 
 //----------------------------------------------------------------------------
 void vtkLineRepresentation::ClampPosition(double x[3])
@@ -896,6 +925,12 @@ double * vtkLineRepresentation::GetDistanceAnnotationScale()
 }
 
 //----------------------------------------------------------------------------
+vtkProperty * vtkLineRepresentation::GetDistanceAnnotationProperty()
+{
+  return this->TextActor->GetProperty();
+}
+
+//----------------------------------------------------------------------------
 void vtkLineRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -934,6 +969,23 @@ void vtkLineRepresentation::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << indent << "Selected End Point Property: (none)\n";
     }
+
+  if ( this->EndPoint2Property )
+    {
+    os << indent << "End Point Property: " << this->EndPoint2Property << "\n";
+    }
+  else
+    {
+    os << indent << "End Point Property: (none)\n";
+    }
+  if ( this->SelectedEndPoint2Property )
+    {
+    os << indent << "Selected End Point Property: " << this->SelectedEndPoint2Property << "\n";
+    }
+  else
+    {
+    os << indent << "Selected End Point Property: (none)\n";
+    }  
 
   os << indent << "Tolerance: " << this->Tolerance << "\n";
 
@@ -982,6 +1034,16 @@ void vtkLineRepresentation::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "(none)\n";
     }  
+
+  os << indent << "TextActor: ";
+  if ( this->TextActor )
+    {
+    os << this->TextActor << "\n";
+    }
+  else
+    {
+    os << "(none)\n";
+    }
   
   // this->InteractionState is printed in superclass
   // this is commented to avoid PrintSelf errors

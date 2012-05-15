@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericInterpolatedVelocityField.cxx,v $
+  Module:    vtkGenericInterpolatedVelocityField.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,12 +22,11 @@
 #include "vtkObjectFactory.h"
 #include "vtkDataSetAttributes.h" // for vtkDataSetAttributes::VECTORS
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkGenericInterpolatedVelocityField, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkGenericInterpolatedVelocityField);
 
-typedef vtkstd::vector< vtkGenericDataSet* > DataSetsTypeBase;
+typedef std::vector< vtkGenericDataSet* > DataSetsTypeBase;
 class vtkGenericInterpolatedVelocityFieldDataSetsType: public DataSetsTypeBase {};
 
 vtkGenericInterpolatedVelocityField::vtkGenericInterpolatedVelocityField()

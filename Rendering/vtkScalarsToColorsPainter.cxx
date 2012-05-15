@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColorsPainter.cxx,v $
+  Module:    vtkScalarsToColorsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,9 @@
 
 #include "vtkActor.h"
 #include "vtkCellData.h"
+#include "vtkCompositeDataIterator.h"
 #include "vtkCompositeDataSet.h"
+#include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 #include "vtkGarbageCollector.h"
 #include "vtkGraphicsFactory.h"
@@ -29,16 +31,17 @@
 #include "vtkInformationStringKey.h"
 #include "vtkLookupTable.h"
 #include "vtkMapper.h" //for VTK_MATERIALMODE_*
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkDataSet.h"
 #include "vtkProperty.h"
 #include "vtkScalarsToColors.h"
 #include "vtkUnsignedCharArray.h"
-#include "vtkSmartPointer.h"
-#include "vtkCompositeDataIterator.h"
 
-#define COLOR_TEXTURE_MAP_SIZE 256
+#include "vtkSmartPointer.h"
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 //-----------------------------------------------------------------------------
 static inline void vtkMultiplyColorsWithAlpha(vtkDataArray* array)
@@ -66,7 +69,6 @@ static inline void vtkMultiplyColorsWithAlpha(vtkDataArray* array)
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkScalarsToColorsPainter);
-vtkCxxRevisionMacro(vtkScalarsToColorsPainter, "$Revision: 1.17 $");
 vtkCxxSetObjectMacro(vtkScalarsToColorsPainter, LookupTable, vtkScalarsToColors);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, USE_LOOKUP_TABLE_SCALAR_RANGE, Integer);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, SCALAR_RANGE, DoubleVector);
@@ -105,6 +107,7 @@ vtkScalarsToColorsPainter::vtkScalarsToColorsPainter()
   this->ScalarVisibility = 1;
 
   this->LastUsedAlpha = -1.0;
+  this->LastUsedMultiplyWithAlpha = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -338,6 +341,7 @@ void vtkScalarsToColorsPainter::PrepareForRendering(vtkRenderer* renderer,
       vtkDataSet::SafeDownCast(input));
     }
   this->LastUsedAlpha = actor->GetProperty()->GetOpacity();
+  this->LastUsedMultiplyWithAlpha = this->GetPremultiplyColorsWithAlpha(actor);
   this->Superclass::PrepareForRendering(renderer, actor);
 }
 
@@ -435,7 +439,17 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     this->LookupTable->SetRange(this->ScalarRange);
     }
   
-  double* range = this->LookupTable->GetRange();
+  double range[2];
+  range[0] = this->LookupTable->GetRange()[0];
+  range[1] = this->LookupTable->GetRange()[1];
+
+  bool use_log_scale = (this->LookupTable->UsingLogScale() != 0);
+  if (use_log_scale)
+    {
+    // convert range to log.
+    vtkLookupTable::GetLogRange(range, range);
+    }
+
   double orig_alpha = this->LookupTable->GetAlpha();
 
   // If the lookup table has changed, the recreate the color texture map.
@@ -444,7 +458,8 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     this->GetMTime() > this->ColorTextureMap->GetMTime() ||
     this->LookupTable->GetMTime() > this->ColorTextureMap->GetMTime() ||
     this->LookupTable->GetAlpha() != alpha ||
-    this->LastUsedAlpha != alpha)
+    this->LastUsedAlpha != alpha ||
+    this->LastUsedMultiplyWithAlpha != multiply_with_alpha)
     {
     this->LookupTable->SetAlpha(alpha);
     this->ColorTextureMap = 0;
@@ -452,22 +467,47 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     // Get the texture map from the lookup table.
     // Create a dummy ramp of scalars.
     // In the future, we could extend vtkScalarsToColors.
-    double k = (range[1]-range[0]) / (COLOR_TEXTURE_MAP_SIZE-1);
-    vtkFloatArray* tmp = vtkFloatArray::New();
-    tmp->SetNumberOfTuples(COLOR_TEXTURE_MAP_SIZE);
-    float* ptr = tmp->GetPointer(0);
-    for (int i = 0; i < COLOR_TEXTURE_MAP_SIZE; ++i)
+    vtkIdType numberOfColors = this->LookupTable->GetNumberOfAvailableColors();
+    vtkIdType textureSize = this->GetTextureSizeLimit();
+    if(numberOfColors > textureSize)
       {
-      *ptr = range[0] + i * k;
-      ++ptr;
+      numberOfColors = textureSize;
+      }
+    if(numberOfColors <= 1)
+      {
+      numberOfColors = 2;
+      }
+    double k = (range[1]-range[0]) / (numberOfColors-1);
+    VTK_CREATE(vtkDoubleArray, scalarTable);
+    // Size of lookup is actual 2*numberOfColors because one dimension
+    // has actual values, then NaNs.
+    scalarTable->SetNumberOfTuples(2*numberOfColors);
+    double* scalarTablePtr = scalarTable->GetPointer(0);
+    // The actual scalar values.
+    for (int i = 0; i < numberOfColors; ++i)
+      {
+      *scalarTablePtr = range[0] + i * k;
+      if (use_log_scale)
+        {
+        *scalarTablePtr = pow(10.0, *scalarTablePtr);
+        }
+      ++scalarTablePtr;
+      }
+    // Dimension on NaN.
+    double nan = vtkMath::Nan();
+    for (int i = 0; i < numberOfColors; ++i)
+      {
+      *scalarTablePtr = nan;
+      ++scalarTablePtr;
       }
     this->ColorTextureMap = vtkSmartPointer<vtkImageData>::New();
-    this->ColorTextureMap->SetExtent(0,COLOR_TEXTURE_MAP_SIZE-1, 
-      0,0, 0,0);
+    this->ColorTextureMap->SetExtent(0,numberOfColors-1,
+      0,1, 0,0);
     this->ColorTextureMap->SetNumberOfScalarComponents(4);
     this->ColorTextureMap->SetScalarTypeToUnsignedChar();
-    vtkDataArray* colors = 
-      this->LookupTable->MapScalars(tmp, this->ColorMode, 0);
+    vtkSmartPointer<vtkDataArray> colors;
+    colors.TakeReference(this->LookupTable->MapScalars(scalarTable,
+                                                       this->ColorMode, 0));
     if (multiply_with_alpha)
       {
       vtkMultiplyColorsWithAlpha(colors);
@@ -475,8 +515,6 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
 
     this->ColorTextureMap->GetPointData()->SetScalars(colors);
     this->LookupTable->SetAlpha(orig_alpha);
-    colors->Delete();
-    tmp->Delete();
     }
 }
 
@@ -555,8 +593,9 @@ void vtkScalarsToColorsPainter::MapScalars(vtkDataSet* output,
   // The LastUsedAlpha checks ensures that opacity changes are reflected
   // correctly when this->MapScalars(..) is called when iterating over a
   // composite dataset.
-  if (colors && lut->GetAlpha() == alpha &&
-    this->LastUsedAlpha == alpha)
+  if (colors && 
+    this->LastUsedAlpha == alpha &&
+    this->LastUsedMultiplyWithAlpha == multiply_with_alpha)
     {
     if (this->GetMTime() < colors->GetMTime() &&
       input->GetMTime() < colors->GetMTime() &&
@@ -631,51 +670,91 @@ void vtkScalarsToColorsPainter::CreateDefaultLookupTable()
 
 //-----------------------------------------------------------------------------
 template<class T>
-void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
-                                            vtkIdType num, int numComps, 
-                                            int component, double* range)
+void vtkMapperScalarToTextureCoordinate(
+                                T scalar_value,         // Input scalar
+                                double range_min,       // range[0]
+                                double inv_range_width, // 1/(range[1]-range[0])
+                                float &tex_coord_s,     // 1st tex coord
+                                float &tex_coord_t)     // 2nd tex coord
 {
-  double tmp, sum;
-  double k = 1.0 / (range[1]-range[0]);
-  vtkIdType i;
-  int j;
+  if (vtkMath::IsNan(scalar_value))
+    {
+    tex_coord_s = 0.5;  // Scalar value is arbitrary when NaN
+    tex_coord_t = 1.0;  // 1.0 in t coordinate means NaN
+    }
+  else
+    {
+    // 0.0 in t coordinate means not NaN.  So why am I setting it to 0.49?
+    // Because when you are mapping scalars and you have a NaN adjacent to
+    // anything else, the interpolation everywhere should be NaN.  Thus, I
+    // want the NaN color everywhere except right on the non-NaN neighbors.
+    // To simulate this, I set the t coord for the real numbers close to
+    // the threshold so that the interpolation almost immediately looks up
+    // the NaN value.
+    tex_coord_t = 0.49;
+
+    double ranged_scalar = (scalar_value - range_min) * inv_range_width;
+    if (ranged_scalar <= 0.0)
+      {
+      tex_coord_s = 0.0;
+      }
+    else if (ranged_scalar >= 1.0)
+      {
+      tex_coord_s = 1.0;
+      }
+    else
+      {
+      tex_coord_s = static_cast<float>(ranged_scalar);
+      }
+    }
+}
+
+//-----------------------------------------------------------------------------
+template<class T>
+void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
+                                            vtkIdType numScalars, int numComps,
+                                            int component, double* range,
+                                            double* table_range,
+                                            bool use_log_scale)
+{
+  double inv_range_width = 1.0 / (range[1]-range[0]);
 
   if (component < 0 || component >= numComps)
     {
-    for (i = 0; i < num; ++i)
+    for (vtkIdType scalarIdx = 0; scalarIdx < numScalars; ++scalarIdx)
       {
-      sum = 0;
-      for (j = 0; j < numComps; ++j)
+      double sum = 0;
+      for (int compIdx = 0; compIdx < numComps; ++compIdx)
         {
-        tmp = static_cast<double>(*input);  
+        double tmp = static_cast<double>(*input);
         sum += (tmp * tmp);
         ++input;
         }
-      output[i] = k * (sqrt(sum) - range[0]);
-      if (output[i] > 1.0)
+      double magnitude = sqrt(sum);
+      if (use_log_scale)
         {
-        output[i] = 1.0;
+        magnitude = vtkLookupTable::ApplyLogScale(
+          magnitude, table_range, range);
         }
-      if (output[i] < 0.0)
-        {
-        output[i] = 0.0;
-        }
+      vtkMapperScalarToTextureCoordinate(magnitude, range[0], inv_range_width,
+                                         output[0], output[1]);
+      output += 2;
       }
     }  
   else
     {
     input += component;
-    for (i = 0; i < num; ++i)
+    for (vtkIdType scalarIdx = 0; scalarIdx < numScalars; ++scalarIdx)
       {
-      output[i] = k * (static_cast<double>(*input) - range[0]);
-      if (output[i] > 1.0)
+      double input_value = static_cast<double>(*input);
+      if (use_log_scale)
         {
-        output[i] = 1.0;
+        input_value = vtkLookupTable::ApplyLogScale(
+          input_value, table_range, range);
         }
-      if (output[i] < 0.0)
-        {
-        output[i] = 0.0;
-        }
+      vtkMapperScalarToTextureCoordinate(input_value, range[0], inv_range_width,
+                                         output[0], output[1]);
+      output += 2;
       input = input + numComps;
       }      
     }
@@ -694,7 +773,16 @@ void vtkScalarsToColorsPainter::MapScalarsToTexture(
     input->GetMTime() > tcoords->GetMTime() ||
     this->LookupTable->GetMTime() > tcoords->GetMTime())
     {
-    double* range = this->LookupTable->GetRange();
+    double range[2];
+    range[0] = this->LookupTable->GetRange()[0];
+    range[1] = this->LookupTable->GetRange()[1];
+    bool use_log_scale = (this->LookupTable->UsingLogScale() != 0);
+    if (use_log_scale)
+      {
+      // convert range to log.
+      vtkLookupTable::GetLogRange(range, range);
+      }
+
     // Get rid of old colors
     if ( tcoords )
       {
@@ -707,6 +795,7 @@ void vtkScalarsToColorsPainter::MapScalarsToTexture(
     void* void_input = scalars->GetVoidPointer(0);
     vtkIdType num = scalars->GetNumberOfTuples();
     vtkFloatArray* dtcoords = vtkFloatArray::New();
+    dtcoords->SetNumberOfComponents(2);
     dtcoords->SetNumberOfTuples(num);
     output->GetPointData()->SetTCoords(dtcoords);
     dtcoords->Delete();
@@ -728,7 +817,9 @@ void vtkScalarsToColorsPainter::MapScalarsToTexture(
       vtkTemplateMacro(
         vtkMapperCreateColorTextureCoordinates(static_cast<VTK_TT*>(void_input),
           tcptr, num, numComps,
-          scalarComponent, range)
+          scalarComponent, range,
+          this->LookupTable->GetRange(),
+          use_log_scale)
       );
     case VTK_BIT:
       vtkErrorMacro("Cannot color by bit array.");
@@ -751,6 +842,12 @@ void vtkScalarsToColorsPainter::ReportReferences(vtkGarbageCollector *collector)
 vtkDataObject *vtkScalarsToColorsPainter::GetOutput()
 {
   return this->OutputData;
+}
+
+//-----------------------------------------------------------------------------
+vtkIdType vtkScalarsToColorsPainter::GetTextureSizeLimit()
+{
+  return 1024;
 }
 
 //-----------------------------------------------------------------------------

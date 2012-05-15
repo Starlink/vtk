@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoostKruskalMinimumSpanningTree.cxx,v $
+Module:    vtkBoostKruskalMinimumSpanningTree.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -40,12 +40,10 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTree.h"
 
 #include <boost/graph/kruskal_min_spanning_tree.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostKruskalMinimumSpanningTree, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkBoostKruskalMinimumSpanningTree);
 
 // Constructor/Destructor
@@ -112,16 +110,16 @@ int vtkBoostKruskalMinimumSpanningTree::RequestData(
   vtkGraphEdgePropertyMapHelper<mapMulti> weight_helper(multi);
   
   // Run the algorithm
-  vtkstd::vector<vtkEdgeType> mstEdges;
+  std::vector<vtkEdgeType> mstEdges;
   if (vtkDirectedGraph::SafeDownCast(input))
     {
     vtkDirectedGraph *g = vtkDirectedGraph::SafeDownCast(input);
-    kruskal_minimum_spanning_tree(g, vtkstd::back_inserter(mstEdges), weight_map(weight_helper));
+    kruskal_minimum_spanning_tree(g, std::back_inserter(mstEdges), weight_map(weight_helper));
     }
   else
     {
     vtkUndirectedGraph *g = vtkUndirectedGraph::SafeDownCast(input);
-    kruskal_minimum_spanning_tree(g, vtkstd::back_inserter(mstEdges), weight_map(weight_helper));
+    kruskal_minimum_spanning_tree(g, std::back_inserter(mstEdges), weight_map(weight_helper));
     }
   
   // Select the minimum spanning tree edges.
@@ -130,7 +128,7 @@ int vtkBoostKruskalMinimumSpanningTree::RequestData(
     vtkIdTypeArray* ids = vtkIdTypeArray::New();
     
     // Add the ids of each MST edge.
-    for (vtkstd::vector<vtkEdgeType>::iterator i = mstEdges.begin();
+    for (std::vector<vtkEdgeType>::iterator i = mstEdges.begin();
          i != mstEdges.end(); ++i)
       {
       ids->InsertNextValue(i->Id);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalPolyDataMapper.cxx,v $
+  Module:    vtkHierarchicalPolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkHierarchicalPolyDataMapper, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkHierarchicalPolyDataMapper);
 
 vtkHierarchicalPolyDataMapper::vtkHierarchicalPolyDataMapper()

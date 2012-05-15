@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpScalar.cxx,v $
+  Module:    vtkWarpScalar.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,16 +17,23 @@
 #include "vtkCellData.h"
 #include "vtkDataArray.h"
 #include "vtkDataSetAttributes.h"
+#include "vtkImageData.h"
+#include "vtkImageDataToPointSet.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointSet.h"
 #include "vtkPoints.h"
+#include "vtkRectilinearGrid.h"
+#include "vtkRectilinearGridToPointSet.h"
 
-vtkCxxRevisionMacro(vtkWarpScalar, "$Revision: 1.50 $");
+#include "vtkNew.h"
+#include "vtkSmartPointer.h"
+
 vtkStandardNewMacro(vtkWarpScalar);
 
+//----------------------------------------------------------------------------
 vtkWarpScalar::vtkWarpScalar()
 {
   this->ScaleFactor = 1.0;
@@ -41,42 +48,109 @@ vtkWarpScalar::vtkWarpScalar()
                                vtkDataSetAttributes::SCALARS);
 }
 
+//----------------------------------------------------------------------------
 vtkWarpScalar::~vtkWarpScalar()
 {
 }
 
+//----------------------------------------------------------------------------
 double *vtkWarpScalar::DataNormal(vtkIdType id, vtkDataArray *normals)
 {
   return normals->GetTuple(id);
 }
 
-double *vtkWarpScalar::InstanceNormal(vtkIdType vtkNotUsed(id), 
+//----------------------------------------------------------------------------
+double *vtkWarpScalar::InstanceNormal(vtkIdType vtkNotUsed(id),
                                      vtkDataArray *vtkNotUsed(normals))
 {
   return this->Normal;
 }
 
-double *vtkWarpScalar::ZNormal(vtkIdType vtkNotUsed(id), 
+//----------------------------------------------------------------------------
+double *vtkWarpScalar::ZNormal(vtkIdType vtkNotUsed(id),
                               vtkDataArray *vtkNotUsed(normals))
 {
   static double zNormal[3]={0.0,0.0,1.0};
   return zNormal;
 }
 
+//----------------------------------------------------------------------------
+int vtkWarpScalar::FillInputPortInformation(int vtkNotUsed(port),
+                                            vtkInformation *info)
+{
+  info->Remove(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkImageData");
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkRectilinearGrid");
+  return 1;
+}
+
+//----------------------------------------------------------------------------
+int vtkWarpScalar::RequestDataObject(vtkInformation *request,
+                                     vtkInformationVector **inputVector,
+                                     vtkInformationVector *outputVector)
+{
+  vtkImageData *inImage = vtkImageData::GetData(inputVector[0]);
+  vtkRectilinearGrid *inRect = vtkRectilinearGrid::GetData(inputVector[0]);
+
+  if (inImage || inRect)
+    {
+    vtkStructuredGrid *output = vtkStructuredGrid::GetData(outputVector);
+    if (!output)
+      {
+      vtkNew<vtkStructuredGrid> newOutput;
+      newOutput->SetPipelineInformation(outputVector->GetInformationObject(0));
+      }
+    return 1;
+    }
+  else
+    {
+    return this->Superclass::RequestDataObject(request,
+                                               inputVector,
+                                               outputVector);
+    }
+}
+
+//----------------------------------------------------------------------------
 int vtkWarpScalar::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  // get the info objects
-  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+  vtkSmartPointer<vtkPointSet> input = vtkPointSet::GetData(inputVector[0]);
+  vtkPointSet *output = vtkPointSet::GetData(outputVector);
 
-  // get the input and ouptut
-  vtkPointSet *input = vtkPointSet::SafeDownCast(
-    inInfo->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPointSet *output = vtkPointSet::SafeDownCast(
-    outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  if (!input)
+    {
+    // Try converting image data.
+    vtkImageData *inImage = vtkImageData::GetData(inputVector[0]);
+    if (inImage)
+      {
+      vtkNew<vtkImageDataToPointSet> image2points;
+      image2points->SetInput(inImage);
+      image2points->Update();
+      input = image2points->GetOutput();
+      }
+    }
+
+  if (!input)
+    {
+    // Try converting rectilinear grid.
+    vtkRectilinearGrid *inRect = vtkRectilinearGrid::GetData(inputVector[0]);
+    if (inRect)
+      {
+      vtkNew<vtkRectilinearGridToPointSet> rect2points;
+      rect2points->SetInput(inRect);
+      rect2points->Update();
+      input = rect2points->GetOutput();
+      }
+    }
+
+  if (!input)
+    {
+    vtkErrorMacro(<< "Invalid or missing input");
+    return 0;
+    }
 
   vtkPoints *inPts;
   vtkDataArray *inNormals;
@@ -86,7 +160,7 @@ int vtkWarpScalar::RequestData(
   int i;
   vtkIdType ptId, numPts;
   double x[3], *n, s, newX[3];
-  
+
   vtkDebugMacro(<<"Warping data with scalars");
 
   // First, copy the input to the output as a starting point
@@ -95,7 +169,7 @@ int vtkWarpScalar::RequestData(
   inPts = input->GetPoints();
   pd = input->GetPointData();
   inNormals = pd->GetNormals();
-  
+
   inScalars = this->GetInputArrayToProcess(0,inputVector);
   if ( !inPts || !inScalars )
     {
@@ -128,7 +202,7 @@ int vtkWarpScalar::RequestData(
   //
   for (ptId=0; ptId < numPts; ptId++)
     {
-    if ( ! (ptId % 10000) ) 
+    if ( ! (ptId % 10000) )
       {
       this->UpdateProgress ((double)ptId/numPts);
       if (this->GetAbortExecute())
@@ -156,9 +230,9 @@ int vtkWarpScalar::RequestData(
 
   // Update ourselves and release memory
   //
-  output->GetPointData()->CopyNormalsOff(); // distorted geometry 
+  output->GetPointData()->CopyNormalsOff(); // distorted geometry
   output->GetPointData()->PassData(input->GetPointData());
-  output->GetCellData()->CopyNormalsOff(); // distorted geometry 
+  output->GetCellData()->CopyNormalsOff(); // distorted geometry
   output->GetCellData()->PassData(input->GetCellData());
 
   output->SetPoints(newPts);
@@ -167,13 +241,14 @@ int vtkWarpScalar::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkWarpScalar::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
   os << indent << "Scale Factor: " << this->ScaleFactor << "\n";
   os << indent << "Use Normal: " << (this->UseNormal ? "On\n" : "Off\n");
-  os << indent << "Normal: (" << this->Normal[0] << ", " 
+  os << indent << "Normal: (" << this->Normal[0] << ", "
      << this->Normal[1] << ", " << this->Normal[2] << ")\n";
   os << indent << "XY Plane: " << (this->XYPlane ? "On\n" : "Off\n");
 }

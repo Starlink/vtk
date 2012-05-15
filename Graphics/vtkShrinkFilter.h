@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShrinkFilter.h,v $
+  Module:    vtkShrinkFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,11 +36,11 @@ class VTK_GRAPHICS_EXPORT vtkShrinkFilter : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkShrinkFilter *New();
-  vtkTypeRevisionMacro(vtkShrinkFilter,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkShrinkFilter,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Get/Set the fraction of shrink for each cell.
+  // Get/Set the fraction of shrink for each cell. The default is 0.5.
   vtkSetClampMacro(ShrinkFactor, double, 0.0, 1.0);
   vtkGetMacro(ShrinkFactor, double);
 

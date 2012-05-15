@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageSeparableConvolution.h,v $
+  Module:    vtkImageSeparableConvolution.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IMAGING_EXPORT vtkImageSeparableConvolution : public vtkImageDecompose
 {
 public:
   static vtkImageSeparableConvolution *New();
-  vtkTypeRevisionMacro(vtkImageSeparableConvolution,vtkImageDecomposeFilter);
+  vtkTypeMacro(vtkImageSeparableConvolution,vtkImageDecomposeFilter);
 
 
   // Set the X convolution kernel, a null value indicates no convolution to

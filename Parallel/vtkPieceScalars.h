@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPieceScalars.h,v $
+  Module:    vtkPieceScalars.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,7 @@
 //
 // .SECTION Description
 // vtkPieceScalars is meant to display which piece is being requested
-// as scalar values.  It is usefull for visualizing the partitioning for
+// as scalar values.  It is useful for visualizing the partitioning for
 // streaming or distributed pipelines.
 //
 // .SECTION See Also
@@ -35,7 +35,7 @@ class VTK_PARALLEL_EXPORT vtkPieceScalars : public vtkDataSetAlgorithm
 public:
   static vtkPieceScalars *New();
 
-  vtkTypeRevisionMacro(vtkPieceScalars,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkPieceScalars,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

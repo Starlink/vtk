@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoTerrain.h,v $
+  Module:    vtkGeoTerrain.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,6 +36,7 @@ class vtkAssembly;
 class vtkCollection;
 class vtkExtractSelectedFrustum;
 class vtkGeoCamera;
+class vtkGeoTreeNodeCache;
 class vtkGeoSource;
 class vtkGeoTerrainNode;
 class vtkRenderer;
@@ -44,7 +45,7 @@ class VTK_GEOVIS_EXPORT vtkGeoTerrain : public vtkObject
 {
 public:
   static vtkGeoTerrain *New();
-  vtkTypeRevisionMacro(vtkGeoTerrain,vtkObject);
+  vtkTypeMacro(vtkGeoTerrain,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -85,6 +86,7 @@ protected:
   virtual void SetGeoSource(vtkGeoSource* source);
   vtkGeoSource* GeoSource;
   vtkGeoTerrainNode* Root;
+  vtkGeoTreeNodeCache* Cache;
 
   // Description:
   // Initialize the terrain with a new source.

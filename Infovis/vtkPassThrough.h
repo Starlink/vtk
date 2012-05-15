@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassThrough.h,v $
+  Module:    vtkPassThrough.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,8 +26,21 @@ class VTK_INFOVIS_EXPORT vtkPassThrough : public vtkPassInputTypeAlgorithm
 {
 public:
   static vtkPassThrough* New();
-  vtkTypeRevisionMacro(vtkPassThrough, vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkPassThrough, vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // Specify the first input port as optional
+  int FillInputPortInformation(int port, vtkInformation* info);
+
+  // Description: 
+  // Whether or not to deep copy the input. This can be useful if you
+  // want to create a copy of a data object. You can then disconnect
+  // this filter's input connections and it will act like a source.
+  // Defaults to OFF.
+  vtkSetMacro(DeepCopyInput, int);
+  vtkGetMacro(DeepCopyInput, int);
+  vtkBooleanMacro(DeepCopyInput, int);
 
 protected:
   vtkPassThrough();
@@ -37,6 +50,8 @@ protected:
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector*);
+
+  int DeepCopyInput;
     
 private:
   vtkPassThrough(const vtkPassThrough&); // Not implemented

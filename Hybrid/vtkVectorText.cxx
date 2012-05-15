@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVectorText.cxx,v $
+  Module:    vtkVectorText.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 #include <locale.h>
 
-vtkCxxRevisionMacro(vtkVectorText, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkVectorText);
 
 typedef struct {

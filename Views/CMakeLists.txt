@@ -3,22 +3,49 @@ SET(UKIT VIEWS)
 SET(KIT_TCL_LIBS vtkInfovisTCL)
 SET(KIT_PYTHON_LIBS vtkInfovisPythonD)
 SET(KIT_JAVA_LIBS vtkInfovisJava)
-SET(KIT_LIBS vtkInfovis)
+SET(KIT_INTERFACE_LIBRARIES vtkInfovis)
 
 SET( Kit_SRCS
 vtkConvertSelectionDomain.cxx
 vtkDataRepresentation.cxx
+vtkEmptyRepresentation.cxx
 vtkGraphLayoutView.cxx
+vtkHierarchicalGraphPipeline.cxx
 vtkHierarchicalGraphView.cxx
+vtkIcicleView.cxx
+vtkInteractorStyleAreaSelectHover.cxx
+vtkInteractorStyleTreeMapHover.cxx
+vtkRenderedSurfaceRepresentation.cxx
+vtkRenderedGraphRepresentation.cxx
+vtkRenderedRepresentation.cxx
+vtkRenderedTreeAreaRepresentation.cxx
+vtkRenderedHierarchyRepresentation.cxx
 vtkRenderView.cxx
-vtkSurfaceRepresentation.cxx
+vtkRenderViewBase.cxx
 vtkTreeAreaView.cxx
-vtkTreeLayoutView.cxx
 vtkTreeMapView.cxx
 vtkTreeRingView.cxx
-vtkIcicleView.cxx
 vtkView.cxx
+vtkViewUpdater.cxx
 )
+
+IF(VTK_USE_N_WAY_ARRAYS)
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkParallelCoordinatesHistogramRepresentation.cxx
+    vtkParallelCoordinatesRepresentation.cxx
+    vtkParallelCoordinatesView.cxx
+    )
+
+  IF(VTK_USE_BOOST)
+    INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+    SET(Kit_SRCS
+      ${Kit_SRCS}
+      vtkPipelineGraphSource.cxx
+      )
+  ENDIF(VTK_USE_BOOST)
+
+ENDIF(VTK_USE_N_WAY_ARRAYS)
 
 #SET_SOURCE_FILES_PROPERTIES(
 #vtkView.cxx

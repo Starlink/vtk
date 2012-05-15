@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestVariantArray.cxx,v $
+  Module:    TestVariantArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,8 +29,8 @@
 #include "vtkSmartPointer.h"
 
 #include <time.h>
-#include <vtkstd/vector>
-using vtkstd::vector;
+#include <vector>
+using std::vector;
 
 void PrintArrays(vector<double> vec, vtkVariantArray* arr)
 {

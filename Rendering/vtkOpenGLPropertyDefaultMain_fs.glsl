@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkOpenGLPropertyDefaultMain_fs.glsl,v $
+//  Module:    vtkOpenGLPropertyDefaultMain_fs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -17,6 +17,8 @@
 // when no main() is provided at the renderer level and some fragment shader is
 // defined by the user on a property. For example, the depth peeling algorithm
 // defines its own main() function for the fragment shader.
+
+#version 110
 
 void propFuncFS();
 

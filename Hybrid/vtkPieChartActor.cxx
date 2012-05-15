@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPieChartActor.cxx,v $
+  Module:    vtkPieChartActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,10 +29,9 @@
 #include "vtkLegendBoxActor.h"
 #include "vtkGlyphSource2D.h"
 #include "vtkProperty2D.h"
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <string>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkPieChartActor, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkPieChartActor);
 
 vtkCxxSetObjectMacro(vtkPieChartActor,Input,vtkDataObject);
@@ -40,7 +39,7 @@ vtkCxxSetObjectMacro(vtkPieChartActor,LabelTextProperty,vtkTextProperty);
 vtkCxxSetObjectMacro(vtkPieChartActor,TitleTextProperty,vtkTextProperty);
 
 // PIMPL'd list of labels
-class vtkPieceLabelArray : public vtkstd::vector<vtkstd::string> {};
+class vtkPieceLabelArray : public std::vector<std::string> {};
 
 
 //----------------------------------------------------------------------------
@@ -649,7 +648,7 @@ void vtkPieChartActor::SetPieceLabel(const int i, const char *label)
     {
     this->Labels->resize(i+1);
     }
-  (*this->Labels)[i] = vtkstd::string(label);
+  (*this->Labels)[i] = std::string(label);
   this->Modified();
 }
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesLayer.h,v $
+  Module:    vtkQtChartSeriesLayer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,6 +31,7 @@
 class vtkQtChartContentsArea;
 class vtkQtChartSeriesModel;
 class vtkQtChartSeriesOptions;
+class vtkQtChartSeriesOptionsModel;
 class vtkQtChartSeriesSelection;
 class vtkQtChartSeriesSelectionModel;
 class QPointF;
@@ -43,9 +44,7 @@ class QRectF;
 ///   layers that use the chart series model.
 ///
 /// It stores the pointer to the chart series model and the list of
-/// options for the series. The series options are created using the
-/// \c createOptions method. Subclasses should overload this method to
-/// create the appropriate type of options object.
+/// options for the series. 
 class VTKQTCHART_EXPORT vtkQtChartSeriesLayer : public vtkQtChartLayer
 {
   Q_OBJECT
@@ -78,6 +77,18 @@ public:
   ///   Sets the chart series model.
   /// \param model The new chart series model.
   virtual void setModel(vtkQtChartSeriesModel *model);
+
+  /// \brief
+  ///   Gets the chart series options model. 
+  /// \return
+  ///   A pointer to the current chart series options model.
+  vtkQtChartSeriesOptionsModel* getOptionsModel() const
+    { return this->Options; }
+
+  /// \brief
+  ///   Sets the chart series options model.
+  /// \param model The new chart series options model.
+  virtual void setOptionsModel(vtkQtChartSeriesOptionsModel* model);
 
   /// \brief
   ///   Gets the drawing options for the given series.
@@ -148,9 +159,6 @@ public slots:
   /// \param offset The new y-axis offset.
   void setYOffset(float offset);
 
-  /// Resets the series options for the model.
-  void resetSeriesOptions();
-
 signals:
   /// \brief
   ///   Emitted when the series model is changed.
@@ -165,61 +173,39 @@ signals:
   /// \param last The last series index of the range.
   void modelSeriesChanged(int first, int last);
 
+protected slots:
   /// \brief
-  ///   Emitted when the visibility for a series has changed.
-  /// \param series The index of the series.
-  /// \param visible True if the series is visible.
-  void modelSeriesVisibilityChanged(int series, bool visible);
+  ///   Called when any of the series options are changed.
+  ///  Default implementation fires the modelSeriesChanged() signal.
+  /// \param options The options that fired the dataChanged() signal.
+  /// \param type Type of the option that was changed.
+  /// \param newValue The new value for the option.
+  /// \param oldValue The previous value for the option, if any.
+  virtual void handleOptionsChanged(vtkQtChartSeriesOptions*,
+    int type, const QVariant& newvalue, const QVariant& oldvalue);
 
 protected:
   /// \brief
-  ///   Creates an options object for a series.
-  /// \note
-  ///   Subclasses should only create the options in this method. Use
-  ///   the \c setupOptions to set up connections.
-  /// \param parent The parent of the options object.
-  /// \return
-  ///   A pointer to a new options object.
-  /// \sa
-  ///   vtkQtChaerSeriesLayer::setupOptions(vtkQtChartSeriesOptions *)
-  virtual vtkQtChartSeriesOptions *createOptions(QObject *parent) = 0;
-
-  /// \brief
-  ///   Sets up the options object.
+  ///   Sets up the default values for the series options object.
   ///
-  /// The style has been reserved and set before this method is called.
-  /// Signal connections should be set up here in order to avoid slot
-  /// calls during setup.
+  /// The style manager should be used to help set up the series options.
+  /// Subclass must call this method every time a new series options is set up.
   ///
   /// \param options The newly created series options.
-  virtual void setupOptions(vtkQtChartSeriesOptions *options) = 0;
-
-private slots:
-  /// \brief
-  ///   Inserts new options for the given series.
-  /// \param first The first index of the new series.
-  /// \param last The last index of the new series.
-  void insertSeriesOptions(int first, int last);
+  virtual void setupOptions(vtkQtChartSeriesOptions *options);
 
   /// \brief
-  ///   Removes options for the given series.
-  /// \param first The first index of the series to remove.
-  /// \param last The last index of the series to remove.
-  void removeSeriesOptions(int first, int last);
-
-private:
-  /// Removes all the series options.
-  void clearOptions();
+  ///   Cleans up the options by deallocating the style reservation for the
+  /// option. Subclass must call this method before a series options object is
+  /// cleaned up.
+  virtual void cleanupOptions(vtkQtChartSeriesOptions* options);
 
 protected:
   /// Stores the series/point selection.
   vtkQtChartSeriesSelectionModel *Selection;
   vtkQtChartSeriesModel *Model;     ///< Stores the series model.
   vtkQtChartContentsArea *Contents; ///< Used for panning.
-
-private:
-  /// Stores the series options.
-  QList<vtkQtChartSeriesOptions *> Options;
+  vtkQtChartSeriesOptionsModel* Options; ///< Stores the series options.
 
 private:
   vtkQtChartSeriesLayer(const vtkQtChartSeriesLayer &);

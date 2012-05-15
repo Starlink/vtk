@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendCompositeDataLeaves.cxx,v $
+  Module:    vtkAppendCompositeDataLeaves.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,9 +28,9 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkTable.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkAppendCompositeDataLeaves, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkAppendCompositeDataLeaves);
 
 //----------------------------------------------------------------------------
@@ -91,9 +91,6 @@ int vtkAppendCompositeDataLeaves::RequestDataObject(
 
   if ( input )
     {
-    this->GetOutputPortInformation( 0 )->Set(
-      vtkDataObject::DATA_EXTENT_TYPE(), input->GetExtentType() );
-
     // for each output
     for ( int i = 0; i < this->GetNumberOfOutputPorts(); ++ i )
       {
@@ -138,6 +135,13 @@ int vtkAppendCompositeDataLeaves::RequestData(
 
   vtkCompositeDataSet* anInput = vtkCompositeDataSet::SafeDownCast(
     this->GetInput( 0 ) );
+
+  if (numInputs == 1)
+    {
+    output->ShallowCopy(anInput);
+    return 1;
+    }
+
   output->CopyStructure( anInput );
 
   vtkDebugMacro(<<"Appending data together");
@@ -170,6 +174,15 @@ int vtkAppendCompositeDataLeaves::RequestData(
     if ( pd )
       {
       this->AppendPolyData( i - 1, numInputs, iter, output );
+      continue;
+      }
+    vtkTable *table = vtkTable::SafeDownCast(obj);
+    if(table)
+      {
+      vtkTable *newTable = vtkTable::New();
+      newTable->ShallowCopy(table);
+      output->SetDataSet(iter, newTable);
+      newTable->Delete();
       continue;
       }
     if ( first )

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWidgetSet.cxx,v $
+  Module:    vtkWidgetSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkParallelopipedWidget.h" // REMOVE
 
-vtkCxxRevisionMacro(vtkWidgetSet, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkWidgetSet);
 
 //----------------------------------------------------------------------

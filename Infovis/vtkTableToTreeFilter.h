@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToTreeFilter.h,v $
+  Module:    vtkTableToTreeFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_INFOVIS_EXPORT vtkTableToTreeFilter : public vtkTreeAlgorithm
 {
 public:
   static vtkTableToTreeFilter* New();
-  vtkTypeRevisionMacro(vtkTableToTreeFilter,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkTableToTreeFilter,vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

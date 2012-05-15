@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtBarChartOptions.cxx,v $
+  Module:    vtkQtBarChartOptions.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,10 +31,10 @@
 #include "vtkQtChartHelpFormatter.h"
 
 
-const QColor vtkQtBarChartOptions::LightBlue = QColor(125, 165, 230);
+//const QColor vtkQtBarChartOptions::LightBlue = QColor(125, 165, 230);
 
 vtkQtBarChartOptions::vtkQtBarChartOptions(QObject *parentObject)
-  : QObject(parentObject), Highlight(vtkQtBarChartOptions::LightBlue)
+  : QObject(parentObject)
 {
   this->AxesCorner = vtkQtChartLayer::BottomLeft;
   this->OutlineType = vtkQtBarChartOptions::Darker;
@@ -44,7 +44,7 @@ vtkQtBarChartOptions::vtkQtBarChartOptions(QObject *parentObject)
 }
 
 vtkQtBarChartOptions::vtkQtBarChartOptions(const vtkQtBarChartOptions &other)
-  : QObject(), Highlight(other.Highlight)
+  : QObject()
 {
   this->AxesCorner = other.AxesCorner;
   this->OutlineType = other.OutlineType;
@@ -95,19 +95,9 @@ void vtkQtBarChartOptions::setOutlineStyle(
     }
 }
 
-void vtkQtBarChartOptions::setHighlightColor(const QColor &color)
-{
-  if(this->Highlight != color)
-    {
-    this->Highlight = color;
-    emit this->highlightChanged();
-    }
-}
-
 vtkQtBarChartOptions &vtkQtBarChartOptions::operator=(
     const vtkQtBarChartOptions &other)
 {
-  this->Highlight = other.Highlight;
   this->AxesCorner = other.AxesCorner;
   this->OutlineType = other.OutlineType;
   this->Help->setFormat(other.Help->getFormat());

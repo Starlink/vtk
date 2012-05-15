@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeMapLayoutStrategy.cxx,v $
+  Module:    vtkTreeMapLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkFloatArray.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkTreeMapLayoutStrategy, "$Revision: 1.5 $");
 
 vtkTreeMapLayoutStrategy::vtkTreeMapLayoutStrategy()
 {

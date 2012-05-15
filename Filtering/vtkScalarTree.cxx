@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarTree.cxx,v $
+  Module:    vtkScalarTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkGarbageCollector.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkScalarTree, "$Revision: 1.32 $");
 vtkCxxSetObjectMacro(vtkScalarTree,DataSet,vtkDataSet);
 
 // Instantiate scalar tree with maximum level of 20 and branching

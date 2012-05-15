@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageNormalize.cxx,v $
+  Module:    vtkImageNormalize.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageNormalize, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkImageNormalize);
 
 //----------------------------------------------------------------------------

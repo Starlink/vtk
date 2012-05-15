@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCell.cxx,v $
+  Module:    vtkCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,11 +15,9 @@
 #include "vtkCell.h"
 
 #include "vtkMath.h"
-#include "vtkMarchingSquaresCases.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkCell, "$Revision: 1.2 $");
-
+//----------------------------------------------------------------------------
 // Construct cell.
 vtkCell::vtkCell()
 {
@@ -31,14 +29,16 @@ vtkCell::vtkCell()
   this->Points->Delete();
   this->PointIds->Register(this);
   this->PointIds->Delete();
-}  
+}
 
+//----------------------------------------------------------------------------
 vtkCell::~vtkCell()
 {
   this->Points->UnRegister(this);
   this->PointIds->UnRegister(this);
 }
 
+//----------------------------------------------------------------------------
 // Instantiate cell from outside
 //
 void vtkCell::Initialize(int npts, vtkIdType *pts, vtkPoints *p)
@@ -52,7 +52,8 @@ void vtkCell::Initialize(int npts, vtkIdType *pts, vtkPoints *p)
     this->Points->InsertPoint(i,p->GetPoint(pts[i]));
     }
 }
- 
+
+//----------------------------------------------------------------------------
 void vtkCell::ShallowCopy(vtkCell *c)
 {
   this->Points->ShallowCopy(c->Points);
@@ -64,12 +65,14 @@ void vtkCell::ShallowCopy(vtkCell *c)
     }
 }
 
+//----------------------------------------------------------------------------
 void vtkCell::DeepCopy(vtkCell *c)
 {
   this->Points->DeepCopy(c->Points);
   this->PointIds->DeepCopy(c->PointIds);
 }
 
+//----------------------------------------------------------------------------
 // Compute cell bounding box (xmin,xmax,ymin,ymax,zmin,zmax). Return pointer
 // to array of six double values.
 double *vtkCell::GetBounds ()
@@ -104,6 +107,7 @@ double *vtkCell::GetBounds ()
   return this->Bounds;
 }
 
+//----------------------------------------------------------------------------
 // Compute cell bounding box (xmin,xmax,ymin,ymax,zmin,zmax). Copy result into
 // user provided array.
 void vtkCell::GetBounds(double bounds[6])
@@ -115,6 +119,7 @@ void vtkCell::GetBounds(double bounds[6])
     }
 }
 
+//----------------------------------------------------------------------------
 // Compute Length squared of cell (i.e., bounding box diagonal squared).
 double vtkCell::GetLength2 ()
 {
@@ -130,8 +135,9 @@ double vtkCell::GetLength2 ()
   return l;
 }
 
+//----------------------------------------------------------------------------
 // Return center of the cell in parametric coordinates.
-// Note that the parametric center is not always located 
+// Note that the parametric center is not always located
 // at (0.5,0.5,0.5). The return value is the subId that
 // the center is in (if a composite cell). If you want the
 // center in x-y-z space, invoke the EvaluateLocation() method.
@@ -141,6 +147,7 @@ int vtkCell::GetParametricCenter(double pcoords[3])
   return 0;
 }
 
+//----------------------------------------------------------------------------
 // This method works fine for all "rectangular" cells, not triangular
 // and tetrahedral topologies.
 double vtkCell::GetParametricDistance(double pcoords[3])
@@ -150,11 +157,11 @@ double vtkCell::GetParametricDistance(double pcoords[3])
 
   for (i=0; i<3; i++)
     {
-    if ( pcoords[i] < 0.0 ) 
+    if ( pcoords[i] < 0.0 )
       {
       pDist = -pcoords[i];
       }
-    else if ( pcoords[i] > 1.0 ) 
+    else if ( pcoords[i] > 1.0 )
       {
       pDist = pcoords[i] - 1.0;
       }
@@ -171,12 +178,13 @@ double vtkCell::GetParametricDistance(double pcoords[3])
 }
 
 
+//----------------------------------------------------------------------------
 void vtkCell::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-  
+
   int numIds=this->PointIds->GetNumberOfIds();
-  
+
   os << indent << "Number Of Points: " << numIds << "\n";
 
   if ( numIds > 0 )
@@ -206,32 +214,6 @@ void vtkCell::PrintSelf(ostream& os, vtkIndent indent)
       }
     os << indent << "\n";
     }
-}
-
-// Note: the following code is placed here to deal with cross-library
-// symbol export and import on Microsoft compilers.
-static vtkMarchingSquaresLineCases VTK_MARCHING_SQUARES_LINECASES[] = { 
-  {{-1, -1, -1, -1, -1}},
-  {{0, 3, -1, -1, -1}},
-  {{1, 0, -1, -1, -1}},
-  {{1, 3, -1, -1, -1}},
-  {{2, 1, -1, -1, -1}},
-  {{0, 3, 2, 1, -1}},
-  {{2, 0, -1, -1, -1}},
-  {{2, 3, -1, -1, -1}},
-  {{3, 2, -1, -1, -1}},
-  {{0, 2, -1, -1, -1}},
-  {{1, 0, 3, 2, -1}},
-  {{1, 2, -1, -1, -1}},
-  {{3, 1, -1, -1, -1}},
-  {{0, 1, -1, -1, -1}},
-  {{3, 0, -1, -1, -1}},
-  {{-1, -1, -1, -1, -1}}
-};
-
-vtkMarchingSquaresLineCases* vtkMarchingSquaresLineCases::GetCases()
-{
-  return VTK_MARCHING_SQUARES_LINECASES;
 }
 
 // Usually overridden. Only composite cells do not override this.

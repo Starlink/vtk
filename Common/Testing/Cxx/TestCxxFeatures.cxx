@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestCxxFeatures.cxx,v $
+  Module:    TestCxxFeatures.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -158,7 +158,7 @@ NestedTestOuter::~NestedTestOuter()
 // Fails on kulu.crd IRIX64-6.5-CC-o32 (old SGI compiler).
 void UsingStdVector()
 {
-  using vtkstd::vector;
+  using std::vector;
   vector<int>();
 }
 #endif
@@ -599,15 +599,34 @@ void TestVoidReturnOuter()
 # pragma warning (disable:858) // type qualifier on return is meaningless
 #endif
 
+// clang warns about type qualifiers on return types.
+#if defined(__clang__)
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wignored-qualifiers"
+#endif
+
+// gcc>=4.3 says type qualifiers ignored on function return type
+#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6)))
+# pragma GCC diagnostic push
+#endif
+#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+# pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#endif
 
 // aCC warns "type qualifier on return type is meaningless" - just omit the
 // function on aCC builds since there is no way to suppress the warning via
 // pragmas...
-// gcc>=4.3 says type qualifiers ignored on function return type
 #if !defined(__HP_aCC)
 void const TestVoidConstReturn() {}
 #endif
 
+#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6)))
+# pragma GCC diagnostic pop
+#endif
+
+#if defined(__clang__)
+# pragma clang diagnostic pop
+#endif
 
 #if defined(__INTEL_COMPILER)
 # pragma warning (pop)
@@ -684,7 +703,7 @@ int main()
   int retVal = 0;
   if (result)
     {
-    // really shouldn't be calle dunless somehting else failed
+    // really shouldn't be called unless something else failed
     // just want to make the compiler think it might get called
     // all this will be yanked once I see the results of this test
     TestDriverDebugReport(0, "a temp test", &retVal);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDelaunay2D.h,v $
+  Module:    vtkDelaunay2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -134,7 +134,7 @@ class vtkPointSet;
 class VTK_GRAPHICS_EXPORT vtkDelaunay2D : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkDelaunay2D,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkDelaunay2D,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

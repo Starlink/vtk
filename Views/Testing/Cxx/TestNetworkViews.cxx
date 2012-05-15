@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestNetworkViews.cxx,v $
+  Module:    TestNetworkViews.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,10 +20,12 @@
 
 #include "vtkNetworkHierarchy.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSQLDatabaseTableSource.h"
 #include "vtkTableToGraph.h"
+#include "vtkTextProperty.h"
 #include "vtkTreeRingView.h"
 #include "vtkVertexDegree.h"
 #include "vtkViewTheme.h"
@@ -32,7 +34,7 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-using vtkstd::string;
+using std::string;
 
 int TestNetworkViews(int argc, char* argv[])
 {
@@ -67,38 +69,38 @@ int TestNetworkViews(int argc, char* argv[])
   
   //Create a view on city/region/country
   VTK_CREATE( vtkTreeRingView, view1 );
+  view1->DisplayHoverTextOff();
   view1->SetTreeFromInputConnection(ip_tree->GetOutputPort());
   view1->SetGraphFromInputConnection(graph->GetOutputPort());
-  view1->SetLabelPriorityArrayName("GraphVertexDegree");
-  view1->SetAreaColorArrayName("GraphVertexDegree");
+  view1->Update();
+  view1->SetLabelPriorityArrayName("VertexDegree");
+  view1->SetAreaColorArrayName("VertexDegree");
+  view1->SetColorAreas(true);
   view1->SetAreaLabelArrayName("ip");
   view1->SetAreaHoverArrayName("ip");
   view1->SetAreaLabelVisibility(true);
   view1->SetEdgeColorArrayName("dport");
   view1->SetColorEdges(true);
-  view1->SetInteriorLogSpacingValue(2.);
-  view1->SetBundlingStrength(.8);
+  view1->SetInteriorLogSpacingValue(5.);
+  view1->SetBundlingStrength(.5);
 
   // Apply a theme to the views
   vtkViewTheme* const theme = vtkViewTheme::CreateMellowTheme();
+  theme->GetPointTextProperty()->ShadowOn();
   view1->ApplyViewTheme(theme);
   theme->Delete();
 
-  VTK_CREATE( vtkRenderWindow, window1 );
-  window1->SetMultiSamples(0);
-  window1->SetSize(600, 600);
-  VTK_CREATE(vtkRenderWindowInteractor, iren);
-  iren->SetRenderWindow(window1);
-  dummy->SetupRenderWindow(window1);
-  view1->SetupRenderWindow(window1);
+  view1->GetRenderWindow()->SetMultiSamples(0);
+  view1->GetRenderWindow()->SetSize(600, 600);
 
-  window1->Render();
+  view1->ResetCamera();
+  view1->Render();
 
-  int retVal = vtkRegressionTestImage(window1);
+  int retVal = vtkRegressionTestImage(view1->GetRenderWindow());
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
-    iren->Initialize();
-    iren->Start();
+    view1->GetInteractor()->Initialize();
+    view1->GetInteractor()->Start();
     
     retVal = vtkRegressionTester::PASSED;
     }

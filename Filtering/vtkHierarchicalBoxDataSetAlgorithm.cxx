@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalBoxDataSetAlgorithm.cxx,v $
+  Module:    vtkHierarchicalBoxDataSetAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkHierarchicalBoxDataSetAlgorithm);
-vtkCxxRevisionMacro(vtkHierarchicalBoxDataSetAlgorithm, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkHierarchicalBoxDataSetAlgorithm::vtkHierarchicalBoxDataSetAlgorithm()
 {

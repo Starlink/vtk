@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageAlgorithm.cxx,v $
+  Module:    vtkImageAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,9 +21,9 @@
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkErrorCode.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageAlgorithm, "$Revision: 1.32 $");
 
 //----------------------------------------------------------------------------
 vtkImageAlgorithm::vtkImageAlgorithm()
@@ -73,6 +73,7 @@ int vtkImageAlgorithm::RequestData(
   vtkInformation *outInfo = 
     outputVector->GetInformationObject(outputPort);
   // call ExecuteData
+  this->SetErrorCode( vtkErrorCode::NoError );
   if (outInfo)
     {
     this->ExecuteData( outInfo->Get(vtkDataObject::DATA_OBJECT()) );
@@ -81,6 +82,12 @@ int vtkImageAlgorithm::RequestData(
     {
     this->ExecuteData(NULL);
     }
+  // Check for any error set by downstream filter (IO in most case)
+  if ( this->GetErrorCode() )
+    {
+    return 0;
+    }
+
   return 1;
 }
 
@@ -304,8 +311,8 @@ void vtkImageAlgorithm::CopyAttributeData(vtkImageData *input,
                                              output->GetNumberOfPoints());
         // Restore the scalars
         int idx = output->GetPointData()->AddArray(tmp);
-        output->GetPointData()->SetActiveAttribute(vtkDataSetAttributes::SCALARS,
-            idx);
+        output->GetPointData()->SetActiveAttribute(idx, 
+          vtkDataSetAttributes::SCALARS);
         tmp->UnRegister(this);
         // Now Copy The point data, but only if output is a subextent of the
         // input.

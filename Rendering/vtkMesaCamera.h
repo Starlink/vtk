@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaCamera.h,v $
+  Module:    vtkMesaCamera.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_RENDERING_EXPORT vtkMesaCamera : public vtkCamera
 {
 public:
   static vtkMesaCamera *New();
-  vtkTypeRevisionMacro(vtkMesaCamera,vtkCamera);
+  vtkTypeMacro(vtkMesaCamera,vtkCamera);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

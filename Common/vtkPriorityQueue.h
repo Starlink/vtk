@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPriorityQueue.h,v $
+  Module:    vtkPriorityQueue.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,7 +55,7 @@ public:
   // Instantiate priority queue with default size and extension size of 1000.
   static vtkPriorityQueue *New();
 
-  vtkTypeRevisionMacro(vtkPriorityQueue,vtkObject);
+  vtkTypeMacro(vtkPriorityQueue,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,12 +67,12 @@ public:
   // index like a point id or cell id.
   void Insert(double priority, vtkIdType id);
 
+//BTX
   // Description:
   // Removes item at specified location from tree; then reorders and
   // balances tree. The location == 0 is the root of the tree. If queue
   // is exhausted, then a value < 0 is returned. (Note: the location
   // is not the same as deleting an id; id is mapped to location.)
-//BTX
   vtkIdType Pop(vtkIdType location, double &priority);
 //ETX    
 
@@ -81,10 +81,10 @@ public:
   // languages.
   vtkIdType Pop(vtkIdType location=0);
 
+//BTX
   // Description:
   // Peek into the queue without actually removing anything. Returns the
   // id and the priority.
-//BTX
   vtkIdType Peek(vtkIdType location, double &priority);
 //ETX    
   

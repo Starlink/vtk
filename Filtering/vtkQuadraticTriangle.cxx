@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticTriangle.cxx,v $
+  Module:    vtkQuadraticTriangle.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkDoubleArray.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticTriangle, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkQuadraticTriangle);
 
 //----------------------------------------------------------------------------
@@ -177,7 +176,7 @@ int vtkQuadraticTriangle::CellBoundary(int subId, double pcoords[3],
 //----------------------------------------------------------------------------
 void vtkQuadraticTriangle::Contour(double value, 
                                    vtkDataArray* cellScalars, 
-                                   vtkPointLocator* locator, 
+                                   vtkIncrementalPointLocator* locator,
                                    vtkCellArray *verts, 
                                    vtkCellArray* lines, 
                                    vtkCellArray* polys, 
@@ -276,7 +275,7 @@ void vtkQuadraticTriangle::Derivatives(int vtkNotUsed(subId),
 // and triangles.
 void vtkQuadraticTriangle::Clip(double value, 
                                 vtkDataArray* cellScalars, 
-                                vtkPointLocator* locator,
+                                vtkIncrementalPointLocator* locator,
                                 vtkCellArray* polys,
                                 vtkPointData* inPd, 
                                 vtkPointData* outPd,

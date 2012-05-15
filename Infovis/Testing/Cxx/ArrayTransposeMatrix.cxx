@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayTransposeMatrix.cxx,v $
+  Module:    ArrayTransposeMatrix.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,10 +31,10 @@
 #define test_expression(expression) \
 { \
   if(!(expression)) \
-    throw vtkstd::runtime_error("Expression failed: " #expression); \
+    throw std::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayTransposeMatrix(int argc, char* argv[])
+int ArrayTransposeMatrix(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   cout << setprecision(17);
   
@@ -50,19 +50,20 @@ int ArrayTransposeMatrix(int argc, char* argv[])
     vtkPrintMatrixFormat(cout, source.GetPointer());
     
     vtkSmartPointer<vtkArrayData> source_data = vtkSmartPointer<vtkArrayData>::New();
-    source_data->SetArray(source);
+    source_data->AddArray(source);
      
     vtkSmartPointer<vtkTransposeMatrix> transpose = vtkSmartPointer<vtkTransposeMatrix>::New();
     transpose->AddInputConnection(source_data->GetProducerPort());
     transpose->Update();
 
-    vtkSparseArray<double>* const output = vtkSparseArray<double>::SafeDownCast(transpose->GetOutput()->GetArray());
+    vtkSparseArray<double>* const output = vtkSparseArray<double>::SafeDownCast(
+      transpose->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     cout << "output matrix:\n";
     vtkPrintMatrixFormat(cout, output);
 
     test_expression(output);
-    test_expression(output->GetExtents()[0] = 2);
-    test_expression(output->GetExtents()[1] = 3);
+    test_expression(output->GetExtent(0).GetSize() == 2);
+    test_expression(output->GetExtent(1).GetSize() == 3);
 
     test_expression(output->GetValue(vtkArrayCoordinates(0, 0)) == 0);
     test_expression(output->GetValue(vtkArrayCoordinates(0, 1)) == 2);
@@ -73,7 +74,7 @@ int ArrayTransposeMatrix(int argc, char* argv[])
 
     return 0;
     }
-  catch(vtkstd::exception& e)
+  catch(std::exception& e)
     {
     cerr << e.what() << endl;
     return 1;

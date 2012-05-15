@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TerrainPolylineEditor.cxx,v $
+  Module:    TerrainPolylineEditor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -13,6 +13,7 @@
 
 =========================================================================*/
 
+#include "vtkSmartPointer.h"
 #include "vtkDEMReader.h"
 #include "vtkPolyDataReader.h"
 #include "vtkPolyData.h"
@@ -38,9 +39,8 @@
 #include "vtkOrientedGlyphContourRepresentation.h"
 #include "vtkInteractorEventRecorder.h"
 #include "vtkTestUtilities.h"
-#include "vtkRegressionTestImage.h"
 
-char TerrainPolylineEditorLog[] = 
+char TerrainPolylineEditorLog[] =
 "# StreamVersion 1\n"
 "EnterEvent 522 259 0 0 0 0 0 i\n"
 "MouseMoveEvent 446 277 0 0 0 0 0 i\n"
@@ -699,7 +699,7 @@ int TerrainPolylineEditor(int argc, char * argv[])
 {
   if (argc < 2)
     {
-    cerr 
+    std::cerr
     << "Demonstrates editing capabilities of a contour widget on terrain \n"
     << "data. Additional arguments : \n"
     << "\tThe projection mode may optionally be specified. [0-Simple,1-NonOccluded\n"
@@ -707,75 +707,79 @@ int TerrainPolylineEditor(int argc, char * argv[])
     << "\tA height offset may be specified. Defaults to 0.0\n"
     << "\tIf a polydata is specified, an initial contour is constucted from\n"
     << "the points in the polydata. The polydata is expected to be a polyline\n"
-    << "(one cell and two or more points on that cell)." 
-    << endl;
-    cerr << "\n\nUsage: " << argv[0] << "\n"
+    << "(one cell and two or more points on that cell)."
+    << std::endl;
+    std::cerr << "\n\nUsage: " << argv[0] << "\n"
               << "  [-ProjectionMode (0,1 or 2)]\n"
-              << "  [-HeightOffset heightOffset]\n" 
-              << "  [-InitialPath SomeVTKXmlfileContainingPath.vtk]" 
-              << endl;
+              << "  [-HeightOffset heightOffset]\n"
+              << "  [-InitialPath SomeVTKXmlfileContainingPath.vtk]"
+              << std::endl;
     return EXIT_FAILURE;
     }
 
-  // Read height field. 
-  char* fname = 
+  // Read height field.
+  char* fname =
     vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/SainteHelens.dem");
-  vtkDEMReader *demReader = vtkDEMReader::New();
+  vtkSmartPointer<vtkDEMReader> demReader =
+    vtkSmartPointer<vtkDEMReader>::New();
   demReader->SetFileName(fname);
   delete [] fname;
-  
+
   // Extract geometry
 
-  vtkImageDataGeometryFilter *surface = vtkImageDataGeometryFilter::New();
+  vtkSmartPointer<vtkImageDataGeometryFilter> surface =
+    vtkSmartPointer<vtkImageDataGeometryFilter>::New();
   surface->SetInput(demReader->GetOutput());
 
-  vtkWarpScalar *warp = vtkWarpScalar::New();
+  vtkSmartPointer<vtkWarpScalar> warp =
+    vtkSmartPointer<vtkWarpScalar>::New();
   warp->SetInput(surface->GetOutput());
   warp->SetScaleFactor(1);
   warp->UseNormalOn();
   warp->SetNormal(0, 0, 1);
-  surface->Delete();
   warp->Update();
 
-  // Define a LUT mapping for the height field 
+  // Define a LUT mapping for the height field
 
   double lo = demReader->GetOutput()->GetScalarRange()[0];
   double hi = demReader->GetOutput()->GetScalarRange()[1];
 
-  vtkLookupTable *lut = vtkLookupTable::New();
+  vtkSmartPointer<vtkLookupTable> lut =
+    vtkSmartPointer<vtkLookupTable>::New();
   lut->SetHueRange(0.6, 0);
   lut->SetSaturationRange(1.0, 0);
   lut->SetValueRange(0.5, 1.0);
-  
-  vtkPolyDataNormals *normals = vtkPolyDataNormals::New();
+
+  vtkSmartPointer<vtkPolyDataNormals> normals =
+    vtkSmartPointer<vtkPolyDataNormals>::New();
   normals->SetInput(warp->GetPolyDataOutput());
   normals->SetFeatureAngle(60);
   normals->SplittingOff();
-  warp->Delete();
 
-  vtkPolyDataMapper *demMapper = vtkPolyDataMapper::New();
+  vtkSmartPointer<vtkPolyDataMapper> demMapper =
+    vtkSmartPointer<vtkPolyDataMapper>::New();
   demMapper->SetInput(normals->GetOutput());
   normals->Update();
   demMapper->SetScalarRange(lo, hi);
   demMapper->SetLookupTable(lut);
 
-  lut->Delete();
-  normals->Delete();
-
-  vtkActor *demActor = vtkActor::New();
+  vtkSmartPointer<vtkActor> demActor =
+    vtkSmartPointer<vtkActor>::New();
   demActor->SetMapper(demMapper);
-  demMapper->Delete();
 
   // Create the RenderWindow, Renderer and the DEM + path actors.
- 
-  vtkRenderer *ren1 = vtkRenderer::New();
-  vtkRenderWindow *renWin = vtkRenderWindow::New();
+
+  vtkSmartPointer<vtkRenderer> ren1 =
+    vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renWin =
+    vtkSmartPointer<vtkRenderWindow>::New();
   renWin->AddRenderer(ren1);
-  vtkRenderWindowInteractor *iren = vtkRenderWindowInteractor::New();
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
   iren->SetRenderWindow(renWin);
-  
+
   // Add the actors to the renderer, set the background and size
-  
+
   renWin->SetSize(600,600);
   ren1->AddActor(demActor);
   ren1->GetActiveCamera()->SetViewUp(0, 0, 1);
@@ -787,30 +791,32 @@ int TerrainPolylineEditor(int argc, char * argv[])
 
   // Here comes the contour widget stuff.....
 
-  vtkContourWidget *contourWidget = vtkContourWidget::New();
-  vtkOrientedGlyphContourRepresentation *rep = 
+  vtkSmartPointer<vtkContourWidget> contourWidget =
+    vtkSmartPointer<vtkContourWidget>::New();
+  vtkOrientedGlyphContourRepresentation *rep =
       vtkOrientedGlyphContourRepresentation::SafeDownCast(
                         contourWidget->GetRepresentation());
   rep->GetLinesProperty()->SetColor(1.0, 0.0, 0.0);
   contourWidget->SetInteractor(iren);
-  
+
   // Set the point placer to the one used for terrains...
 
-  vtkTerrainDataPointPlacer * pointPlacer = vtkTerrainDataPointPlacer::New();
+  vtkSmartPointer<vtkTerrainDataPointPlacer>  pointPlacer =
+    vtkSmartPointer<vtkTerrainDataPointPlacer>::New();
   pointPlacer->AddProp(demActor);    // the actor(s) containing the terrain.
   rep->SetPointPlacer(pointPlacer);
 
   // Set a terrain interpolator. Interpolates points as they are placed,
   // so that they lie on the terrain.
 
-  vtkTerrainContourLineInterpolator *interpolator 
-          = vtkTerrainContourLineInterpolator::New();
+  vtkSmartPointer<vtkTerrainContourLineInterpolator> interpolator
+          = vtkSmartPointer<vtkTerrainContourLineInterpolator>::New();
   rep->SetLineInterpolator(interpolator);
   interpolator->SetImageData(demReader->GetOutput());
-  
-  // Set the default projection mode to hug the terrain, unless user 
+
+  // Set the default projection mode to hug the terrain, unless user
   // overrides it.
-  // 
+  //
   interpolator->GetProjector()->SetProjectionModeToHug();
   for (int i = 0; i < argc-1; i++)
     {
@@ -825,49 +831,34 @@ int TerrainPolylineEditor(int argc, char * argv[])
       }
     if (strcmp("-InitialPath", argv[i]) == 0)
       {
-      // If we had an input poly as an initial path, build a contour widget from
-      // that path.
+      // If we had an input poly as an initial path, build a contour
+      // widget from that path.
       //
-      vtkPolyDataReader *terrainPathReader = vtkPolyDataReader::New();
+      vtkSmartPointer<vtkPolyDataReader> terrainPathReader =
+        vtkSmartPointer<vtkPolyDataReader>::New();
       terrainPathReader->SetFileName(argv[i+1]);
       terrainPathReader->Update();
       contourWidget->Initialize( terrainPathReader->GetOutput(), 0 );
-      terrainPathReader->Delete();
       }
     }
-  
+
   contourWidget->EnabledOn();
 
-  vtkInteractorEventRecorder *recorder = vtkInteractorEventRecorder::New();
+  vtkSmartPointer<vtkInteractorEventRecorder> recorder =
+    vtkSmartPointer<vtkInteractorEventRecorder>::New();
   recorder->SetInteractor(iren);
   recorder->ReadFromInputStringOn();
-  recorder->SetInputString(TerrainPolylineEditorLog); 
+  recorder->SetInputString(TerrainPolylineEditorLog);
   recorder->EnabledOn();
-  
+
   renWin->Render();
   iren->Initialize();
 
   recorder->Play();
-  
+
   recorder->Off();
 
-  int retVal = vtkRegressionTestImage( renWin );
-  if ( retVal == vtkRegressionTester::DO_INTERACTOR)
-    {
-    iren->Start();
-    }
+  iren->Start();
 
-  // Cleanups
-  contourWidget->Delete();
-  interpolator->Delete();
-  pointPlacer->Delete();
-  demReader->Delete();
-  demActor->Delete();
-  iren->Delete();
-  renWin->Delete();
-  ren1->Delete();
-  recorder->Delete();
-  
   return EXIT_SUCCESS;
 }
-

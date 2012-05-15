@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleUnicam.h,v $
+  Module:    vtkInteractorStyleUnicam.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -107,7 +107,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleUnicam : public vtkInteractorStyle
 {
 public:
   static vtkInteractorStyleUnicam *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleUnicam,vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleUnicam,vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   void SetWorldUpVector(double a[3]) {this->SetWorldUpVector(a[0],a[1],a[2]);}

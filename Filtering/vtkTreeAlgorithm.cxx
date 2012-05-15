@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeAlgorithm.cxx,v $
+  Module:    vtkTreeAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkTree.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkTreeAlgorithm, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTreeAlgorithm);
 
 //----------------------------------------------------------------------------

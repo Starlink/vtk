@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataObjectWriter.cxx,v $
+  Module:    vtkGenericDataObjectWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,6 +14,8 @@
 =========================================================================*/
 #include "vtkGenericDataObjectWriter.h"
 
+#include "vtkCompositeDataSet.h"
+#include "vtkCompositeDataWriter.h"
 #include "vtkDataObject.h"
 #include "vtkErrorCode.h"
 #include "vtkGraph.h"
@@ -36,7 +38,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkUnstructuredGridWriter.h"
 
-vtkCxxRevisionMacro(vtkGenericDataObjectWriter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGenericDataObjectWriter);
 
 template<typename WriterT, typename DataT>
@@ -80,9 +81,6 @@ void vtkGenericDataObjectWriter::WriteData()
     case VTK_UNDIRECTED_GRAPH:
       writer = CreateWriter<vtkGraphWriter, vtkGraph>(input);
       break;
-    case VTK_HIERARCHICAL_BOX_DATA_SET:
-      vtkErrorMacro(<< "Cannot write hierarchical box data set");
-      return;
     case VTK_HIERARCHICAL_DATA_SET:
       vtkErrorMacro(<< "Cannot write hierarchical data set");
       return;
@@ -93,8 +91,10 @@ void vtkGenericDataObjectWriter::WriteData()
       writer = CreateWriter<vtkStructuredPointsWriter, vtkImageData>(input);
       break;
     case VTK_MULTIBLOCK_DATA_SET:
-      vtkErrorMacro(<< "Cannot write multiblock data set");
-      return;
+    case VTK_HIERARCHICAL_BOX_DATA_SET:
+    case VTK_MULTIPIECE_DATA_SET:
+      writer = CreateWriter<vtkCompositeDataWriter, vtkCompositeDataSet>(input);
+      break;
     case VTK_MULTIGROUP_DATA_SET:
       vtkErrorMacro(<< "Cannot write multigroup data set");
       return;

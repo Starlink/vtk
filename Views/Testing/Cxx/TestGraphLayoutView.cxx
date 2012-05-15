@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestGraphLayoutView.cxx,v $
+  Module:    TestGraphLayoutView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,6 +24,7 @@
 #include "vtkIdTypeArray.h"
 #include "vtkInteractorEventRecorder.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderedGraphRepresentation.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -31,6 +32,8 @@
 #include "vtkStringToNumeric.h"
 #include "vtkTestUtilities.h"
 #include "vtkXMLTreeReader.h"
+
+using std::string;
 
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
@@ -804,11 +807,11 @@ char GraphLayoutViewEventLog[] =
 "MouseMoveEvent 73 61 0 0 0 0 0\n"
 "MouseMoveEvent 71 59 0 0 0 0 0\n"
 "MouseMoveEvent 70 57 0 0 0 0 0\n"
-"MouseMoveEvent 70 55 0 0 0 0 0\n"
-"MouseMoveEvent 69 54 0 0 0 0 0\n"
-"LeftButtonReleaseEvent 69 54 0 0 0 0 0\n"
-"EndInteractionEvent 69 54 0 0 0 0 0\n"
-"MouseMoveEvent 69 54 0 0 0 0 0\n"
+"MouseMoveEvent 70 44 0 0 0 0 0\n"
+"MouseMoveEvent 69 44 0 0 0 0 0\n"
+"LeftButtonReleaseEvent 69 44 0 0 0 0 0\n"
+"EndInteractionEvent 69 44 0 0 0 0 0\n"
+"MouseMoveEvent 69 44 0 0 0 0 0\n"
 "MouseMoveEvent 70 54 0 0 0 0 0\n"
 "MouseMoveEvent 72 56 0 0 0 0 0\n"
 "MouseMoveEvent 74 58 0 0 0 0 0\n"
@@ -1072,15 +1075,17 @@ char GraphLayoutViewEventLog[] =
 "ExitEvent 276 299 0 0 0 0 0\n"
 ;
 
-//#define RECORD
-
 int TestGraphLayoutView(int argc, char* argv[])
 {
-  char* file = vtkTestUtilities::ExpandDataFileName(argc, argv,
-                                                    "Data/treetest.xml");
+  bool record = false;
+
+  VTK_CREATE(vtkTesting, testHelper);
+  testHelper->AddArguments(argc,const_cast<const char **>(argv));
+  string dataRoot = testHelper->GetDataRoot();
+  string file = dataRoot + "/Data/treetest.xml";
 
   VTK_CREATE(vtkXMLTreeReader, reader);
-  reader->SetFileName(file);
+  reader->SetFileName(file.c_str());
   reader->SetMaskArrays(true);
   reader->Update();
   vtkTree* t = reader->GetOutput();
@@ -1111,60 +1116,60 @@ int TestGraphLayoutView(int argc, char* argv[])
   numeric->SetInput(t);
   
   // Graph layout view
-  VTK_CREATE(vtkRenderWindow, win);
-  VTK_CREATE(vtkRenderWindowInteractor, iren);
-  iren->SetRenderWindow(win);
   VTK_CREATE(vtkGraphLayoutView, view);
+  view->DisplayHoverTextOn();
   view->SetLayoutStrategyToCircular();
   view->SetVertexLabelArrayName("name");
   view->VertexLabelVisibilityOn();
   view->SetVertexColorArrayName("size");
   view->ColorVerticesOn();
+  view->SetRepresentationFromInputConnection(numeric->GetOutputPort());
   view->SetEdgeColorArrayName("distance");
   view->ColorEdgesOn();
   view->SetEdgeLabelArrayName("edge label");
   view->EdgeLabelVisibilityOn();
-  view->SetupRenderWindow(win);
-  view->SetRepresentationFromInputConnection(numeric->GetOutputPort());
+  vtkRenderedGraphRepresentation* rep = vtkRenderedGraphRepresentation::SafeDownCast(view->GetRepresentation());
+  rep->SetVertexHoverArrayName("name");
+  rep->SetEdgeHoverArrayName("edge label");
 
-  view->GetRenderer()->ResetCamera();
-  view->Update();
+  view->ResetCamera();
 
   // record events
   VTK_CREATE(vtkInteractorEventRecorder, recorder);
-  recorder->SetInteractor(iren);
-#ifdef RECORD
-  recorder->SetFileName("record.log");
-  recorder->SetEnabled(true);
-  recorder->Record();
-#else
-  recorder->ReadFromInputStringOn();
-  recorder->SetInputString(GraphLayoutViewEventLog);
-#endif
+  recorder->SetInteractor(view->GetInteractor());
+  if (record)
+    {
+    recorder->SetFileName("record.log");
+    recorder->SetEnabled(true);
+    recorder->Record();
+    }
+  else
+    {
+    recorder->ReadFromInputStringOn();
+    recorder->SetInputString(GraphLayoutViewEventLog);
+    }
 
   // interact with data
   // render the image
   //
-  iren->Initialize();
-  win->Render();
-#ifdef RECORD
-#else
-  recorder->Play();
-
-  // Remove the observers so we can go interactive. Without this the "-I"
-  // testing option fails.
-  recorder->Off();
-#endif
+  view->GetInteractor()->Initialize();
+  view->Render();
+  if (!record)
+    {
+    recorder->Play();
+    // Remove the observers so we can go interactive. Without this the "-I"
+    // testing option fails.
+    recorder->Off();
+    }
   
-  int retVal = vtkRegressionTestImage(win);
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
-    iren->Initialize();
-    iren->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
     
     retVal = vtkRegressionTester::PASSED;
     }
 
-  delete [] file;
   return !retVal;
 }

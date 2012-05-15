@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageStencil.h,v $
+  Module:    vtkImageStencil.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImageStencil : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageStencil *New();
-  vtkTypeRevisionMacro(vtkImageStencil, vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageStencil, vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -45,7 +45,6 @@ public:
   vtkGetMacro(ReverseStencil, int);
 
   // Description:
-  // NOTE: Not yet implemented, use SetBackgroundValue instead.
   // Set the second input.  This image will be used for the 'outside' of the
   // stencil.  If not set, the output voxels will be filled with
   // BackgroundValue instead.
@@ -69,8 +68,6 @@ protected:
   vtkImageStencil();
   ~vtkImageStencil();
   
-  virtual int RequestInformation (vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-
   void ThreadedRequestData(vtkInformation *request,
                            vtkInformationVector **inputVector,
                            vtkInformationVector *outputVector,

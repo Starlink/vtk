@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToStructuredGrid.cxx,v $
+  Module:    vtkTableToStructuredGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkTable.h"
 
 vtkStandardNewMacro(vtkTableToStructuredGrid);
-vtkCxxRevisionMacro(vtkTableToStructuredGrid, "$Revision: 1.2 $");
 //----------------------------------------------------------------------------
 vtkTableToStructuredGrid::vtkTableToStructuredGrid()
 {

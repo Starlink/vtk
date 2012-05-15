@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageData.h,v $
+  Module:    vtkImageData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_FILTERING_EXPORT vtkImageData : public vtkDataSet
 public:
   static vtkImageData *New();
 
-  vtkTypeRevisionMacro(vtkImageData,vtkDataSet);
+  vtkTypeMacro(vtkImageData,vtkDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -83,15 +83,17 @@ public:
   virtual int GetMaxCellSize() {return 8;}; //voxel is the largest
 
   // Description:
-  // Restore data object to initial state,
+  // Restore data object to initial state.
   virtual void Initialize();
 
   // Description:
-  // Set dimensions of structured points dataset.
+  // \deprecated{This is for backward compatibility only - use SetExtent().}
+  // Same as SetExtent(0, i-1, 0, j-1, 0, k-1)
   virtual void SetDimensions(int i, int j, int k);
 
   // Description:
-  // Set dimensions of structured points dataset.
+  // \deprecated{This is for backward compatibility only - use SetExtent().}
+  // Same as SetExtent(0, dims[0]-1, 0, dims[1]-1, 0, dims[2]-1)
   virtual void SetDimensions(const int dims[3]);
 
   // Description:
@@ -135,12 +137,12 @@ public:
   // Description:
   // Given a location in structured coordinates (i-j-k), return the point id.
   virtual vtkIdType ComputePointId(int ijk[3]) {
-    return vtkStructuredData::ComputePointId(this->GetDimensions(),ijk);};
+    return vtkStructuredData::ComputePointIdForExtent(this->Extent,ijk);};
 
   // Description:
   // Given a location in structured coordinates (i-j-k), return the cell id.
   virtual vtkIdType ComputeCellId(int ijk[3]) {
-    return vtkStructuredData::ComputeCellId(this->GetDimensions(),ijk);};
+    return vtkStructuredData::ComputeCellIdForExtent(this->Extent,ijk);};
 
   // Description:
   // Set / Get the extent on just one axis
@@ -181,16 +183,21 @@ public:
   virtual double GetScalarTypeMax();
 
   // Description:
-  // Set the size of the scalar type in bytes.
+  // Get the size of the scalar type in bytes.
   virtual int GetScalarSize();
 
   // Description:
   // Different ways to get the increments for moving around the data.
   // GetIncrements() calls ComputeIncrements() to ensure the increments are
-  // up to date.
+  // up to date.  The first three methods compute the increments based on the
+  // active scalar field while the next three, the scalar field is passed in.
   virtual vtkIdType *GetIncrements();
   virtual void GetIncrements(vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ);
   virtual void GetIncrements(vtkIdType inc[3]);
+  virtual vtkIdType *GetIncrements(vtkDataArray *scalars);
+  virtual void GetIncrements(vtkDataArray *scalars, 
+                             vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ);
+  virtual void GetIncrements(vtkDataArray *scalars, vtkIdType inc[3]);
 
   // Description:
   // Different ways to get the increments for moving around the data.
@@ -202,7 +209,11 @@ public:
   // over Z, Y, X, C, incrementing the pointer by 1 after each
   // component.  When the end of the component is reached, the pointer
   // is set to the beginning of the next pixel, thus incX is properly set to 0.
+  // The first form of GetContinuousIncrements uses the active scalar field
+  // while the second form allows the scalar array to be passed in.
   virtual void GetContinuousIncrements(
+    int extent[6], vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ);
+  virtual void GetContinuousIncrements(vtkDataArray *scalars,
     int extent[6], vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ);
 
   // Description:
@@ -363,17 +374,10 @@ protected:
   vtkImageData();
   ~vtkImageData();
 
-  // for the GetCell method
-  vtkVertex *Vertex;
-  vtkLine *Line;
-  vtkPixel *Pixel;
-  vtkVoxel *Voxel;
-
   // The extent of what is currently in the structured grid.
   // Dimensions is just an array to return a value.
   // Its contents are out of data until GetDimensions is called.
   int Dimensions[3];
-  int DataDescription;
   vtkIdType Increments[3];
 
   double Origin[3];
@@ -381,18 +385,64 @@ protected:
 
   int Extent[6];
 
+  // The first method assumes Active Scalars
   void ComputeIncrements();
+  // This one is given the number of components of the
+  // scalar field explicitly
+  void ComputeIncrements(int numberOfComponents);
+  void ComputeIncrements(vtkDataArray *scalars);
+
+  // The first method assumes Acitive Scalars
+  void ComputeIncrements(vtkIdType inc[3]);
+  // This one is given the number of components of the
+  // scalar field explicitly
+  void ComputeIncrements(int numberOfComponents, vtkIdType inc[3]);
+  void ComputeIncrements(vtkDataArray *scalars, vtkIdType inc[3]);
   void CopyOriginAndSpacingFromPipeline();
 
   vtkTimeStamp ExtentComputeTime;
 
+  void SetDataDescription(int desc);
+  int GetDataDescription() { return this->DataDescription; }
+
 private:
   void InternalImageDataCopy(vtkImageData *src);
 private:
+
+  //BTX
+  friend class vtkUniformGrid;
+  //ETX
+
+  // for the GetCell method
+  vtkVertex *Vertex;
+  vtkLine *Line;
+  vtkPixel *Pixel;
+  vtkVoxel *Voxel;
+
+  int DataDescription;
+
   vtkImageData(const vtkImageData&);  // Not implemented.
   void operator=(const vtkImageData&);  // Not implemented.
 };
 
+
+//----------------------------------------------------------------------------
+inline void vtkImageData::ComputeIncrements()
+{
+  this->ComputeIncrements(this->Increments);
+}
+
+//----------------------------------------------------------------------------
+inline void vtkImageData::ComputeIncrements(int numberOfComponents)
+{
+  this->ComputeIncrements(numberOfComponents, this->Increments);
+}
+
+//----------------------------------------------------------------------------
+inline void vtkImageData::ComputeIncrements(vtkDataArray *scalars)
+{
+  this->ComputeIncrements(scalars, this->Increments);
+}
 
 //----------------------------------------------------------------------------
 inline void vtkImageData::GetPoint(vtkIdType id, double x[3])
@@ -420,6 +470,3 @@ inline int vtkImageData::GetDataDimension()
 }
 
 #endif
-
-
-

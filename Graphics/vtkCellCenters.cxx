@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellCenters.cxx,v $
+  Module:    vtkCellCenters.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,15 +25,16 @@
 #include "vtkPolyData.h"
 #include "vtkCellArray.h"
 
-vtkCxxRevisionMacro(vtkCellCenters, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkCellCenters);
 
+//----------------------------------------------------------------------------
 // Construct object with vertex cell generation turned off.
 vtkCellCenters::vtkCellCenters()
 {
   this->VertexCells = 0;
 }
 
+//----------------------------------------------------------------------------
 // Generate points
 int vtkCellCenters::RequestData(
   vtkInformation *vtkNotUsed(request),
@@ -44,7 +45,7 @@ int vtkCellCenters::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -145,12 +146,14 @@ int vtkCellCenters::RequestData(
   return 1;
 }
 
+//----------------------------------------------------------------------------
 int vtkCellCenters::FillInputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
 }
 
+//----------------------------------------------------------------------------
 void vtkCellCenters::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);

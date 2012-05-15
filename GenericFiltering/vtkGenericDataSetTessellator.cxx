@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataSetTessellator.cxx,v $
+  Module:    vtkGenericDataSetTessellator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,11 +32,11 @@
 #include "vtkGenericAttribute.h"
 #include "vtkCellData.h"
 #include "vtkGenericCellTessellator.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkGenericDataSetTessellator, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkGenericDataSetTessellator);
 
-vtkCxxSetObjectMacro(vtkGenericDataSetTessellator,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkGenericDataSetTessellator,Locator,vtkIncrementalPointLocator);
 //----------------------------------------------------------------------------
 //
 vtkGenericDataSetTessellator::vtkGenericDataSetTessellator()
@@ -162,7 +162,7 @@ int vtkGenericDataSetTessellator::RequestData(
   
   input->GetTessellator()->InitErrorMetrics(input);
   
-  vtkPointLocator *locator=0;
+  vtkIncrementalPointLocator *locator=0;
   if ( this->Merging )
     {
     if ( this->Locator == NULL )

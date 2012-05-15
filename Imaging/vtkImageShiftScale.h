@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageShiftScale.h,v $
+  Module:    vtkImageShiftScale.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,10 +14,10 @@
 =========================================================================*/
 // .NAME vtkImageShiftScale - shift and scale an input image
 // .SECTION Description
-// With vtkImageShiftScale Pixels are shifted and then scaled. As
-// a convenience, this class allows you to set the output scalar type
-// similar to vtkImageCast. This is because shift scale operations
-// frequently convert data types.
+// With vtkImageShiftScale Pixels are shifted (a constant value added)
+// and then scaled (multiplied by a scalar. As a convenience, this class 
+// allows you to set the output scalar type similar to vtkImageCast. 
+// This is because shift scale operations frequently convert data types.
 
 
 #ifndef __vtkImageShiftScale_h
@@ -30,16 +30,16 @@ class VTK_IMAGING_EXPORT vtkImageShiftScale : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageShiftScale *New();
-  vtkTypeRevisionMacro(vtkImageShiftScale,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageShiftScale,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Set/Get the shift value.
+  // Set/Get the shift value. This value is added to each pixel
   vtkSetMacro(Shift,double);
   vtkGetMacro(Shift,double);
 
   // Description:
-  // Set/Get the scale value.
+  // Set/Get the scale value. Each pixel is multiplied by this value.
   vtkSetMacro(Scale,double);
   vtkGetMacro(Scale,double);
 

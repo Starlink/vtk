@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositePolyDataMapper2.h,v $
+  Module:    vtkCompositePolyDataMapper2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,30 +28,19 @@ class VTK_RENDERING_EXPORT vtkCompositePolyDataMapper2 : public vtkPainterPolyDa
 {
 public:
   static vtkCompositePolyDataMapper2* New();
-  vtkTypeRevisionMacro(vtkCompositePolyDataMapper2, vtkPainterPolyDataMapper);
+  vtkTypeMacro(vtkCompositePolyDataMapper2, vtkPainterPolyDataMapper);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Implemented by sub classes. Actual rendering is done here.
-  virtual void RenderPiece(vtkRenderer *ren, vtkActor *act);
-
-  // Description:
-  // Standard vtkProp method to get 3D bounds of a 3D prop
-  double *GetBounds();
-  void GetBounds(double bounds[6]) { this->Superclass::GetBounds( bounds ); };  
-
-
-  // Description:
-  // This calls RenderPiece (in a for loop is streaming is necessary).
-  // Basically a reimplementation for vtkPolyDataMapper::Render() since we don't
-  // want it to give up when vtkCompositeDataSet is encountered.
-  virtual void Render(vtkRenderer *ren, vtkActor *act);
-
-  // Description:
-  // When set, each block is colored with a different color. Note that scalar
-  // coloring will be ignored.
-  vtkSetMacro(ColorBlocks, int);
-  vtkGetMacro(ColorBlocks, int);
+  // Returns if the mapper does not expect to have translucent geometry. This
+  // may happen when using ScalarMode is set to not map scalars i.e. render the
+  // scalar array directly as colors and the scalar array has opacity i.e. alpha
+  // component. Note that even if this method returns true, an actor may treat
+  // the geometry as translucent since a constant translucency is set on the
+  // property, for example.
+  // Overridden to use the actual data and ScalarMode to determine if we have
+  // opaque geometry.
+  virtual bool GetIsOpaque();
 
 //BTX
 protected:
@@ -70,18 +59,12 @@ protected:
 
   // Description:
   // Need to loop over the hierarchy to compute bounds
-  void ComputeBounds();
-
-  // Description:
-  // Called when the PainterInformation becomes obsolete. 
-  // It is called before the Render is initiated on the Painter.
-  virtual void UpdatePainterInformation();
+  virtual void ComputeBounds();
 
   // Description:
   // Time stamp for computation of bounds.
   vtkTimeStamp BoundsMTime;
 
-  int ColorBlocks;
 private:
   vtkCompositePolyDataMapper2(const vtkCompositePolyDataMapper2&); // Not implemented.
   void operator=(const vtkCompositePolyDataMapper2&); // Not implemented.

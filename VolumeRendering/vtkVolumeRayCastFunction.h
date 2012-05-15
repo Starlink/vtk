@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastFunction.h,v $
+  Module:    vtkVolumeRayCastFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -85,7 +85,7 @@ typedef struct
   // about its size, spacing, origin and precomputed increment
   int                          ScalarDataType;
   void                        *ScalarDataPointer;
-  int                          DataIncrement[3];
+  vtkIdType                    DataIncrement[3];
   int                          DataSize[3];
   double                       DataSpacing[3];
   double                       DataOrigin[3];
@@ -130,16 +130,16 @@ typedef struct
 class VTK_VOLUMERENDERING_EXPORT vtkVolumeRayCastFunction : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkVolumeRayCastFunction,vtkObject);
+  vtkTypeMacro(vtkVolumeRayCastFunction,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
+//BTX
   // Description:
   // Do the basic initialization. This includes saving the parameters
   // passed in into local variables, as well as grabbing some useful
   // info from the volume property and normal encoder. This initialize
   // routine is called once per render. It also calls the 
   // SpecificFunctionInitialize of the subclass function.
-//BTX
   void FunctionInitialize( vtkRenderer *ren,
                            vtkVolume   *vol,
                            vtkVolumeRayCastStaticInfo *staticInfo );
@@ -157,10 +157,10 @@ protected:
   vtkVolumeRayCastFunction() {};
   ~vtkVolumeRayCastFunction() {};
 
+//BTX
   // Description:
   // This method gives the subclass a chance to do any special
   // initialization that it may need to do
-//BTX
   virtual void SpecificFunctionInitialize( vtkRenderer *ren,
                                            vtkVolume   *vol,
                                            vtkVolumeRayCastStaticInfo *staticInfo,

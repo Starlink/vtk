@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWeakPointer.h,v $
+  Module:    vtkWeakPointer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,10 +14,28 @@
 =========================================================================*/
 // .NAME vtkWeakPointer - a weak reference to a vtkObject.
 // .SECTION Description
-// vtkWeakPointer is a weak reference to a vtkObject which means that assigning
-// a vtkObject to the vtkWeakPointer does not affect the reference cound of the
+// A weak reference to a vtkObject, which means that assigning
+// a vtkObject to the vtkWeakPointer does not affect the reference count of the
 // vtkObject. However, when the vtkObject is destroyed, the vtkWeakPointer gets
-// initialized to NULL, thus avoid any dangling references.
+// initialized to NULL, thus avoiding any dangling references.
+//
+// \code
+// vtkTable *table = vtkTable::New();
+// vtkWeakPointer<vtkTable> weakTable = table;
+// \endcode
+//
+// Some time later the table may be deleted, but if it is tested for null then
+// the weak pointer will not leave a dangling pointer.
+//
+// \code
+// table->Delete();
+// if (weakTable)
+//   {
+//   // Never executed as the weak table pointer will be null here
+//   cout << "Number of columns in table: " << weakTable->GetNumberOfColumns()
+//        << endl;
+//   }
+// \endcode
 
 #ifndef __vtkWeakPointer_h
 #define __vtkWeakPointer_h
@@ -41,7 +59,7 @@ public:
   vtkWeakPointer(const vtkWeakPointerBase& r): vtkWeakPointerBase(r) {}
 
   // Description:
-  // Assign object to reference.  
+  // Assign object to reference.
   vtkWeakPointer& operator=(T* r)
     {
     this->vtkWeakPointerBase::operator=(r);
@@ -49,7 +67,7 @@ public:
     }
 
   // Description:
-  // Assign object to reference. 
+  // Assign object to reference.
   vtkWeakPointer& operator=(const vtkWeakPointerBase& r)
     {
     this->vtkWeakPointerBase::operator=(r);
@@ -92,7 +110,7 @@ public:
   // avoid the bogus ambiguous overload error.
 #if defined(__HP_aCC) || defined(__IBMCPP__)
 # define VTK_WEAK_POINTER_DEFINE_OPERATOR_WORKAROUND(op) \
-  vtkstd_bool operator op (NullPointerOnly*) const        \
+  bool operator op (NullPointerOnly*) const              \
     {                                                     \
     return ::operator op (*this, 0);                      \
     }
@@ -118,18 +136,18 @@ private:
 
 #define VTK_WEAK_POINTER_DEFINE_OPERATOR(op) \
   template <class T> \
-  inline vtkstd_bool \
+  inline bool \
   operator op (const vtkWeakPointer<T>& l, const vtkWeakPointer<T>& r) \
     { \
     return (l.GetPointer() op r.GetPointer()); \
     } \
   template <class T> \
-  inline vtkstd_bool operator op (T* l, const vtkWeakPointer<T>& r) \
+  inline bool operator op (T* l, const vtkWeakPointer<T>& r) \
     { \
     return (l op r.GetPointer()); \
     } \
   template <class T> \
-  inline vtkstd_bool operator op (const vtkWeakPointer<T>& l, T* r) \
+  inline bool operator op (const vtkWeakPointer<T>& l, T* r) \
     { \
     return (l.GetPointer() op r); \
     }

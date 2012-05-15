@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLImageDataReader.cxx,v $
+  Module:    vtkXMLImageDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkInformationVector.h"
 
-vtkCxxRevisionMacro(vtkXMLImageDataReader, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkXMLImageDataReader);
 
 //----------------------------------------------------------------------------

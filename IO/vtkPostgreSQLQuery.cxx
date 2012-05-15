@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPostgreSQLQuery.cxx,v $
+  Module:    vtkPostgreSQLQuery.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,6 @@ void ConvertFromNetworkOrder(T &target, const char *rawBytes)
 
 // ----------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkPostgreSQLQuery, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkPostgreSQLQuery);
 
 // ----------------------------------------------------------------------
@@ -688,7 +687,7 @@ vtkVariant ConvertStringToSignedShort(bool isBinary, const char *rawData)
 {
   if (isBinary)
     {
-    short result;
+    short result = 0;
     ConvertFromNetworkOrder(result, rawData);
     return vtkVariant(result);
     }
@@ -705,7 +704,7 @@ vtkVariant ConvertStringToUnsignedShort(bool isBinary, const char *rawData)
 {
   if (isBinary)
     {
-    unsigned short result;
+    unsigned short result = 0;
     ConvertFromNetworkOrder(result, rawData);
     return vtkVariant(result);
     }
@@ -722,7 +721,7 @@ vtkVariant ConvertStringToSignedInt(bool isBinary, const char *rawData)
 {
   if (isBinary)
     {
-    int result;
+    int result = 0;
     ConvertFromNetworkOrder(result, rawData);
     return vtkVariant(result);
     }
@@ -739,7 +738,7 @@ vtkVariant ConvertStringToUnsignedInt(bool isBinary, const char *rawData)
 {
   if (isBinary)
     {
-    unsigned int result;
+    unsigned int result = 0;
     ConvertFromNetworkOrder(result, rawData);
     return vtkVariant(result);
     }
@@ -834,7 +833,7 @@ vtkVariant ConvertStringToFloat(bool isBinary, const char *rawData)
     // and then transmits them that way.  This... frightens me.  It assumes
     // that both sender and recipient use IEEE floats.  Still, I'm not sure
     // there's any other good way to do it.
-    unsigned int intResult;
+    unsigned int intResult = 0;
     ConvertFromNetworkOrder(intResult, rawData);
 
     // This is the idiom that libpq uses internally to convert between the
@@ -856,9 +855,9 @@ vtkVariant ConvertStringToFloat(bool isBinary, const char *rawData)
     // Catch NaN 
     if (rawData[0] == 'N' || rawData[0] == 'n')
       {
-      if (vtkstd::numeric_limits<float>::has_quiet_NaN)
+      if (std::numeric_limits<float>::has_quiet_NaN)
         {
-        finalResult = vtkstd::numeric_limits<float>::quiet_NaN();
+        finalResult = std::numeric_limits<float>::quiet_NaN();
         }
       else
         {
@@ -873,9 +872,9 @@ vtkVariant ConvertStringToFloat(bool isBinary, const char *rawData)
       }
     else if (rawString == "Infinity")
       {
-      if (vtkstd::numeric_limits<float>::has_infinity)
+      if (std::numeric_limits<float>::has_infinity)
         {
-        finalResult = vtkstd::numeric_limits<float>::infinity();
+        finalResult = std::numeric_limits<float>::infinity();
         }
       else
         {
@@ -884,9 +883,9 @@ vtkVariant ConvertStringToFloat(bool isBinary, const char *rawData)
       }
     else if (rawString == "-Infinity")
       {
-      if (vtkstd::numeric_limits<float>::has_infinity)
+      if (std::numeric_limits<float>::has_infinity)
         {
-        finalResult = - vtkstd::numeric_limits<float>::infinity();
+        finalResult = - std::numeric_limits<float>::infinity();
         }
       else
         {
@@ -937,7 +936,7 @@ vtkVariant ConvertStringToDouble(bool isBinary, const char *rawData)
     // there's any other good way to do it.
     
     // Let's hope that we always have a 64-bit type.
-    vtkTypeUInt64 intResult;
+    vtkTypeUInt64 intResult = 0;
     ConvertFromNetworkOrder(intResult, rawData);
     union {
       vtkTypeUInt64 i;
@@ -954,9 +953,9 @@ vtkVariant ConvertStringToDouble(bool isBinary, const char *rawData)
     // Catch NaN 
     if (rawData[0] == 'N' || rawData[0] == 'n')
       {
-      if (vtkstd::numeric_limits<double>::has_quiet_NaN)
+      if (std::numeric_limits<double>::has_quiet_NaN)
         {
-        finalResult = vtkstd::numeric_limits<double>::quiet_NaN();
+        finalResult = std::numeric_limits<double>::quiet_NaN();
         }
       else
         {
@@ -971,9 +970,9 @@ vtkVariant ConvertStringToDouble(bool isBinary, const char *rawData)
       }
     else if (rawString == "Infinity")
       {
-      if (vtkstd::numeric_limits<double>::has_infinity)
+      if (std::numeric_limits<double>::has_infinity)
         {
-        finalResult = vtkstd::numeric_limits<double>::infinity();
+        finalResult = std::numeric_limits<double>::infinity();
         }
       else
         {
@@ -982,9 +981,9 @@ vtkVariant ConvertStringToDouble(bool isBinary, const char *rawData)
       }
     else if (rawString == "-Infinity")
       {
-      if (vtkstd::numeric_limits<double>::has_infinity)
+      if (std::numeric_limits<double>::has_infinity)
         {
-        finalResult = - vtkstd::numeric_limits<double>::infinity();
+        finalResult = - std::numeric_limits<double>::infinity();
         }
       else
         {

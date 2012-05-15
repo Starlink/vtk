@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFieldData.h,v $
+  Module:    vtkFieldData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,7 +55,7 @@ class VTK_FILTERING_EXPORT vtkFieldData : public vtkObject
 public:
   static vtkFieldData *New();
 
-  vtkTypeRevisionMacro(vtkFieldData,vtkObject);
+  vtkTypeMacro(vtkFieldData,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

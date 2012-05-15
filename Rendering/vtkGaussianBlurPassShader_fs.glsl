@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkGaussianBlurPassShader_fs.glsl,v $
+//  Module:    vtkGaussianBlurPassShader_fs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -14,6 +14,8 @@
 // ============================================================================
 
 // Fragment shader used by the gaussian blur filter render pass.
+
+#version 110
 
 uniform sampler2D source;
 uniform float coef[3];

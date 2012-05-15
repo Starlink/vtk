@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticEdge.cxx,v $
+  Module:    vtkQuadraticEdge.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkDoubleArray.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticEdge, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkQuadraticEdge);
 
 //----------------------------------------------------------------------------
@@ -142,7 +141,7 @@ static int LinearLines[2][2] = { {0,2}, {2,1} };
     
 
 void vtkQuadraticEdge::Contour(double value, vtkDataArray *cellScalars,
-                               vtkPointLocator *locator, vtkCellArray *verts, 
+                               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                                vtkCellArray *lines, vtkCellArray *polys, 
                                vtkPointData *inPd, vtkPointData *outPd,
                                vtkCellData *inCd, vtkIdType cellId,
@@ -297,7 +296,7 @@ void vtkQuadraticEdge::Derivatives(int vtkNotUsed(subId),
 // Clip this quadratic edge using scalar value provided. Like contouring, 
 // except that it cuts the edge to produce linear line segments.
 void vtkQuadraticEdge::Clip(double value, vtkDataArray *cellScalars, 
-                            vtkPointLocator *locator, vtkCellArray *lines,
+                            vtkIncrementalPointLocator *locator, vtkCellArray *lines,
                             vtkPointData *inPd, vtkPointData *outPd,
                             vtkCellData *inCd, vtkIdType cellId, 
                             vtkCellData *outCd, int insideOut)

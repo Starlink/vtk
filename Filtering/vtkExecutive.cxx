@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExecutive.cxx,v $
+  Module:    vtkExecutive.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,13 +27,12 @@
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 
-#include <vtkstd/vector>
+#include <vector>
 #include <vtksys/ios/sstream>
 
 
 #include "vtkCompositeDataPipeline.h"
 
-vtkCxxRevisionMacro(vtkExecutive, "$Revision: 1.33 $");
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_DIRECTION, Integer);
@@ -47,7 +46,7 @@ vtkInformationKeyMacro(vtkExecutive, PRODUCER, ExecutivePort);
 class vtkExecutiveInternals
 {
 public:
-  vtkstd::vector<vtkInformationVector*> InputInformation;
+  std::vector<vtkInformationVector*> InputInformation;
   vtkExecutiveInternals();
   ~vtkExecutiveInternals();
   vtkInformationVector** GetInputInformation(int newNumberOfPorts);
@@ -62,7 +61,7 @@ vtkExecutiveInternals::vtkExecutiveInternals()
 vtkExecutiveInternals::~vtkExecutiveInternals()
 {
   // Delete all the input information vectors.
-  for(vtkstd::vector<vtkInformationVector*>::iterator
+  for(std::vector<vtkInformationVector*>::iterator
         i = this->InputInformation.begin();
       i != this->InputInformation.end(); ++i)
     {

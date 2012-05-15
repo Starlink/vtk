@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssembly.cxx,v $
+  Module:    vtkAssembly.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkVolume.h"
 
-vtkCxxRevisionMacro(vtkAssembly, "$Revision: 1.60 $");
 vtkStandardNewMacro(vtkAssembly);
 
 // Construct object with no children.
@@ -33,6 +32,14 @@ vtkAssembly::vtkAssembly()
 
 vtkAssembly::~vtkAssembly()
 {
+  vtkCollectionSimpleIterator pit;
+  vtkProp *part;
+  for ( this->Parts->InitTraversal(pit);
+       (part=this->Parts->GetNextProp(pit)); )
+    {
+    part->RemoveConsumer(this);
+    }
+
   this->Parts->Delete();
   this->Parts = NULL;
 }
@@ -43,6 +50,7 @@ void vtkAssembly::AddPart(vtkProp3D *prop)
   if ( ! this->Parts->IsItemPresent(prop) )
     {
     this->Parts->AddItem(prop);
+    prop->AddConsumer(this);
     this->Modified();
     } 
 }
@@ -52,6 +60,7 @@ void vtkAssembly::RemovePart(vtkProp3D *prop)
 {
   if ( this->Parts->IsItemPresent(prop) )
     {
+    prop->RemoveConsumer(this);
     this->Parts->RemoveItem(prop);
     this->Modified();
     } 
@@ -60,15 +69,21 @@ void vtkAssembly::RemovePart(vtkProp3D *prop)
 // Shallow copy another assembly.
 void vtkAssembly::ShallowCopy(vtkProp *prop)
 {
-  vtkAssembly *a = vtkAssembly::SafeDownCast(prop);
-  if ( a != NULL )
+  vtkAssembly *p = vtkAssembly::SafeDownCast(prop);
+  if ( p != NULL && p != this )
     {
-    this->Parts->RemoveAllItems();
     vtkCollectionSimpleIterator pit;
-    a->Parts->InitTraversal(pit);
-    for (int i=0; i<0; i++)
+    vtkProp3D *part;
+    for ( this->Parts->InitTraversal(pit);
+        (part=this->Parts->GetNextProp3D(pit)); )
       {
-      this->Parts->AddItem(a->Parts->GetNextProp3D(pit));
+      part->RemoveConsumer(this);
+      }
+    this->Parts->RemoveAllItems();
+    for ( p->Parts->InitTraversal(pit);
+        (part=p->Parts->GetNextProp3D(pit)); )
+      {
+      this->AddPart(part);
       }
     }
 

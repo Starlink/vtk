@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataConnectivityFilter.h,v $
+  Module:    vtkPolyDataConnectivityFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,13 +17,13 @@
 // vtkPolyDataConnectivityFilter is a filter that extracts cells that
 // share common points and/or satisfy a scalar threshold
 // criterion. (Such a group of cells is called a region.) The filter
-// works in one of six ways: 1) extract the largest connected region
+// works in one of six ways: 1) extract the largest (most points) connected region
 // in the dataset; 2) extract specified region numbers; 3) extract all
 // regions sharing specified point ids; 4) extract all regions sharing
 // specified cell ids; 5) extract the region closest to the specified
 // point; or 6) extract all regions (used to color regions).
 //
-// This filter is specialized for polygonal data. This means it runs a bit 
+// This filter is specialized for polygonal data. This means it runs a bit
 // faster and is easier to construct visualization networks that process
 // polygonal data.
 //
@@ -31,10 +31,16 @@
 // on the boolean ivar ScalarConnectivity. If this flag is on, the
 // connectivity algorithm is modified so that cells are considered connected
 // only if 1) they are geometrically connected (share a point) and 2) the
-// scalar values of one of the cell's points falls in the scalar range
-// specified. This use of ScalarConnectivity is particularly useful for
-// selecting cells for later processing.
-
+// scalar values of the cell's points falls in the scalar range specified.
+// If ScalarConnectivity and FullScalarConnectivity is ON, all the cell's
+// points must lie in the scalar range specified for the cell to qualify as
+// being connected. If FullScalarConnectivity is OFF, any one of the cell's
+// points may lie in the user specified scalar range for the cell to qualify
+// as being connected.
+//
+// This use of ScalarConnectivity is particularly useful for selecting cells
+// for later processing.
+//
 // .SECTION See Also
 // vtkConnectivityFilter
 
@@ -57,8 +63,13 @@ class vtkIdTypeArray;
 class VTK_GRAPHICS_EXPORT vtkPolyDataConnectivityFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkPolyDataConnectivityFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkPolyDataConnectivityFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // Obtain the array containing the region sizes of the extracted
+  // regions
+  vtkGetObjectMacro(RegionSizes,vtkIdTypeArray);
 
   // Description:
   // Construct with default extraction mode to extract largest regions.
@@ -71,6 +82,18 @@ public:
   vtkSetMacro(ScalarConnectivity,int);
   vtkGetMacro(ScalarConnectivity,int);
   vtkBooleanMacro(ScalarConnectivity,int);
+
+  // Description:
+  // Turn on/off the use of Fully connected scalar connectivity. This is off
+  // by default. The flag is used only if ScalarConnectivity is on. If
+  // FullScalarConnectivity is ON, all the cell's points must lie in the
+  // scalar range specified for the cell to qualify as being connected. If
+  // FullScalarConnectivity is OFF, any one of the cell's points may lie in
+  // the user specified scalar range for the cell to qualify as being
+  // connected.
+  vtkSetMacro(FullScalarConnectivity,int);
+  vtkGetMacro(FullScalarConnectivity,int);
+  vtkBooleanMacro(FullScalarConnectivity,int);
 
   // Description:
   // Set the scalar range to use to extract cells based on scalar connectivity.
@@ -122,7 +145,7 @@ public:
   void DeleteSpecifiedRegion(int id);
 
   // Description:
-  // Use to specify x-y-z point coordinates when extracting the region 
+  // Use to specify x-y-z point coordinates when extracting the region
   // closest to a specified point.
   vtkSetVector3Macro(ClosestPoint,double);
   vtkGetVectorMacro(ClosestPoint,double,3);
@@ -136,6 +159,18 @@ public:
   vtkSetMacro(ColorRegions,int);
   vtkGetMacro(ColorRegions,int);
   vtkBooleanMacro(ColorRegions,int);
+
+  // Description:
+  // Mark visited point ids ? It may be useful to extract the visited point
+  // ids for use by a downstream filter. Default is OFF.
+  vtkSetMacro( MarkVisitedPointIds, int );
+  vtkGetMacro( MarkVisitedPointIds, int );
+  vtkBooleanMacro( MarkVisitedPointIds, int );
+
+  // Description:
+  // Get the visited point ids. This is valid only if MarkVisitedPointIds
+  // has been set.
+  vtkGetObjectMacro( VisitedPointIds, vtkIdList );
 
 protected:
   vtkPolyDataConnectivityFilter();
@@ -153,11 +188,15 @@ protected:
   double ClosestPoint[3];
 
   int ScalarConnectivity;
+  int FullScalarConnectivity;
+
+  // Does this cell qualify as being scalar connected ?
+  int IsScalarConnected( vtkIdType cellId );
+
   double ScalarRange[2];
 
   void TraverseAndMark();
 
-private:
   // used to support algorithm execution
   vtkDataArray *CellScalars;
   vtkIdList *NeighborCellPointIds;
@@ -165,7 +204,7 @@ private:
   vtkIdType *PointMap;
   vtkDataArray *NewScalars;
   vtkIdType RegionNumber;
-  vtkIdType PointNumber;    
+  vtkIdType PointNumber;
   vtkIdType NumCellsInRegion;
   vtkDataArray *InScalars;
   vtkPolyData *Mesh;
@@ -173,6 +212,10 @@ private:
   vtkIdList *Wave2;
   vtkIdList *PointIds;
   vtkIdList *CellIds;
+  vtkIdList *VisitedPointIds;
+
+  int MarkVisitedPointIds;
+
 private:
   vtkPolyDataConnectivityFilter(const vtkPolyDataConnectivityFilter&);  // Not implemented.
   void operator=(const vtkPolyDataConnectivityFilter&);  // Not implemented.
@@ -182,27 +225,27 @@ private:
 // Return the method of extraction as a string.
 inline const char *vtkPolyDataConnectivityFilter::GetExtractionModeAsString(void)
 {
-  if ( this->ExtractionMode == VTK_EXTRACT_POINT_SEEDED_REGIONS ) 
+  if ( this->ExtractionMode == VTK_EXTRACT_POINT_SEEDED_REGIONS )
     {
     return "ExtractPointSeededRegions";
     }
-  else if ( this->ExtractionMode == VTK_EXTRACT_CELL_SEEDED_REGIONS ) 
+  else if ( this->ExtractionMode == VTK_EXTRACT_CELL_SEEDED_REGIONS )
     {
     return "ExtractCellSeededRegions";
     }
-  else if ( this->ExtractionMode == VTK_EXTRACT_SPECIFIED_REGIONS ) 
+  else if ( this->ExtractionMode == VTK_EXTRACT_SPECIFIED_REGIONS )
     {
     return "ExtractSpecifiedRegions";
     }
-  else if ( this->ExtractionMode == VTK_EXTRACT_ALL_REGIONS ) 
+  else if ( this->ExtractionMode == VTK_EXTRACT_ALL_REGIONS )
     {
     return "ExtractAllRegions";
     }
-  else if ( this->ExtractionMode == VTK_EXTRACT_CLOSEST_POINT_REGION ) 
+  else if ( this->ExtractionMode == VTK_EXTRACT_CLOSEST_POINT_REGION )
     {
     return "ExtractClosestPointRegion";
     }
-  else 
+  else
     {
     return "ExtractLargestRegion";
     }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkNetworkHierarchy.cxx,v $
+  Module:    vtkNetworkHierarchy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,9 +38,8 @@
 #include <vtksys/stl/utility>
 #include <vtksys/stl/vector>
 #include <vtksys/ios/sstream>
-#include <vtkstd/algorithm>
+#include <algorithm>
 
-vtkCxxRevisionMacro(vtkNetworkHierarchy, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkNetworkHierarchy);
 
 // This is just a macro wrapping for smart pointers
@@ -135,7 +134,7 @@ int vtkNetworkHierarchy::RequestData(
     
     
   // Build subnet map
-  typedef vtkstd::vector<vtkstd::pair<unsigned int, vtkIdType> > subnet_map_type;
+  typedef std::vector<std::pair<unsigned int, vtkIdType> > subnet_map_type;
   subnet_map_type SubnetMap;
   for (vtkIdType i = 0; i < ipArray->GetNumberOfTuples(); ++i)
     {
@@ -196,8 +195,9 @@ int vtkNetworkHierarchy::RequestData(
   // Add root
   vtkIdType rootID = builder->AddVertex();
   treeTable->InsertNextBlankRow();
-    //Don't label the root node...
-//  treeTable->SetValueByName(rootID, this->IPArrayName, vtkVariant("Internet"));
+
+  // Don't label the root node...
+  // treeTable->SetValueByName(rootID, this->IPArrayName, vtkVariant("Internet"));
   treeTable->SetValueByName(rootID, this->IPArrayName, vtkVariant(""));
   if (pedIDArr)
     {

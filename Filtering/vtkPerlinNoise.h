@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPerlinNoise.h,v $
+  Module:    vtkPerlinNoise.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@
 class VTK_FILTERING_EXPORT vtkPerlinNoise : public vtkImplicitFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkPerlinNoise,vtkImplicitFunction);
+  vtkTypeMacro(vtkPerlinNoise,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

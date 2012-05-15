@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaCommand.h,v $
-  Language:  C++
-  Date:      $Date: 2008-11-10 14:13:06 $
-  Version:   $Revision: 1.11 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METACOMMAND_H
@@ -76,7 +71,7 @@ public:
 
   typedef METAIO_STL::vector<Option>             OptionVector;
   typedef METAIO_STL::vector<ParameterGroup>     ParameterGroupVector;
-  
+
   MetaCommand();
   ~MetaCommand() {}
 
@@ -108,7 +103,7 @@ public:
                 METAIO_STL::string description,
                 TypeEnumType type,
                 bool externalData );
-  
+
   /** Add a field to an option */
   bool AddOptionField(METAIO_STL::string optionName,
                       METAIO_STL::string name,
@@ -117,7 +112,7 @@ public:
                       METAIO_STL::string defVal = "",
                       METAIO_STL::string description = "",
                       DataEnumType externalData = DATA_NONE);
-  
+
   /** Set the range of value as an option */
   bool SetOptionRange(METAIO_STL::string optionName,
                       METAIO_STL::string name,
@@ -144,10 +139,10 @@ public:
                          METAIO_STL::string groupDescription="",
                          bool advanced=false);
 
-  /** Collect all the information until the next tag 
+  /** Collect all the information until the next tag
    * \warning this function works only if the field is of type String */
   void SetOptionComplete(METAIO_STL::string optionName,
-                         bool complete);  
+                         bool complete);
 
   /** Get the values given the option name */
   bool GetValueAsBool(METAIO_STL::string optionName,
@@ -189,7 +184,7 @@ public:
   bool OptionExistsByMinusTag(METAIO_STL::string minusTag);
 
   bool Parse(int argc, char* argv[]);
-  
+
   /** Given an XML buffer fill in the command line arguments */
   bool ParseXML(const char* buffer);
 
@@ -206,46 +201,46 @@ public:
   void               SetVersionFromCVS(METAIO_STL::string version);
 
   /** Set the version of the app */
-  METAIO_STL::string GetVersion() 
+  METAIO_STL::string GetVersion()
     { return m_Version; }
 
-  void SetVersion(const char* version) 
+  void SetVersion(const char* version)
     { m_Version=version; }
-  
+
   /** Get the name of the application */
-  METAIO_STL::string GetApplicationName() 
+  METAIO_STL::string GetApplicationName()
     { return m_ExecutableName; }
 
   /** Set the date of the app */
-  METAIO_STL::string GetDate() 
+  METAIO_STL::string GetDate()
     { return m_Date; }
 
-  void SetDate(const char* date) 
+  void SetDate(const char* date)
     { m_Date=date; }
 
-  void SetName(const char* name) 
+  void SetName(const char* name)
     { m_Name=name; }
 
   /** Set the description */
-  void SetDescription(const char* description) 
+  void SetDescription(const char* description)
     { m_Description=description; }
   METAIO_STL::string GetDescription() const
     {return m_Description;}
 
   /** Set the author */
-  void SetAuthor(const char* author) 
+  void SetAuthor(const char* author)
     { m_Author=author; }
   METAIO_STL::string GetAuthor() const
     {return m_Author;}
 
   /** Set the acknowledgments */
-  void SetAcknowledgments(const char* acknowledgments) 
+  void SetAcknowledgments(const char* acknowledgments)
     { m_Acknowledgments=acknowledgments; }
   METAIO_STL::string GetAcknowledgments() const
-    {return m_Acknowledgments;} 
-  
+    {return m_Acknowledgments;}
+
   /** Set the category */
-  void SetCategory(const char* category) 
+  void SetCategory(const char* category)
     { m_Category=category; }
   METAIO_STL::string GetCategory() const
     {return m_Category;}
@@ -253,21 +248,21 @@ public:
   long GetOptionId(Option* option);
 
   /** Return the list of options */
-  const OptionVector & GetOptions() 
+  const OptionVector & GetOptions()
     { return m_OptionVector; }
 
   /** Return the list of parse options */
-  const OptionVector & GetParsedOptions() 
+  const OptionVector & GetParsedOptions()
     { return m_ParsedOptionVector; }
 
   void SetHelpCallBack(void (* newHelpCallBack)(void))
     { m_HelpCallBack = newHelpCallBack; }
-  
+
   METAIO_STL::string TypeToString(TypeEnumType type);
   TypeEnumType StringToType(const char* type);
 
   void SetVerbose(bool verbose) {m_Verbose = verbose;}
-  void SetParseFailureOnUnrecognizedOption(bool fail) 
+  void SetParseFailureOnUnrecognizedOption(bool fail)
   { m_FailOnUnrecognizedOption = fail; }
 
   /** Return true if we got the --xml */
@@ -278,8 +273,8 @@ public:
 
   /** Disable the deprecated warnings */
   void DisableDeprecatedWarnings();
-  
-  /** Load arguments from XML file. 
+
+  /** Load arguments from XML file.
    *  The second argument when set to true allows
    *  external classes to use this function to parse XML
    *  arguments. */
@@ -312,7 +307,7 @@ private:
    *  This is used when importing command line arguments
    *  from XML */
   bool SetOptionValue(const char* optionName,
-                      const char* name, 
+                      const char* name,
                       const char* value,
                       bool createMissingArgument=false);
 
@@ -334,4 +329,4 @@ private:
 };
 #endif
 
-#endif 
+#endif

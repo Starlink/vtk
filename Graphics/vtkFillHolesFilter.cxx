@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFillHolesFilter.cxx,v $
+  Module:    vtkFillHolesFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkSphere.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkFillHolesFilter, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkFillHolesFilter);
 
 //------------------------------------------------------------------------
@@ -51,7 +50,7 @@ int vtkFillHolesFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -148,7 +147,7 @@ int vtkFillHolesFilter::RequestData(
   vtkIdType numHolesFilled=0;
   numCells = newLines->GetNumberOfCells();
   vtkCellArray *newCells = NULL;
-  if ( numCells > 3 ) //only do the work if there are free edges
+  if ( numCells >= 3 ) //only do the work if there are free edges
     {
     double sphere[4];
     vtkIdType startId, neiId, currentCellId, hints[2]; hints[0]=0; hints[1]=0;

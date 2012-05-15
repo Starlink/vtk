@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeClipCutPointsGrabber.cxx,v $
+  Module:    vtkHyperOctreeClipCutPointsGrabber.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,18 +16,17 @@
 
 #include "vtkObjectFactory.h"
 #include "vtkOrderedTriangulator.h"
-#include <vtkstd/set>
+#include <set>
 #include "vtkPolygon.h"
 #include <assert.h>
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeClipCutPointsGrabber, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkHyperOctreeClipCutPointsGrabber);
 
 class vtkHyperOctreeIdSet // Pimpl idiom
 {
 public:
-  vtkstd::set<vtkIdType> Set;
+  std::set<vtkIdType> Set;
 };
 
 //-----------------------------------------------------------------------------

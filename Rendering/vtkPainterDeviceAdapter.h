@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainterDeviceAdapter.h,v $
+  Module:    vtkPainterDeviceAdapter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_RENDERING_EXPORT vtkPainterDeviceAdapter : public vtkObject
 {
 public:
   static vtkPainterDeviceAdapter* New();
-  vtkTypeRevisionMacro(vtkPainterDeviceAdapter, vtkObject);
+  vtkTypeMacro(vtkPainterDeviceAdapter, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:
@@ -153,7 +153,7 @@ public:
                             void *indices) = 0;
 
   // Description:
-  // Returns true if this device adapter is compatable with the given
+  // Returns true if this device adapter is compatible with the given
   // vtkRenderer.
   virtual int Compatible(vtkRenderer *renderer) = 0;
 

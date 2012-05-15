@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAnnotatedCubeActor.cxx,v $
+  Module:    vtkAnnotatedCubeActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkTransformFilter.h"
 #include "vtkVectorText.h"
 
-vtkCxxRevisionMacro(vtkAnnotatedCubeActor, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkAnnotatedCubeActor);
 
 //-------------------------------------------------------------------------
@@ -53,7 +52,7 @@ vtkAnnotatedCubeActor::vtkAnnotatedCubeActor()
 
   vtkPolyDataMapper *cubeMapper = vtkPolyDataMapper::New();
   this->CubeActor = vtkActor::New();
-  cubeMapper->SetInput( this->CubeSource->GetOutput() );
+  cubeMapper->SetInputConnection( this->CubeSource->GetOutputPort() );
   this->CubeActor->SetMapper( cubeMapper );
   cubeMapper->Delete();
 
@@ -85,12 +84,12 @@ vtkAnnotatedCubeActor::vtkAnnotatedCubeActor()
   vtkPolyDataMapper *zplusMapper  = vtkPolyDataMapper::New();
   vtkPolyDataMapper *zminusMapper = vtkPolyDataMapper::New();
 
-  xplusMapper->SetInput ( this->XPlusFaceVectorText->GetOutput() );
-  xminusMapper->SetInput( this->XMinusFaceVectorText->GetOutput() );
-  yplusMapper->SetInput ( this->YPlusFaceVectorText->GetOutput() );
-  yminusMapper->SetInput( this->YMinusFaceVectorText->GetOutput() );
-  zplusMapper->SetInput ( this->ZPlusFaceVectorText->GetOutput() );
-  zminusMapper->SetInput( this->ZMinusFaceVectorText->GetOutput() );
+  xplusMapper->SetInputConnection ( this->XPlusFaceVectorText->GetOutputPort() );
+  xminusMapper->SetInputConnection( this->XMinusFaceVectorText->GetOutputPort() );
+  yplusMapper->SetInputConnection ( this->YPlusFaceVectorText->GetOutputPort() );
+  yminusMapper->SetInputConnection( this->YMinusFaceVectorText->GetOutputPort() );
+  zplusMapper->SetInputConnection ( this->ZPlusFaceVectorText->GetOutputPort() );
+  zminusMapper->SetInputConnection( this->ZMinusFaceVectorText->GetOutputPort() );
 
   this->XPlusFaceActor  = vtkActor::New();
   this->XMinusFaceActor = vtkActor::New();
@@ -145,10 +144,10 @@ vtkAnnotatedCubeActor::vtkAnnotatedCubeActor()
   this->ExtractTextEdges = vtkFeatureEdges::New();
   this->ExtractTextEdges->BoundaryEdgesOn();
   this->ExtractTextEdges->ColoringOff();
-  this->ExtractTextEdges->SetInput( this->AppendTextEdges->GetOutput() );
+  this->ExtractTextEdges->SetInputConnection( this->AppendTextEdges->GetOutputPort() );
 
   vtkPolyDataMapper* edgesMapper = vtkPolyDataMapper::New();
-  edgesMapper->SetInput( this->ExtractTextEdges->GetOutput() );
+  edgesMapper->SetInputConnection( this->ExtractTextEdges->GetOutputPort() );
 
   this->TextEdgesActor = vtkActor::New();
   this->TextEdgesActor->SetMapper( edgesMapper );
@@ -367,7 +366,7 @@ vtkProperty *vtkAnnotatedCubeActor::GetZPlusFaceProperty()
 vtkProperty *vtkAnnotatedCubeActor::GetZMinusFaceProperty()
 {
   return this->ZMinusFaceActor->GetProperty();
-}               
+}
 
 //-------------------------------------------------------------------------
 vtkProperty *vtkAnnotatedCubeActor::GetCubeProperty()
@@ -493,42 +492,42 @@ void vtkAnnotatedCubeActor::UpdateProps()
     }
 
   this->XPlusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->XPlusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->XPlusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->XPlusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   vtkPolyData* edges = this->AppendTextEdges->GetInput( 0 );
   edges->CopyStructure( this->TransformFilter->GetOutput() );
 
   this->XMinusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->XMinusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->XMinusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->XMinusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   edges = this->AppendTextEdges->GetInput( 1 );
   edges->CopyStructure( this->TransformFilter->GetOutput() );
 
   this->YPlusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->YPlusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->YPlusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->YPlusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   edges = this->AppendTextEdges->GetInput( 2 );
   edges->CopyStructure( this->TransformFilter->GetOutput() );
 
   this->YMinusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->YMinusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->YMinusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->YMinusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   edges = this->AppendTextEdges->GetInput( 3 );
   edges->CopyStructure( this->TransformFilter->GetOutput() );
 
   this->ZPlusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->ZPlusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->ZPlusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->ZPlusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   edges = this->AppendTextEdges->GetInput( 4 );
   edges->CopyStructure(this->TransformFilter->GetOutput());
 
   this->ZMinusFaceActor->ComputeMatrix();
-  this->TransformFilter->SetInput( this->ZMinusFaceVectorText->GetOutput() );
+  this->TransformFilter->SetInputConnection( this->ZMinusFaceVectorText->GetOutputPort() );
   this->Transform->SetMatrix( this->ZMinusFaceActor->GetMatrix() );
   this->TransformFilter->Update();
   edges = this->AppendTextEdges->GetInput( 5 );

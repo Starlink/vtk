@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaRepresentationPainter.cxx,v $
+  Module:    vtkMesaRepresentationPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,5 +32,4 @@
 #include "vtkOpenGLRepresentationPainter.cxx"
 #undef vtkOpenGLRepresentationPainter
 
-vtkCxxRevisionMacro(vtkMesaRepresentationPainter, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkMesaRepresentationPainter);

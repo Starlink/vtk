@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeAlgorithm.cxx,v $
+  Module:    vtkHyperOctreeAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeAlgorithm, "$Revision: 1.1 $");
 
 //----------------------------------------------------------------------------
 vtkHyperOctreeAlgorithm::vtkHyperOctreeAlgorithm()

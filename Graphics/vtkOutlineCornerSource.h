@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOutlineCornerSource.h,v $
+  Module:    vtkOutlineCornerSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@
 class VTK_GRAPHICS_EXPORT vtkOutlineCornerSource : public vtkOutlineSource
 {
 public:
-  vtkTypeRevisionMacro(vtkOutlineCornerSource,vtkOutlineSource);
+  vtkTypeMacro(vtkOutlineCornerSource,vtkOutlineSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

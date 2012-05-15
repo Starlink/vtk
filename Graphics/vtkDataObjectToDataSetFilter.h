@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectToDataSetFilter.h,v $
+  Module:    vtkDataObjectToDataSetFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -77,7 +77,7 @@ class VTK_GRAPHICS_EXPORT vtkDataObjectToDataSetFilter : public vtkDataSetAlgori
 {
 public:
   static vtkDataObjectToDataSetFilter *New();
-  vtkTypeRevisionMacro(vtkDataObjectToDataSetFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkDataObjectToDataSetFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -203,26 +203,26 @@ public:
   vtkGetMacro(DefaultNormalize,int);
   vtkBooleanMacro(DefaultNormalize,int);
 
-  // Decription:
+  // Description:
   // Specify the dimensions to use if generating a dataset that requires
   // dimensions specification (vtkStructuredPoints, vtkStructuredGrid,
   // vtkRectilinearGrid).
   vtkSetVector3Macro(Dimensions,int);
   vtkGetVectorMacro(Dimensions,int,3);
   
-  // Decription:
+  // Description:
   // Specify the origin to use if generating a dataset whose origin
   // can be set (i.e., a vtkStructuredPoints dataset).
   vtkSetVector3Macro(Origin,double);
   vtkGetVectorMacro(Origin,double,3);
   
-  // Decription:
+  // Description:
   // Specify the spacing to use if generating a dataset whose spacing 
   // can be set (i.e., a vtkStructuredPoints dataset).
   vtkSetVector3Macro(Spacing,double);
   vtkGetVectorMacro(Spacing,double,3);
   
-  // Decription:
+  // Description:
   // Alternative methods to specify the dimensions, spacing, and origin for those
   // datasets requiring this information. You need to specify the name of an array;
   // the component of the array, and the range of the array (min,max). These methods

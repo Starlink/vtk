@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredPointsGeometryFilter.h,v $
+  Module:    vtkStructuredPointsGeometryFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@
 class VTK_GRAPHICS_EXPORT vtkStructuredPointsGeometryFilter : public vtkImageDataGeometryFilter
 {
 public:
-  vtkTypeRevisionMacro(vtkStructuredPointsGeometryFilter,vtkImageDataGeometryFilter);
+  vtkTypeMacro(vtkStructuredPointsGeometryFilter,vtkImageDataGeometryFilter);
   
   // Description:
   // Construct with initial extent of all the data

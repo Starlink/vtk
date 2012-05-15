@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGroupLeafVertices.h,v $
+  Module:    vtkGroupLeafVertices.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,8 +32,18 @@ class VTK_INFOVIS_EXPORT vtkGroupLeafVertices : public vtkTreeAlgorithm
 {
 public:
   static vtkGroupLeafVertices* New();
-  vtkTypeRevisionMacro(vtkGroupLeafVertices,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkGroupLeafVertices,vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // The name of the domain that non-leaf vertices will be assigned to.
+  // If the input graph already contains vertices in this domain:
+  // - If the ids for this domain are numeric, starts assignment with max id
+  // - If the ids for this domain are strings, starts assignment with "group X"
+  //   where "X" is the max id.
+  // Default is "group_vertex".
+  vtkSetStringMacro(GroupDomain);
+  vtkGetStringMacro(GroupDomain);
 
 protected:
   vtkGroupLeafVertices();
@@ -43,6 +53,8 @@ protected:
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector*);
+
+  char* GroupDomain;
     
 private:
   vtkGroupLeafVertices(const vtkGroupLeafVertices&); // Not implemented

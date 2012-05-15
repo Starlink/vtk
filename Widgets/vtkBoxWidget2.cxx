@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoxWidget2.cxx,v $
+  Module:    vtkBoxWidget2.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkRenderer.h"
 
 
-vtkCxxRevisionMacro(vtkBoxWidget2, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkBoxWidget2);
 
 //----------------------------------------------------------------------------
@@ -38,6 +37,7 @@ vtkBoxWidget2::vtkBoxWidget2()
   this->TranslationEnabled = 1;
   this->ScalingEnabled = 1;
   this->RotationEnabled = 1;
+  this->MoveFacesEnabled = 1;
 
   // Define widget events
   this->CallbackMapper->SetCallbackMethod(vtkCommand::LeftButtonPressEvent,
@@ -122,6 +122,34 @@ void vtkBoxWidget2::SelectAction(vtkAbstractWidget *w)
     return;
     }
   
+  // Test for states that involve face or handle picking here so
+  // selection highlighting doesn't happen if that interaction is disabled.
+  // Non-handle-grabbing transformations are tested in the "Action" methods.
+  
+  // Rotation
+  if (interactionState == vtkBoxRepresentation::Rotating
+       && self->RotationEnabled == 0)
+  {
+    return;
+  }
+  // Face Movement
+  if ((interactionState == vtkBoxRepresentation::MoveF0 ||
+       interactionState == vtkBoxRepresentation::MoveF1 ||
+       interactionState == vtkBoxRepresentation::MoveF2 ||
+       interactionState == vtkBoxRepresentation::MoveF3 ||
+       interactionState == vtkBoxRepresentation::MoveF4 ||
+       interactionState == vtkBoxRepresentation::MoveF5)
+        && self->MoveFacesEnabled == 0)
+  {
+    return;
+  }
+  // Translation
+  if (interactionState == vtkBoxRepresentation::Translating
+       && self->TranslationEnabled == 0)
+  {
+    return;
+  }
+  
   // We are definitely selected
   self->WidgetState = vtkBoxWidget2::Active;
   self->GrabFocus(self->EventCallbackCommand);
@@ -143,6 +171,11 @@ void vtkBoxWidget2::TranslateAction(vtkAbstractWidget *w)
   // We are in a static method, cast to ourself
   vtkBoxWidget2 *self = reinterpret_cast<vtkBoxWidget2*>(w);
 
+  if (self->TranslationEnabled == 0)
+  {
+    return;
+  }
+  
   // Get the event position
   int X = self->Interactor->GetEventPosition()[0];
   int Y = self->Interactor->GetEventPosition()[1];
@@ -186,6 +219,11 @@ void vtkBoxWidget2::ScaleAction(vtkAbstractWidget *w)
   // We are in a static method, cast to ourself
   vtkBoxWidget2 *self = reinterpret_cast<vtkBoxWidget2*>(w);
 
+  if (self->ScalingEnabled == 0)
+  {
+    return;
+  }
+  
   // Get the event position
   int X = self->Interactor->GetEventPosition()[0];
   int Y = self->Interactor->GetEventPosition()[1];
@@ -288,6 +326,7 @@ void vtkBoxWidget2::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Translation Enabled: " << (this->TranslationEnabled ? "On\n" : "Off\n");
   os << indent << "Scaling Enabled: " << (this->ScalingEnabled ? "On\n" : "Off\n");
   os << indent << "Rotation Enabled: " << (this->RotationEnabled ? "On\n" : "Off\n");
+  os << indent << "Move Faces Enabled: " << (this->MoveFacesEnabled ? "On\n" : "Off\n");
 }
 
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationKeyVectorKey.cxx,v $
+  Module:    vtkInformationKeyVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,10 +15,9 @@
 #include "vtkInformationKeyVectorKey.h"
 
 #include "vtkInformation.h"
-#include <vtkstd/vector>
-#include <vtkstd/algorithm> // find()
+#include <vector>
+#include <algorithm> // find()
 
-vtkCxxRevisionMacro(vtkInformationKeyVectorKey, "$Revision: 1.9 $");
 
 //----------------------------------------------------------------------------
 vtkInformationKeyVectorKey::vtkInformationKeyVectorKey(const char* name, const char* location):
@@ -43,7 +42,7 @@ class vtkInformationKeyVectorValue: public vtkObjectBase
 {
 public:
   vtkTypeMacro(vtkInformationKeyVectorValue, vtkObjectBase);
-  vtkstd::vector<vtkInformationKey*> Value;
+  std::vector<vtkInformationKey*> Value;
 };
 
 //----------------------------------------------------------------------------
@@ -122,7 +121,7 @@ void vtkInformationKeyVectorKey::RemoveItem(vtkInformation* info,
   
   if(v)
     {
-    vtkstd::vector<vtkInformationKey*>::iterator it=vtkstd::find(v->Value.begin(),v->Value.end(),value);
+    std::vector<vtkInformationKey*>::iterator it=std::find(v->Value.begin(),v->Value.end(),value);
     if(it!=v->Value.end())
       {
       v->Value.erase(it);
@@ -163,7 +162,7 @@ void vtkInformationKeyVectorKey::Get(vtkInformation* info,
     (this->GetAsObjectBase(info));
   if(v && value)
     {
-    for(vtkstd::vector<vtkInformationKey*>::size_type i = 0;
+    for(std::vector<vtkInformationKey*>::size_type i = 0;
         i < v->Value.size(); ++i)
       {
       value[i] = v->Value[i];

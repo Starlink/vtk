@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantCast.h,v $
+  Module:    vtkVariantCast.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,24 +19,31 @@
 
 =========================================================================*/
 
-#ifndef __vtkVariantCast_h
-#define __vtkVariantCast_h
-
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
-// Description:
+// .NAME vtkVariantCast
+// .SECTION Description
 // Converts a vtkVariant to some other type.  Wherever possible, implicit conversions are
 // performed, so this method can be used to convert from nearly any type to a string, or
 // from a string to nearly any type.  Note that some conversions may fail at runtime, such
 // as a conversion from the string "abc" to a numeric type.
 //
 // The optional 'valid' flag can be used by callers to verify whether conversion succeeded.
+
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
+#ifndef __vtkVariantCast_h
+#define __vtkVariantCast_h
+
+#include <vtkUnicodeString.h>
+
 template<typename T>
 T vtkVariantCast(const vtkVariant& value, bool* valid = 0)
 {
-  vtkGenericWarningMacro(<< "cannot cast vtkVariant containing " << value.GetTypeAsString() << " to unsupported type.");
+  vtkGenericWarningMacro(
+    << "Cannot convert vtkVariant containing [" << value.GetTypeAsString() << "] "
+    << "to unsupported type [" << typeid(T).name() << "].  "
+    << "Create a vtkVariantCast<> specialization to eliminate this warning."
+    );
 
   if(valid)
     *valid = false;
@@ -145,6 +152,15 @@ inline vtkStdString vtkVariantCast<vtkStdString>(const vtkVariant& value, bool* 
     *valid = true;
 
   return value.ToString();
+}
+
+template<>
+inline vtkUnicodeString vtkVariantCast<vtkUnicodeString>(const vtkVariant& value, bool* valid)
+{
+  if(valid)
+    *valid = true;
+
+  return value.ToUnicodeString();
 }
 
 template<>

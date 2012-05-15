@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformCoordinateSystems.cxx,v $
+  Module:    vtkTransformCoordinateSystems.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkViewport.h"
 #include "vtkPointSet.h"
 
-vtkCxxRevisionMacro(vtkTransformCoordinateSystems, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTransformCoordinateSystems);
 
 //------------------------------------------------------------------------
@@ -63,7 +62,7 @@ int vtkTransformCoordinateSystems::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPointSet *input = vtkPointSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPointSet *output = vtkPointSet::SafeDownCast(

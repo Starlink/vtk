@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHardwareSelectionPolyDataPainter.cxx,v $
+  Module:    vtkHardwareSelectionPolyDataPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,19 +27,18 @@
 #include "vtkPointData.h"
 
 vtkStandardNewMacro(vtkHardwareSelectionPolyDataPainter);
-vtkCxxRevisionMacro(vtkHardwareSelectionPolyDataPainter, "$Revision: 1.2 $");
 //-----------------------------------------------------------------------------
 static inline int vtkHardwareSelectionPolyDataPainterGetTotalCells(vtkPolyData* pd,
   unsigned long typeflags)
 {
   int total_cells = 0;
-  total_cells += (typeflags & vtkPainter::VERTS)? 
+  total_cells += (typeflags & vtkPainter::VERTS)?
     pd->GetNumberOfVerts() : 0;
-  total_cells += (typeflags & vtkPainter::LINES)? 
+  total_cells += (typeflags & vtkPainter::LINES)?
     pd->GetNumberOfLines() : 0;
-  total_cells += (typeflags & vtkPainter::POLYS)? 
+  total_cells += (typeflags & vtkPainter::POLYS)?
     pd->GetNumberOfPolys() : 0;
-  total_cells += (typeflags & vtkPainter::STRIPS)? 
+  total_cells += (typeflags & vtkPainter::STRIPS)?
     pd->GetNumberOfStrips() : 0;
   return total_cells;
 }
@@ -75,6 +74,16 @@ void vtkHardwareSelectionPolyDataPainter::RenderInternal(
     return;
     }
 
+  vtkPolyData* pd = this->GetInputAsPolyData();
+  this->TotalCells = vtkHardwareSelectionPolyDataPainterGetTotalCells(pd, typeflags);
+
+  if (this->TotalCells == 0)
+    {
+    // skip empty polydatas.
+    this->TimeToDraw = 0;
+    return;
+    }
+
   vtkHardwareSelector* selector = renderer->GetSelector();
   if (this->EnableSelection)
     {
@@ -85,8 +94,7 @@ void vtkHardwareSelectionPolyDataPainter::RenderInternal(
       device->MakeVertexEmphasis(true);
       }
     }
-  vtkPolyData* pd = this->GetInputAsPolyData();
-  this->TotalCells = vtkHardwareSelectionPolyDataPainterGetTotalCells(pd, typeflags);
+
   this->Timer->StartTimer();
   vtkIdType startCell = 0;
 
@@ -100,13 +108,13 @@ void vtkHardwareSelectionPolyDataPainter::RenderInternal(
     {
     this->DrawCells(VTK_POLY_LINE, pd->GetLines(), startCell, renderer);
     }
-  
+
   startCell += pd->GetNumberOfLines();
   if (typeflags & vtkPainter::POLYS)
     {
     this->DrawCells(VTK_POLYGON, pd->GetPolys(), startCell, renderer);
     }
- 
+
   startCell += pd->GetNumberOfPolys();
   if (typeflags & vtkPainter::STRIPS)
     {
@@ -138,7 +146,7 @@ void vtkHardwareSelectionPolyDataPainter::DrawCells(
   vtkHardwareSelector* selector = renderer->GetSelector();
   int attributeMode = selector->GetFieldAssociation();
   if (attributeMode == vtkDataObject::FIELD_ASSOCIATION_POINTS &&
-    selector->GetCurrentPass() > vtkHardwareSelector::ACTOR_PASS &&
+    selector->GetCurrentPass() >= vtkHardwareSelector::ID_LOW24 &&
     this->EnableSelection)
     {
     mode = VTK_POLY_VERTEX;
@@ -147,7 +155,7 @@ void vtkHardwareSelectionPolyDataPainter::DrawCells(
   vtkPoints* p = pd->GetPoints();
   vtkIdType npts, *pts;
   vtkIdType cellId = startCellId;
-  
+
   int pointtype = p->GetDataType();
   void* voidpoints = p->GetVoidPointer(0);
   int count = 0;
@@ -169,12 +177,12 @@ void vtkHardwareSelectionPolyDataPainter::DrawCells(
         {
         selector->RenderAttributeId(pointId);
         }
-      device->SendAttribute(vtkPointData::NUM_ATTRIBUTES, 3, 
+      device->SendAttribute(vtkPointData::NUM_ATTRIBUTES, 3,
         pointtype, voidpoints, 3*pointId);
       }
     device->EndPrimitive();
     cellId++;
-    if (count == 10000) 
+    if (count == 10000)
       {
       count = 0;
       // report progress

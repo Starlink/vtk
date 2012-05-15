@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSQLQuery.h,v $
+  Module:    vtkSQLQuery.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -64,7 +64,7 @@ class vtkVariantArray;
 class VTK_IO_EXPORT vtkSQLQuery : public vtkRowQuery
 {
 public:
-  vtkTypeRevisionMacro(vtkSQLQuery, vtkRowQuery);
+  vtkTypeMacro(vtkSQLQuery, vtkRowQuery);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -98,6 +98,7 @@ public:
   // Return the database associated with the query.
   vtkGetObjectMacro(Database, vtkSQLDatabase);
 
+//BTX
   // Description:
   // Bind a parameter to a placeholder in a query.  A full discussion
   // of this feature is beyond the scope of this header file, but in
@@ -112,7 +113,7 @@ public:
   // You are responsible for making sure that the types match when you
   // call BindParameter.  You don't have to get it precisely correct:
   // in general, the SQL driver is smart enough to do things like cast
-  // a short to a long or a float to a double.  
+  // a short to a long or a float to a double.
   //
   // Bound parameters were introduced in ANSI SQL 92.  Please see that
   // standard for more information.
@@ -126,7 +127,6 @@ public:
   // vtkVariant) dispatches to one of the more type-specific versions.  It
   // should be OK to use in database drivers without modification.
 
-//BTX
   virtual bool BindParameter(int index, unsigned char value);
   virtual bool BindParameter(int index, unsigned short value);
   virtual bool BindParameter(int index, unsigned int value);
@@ -153,8 +153,8 @@ public:
   virtual bool BindParameter(int index, const char *stringValue, size_t length);
 //BTX
   virtual bool BindParameter(int index, const vtkStdString &string);
-  virtual bool BindParameter(int index, vtkVariant var);
 //ETX
+  virtual bool BindParameter(int index, vtkVariant var);
   // Description:
   // Bind a blob value.  Not all databases support blobs as a data
   // type.  Check vtkSQLDatabase::IsSupported(VTK_SQL_FEATURE_BLOB) to
@@ -164,7 +164,7 @@ public:
   // Reset all parameter bindings to NULL.
   virtual bool ClearParameterBindings();
 
-  //BTX
+//BTX
   // Description:
   // Escape a string for inclusion into an SQL query.
   // If \a addSurroundingQuotes is true, then quotation marks appropriate to the
@@ -175,7 +175,7 @@ public:
   // database backends that do not provde a way to escape
   // strings for use inside queries.
   virtual vtkStdString EscapeString( vtkStdString s, bool addSurroundingQuotes = true );
-  //ETX
+//ETX
 
   // Description:
   // Escape a string for inclusion into an SQL query.

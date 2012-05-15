@@ -2,16 +2,16 @@
 #include <vtkDenseArray.h>
 #include <vtkSparseArray.h>
 
-int main(int argc, char* argv[])
+int main(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   // Create a dense matrix:
   vtkDenseArray<double>* matrix = vtkDenseArray<double>::New();
   matrix->Resize(10, 10);
   matrix->Fill(0.0);
-  
+
   // Increment every value in a sparse-or-dense array
   // with any number of dimensions:
-  for(int n = 0; n != matrix->GetNonNullSize(); ++n)
+  for(vtkArray::SizeT n = 0; n != matrix->GetNonNullSize(); ++n)
     {
     matrix->SetValueN(n, matrix->GetValueN(n) + 1);
     }
@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
   sum->Fill(0.0);
 
   vtkArrayCoordinates coordinates;
-  for(int n = 0; n != matrix->GetNonNullSize(); ++n)
+  for(vtkArray::SizeT n = 0; n != matrix->GetNonNullSize(); ++n)
     {
     matrix->GetCoordinatesN(n, coordinates);
     sum->SetValue(coordinates[1], sum->GetValue(coordinates[1]) + matrix->GetValueN(n));
@@ -38,7 +38,6 @@ int main(int argc, char* argv[])
 
   sum->Delete();
   matrix->Delete();
-  
+
   return 0;
 }
-

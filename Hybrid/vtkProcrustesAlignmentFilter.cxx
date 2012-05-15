@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProcrustesAlignmentFilter.cxx,v $
+  Module:    vtkProcrustesAlignmentFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPolyData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkProcrustesAlignmentFilter, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkProcrustesAlignmentFilter);
 
 //----------------------------------------------------------------------------
@@ -30,6 +29,7 @@ vtkStandardNewMacro(vtkProcrustesAlignmentFilter);
 vtkProcrustesAlignmentFilter::vtkProcrustesAlignmentFilter()
 {
   this->LandmarkTransform = vtkLandmarkTransform::New();
+  this->StartFromCentroid = false;
 
   this->MeanPoints = vtkPoints::New();
 }
@@ -136,7 +136,7 @@ int vtkProcrustesAlignmentFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPointSet *input = vtkPointSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPointSet *output = vtkPointSet::SafeDownCast(
@@ -177,6 +177,7 @@ int vtkProcrustesAlignmentFilter::RequestData(
     }
 
   // all the inputs must have the same number of points to consider executing
+
   for(i=1;i<N_SETS;i++) 
     {
     tmpInfo = inputVector[0]->GetInformationObject(i);
@@ -200,6 +201,44 @@ int vtkProcrustesAlignmentFilter::RequestData(
 //  vtkPoints *mean_points = vtkPoints::New();
   MeanPoints->DeepCopy(input->GetPoints());
   // our initial estimate of the mean comes from the first example in the set
+  
+
+  // Move to the mutual centroid of the data if requested.
+  if (this->GetStartFromCentroid())
+    {
+    double meanCentroid[3];
+    double firstCentroid[3];
+    Centroid(MeanPoints, firstCentroid);
+    meanCentroid[0] = firstCentroid[0];
+    meanCentroid[1] = firstCentroid[1];
+    meanCentroid[2] = firstCentroid[2];
+
+    for(i=1;i<N_SETS;i++)
+      {
+      tmpInfo = inputVector[0]->GetInformationObject(i);
+      tmpInput = 0;
+      if (tmpInfo)
+        {
+        tmpInput =
+          vtkPointSet::SafeDownCast(tmpInfo->Get(vtkDataObject::DATA_OBJECT()));
+        }
+      double localCentroid[3];
+      Centroid(tmpInput->GetPoints(), localCentroid);
+      meanCentroid[0] += localCentroid[0];
+      meanCentroid[1] += localCentroid[1];
+      meanCentroid[2] += localCentroid[2];
+      }
+    meanCentroid[0] /= N_SETS;
+    meanCentroid[1] /= N_SETS;
+    meanCentroid[2] /= N_SETS;
+  
+    double translate[3];
+    translate[0] = meanCentroid[0] - firstCentroid[0];
+    translate[1] = meanCentroid[1] - firstCentroid[1];
+    translate[2] = meanCentroid[2] - firstCentroid[2];
+
+    TranslateShape(MeanPoints, translate);
+    }
 
   // we keep a record of the first mean to fix the orientation and scale
   // (which are otherwise undefined and the loop will not converge)
@@ -403,4 +442,6 @@ void vtkProcrustesAlignmentFilter::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
   this->LandmarkTransform->PrintSelf(os,indent.GetNextIndent());
   this->MeanPoints->PrintSelf(os, indent.GetNextIndent());
+  os << indent << "Start From Centroid: " 
+     << (this->StartFromCentroid ? "On\n" : "Off\n");
 }

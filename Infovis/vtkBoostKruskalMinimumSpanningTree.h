@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoostKruskalMinimumSpanningTree.h,v $
+Module:    vtkBoostKruskalMinimumSpanningTree.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -41,7 +41,7 @@ class VTK_INFOVIS_EXPORT vtkBoostKruskalMinimumSpanningTree : public vtkSelectio
 {
 public:
   static vtkBoostKruskalMinimumSpanningTree *New();
-  vtkTypeRevisionMacro(vtkBoostKruskalMinimumSpanningTree, vtkSelectionAlgorithm);
+  vtkTypeMacro(vtkBoostKruskalMinimumSpanningTree, vtkSelectionAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

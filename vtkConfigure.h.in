@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConfigure.h.in,v $
+  Module:    vtkConfigure.h.in
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,6 +38,7 @@
 #cmakedefine VTK_USE_SPROC
 #cmakedefine VTK_HP_PTHREADS
 #cmakedefine VTK_USE_WIN32_THREADS
+# define VTK_MAX_THREADS @VTK_MAX_THREADS@
 
 /* Size of fundamental data types.  */
 /* Mac OS X uses two data models, ILP32 (in which integers, long integers,
@@ -53,14 +54,17 @@
 # define VTK_SIZEOF_LONG   @VTK_SIZEOF_LONG@
 # define VTK_SIZEOF_FLOAT  @VTK_SIZEOF_FLOAT@
 # define VTK_SIZEOF_DOUBLE @VTK_SIZEOF_DOUBLE@
+# define VTK_SIZEOF_VOID_P @VTK_SIZEOF_VOID_P@
 #else
 # define VTK_SIZEOF_CHAR   1
 # define VTK_SIZEOF_SHORT  2
 # define VTK_SIZEOF_INT    4
 # if defined(__LP64__) && __LP64__
 #  define VTK_SIZEOF_LONG  8
+#  define VTK_SIZEOF_VOID_P 8
 # else
 #  define VTK_SIZEOF_LONG  4
+#  define VTK_SIZEOF_VOID_P 4
 # endif
 # define VTK_SIZEOF_FLOAT  4
 # define VTK_SIZEOF_DOUBLE 8
@@ -104,6 +108,9 @@
 /* Whether we require large files support.  */
 #cmakedefine VTK_REQUIRE_LARGE_FILE_SUPPORT
 
+/* Whether reverse const iterator's have comparison operators. */
+#cmakedefine VTK_CONST_REVERSE_ITERATOR_COMPARISON
+
 /*--------------------------------------------------------------------------*/
 /* VTK Platform Configuration                                               */
 
@@ -141,6 +148,15 @@
 /* Whether the Boost library is being used */
 #cmakedefine VTK_USE_BOOST
 
+/* Whether Gnu R can be used */
+#cmakedefine VTK_USE_GNU_R
+
+/* Whether the Qt files are available */
+#cmakedefine VTK_USE_QT
+
+/* Whether N-way arrays are being used */
+#cmakedefine VTK_USE_N_WAY_ARRAYS
+
 /*--------------------------------------------------------------------------*/
 /* VTK Versioning                                                           */
 
@@ -161,20 +177,24 @@
 /* Setup VTK based on platform features and configuration.                  */
 
 /* Setup vtkstd, a portable namespace for std.  */
-#ifndef VTK_NO_STD_NAMESPACE
-# define vtkstd std
-#else
-# define vtkstd
+#ifndef VTK_LEGACY_REMOVE
+# ifndef VTK_NO_STD_NAMESPACE
+#  define vtkstd std
+# else
+#  define vtkstd
+# endif
 #endif
 
 /* Define a "vtkstd_bool" type.  This should be used as the
    return type of comparison operators to keep STL happy on all
    platforms.  It should not be used elsewhere.  Only use bool
    if this file is included by a c++ file. */
-#if defined(VTK_COMPILER_HAS_BOOL) && defined(__cplusplus)
-typedef bool vtkstd_bool;
-#else
-typedef int vtkstd_bool;
+#ifndef VTK_LEGACY_REMOVE
+# if defined(VTK_COMPILER_HAS_BOOL) && defined(__cplusplus)
+  typedef bool vtkstd_bool;
+# else
+  typedef int vtkstd_bool;
+# endif
 #endif
 
 /* Define a macro to help define template specializations.  Skip if
@@ -188,8 +208,11 @@ typedef int vtkstd_bool;
 # endif
 #endif
 
+#cmakedefine VTK_USE_FOR_SCOPE_WORKAROUND
+
 /* Use the common for-scope work-around when compiling a source in VTK.  */
-#if defined(VTK_IN_VTK) && !defined(VTK_NO_WORKAROUND_FOR_SCOPE)
+/* External Projects can set VTK_USE_FOR_SCOPE_WORKAROUND to get this "fix" */
+#if (defined(VTK_IN_VTK) && !defined(VTK_NO_WORKAROUND_FOR_SCOPE)) || defined(VTK_USE_FOR_SCOPE_WORKAROUND)
 # define VTK_WORKAROUND_FOR_SCOPE
 #endif
 #if defined(VTK_NO_FOR_SCOPE) && defined(VTK_WORKAROUND_FOR_SCOPE)
@@ -219,5 +242,9 @@ typedef int vtkstd_bool;
    typedef unsigned __int64 vtkIOStreamULL;
 # endif
 #endif
+
+/* Set the whether we have UINTPTR_T defined in support of the GNU R interface */
+#cmakedefine HAVE_VTK_UINTPTR_T
+#define VTK_R_HOME "@VTK_R_HOME@"
 
 #endif

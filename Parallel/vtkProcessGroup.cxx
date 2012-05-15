@@ -2,7 +2,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProcessGroup.cxx,v $
+  Module:    vtkProcessGroup.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,10 +25,9 @@
 #include "vtkMultiProcessController.h"
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/algorithm>
+#include <algorithm>
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkProcessGroup, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkProcessGroup);
 
 //-----------------------------------------------------------------------------
@@ -90,8 +89,11 @@ void vtkProcessGroup::SetCommunicator(vtkCommunicator *communicator)
       newNumberOfProcessIds = this->NumberOfProcessIds;
       }
     }
-  vtkstd::copy(newProcessIds, newProcessIds+newNumberOfProcessIds,
+  if (this->ProcessIds)
+    {
+    std::copy(newProcessIds, newProcessIds+newNumberOfProcessIds,
                this->ProcessIds);
+    }
   if (this->Communicator) delete[] this->ProcessIds;
   this->ProcessIds = newProcessIds;
   this->NumberOfProcessIds = newNumberOfProcessIds;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInputStream.h,v $
+  Module:    vtkInputStream.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_IO_EXPORT vtkInputStream : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkInputStream,vtkObject);
+  vtkTypeMacro(vtkInputStream,vtkObject);
   static vtkInputStream *New();
   void PrintSelf(ostream& os, vtkIndent indent);
   

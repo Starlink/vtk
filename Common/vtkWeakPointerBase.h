@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWeakPointerBase.h,v $
+  Module:    vtkWeakPointerBase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,26 +14,28 @@
 =========================================================================*/
 // .NAME vtkWeakPointerBase - Non-templated superclass for vtkWeakPointer.
 // .SECTION Description
-// vtkWeakPointerBase holds a pointer to a vtkObject or subclass
-// instance, but it never affects the reference count of the vtkObject. However,
-// when the vtkObject referred to is destroyed, the pointer gets initialized to
+// vtkWeakPointerBase holds a pointer to a vtkObjectBase or subclass
+// instance, but it never affects the reference count of the vtkObjectBase. However,
+// when the vtkObjectBase referred to is destroyed, the pointer gets initialized to
 // NULL, thus avoid dangling references.
 
 #ifndef __vtkWeakPointerBase_h
 #define __vtkWeakPointerBase_h
 
-#include "vtkObject.h"
+#include "vtkObjectBase.h"
+
+class vtkObjectBaseToWeakPointerBaseFriendship;
 
 class VTK_COMMON_EXPORT vtkWeakPointerBase
 {
 public:
   // Description:
   // Initialize smart pointer to NULL.
-  vtkWeakPointerBase();
+  vtkWeakPointerBase() : Object(0) {};
 
   // Description:
   // Initialize smart pointer to given object.
-  vtkWeakPointerBase(vtkObject* r);
+  vtkWeakPointerBase(vtkObjectBase* r);
 
   // Description:
   // Initialize weak pointer .
@@ -46,58 +48,46 @@ public:
   // Description:
   // Assign object to reference.  This removes any reference to an old
   // object.
-  vtkWeakPointerBase& operator=(vtkObject* r);
+  vtkWeakPointerBase& operator=(vtkObjectBase* r);
   vtkWeakPointerBase& operator=(const vtkWeakPointerBase& r);
 
   // Description:
   // Get the contained pointer.
-  vtkObject* GetPointer() const
+  vtkObjectBase* GetPointer() const
     {
     // Inline implementation so smart pointer comparisons can be fully
     // inlined.
     return this->Object;
     }
 
+private:
+  friend class vtkObjectBaseToWeakPointerBaseFriendship;
+
 protected:
 
-  // Initialize smart pointer to given object, but do not increment
-  // reference count.  The destructor will still decrement the count.
-  // This effectively makes it an auto-ptr.
+  // Initialize weak pointer to given object.
   class NoReference {};
-  vtkWeakPointerBase(vtkObject* r, const NoReference&);
+  vtkWeakPointerBase(vtkObjectBase* r, const NoReference&);
 
   // Pointer to the actual object.
-  vtkObject* Object;
-
-private:
-  // Internal utility methods.
-  void RemoveObserver();
-  void AddObserver();
-
-  class vtkObserver;
-  friend class vtkObserver;
-  vtkObserver* Observer;
+  vtkObjectBase* Object;
 };
 
 //----------------------------------------------------------------------------
-// Need to use vtkstd_bool type because std: :less requires bool return
-// type from operators.  This example should not be used to justify
-// using bool elsewhere in VTK.
-
 #define VTK_WEAK_POINTER_BASE_DEFINE_OPERATOR(op) \
-  inline vtkstd_bool \
+  inline bool \
   operator op (const vtkWeakPointerBase& l, const vtkWeakPointerBase& r) \
     { \
     return (static_cast<void*>(l.GetPointer()) op \
             static_cast<void*>(r.GetPointer())); \
     } \
-  inline vtkstd_bool \
-  operator op (vtkObject* l, const vtkWeakPointerBase& r) \
+  inline bool \
+  operator op (vtkObjectBase* l, const vtkWeakPointerBase& r) \
     { \
     return (static_cast<void*>(l) op static_cast<void*>(r.GetPointer())); \
     } \
-  inline vtkstd_bool \
-  operator op (const vtkWeakPointerBase& l, vtkObject* r) \
+  inline bool \
+  operator op (const vtkWeakPointerBase& l, vtkObjectBase* r) \
     { \
     return (static_cast<void*>(l.GetPointer()) op static_cast<void*>(r)); \
     }

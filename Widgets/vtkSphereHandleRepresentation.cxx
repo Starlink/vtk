@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphereHandleRepresentation.cxx,v $
+  Module:    vtkSphereHandleRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkCoordinate.h"
 #include "vtkRenderWindow.h"
 
-vtkCxxRevisionMacro(vtkSphereHandleRepresentation, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSphereHandleRepresentation);
 vtkCxxSetObjectMacro(vtkSphereHandleRepresentation,SelectedProperty,vtkProperty);
 
@@ -476,6 +475,21 @@ void vtkSphereHandleRepresentation::ShallowCopy(vtkProp *prop)
     this->SetHotSpotSize(rep->GetHotSpotSize());
     }
   this->Superclass::ShallowCopy(prop);
+}
+
+//----------------------------------------------------------------------
+void vtkSphereHandleRepresentation::DeepCopy(vtkProp *prop)
+{
+  vtkSphereHandleRepresentation *rep = 
+    vtkSphereHandleRepresentation::SafeDownCast(prop);
+  if ( rep )
+    {
+    this->SetTranslationMode(rep->GetTranslationMode());
+    this->Property->DeepCopy(rep->GetProperty());
+    this->SelectedProperty->DeepCopy(rep->GetSelectedProperty());
+    this->SetHotSpotSize(rep->GetHotSpotSize());
+    }
+  this->Superclass::DeepCopy(prop);
 }
 
 //----------------------------------------------------------------------

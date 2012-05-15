@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSelectionAlgorithm.h,v $
+  Module:    vtkSelectionAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_FILTERING_EXPORT vtkSelectionAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkSelectionAlgorithm *New();
-  vtkTypeRevisionMacro(vtkSelectionAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkSelectionAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

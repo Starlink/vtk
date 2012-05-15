@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredGrid.h,v $
+  Module:    vtkStructuredGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -56,7 +56,7 @@ class VTK_FILTERING_EXPORT vtkStructuredGrid : public vtkPointSet
 public:
   static vtkStructuredGrid *New();
 
-  vtkTypeRevisionMacro(vtkStructuredGrid,vtkPointSet);
+  vtkTypeMacro(vtkStructuredGrid,vtkPointSet);
   void PrintSelf(ostream& os, vtkIndent indent);
  
   // Description:
@@ -200,6 +200,16 @@ public:
   static vtkStructuredGrid* GetData(vtkInformation* info);
   static vtkStructuredGrid* GetData(vtkInformationVector* v, int i=0);
   //ETX
+
+  // Description:
+  // Get a point in the grid. If adjustForExtent is true, (i,j,k) is 
+  // interpreted as a position relative to the beginning of the extent.
+  // If adjustForExtent is false, (i,j,k) is interpreted literally
+  // and the (i,j,k) point of the grid is returned regardless of the 
+  // extent beginning.
+  // The point coordinate is returned in 'p'.
+  // The default adjustForExtent is true.
+  void GetPoint(int i, int j, int k, double p[3], bool adjustForExtent = true);
 
 protected:
   vtkStructuredGrid();

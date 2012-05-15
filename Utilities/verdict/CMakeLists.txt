@@ -53,12 +53,6 @@ configure_file(
 
 if ( VERDICT_MANGLE )
   set( verdict_LIBRARY "${VERDICT_MANGLE_PREFIX}verdict" )
-  # if the name of the library is not 'verdict', then add verdict_EXPORTS 
-  # manually so that the usual dllexport/dllimport tricks still work.
-  if(WIN32)
-    set_source_files_properties(${verdict_SRCS} PROPERTIES
-      COMPILE_FLAGS "-Dverdict_EXPORTS")
-  endif(WIN32)
 else ( VERDICT_MANGLE )
   set( verdict_LIBRARY "verdict" )
 endif ( VERDICT_MANGLE )
@@ -75,7 +69,9 @@ if ( NOT VERDICT_NO_LIBRARY_VERSION )
   )
 endif ( NOT VERDICT_NO_LIBRARY_VERSION )
 
-add_library( ${verdict_LIBRARY} ${verdict_SRCS} )
+vtk_add_library( ${verdict_LIBRARY} ${verdict_SRCS} )
+set_target_properties( ${verdict_LIBRARY} PROPERTIES DEFINE_SYMBOL verdict_EXPORTS)
+
 # Apply user-defined properties to the library targets.
 if ( VERDICT_LIBRARY_PROPERTIES )
   set_target_properties( ${verdict_LIBRARY}
@@ -96,6 +92,18 @@ if ( VERDICT_ENABLE_TESTING )
   add_test( verdict_test verdict_test )
   set_tests_properties( verdict_test PROPERTIES FAIL_REGULAR_EXPRESSION "FAILED" )
 endif ( VERDICT_ENABLE_TESTING )
+
+if (VTK_INSTALL_BIN_DIR_CM24)
+  set (verdict_INSTALL_BIN_DIR ${VTK_INSTALL_BIN_DIR_CM24})
+endif(VTK_INSTALL_BIN_DIR_CM24)
+
+if(VTK_INSTALL_LIB_DIR_CM24)
+  set (verdict_INSTALL_LIB_DIR ${VTK_INSTALL_LIB_DIR_CM24})
+endif(VTK_INSTALL_LIB_DIR_CM24)
+
+if(VTK_INSTALL_INCLUDE_DIR)
+  set (verdict_INSTALL_INCLUDE_SUBDIR ${VTK_INSTALL_INCLUDE_DIR})
+endif(VTK_INSTALL_INCLUDE_DIR)
 
 if ( NOT verdict_INSTALL_DOC_DIR )
   set (verdict_INSTALL_DOC_DIR doc)
@@ -120,30 +128,34 @@ endif ( VERDICT_BUILD_DOC )
 #
 # Installation stuff
 #
-install(FILES 
-  README
-  Verdict.htm
-  Verdict.doc
-  verdict_test.cpp
-  DESTINATION ${verdict_INSTALL_DOC_DIR}/verdict/${verdict_VERSION}/
-  COMPONENT Development
-)
+IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+  install(FILES
+    README
+    Verdict.htm
+    Verdict.doc
+    verdict_test.cpp
+    DESTINATION ${verdict_INSTALL_DOC_DIR}/verdict/${verdict_VERSION}/
+    COMPONENT Development
+  )
 
-install(
-  FILES ${verdict_BINARY_DIR}/verdict.h
-  DESTINATION ${verdict_INSTALL_INCLUDE_DIR}
-  COMPONENT Development
-)
-
-if ( VERDICT_MANGLE )
   install(
-    FILES ${verdict_BINARY_DIR}/verdict_mangle.h
+    FILES ${verdict_BINARY_DIR}/verdict.h
     DESTINATION ${verdict_INSTALL_INCLUDE_DIR}
     COMPONENT Development
   )
-endif ( VERDICT_MANGLE )
+
+  if ( VERDICT_MANGLE )
+    install(
+      FILES ${verdict_BINARY_DIR}/verdict_mangle.h
+      DESTINATION ${verdict_INSTALL_INCLUDE_DIR}
+      COMPONENT Development
+    )
+  endif ( VERDICT_MANGLE )
+
+ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
 install(TARGETS ${verdict_LIBRARY}
+      EXPORT ${VTK_INSTALL_EXPORT_NAME}
       RUNTIME DESTINATION ${verdict_INSTALL_BIN_DIR} COMPONENT RuntimeLibraries # .exe, .dll
       LIBRARY DESTINATION ${verdict_INSTALL_LIB_DIR} COMPONENT RuntimeLibraries # .so, mod.dll
       ARCHIVE DESTINATION ${verdict_INSTALL_LIB_DIR} COMPONENT Development      # .a, .lib

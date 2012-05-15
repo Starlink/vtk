@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestBoostAdapter.cxx,v $
+  Module:    TestBoostAdapter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,6 +17,14 @@
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
+
+#include "vtkGraph.h"
+#include "vtkBoostGraphAdapter.h"
+#include "vtkIntArray.h"
+#include "vtkIdTypeArray.h"
+#include "vtkMath.h"
+#include "vtkSmartPointer.h"
+#include "vtkTimerLog.h"
 
 #include <vtksys/stl/vector>
 #include <vtksys/stl/map>
@@ -36,17 +44,7 @@
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
 
-#include "vtkGraph.h"
-#include "vtkBoostGraphAdapter.h"
-#include "vtkIntArray.h"
-#include "vtkIdTypeArray.h"
-#include "vtkMath.h"
-#include "vtkTimerLog.h"
-
-#include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 

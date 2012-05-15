@@ -35,11 +35,16 @@ ENDIF (VTK_WRAP_TCL AND VTKMY_WRAP_TCL)
 
 # Create the vtkmyUnsorted Python library.
 IF (VTK_WRAP_PYTHON AND VTKMY_WRAP_PYTHON)
+  INCLUDE_DIRECTORIES("${PYTHON_INCLUDE_PATH}")
   VTK_WRAP_PYTHON3 (vtkmyUnsortedPython UnsortedPython_SRCS "${Unsorted_SRCS}")
   ADD_LIBRARY (vtkmyUnsortedPythonD ${UnsortedPython_SRCS})
   ADD_LIBRARY (vtkmyUnsortedPython MODULE vtkmyUnsortedPythonInit.cxx)
   TARGET_LINK_LIBRARIES(vtkmyUnsortedPythonD vtkmyUnsorted vtkmyCommonPythonD)
   TARGET_LINK_LIBRARIES(vtkmyUnsortedPython vtkmyUnsortedPythonD)
+  SET_TARGET_PROPERTIES(vtkmyUnsortedPython PROPERTIES PREFIX "")
+  IF(WIN32 AND NOT CYGWIN)
+    SET_TARGET_PROPERTIES(vtkmyUnsortedPython PROPERTIES SUFFIX ".pyd")
+  ENDIF(WIN32 AND NOT CYGWIN)
 ENDIF (VTK_WRAP_PYTHON AND VTKMY_WRAP_PYTHON)
 
 # Create the vtkmyUnsorted Java library.

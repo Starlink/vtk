@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartAxis.cxx,v $
+  Module:    vtkQtChartAxis.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -299,7 +299,7 @@ vtkQtChartAxisInternal::~vtkQtChartAxisInternal()
 
 //-----------------------------------------------------------------------------
 static double MinIntLogPower = -1;
-const double vtkQtChartAxis::MinLogValue = 0.0001;
+const double vtkQtChartAxis::MinLogValue = 1e-20;
 
 vtkQtChartAxis::vtkQtChartAxis(vtkQtChartAxis::AxisLocation location,
     QGraphicsItem *item)
@@ -867,8 +867,9 @@ void vtkQtChartAxis::layoutAxis(const QRectF &area)
       this->Options->getAxisScale() == vtkQtChartAxisOptions::Logarithmic &&
       !this->Internal->Scale.LogAvailable)
     {
-    qWarning() << "Warning: Invalid range for a logarithmic scale."
-               << "Please select a range greater than zero.";
+    qWarning() << "Warning: Invalid range for a logarithmic scale. "
+               << "Please specify a range with minimum value greater than 0 "
+               << "for this axis.";
     }
 
   // Signal the chart layers if the pixel-value map changed.
@@ -1908,9 +1909,21 @@ void vtkQtChartAxis::generateLabels(const QRectF &contents)
 
         // Fill in the data based on the interval.
         rangeMaximum += interval / 2; // Account for round-off error.
-        for( ; value < rangeMaximum; value += interval)
+        if ( minimum.toDouble() != HUGE_VAL &&
+          minimum.toDouble() != -HUGE_VAL &&
+          maximum.toDouble() != HUGE_VAL &&
+          maximum.toDouble() != -HUGE_VAL)
           {
-          this->Model->addLabel(QVariant(value));
+          for( ; value < rangeMaximum; value += interval)
+            {
+            this->Model->addLabel(QVariant(value));
+            }
+          }
+        else
+          {
+          qWarning("Range has infinity. Axes may not show up correctly.");
+          this->Model->addLabel(minimum);
+          this->Model->addLabel(maximum);
           }
         }
       }
@@ -2081,6 +2094,11 @@ void vtkQtChartAxis::generateLogLabels(const QRectF &contents)
 
     // Place the first value on the list using value min in case
     // the first value is int zero.
+    if (minimum.toDouble() < value.toDouble())
+      {
+      // if minimum is less than the 1st power or 10, then we add minimum first.
+      this->Model->addLabel(minimum);
+      }
     this->Model->addLabel(value);
 
     // Fill in the data based on the interval.
@@ -2093,29 +2111,33 @@ void vtkQtChartAxis::generateLogLabels(const QRectF &contents)
         {
         for(int j = subInterval; j < 10; j += subInterval)
           {
-          if(value.type() == QVariant::Int)
+          double subItemExp = minExp+(i-1)+(j/10.00001);
+          QVariant subItem = pow(10.0, subItemExp);
+          if (value.type() == QVariant::Int)
             {
-            int subItem = value.toInt();
-            subItem += j;
-            this->Model->addLabel(QVariant(subItem));
+            subItem.convert(QVariant::Int);
             }
-          else
-            {
-            double subItem = value.toDouble();
-            subItem += j;
-            this->Model->addLabel(QVariant(subItem));
-            }
+          this->Model->addLabel(subItem);
           }
         }
-
       value = pow((double)10.0, (double)(minExp + i));
       if(minimum.type() == QVariant::Int)
         {
         value.convert(QVariant::Int);
         }
 
-      this->Model->addLabel(value);
+      if (i==intervals)
+        {
+        // for the last value, add maximum 
+        this->Model->addLabel(maximum);
+        }
+      else
+        {
+        this->Model->addLabel(value);
+        }
       }
+
+
     }
   else if(this->Internal->DataAvailable)
     {

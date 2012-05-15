@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtPointMarker.cxx,v $
+  Module:    vtkQtPointMarker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -90,7 +90,9 @@ void vtkQtPointMarker::paint(QPainter *painter)
       painter->drawPolygon(diamond);
       break;
       }
+    case vtkQtPointMarker::NoMarker:
     case vtkQtPointMarker::UserStyle:
+    default:
       {
       break;
       }

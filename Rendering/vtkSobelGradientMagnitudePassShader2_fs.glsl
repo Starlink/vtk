@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkSobelGradientMagnitudePassShader2_fs.glsl,v $
+//  Module:    vtkSobelGradientMagnitudePassShader2_fs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -14,6 +14,8 @@
 // ============================================================================
 
 // Fragment shader used by the second pass of the Sobel filter render pass.
+
+#version 110
 
 uniform sampler2D gx1;
 uniform sampler2D gy1;

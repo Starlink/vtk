@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDisplayListPainter.cxx,v $
+  Module:    vtkDisplayListPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkDisplayListPainter);
-vtkCxxRevisionMacro(vtkDisplayListPainter, "$Revision: 1.4 $");
 vtkInformationKeyMacro(vtkDisplayListPainter, IMMEDIATE_MODE_RENDERING, Integer);
 
 //----------------------------------------------------------------------------

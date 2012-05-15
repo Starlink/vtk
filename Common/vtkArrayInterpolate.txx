@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayInterpolate.txx,v $
+  Module:    vtkArrayInterpolate.txx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -22,55 +22,57 @@
 #ifndef __vtkArrayInterpolate_txx
 #define __vtkArrayInterpolate_txx
 
-#include "vtkArraySlices.h"
+#include "vtkArrayExtentsList.h"
 #include "vtkArrayWeights.h"
 
 template<typename T>
 void vtkInterpolate(
   vtkTypedArray<T>* source_array,
-  const vtkArraySlices& source_slices,
+  const vtkArrayExtentsList& source_slices,
   const vtkArrayWeights& source_weights,
-  const vtkArraySlice& target_slice,
+  const vtkArrayExtents& target_slice,
   vtkTypedArray<T>* target_array)
 {
-  const vtkArrayExtents target_extents = target_slice.GetExtents();
-  
-  if(target_extents.GetDimensions() != target_array->GetDimensions())
+  if(!target_array->GetExtents().Contains(target_slice))
     {
-    vtkGenericWarningMacro(<< "target slice must match target array dimensions");
+    vtkGenericWarningMacro(<< "Target array does not contain target slice.");
     return;
     }
   
   if(source_slices.GetCount() != source_weights.GetCount())
     {
-    vtkGenericWarningMacro(<< "source slice and weight counts must match");
+    vtkGenericWarningMacro(<< "Source slice and weight counts must match.");
     return;
     }
 
   for(int i = 0; i != source_slices.GetCount(); ++i)
     {
-    if(source_slices[i].GetExtents() != target_extents)
+    if(!target_slice.SameShape(source_slices[i]))
       {
-      vtkGenericWarningMacro(<< "source and target slice extents must match");
+      vtkGenericWarningMacro(<< "Source and target slice shapes must match: " << source_slices[i] << " versus " << target_slice);
       return;
       }
     }
     
   // Zero-out the target storage ...
   const vtkIdType n_begin = 0;
-  const vtkIdType n_end = target_extents.GetSize();
+  const vtkIdType n_end = target_slice.GetSize();
+  vtkArrayCoordinates target_coordinates;
   for(vtkIdType n = n_begin; n != n_end; ++n)
     {
-    target_array->SetValue(target_slice.GetCoordinatesN(n), 0);
+    target_slice.GetLeftToRightCoordinatesN(n, target_coordinates);
+    target_array->SetValue(target_coordinates, 0);
     }
 
   // Accumulate results ...
+  vtkArrayCoordinates source_coordinates;
   for(vtkIdType n = n_begin; n != n_end; ++n)
     {
-    const vtkArrayCoordinates target_coordinates = target_slice.GetCoordinatesN(n);
+    target_slice.GetLeftToRightCoordinatesN(n, target_coordinates);
     for(int source = 0; source != source_slices.GetCount(); ++source)
       {
-      target_array->SetValue(target_coordinates, target_array->GetValue(target_coordinates) + (source_array->GetValue(source_slices[source].GetCoordinatesN(n)) * source_weights[source]));
+      source_slices[source].GetLeftToRightCoordinatesN(n, source_coordinates);
+      target_array->SetValue(target_coordinates, target_array->GetValue(target_coordinates) + (source_array->GetValue(source_coordinates) * source_weights[source]));
       }
     }
 }

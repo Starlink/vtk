@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtSQLDatabase.h,v $
+  Module:    vtkQtSQLDatabase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class QVTK_EXPORT vtkQtSQLDatabase : public vtkSQLDatabase
 {
 public:
   static vtkQtSQLDatabase* New();
-  vtkTypeRevisionMacro(vtkQtSQLDatabase, vtkSQLDatabase);
+  vtkTypeMacro(vtkQtSQLDatabase, vtkSQLDatabase);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -134,7 +134,6 @@ public:
   // Get the URL of the database.
   virtual vtkStdString GetURL();
 
-//BTX
 protected:
   vtkQtSQLDatabase();
   ~vtkQtSQLDatabase();
@@ -151,7 +150,7 @@ protected:
   friend class vtkQtSQLQuery;
 
   // Description:
-  // Overridden to determine connection paramters given the URL. 
+  // Overridden to determine connection parameters given the URL. 
   // This is called by CreateFromURL() to initialize the instance.
   // Look at CreateFromURL() for details about the URL format.
   virtual bool ParseURL(const char* url);
@@ -171,7 +170,6 @@ private:
   
   vtkQtSQLDatabase(const vtkQtSQLDatabase &); // Not implemented.
   void operator=(const vtkQtSQLDatabase &); // Not implemented.
-//ETX
 };
 
 #endif // (QT_EDITION & QT_MODULE_SQL)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredPoints.h,v $
+  Module:    vtkStructuredPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_FILTERING_EXPORT vtkStructuredPoints : public vtkImageData
 {
 public:
   static vtkStructuredPoints *New();
-  vtkTypeRevisionMacro(vtkStructuredPoints,vtkImageData);
+  vtkTypeMacro(vtkStructuredPoints,vtkImageData);
 
   // Description:
   // To simplify filter superclasses,

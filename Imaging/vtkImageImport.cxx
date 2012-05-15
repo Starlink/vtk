@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageImport.cxx,v $
+  Module:    vtkImageImport.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,9 +25,8 @@
 #include "vtkPointData.h"
 
 #include <ctype.h>
-#include <vtkstd/exception>
+#include <exception>
 
-vtkCxxRevisionMacro(vtkImageImport, "$Revision: 1.54 $");
 vtkStandardNewMacro(vtkImageImport);
 
 
@@ -36,7 +35,7 @@ vtkStandardNewMacro(vtkImageImport);
       {\
       invocation;\
       }\
-    catch (vtkstd::exception &_e)\
+    catch (std::exception &_e)\
       {\
       vtkErrorMacro(<<messagePrepend <<_e.what());\
       }\
@@ -250,11 +249,10 @@ void vtkImageImport::ExecuteData(vtkDataObject *output)
   data->SetExtent(0,0,0,0,0,0);
   data->AllocateScalars();
   void *ptr = this->GetImportVoidPointer();
-  int size = 
-    (this->DataExtent[1] - this->DataExtent[0]+1) *
-    (this->DataExtent[3] - this->DataExtent[2]+1) *
-    (this->DataExtent[5] - this->DataExtent[4]+1) *
-    this->NumberOfScalarComponents;    
+  vtkIdType size = this->NumberOfScalarComponents;    
+  size *= this->DataExtent[1] - this->DataExtent[0] + 1;
+  size *= this->DataExtent[3] - this->DataExtent[2] + 1;
+  size *= this->DataExtent[5] - this->DataExtent[4] + 1;
 
   data->SetExtent(this->DataExtent);
   data->GetPointData()->GetScalars()->SetVoidArray(ptr,size,1);
@@ -262,7 +260,7 @@ void vtkImageImport::ExecuteData(vtkDataObject *output)
 }
 
 //----------------------------------------------------------------------------
-void vtkImageImport::CopyImportVoidPointer(void *ptr, int size)
+void vtkImageImport::CopyImportVoidPointer(void *ptr, vtkIdType size)
 {
   unsigned char *mem = new unsigned char [size];
   memcpy(mem,ptr,size);
@@ -305,7 +303,7 @@ int vtkImageImport::InvokePipelineModifiedCallbacks()
       {
       ret = (this->PipelineModifiedCallback)(this->CallbackUserData);
       }
-    catch (vtkstd::exception &_e)
+    catch (std::exception &_e)
       {
       vtkErrorMacro(<<"Calling PipelineModifiedCallback: " << _e.what());
       // if an error occurred, we don't want the pipeline to run again

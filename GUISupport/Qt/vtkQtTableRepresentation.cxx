@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtTableRepresentation.cxx,v $
+  Module:    vtkQtTableRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,6 @@
 #include <assert.h>
 
 // ----------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkQtTableRepresentation, "$Revision: 1.2 $");
 
 // ----------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkQtTableRepresentation, ColorTable, vtkLookupTable);
@@ -80,19 +79,13 @@ vtkQtTableRepresentation::~vtkQtTableRepresentation()
 
 // ----------------------------------------------------------------------
 
-void
-vtkQtTableRepresentation::SetInputConnection(vtkAlgorithmOutput *conn)
+int
+vtkQtTableRepresentation::RequestData(vtkInformation*,
+                                      vtkInformationVector**,
+                                      vtkInformationVector*)
 {
-  if (conn == this->GetInputConnection())
-    {
-    return;
-    }
-
-  // Grab a reference to the connection so that VTK's garbage
-  // collection will work
-  this->Superclass::SetInputConnection(conn);
-
-  this->Update();
+  this->UpdateTable();
+  return 1;
 }
 
 // ----------------------------------------------------------------------
@@ -108,78 +101,83 @@ vtkQtTableRepresentation::SetKeyColumn(const char *col)
 
   this->SetKeyColumnInternal(col);
   this->ModelAdapter->SetKeyColumn(-1);
-  this->Update();
+  this->Modified();
+  // We don't call Update(), representations should not call Update() on
+  // themselves when their ivars are changed. It's almost like a vtkAlgorithm
+  // calling Update() on itself when an ivar change which is not recommended.
+  //this->Update();
 }
 
 // ----------------------------------------------------------------------
 
-void
-vtkQtTableRepresentation::Update()
+char* vtkQtTableRepresentation::GetKeyColumn()
+{
+  return this->GetKeyColumnInternal();
+}
+
+// ----------------------------------------------------------------------
+void vtkQtTableRepresentation::UpdateTable()
 {
   this->ResetModel();
 
-  vtkAlgorithmOutput *conn = this->GetInputConnection();
-  if (conn == NULL)
+  if (!this->GetInput())
     {
     return;
     }
 
-  // Is there a usable vtkTable in there?
-  vtkAlgorithm *algorithm = conn->GetProducer();
-  algorithm->Update();
-  vtkDataObject *obj = algorithm->GetOutputDataObject(conn->GetIndex());
-  vtkTable *table = vtkTable::SafeDownCast(obj);
-  
+  vtkTable *table = vtkTable::SafeDownCast(this->GetInput());
   if (!table)
     {
-    vtkErrorMacro(<<"vtkQtTableRepresentation: I need a vtkTable as input.  You supplied a " << obj->GetClassName() << ".");
+    vtkErrorMacro(<<"vtkQtTableRepresentation: I need a vtkTable as input.  You supplied a " << this->GetInput()->GetClassName() << ".");
     return;
     }
 
   // Set first/last data column names if they
   // have not already been set.
-  if (!this->FirstDataColumn)
+  const char* firstDataColumn = this->FirstDataColumn;
+  const char* lastDataColumn = this->LastDataColumn;
+  if (!firstDataColumn)
     {
-    this->SetFirstDataColumn(table->GetColumnName(0));
+    firstDataColumn = table->GetColumnName(0);
     }
-  if (!this->LastDataColumn)
+  if (!lastDataColumn)
     {
-    this->SetLastDataColumn(table->GetColumnName(table->GetNumberOfColumns()-1));
+    lastDataColumn = table->GetColumnName(table->GetNumberOfColumns()-1);
     }
 
   // Now that we're sure of having data, put it into a Qt model
   // adapter that we can push into the QListView.  Before we hand that
   // off, though, we'll need to come up with colors for
   // each series.
-  int keyColumnIndex = -1;
+  //int keyColumnIndex = -1;
   int firstDataColumnIndex = -1;
   int lastDataColumnIndex = -1;
-  if (this->KeyColumnInternal != NULL)
+  //if (this->KeyColumnInternal != NULL)
+  //  {
+  //  table->GetRowData()->GetAbstractArray(this->KeyColumnInternal, keyColumnIndex);
+  //  if (keyColumnIndex >= 0)
+  //    {
+  //    this->ModelAdapter->SetKeyColumn(keyColumnIndex);
+  //    }
+  //  else
+  //    {
+  //    // Either the user didn't specify a key column or else it wasn't
+  //    // found.  We'll do the best we can.
+  //    vtkWarningMacro(<<"vtkQtTableRepresentation: Key column "
+  //                    << (this->KeyColumnInternal ? this->KeyColumnInternal : "(NULL)")
+  //                    << " not found.  Defaulting to column 0.");
+  //    this->ModelAdapter->SetKeyColumn(0);
+  //    }
+  //  }
+  if (firstDataColumn != NULL)
     {
-    table->GetRowData()->GetAbstractArray(this->KeyColumnInternal, keyColumnIndex);
-    if (keyColumnIndex >= 0)
-      {
-      this->ModelAdapter->SetKeyColumn(keyColumnIndex);
-      }
-    else
-      {
-      // Either the user didn't specify a key column or else it wasn't
-      // found.  We'll do the best we can.
-      vtkWarningMacro(<<"vtkQtTableRepresentation: Key column "
-                      << (this->KeyColumnInternal ? this->KeyColumnInternal : "(NULL)")
-                      << " not found.  Defaulting to column 0.");
-      this->ModelAdapter->SetKeyColumn(0);
-      }
+    table->GetRowData()->GetAbstractArray(firstDataColumn,
+                                          firstDataColumnIndex);
     }
-  if (this->FirstDataColumn != NULL)
+  if (lastDataColumn != NULL)
     {
-    table->GetRowData()->GetAbstractArray(this->FirstDataColumn,
-                                            firstDataColumnIndex);
-    }
-  if (this->LastDataColumn != NULL)
-    {
-    table->GetRowData()->GetAbstractArray(this->LastDataColumn,
-                                            lastDataColumnIndex);
+    table->GetRowData()->GetAbstractArray(lastDataColumn,
+                                          lastDataColumnIndex);
     }
   this->ModelAdapter->SetDataColumnRange(firstDataColumnIndex, lastDataColumnIndex);
 
@@ -188,6 +186,10 @@ vtkQtTableRepresentation::Update()
   // here.
 
   this->ModelAdapter->SetVTKDataObject(table);
+  if (this->KeyColumnInternal != NULL)
+    {
+    this->ModelAdapter->SetKeyColumnName(this->KeyColumnInternal);
+    }
   this->CreateSeriesColors();
 }
 
@@ -199,7 +201,11 @@ vtkQtTableRepresentation::ResetModel()
   this->SetModelType();
   if (this->ModelAdapter)
     {
-    this->ModelAdapter->SetVTKDataObject(NULL);
+    // FIXME
+    // Need to alert the model of potential changes to the vtkTable
+    // in different way than disconnecting/reconnecting the vtkTable from
+    // the model adapter
+    //this->ModelAdapter->SetVTKDataObject(NULL);
     }
   this->SeriesColors->Reset();
   this->SeriesColors->SetNumberOfComponents(4);

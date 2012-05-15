@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFrameBufferObject.cxx,v $
+  Module:    vtkFrameBufferObject.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 // #define VTK_FBO_DEBUG // display info on RenderQuad()
 
 vtkStandardNewMacro(vtkFrameBufferObject);
-vtkCxxRevisionMacro(vtkFrameBufferObject, "$Revision: 1.6 $");
 //----------------------------------------------------------------------------
 vtkFrameBufferObject::vtkFrameBufferObject()
 {
@@ -55,6 +54,17 @@ vtkFrameBufferObject::~vtkFrameBufferObject()
   // Returns if the context supports the required extensions.
 bool vtkFrameBufferObject::IsSupported(vtkRenderWindow *win)
 {
+  // FBO passes make sense only with hardware acceleration, and Mesa has
+  // insufficient support for VTK's separate compilation units anyway.
+  if(const char* gl_version =
+     reinterpret_cast<const char*>(glGetString(GL_VERSION)))
+    {
+    if(strstr(gl_version, "Mesa"))
+      {
+      return false;
+      }
+    }
+
   vtkOpenGLRenderWindow *renWin=vtkOpenGLRenderWindow::SafeDownCast(win);
   if(renWin!=0)
     {

@@ -24,7 +24,6 @@
 #include <assert.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMedicalImageProperties, "1.21");
 vtkStandardNewMacro(vtkMedicalImageProperties);
 
 static const char *vtkMedicalImagePropertiesOrientationString[] = {
@@ -51,15 +50,15 @@ public:
   {
   public:
     UserDefinedValue(const char *name = 0, const char *value = 0):Name(name ? name : ""),Value(value ? value : "") {}
-    vtkstd::string Name;
-    vtkstd::string Value;
-    // order for the vtkstd::set
+    std::string Name;
+    std::string Value;
+    // order for the std::set
     bool operator<(const UserDefinedValue &udv) const
       {
       return Name < udv.Name;
       }
   };
-  typedef vtkstd::set< UserDefinedValue > UserDefinedValues;
+  typedef std::set< UserDefinedValue > UserDefinedValues;
   UserDefinedValues UserDefinedValuePool;
   void AddUserDefinedValue(const char *name, const char *value)
     {
@@ -117,14 +116,14 @@ public:
       UserDefinedValuePool.clear();
     }
 
-  typedef vtkstd::vector<WindowLevelPreset> WindowLevelPresetPoolType;
-  typedef vtkstd::vector<WindowLevelPreset>::iterator WindowLevelPresetPoolIterator;
+  typedef std::vector<WindowLevelPreset> WindowLevelPresetPoolType;
+  typedef std::vector<WindowLevelPreset>::iterator WindowLevelPresetPoolIterator;
 
   WindowLevelPresetPoolType WindowLevelPresetPool;
 
   // It is also useful to have a mapping from DICOM UID to slice id, for application like VolView
-  typedef vtkstd::map< unsigned int, vtkstd::string> SliceUIDType;
-  typedef vtkstd::vector< SliceUIDType > VolumeSliceUIDType;
+  typedef std::map< unsigned int, std::string> SliceUIDType;
+  typedef std::vector< SliceUIDType > VolumeSliceUIDType;
   VolumeSliceUIDType UID;
   void SetNumberOfVolumes(unsigned int n)
     {
@@ -202,7 +201,7 @@ public:
         }
       }
     os << indent << "Orientation(s): ";
-    for( vtkstd::vector<unsigned int>::const_iterator it = Orientation.begin();
+    for( std::vector<unsigned int>::const_iterator it = Orientation.begin();
       it != Orientation.end(); ++it)
       {
       os << indent << vtkMedicalImageProperties::GetStringFromOrientationType(*it) << endl;
@@ -215,7 +214,7 @@ public:
       os << indent << it2->Name << " -> " << it2->Value << "\n";
       }
     }
-  vtkstd::vector<unsigned int> Orientation;
+  std::vector<unsigned int> Orientation;
   void SetOrientation(unsigned int vol, unsigned int ori)
     {
     // see SetNumberOfVolumes for allocation
@@ -713,6 +712,39 @@ int vtkMedicalImageProperties::GetPatientAgeDay()
   return day;
 }
 
+//----------------------------------------------------------------------------
+int vtkMedicalImageProperties::GetTimeAsFields(const char *time, int &hour,
+  int &minute, int &second /* , long &milliseconds */)
+{
+  if( !time )
+    {
+    return 0;
+    }
+
+  size_t len = strlen(time);
+  if( len == 6 )
+    {
+    // DICOM V3
+    if( sscanf(time, "%02d%02d%02d", &hour, &minute, &second) != 3 )
+      {
+      return 0;
+      }
+    }
+  else if( len == 8 )
+    {
+    // Some *very* old ACR-NEMA
+    if( sscanf(time, "%02d.%02d.%02d", &hour, &minute, &second) != 3 )
+      {
+      return 0;
+      }
+    }
+  else
+    {
+    return 0;
+    }
+
+  return 1;
+}
 //----------------------------------------------------------------------------
 int vtkMedicalImageProperties::GetDateAsFields(const char *date, int &year,
   int &month, int &day)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHandleWidget.h,v $
+  Module:    vtkHandleWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -73,7 +73,7 @@ public:
 
   // Description:
   // Standard VTK class macros.
-  vtkTypeRevisionMacro(vtkHandleWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkHandleWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -83,6 +83,11 @@ public:
   void SetRepresentation(vtkHandleRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkHandleRepresentation.
+  vtkHandleRepresentation *GetHandleRepresentation()
+    {return reinterpret_cast<vtkHandleRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Create the default widget representation if one is not set. By default
   // an instance of vtkPointHandleRepresenation3D is created.

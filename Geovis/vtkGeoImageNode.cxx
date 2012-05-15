@@ -1,7 +1,7 @@
 /*=============================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoImageNode.cxx,v $
+  Module:    vtkGeoImageNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkXMLImageDataReader.h"
 #include "vtkXMLImageDataWriter.h"
 
-vtkCxxRevisionMacro(vtkGeoImageNode, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkGeoImageNode);
 
 
@@ -260,3 +259,15 @@ void vtkGeoImageNode::DeepCopy(vtkGeoTreeNode *src)
   this->Superclass::DeepCopy(src);
 }
 
+//-----------------------------------------------------------------------------
+bool vtkGeoImageNode::HasData()
+{
+  return (this->Image != 0);
+}
+
+//-----------------------------------------------------------------------------
+void vtkGeoImageNode::DeleteData()
+{
+  this->Image = 0;
+  this->Texture = 0;
+}

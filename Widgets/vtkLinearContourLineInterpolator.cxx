@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinearContourLineInterpolator.cxx,v $
+  Module:    vtkLinearContourLineInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkLinearContourLineInterpolator.h"
 #include <vtkObjectFactory.h>
 
-vtkCxxRevisionMacro(vtkLinearContourLineInterpolator, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkLinearContourLineInterpolator);
 
 //----------------------------------------------------------------------
@@ -30,9 +29,15 @@ vtkLinearContourLineInterpolator::~vtkLinearContourLineInterpolator()
 
 //----------------------------------------------------------------------
 int vtkLinearContourLineInterpolator::InterpolateLine( vtkRenderer *vtkNotUsed(ren),
-                                                       vtkContourRepresentation *rep,
-                                                       int idx1, int idx2 )
+                                                       vtkContourRepresentation *vtkNotUsed(rep),
+                                                       int vtkNotUsed(idx1), int vtkNotUsed(idx2) )
 {
   return 1;
+}
+
+//----------------------------------------------------------------------
+void vtkLinearContourLineInterpolator::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
 }
 

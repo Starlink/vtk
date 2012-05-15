@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBlockIdScalars.h,v $
+  Module:    vtkBlockIdScalars.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_GRAPHICS_EXPORT vtkBlockIdScalars : public vtkMultiBlockDataSetAlgorit
 {
 public:
   static vtkBlockIdScalars* New();
-  vtkTypeRevisionMacro(vtkBlockIdScalars, vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkBlockIdScalars, vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX

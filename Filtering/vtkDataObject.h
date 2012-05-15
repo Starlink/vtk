@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObject.h,v $
+  Module:    vtkDataObject.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,9 @@
 
 #include "vtkObject.h"
 
+class vtkAbstractArray;
 class vtkAlgorithmOutput;
+class vtkDataSetAttributes;
 class vtkExecutive;
 class vtkFieldData;
 class vtkInformation;
@@ -62,7 +64,7 @@ class VTK_FILTERING_EXPORT vtkDataObject : public vtkObject
 public:
   static vtkDataObject *New();
 
-  vtkTypeRevisionMacro(vtkDataObject,vtkObject);
+  vtkTypeMacro(vtkDataObject,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -126,7 +128,7 @@ public:
   static int GetGlobalReleaseDataFlag();
 
   // Description:
-  // Assign or retrieve field data to this data object.
+  // Assign or retrieve a general field data to this data object.
   virtual void SetFieldData(vtkFieldData*);
   vtkGetObjectMacro(FieldData,vtkFieldData);
   
@@ -301,7 +303,7 @@ public:
   // Set/Get the maximum number of pieces that can be requested.  
   // The maximum number of pieces is meta data for unstructured data sets.
   // It gets set by the source during the update information call.
-  // A value of -1 indicates that there is no maximum.  A value of
+  // A value of -1 indicates that there is no maximum.
   virtual void SetMaximumNumberOfPieces(int);
   virtual int GetMaximumNumberOfPieces();
 
@@ -433,6 +435,56 @@ public:
 
   //BTX
   // Description:
+  // Possible attribute types.
+  // POINT_THEN_CELL is provided for consistency with FieldAssociations.
+  enum AttributeTypes
+  {
+    POINT,
+    CELL,
+    FIELD,
+    POINT_THEN_CELL,
+    VERTEX,
+    EDGE,
+    ROW,
+    NUMBER_OF_ATTRIBUTE_TYPES
+  };
+  //ETX
+
+  // Description:
+  // Returns the attributes of the data object of the specified
+  // attribute type. The type may be:
+  // <ul>
+  // <li>POINT  - Defined in vtkDataSet subclasses.
+  // <li>CELL   - Defined in vtkDataSet subclasses.
+  // <li>VERTEX - Defined in vtkGraph subclasses.
+  // <li>EDGE   - Defined in vtkGraph subclasses.
+  // <li>ROW    - Defined in vtkTable.
+  // </ul>
+  // The other attribute type, FIELD, will return NULL since
+  // field data is stored as a vtkFieldData instance, not a
+  // vtkDataSetAttributes instance. To retrieve field data, use
+  // GetAttributesAsFieldData.
+  virtual vtkDataSetAttributes* GetAttributes(int type);
+
+  // Description:
+  // Returns the attributes of the data object as a vtkFieldData.
+  // This returns non-null values in all the same cases as GetAttributes,
+  // in addition to the case of FIELD, which will return the field data
+  // for any vtkDataObject subclass.
+  virtual vtkFieldData* GetAttributesAsFieldData(int type);
+
+  // Description:
+  // Retrieves the attribute type that an array came from.
+  // This is useful for obtaining which attribute type a input array
+  // to an algorithm came from (retrieved from GetInputAbstractArrayToProcesss).
+  virtual int GetAttributeTypeForArray(vtkAbstractArray* arr);
+
+  // Description:
+  // Get the number of elements for a specific attribute type (POINT, CELL, etc.).
+  virtual vtkIdType GetNumberOfElements(int type);
+
+  //BTX
+  // Description:
   // Possible values for the FIELD_OPERATION information entry.
   enum FieldOperations
   {
@@ -455,6 +507,7 @@ public:
   static vtkInformationIntegerKey* DATA_PIECE_NUMBER();
   static vtkInformationIntegerKey* DATA_NUMBER_OF_PIECES();
   static vtkInformationIntegerKey* DATA_NUMBER_OF_GHOST_LEVELS();
+  static vtkInformationDoubleKey* DATA_RESOLUTION();
   static vtkInformationDoubleVectorKey* DATA_TIME_STEPS();
   static vtkInformationInformationVectorKey* POINT_DATA_VECTOR();
   static vtkInformationInformationVectorKey* CELL_DATA_VECTOR();
@@ -469,6 +522,7 @@ public:
   static vtkInformationIntegerKey* FIELD_OPERATION();
   static vtkInformationDoubleVectorKey* FIELD_RANGE();
   static vtkInformationDoubleVectorKey* PIECE_FIELD_RANGE();
+  static vtkInformationStringKey* FIELD_ARRAY_NAME();
   static vtkInformationIntegerVectorKey* PIECE_EXTENT();
   static vtkInformationStringKey* FIELD_NAME();
   static vtkInformationDoubleVectorKey* ORIGIN();

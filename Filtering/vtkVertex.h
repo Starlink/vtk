@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVertex.h,v $
+  Module:    vtkVertex.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,11 +21,13 @@
 
 #include "vtkCell.h"
 
+class vtkIncrementalPointLocator;
+
 class VTK_FILTERING_EXPORT vtkVertex : public vtkCell
 {
 public:
   static vtkVertex *New();
-  vtkTypeRevisionMacro(vtkVertex,vtkCell);
+  vtkTypeMacro(vtkVertex,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -40,7 +42,7 @@ public:
   vtkCell *GetEdge(int) {return 0;};
   vtkCell *GetFace(int) {return 0;};
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *pts,
+            vtkIncrementalPointLocator *locator, vtkCellArray *pts,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);
@@ -65,7 +67,7 @@ public:
   // points list that merges points as they are inserted (i.e., prevents
   // duplicates).
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts1,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts1,
                vtkCellArray *lines, vtkCellArray *verts2,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);

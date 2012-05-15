@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkButtonSource.cxx,v $
+  Module:    vtkButtonSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkButtonSource.h"
 
-vtkCxxRevisionMacro(vtkButtonSource, "$Revision: 1.12 $");
 
 // Construct 
 vtkButtonSource::vtkButtonSource()

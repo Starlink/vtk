@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPythonAppInit.cxx,v $
+  Module:    vtkPythonAppInit.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #endif // VTK_COMPILED_USING_MPI
 
 #include "vtkPython.h"
-
 #include "vtkVersion.h"
 #include "Wrapping/Python/vtkPythonAppInitConfigure.h"
 
@@ -54,6 +53,14 @@
 #include "vtkParallelInstantiator.h"
 #endif
 
+#ifdef VTK_USE_CHARTS
+#include "vtkChartsInstantiator.h"
+#endif
+
+#ifdef VTK_USE_CHEMISTRY
+#include "vtkChemistryInstantiator.h"
+#endif
+
 #ifdef VTK_USE_GEOVIS
 #include "vtkGeovisInstantiator.h"
 #endif
@@ -66,7 +73,7 @@
 #include "vtkViewsInstantiator.h"
 #endif
 
-#include <vtkstd/string>
+#include <string>
 #include <vtksys/SystemTools.hxx>
 
 #ifdef VTK_COMPILED_USING_MPI
@@ -81,7 +88,7 @@ public:
       MPI_Init(argc, argv);
       this->Controller = vtkMPIController::New();
       this->Controller->Initialize(argc, argv, 1);
-      vtkMultiProcessController::SetGlobalController(this->Controller);      
+      vtkMultiProcessController::SetGlobalController(this->Controller);
     }
   ~vtkMPICleanup()
     {
@@ -124,7 +131,7 @@ static void vtkPythonAppInitPrependPath(const char* self_dir);
 int main(int argc, char **argv)
 {
   vtkPythonAppInitEnableMSVCDebugHook();
-  
+
 #ifdef VTK_COMPILED_USING_MPI
   VTKMPICleanup.Initialize(&argc, &argv);
 #endif // VTK_COMPILED_USING_MPI
@@ -159,7 +166,7 @@ int main(int argc, char **argv)
   // full path.  We need to collapse the path name to aid relative
   // path computation for the VTK python module installation.
   static char argv0[VTK_PYTHON_MAXPATH];
-  vtkstd::string av0 = vtksys::SystemTools::CollapseFullPath(argv[0]);
+  std::string av0 = vtksys::SystemTools::CollapseFullPath(argv[0]);
   strcpy(argv0, av0.c_str());
   Py_SetProgramName(argv0);
 
@@ -183,7 +190,7 @@ int main(int argc, char **argv)
     {
     // Use the executable location to try to set sys.path to include
     // the VTK python modules.
-    vtkstd::string self_dir = vtksys::SystemTools::GetFilenamePath(exe_str);
+    std::string self_dir = vtksys::SystemTools::GetFilenamePath(exe_str);
     vtkPythonAppInitPrependPath(self_dir.c_str());
     }
 
@@ -202,7 +209,8 @@ static int vtkPythonAppInitDebugReport(int, char* message, int*)
 }
 void vtkPythonAppInitEnableMSVCDebugHook()
 {
-  if(getenv("DART_TEST_FROM_DART"))
+  if(getenv("DART_TEST_FROM_DART") ||
+    getenv("DASHBOARD_TEST_FROM_CTEST"))
     {
     _CrtSetReportHook(vtkPythonAppInitDebugReport);
     }
@@ -217,9 +225,9 @@ void vtkPythonAppInitEnableMSVCDebugHook()
 static void vtkPythonAppInitPrependPythonPath(const char* dir)
 {
   // Convert slashes for this platform.
-  vtkstd::string out_dir = dir;
+  std::string out_dir = dir;
 #if defined(_WIN32) && !defined(__CYGWIN__)
-  for(vtkstd::string::size_type i = 0; i < out_dir.length(); ++i)
+  for(std::string::size_type i = 0; i < out_dir.length(); ++i)
     {
     if(out_dir[i] == '/')
       {
@@ -250,7 +258,7 @@ static void vtkPythonAppInitPrependPath(const char* self_dir)
   int found_vtk = 0;
   for (const char** build_dir = build_dirs; *build_dir && !found_vtk; ++build_dir)
     {
-    vtkstd::string package_dir = self_dir;
+    std::string package_dir = self_dir;
 #if defined(CMAKE_INTDIR)
     package_dir += "/..";
 #endif
@@ -277,22 +285,24 @@ static void vtkPythonAppInitPrependPath(const char* self_dir)
     // packages in sys.path himself/herself.
     const char* inst_dirs[] = {
       "/lib/python" VTK_PYTHON_VERSION "/site-packages/vtk", // UNIX --prefix
+      "/python" VTK_PYTHON_VERSION "/site-packages/vtk", // UNIX + Forwarding exe --prefix
+      "/../Library/Python/" VTK_PYTHON_VERSION "/site-packages/vtk", // Apple + Forwarding exe
       "/lib/python/vtk", // UNIX --home
       "/Lib/site-packages/vtk", "/Lib/vtk", // Windows
       "/site-packages/vtk", "/vtk", // Windows
       0
     };
-    vtkstd::string prefix = vtksys::SystemTools::GetFilenamePath(self_dir);
+    std::string prefix = vtksys::SystemTools::GetFilenamePath(self_dir);
     for(const char** dir = inst_dirs; *dir; ++dir)
       {
-      vtkstd::string package_dir = prefix;
+      std::string package_dir = prefix;
       package_dir += *dir;
       package_dir = vtksys::SystemTools::CollapseFullPath(package_dir.c_str());
       if(vtksys::SystemTools::FileIsDirectory(package_dir.c_str()))
         {
         // We found the modules.  Add the location to sys.path, but
         // without the "/vtk" suffix.
-        vtkstd::string path_dir =
+        std::string path_dir =
           vtksys::SystemTools::GetFilenamePath(package_dir);
         vtkPythonAppInitPrependPythonPath(path_dir.c_str());
         break;

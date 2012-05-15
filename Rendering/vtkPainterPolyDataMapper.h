@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainterPolyDataMapper.h,v $
+  Module:    vtkPainterPolyDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkPainterPolyDataMapper : public vtkPolyDataMapper
 {
 public:
   static vtkPainterPolyDataMapper* New();
-  vtkTypeRevisionMacro(vtkPainterPolyDataMapper, vtkPolyDataMapper);
+  vtkTypeMacro(vtkPainterPolyDataMapper, vtkPolyDataMapper);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -51,12 +51,6 @@ public:
   // The parameter window could be used to determine which graphic
   // resources to release. Merely propagates the call to the painter.
   void ReleaseGraphicsResources(vtkWindow *);
-
-  // Description:
-  // Re-implement the superclass GetBounds method.
-  virtual void GetBounds(double bounds[6])
-    { this->Superclass::GetBounds(bounds); }
-  virtual double *GetBounds();
 
   // Description:
   // Select a data array from the point/cell data
@@ -97,13 +91,30 @@ public:
   virtual bool GetSupportsSelection()
     { return (this->SelectionPainter != 0); }
 
+  // Description:
+  // Returns if the mapper does not expect to have translucent geometry. This
+  // may happen when using ScalarMode is set to not map scalars i.e. render the
+  // scalar array directly as colors and the scalar array has opacity i.e. alpha
+  // component. Note that even if this method returns true, an actor may treat
+  // the geometry as translucent since a constant translucency is set on the
+  // property, for example.
+  // Overridden to use the actual data and ScalarMode to determine if we have
+  // opaque geometry.
+  virtual bool GetIsOpaque();
+
 protected:
   vtkPainterPolyDataMapper();
   ~vtkPainterPolyDataMapper();
 
   // Description:
+  // Called in GetBounds(). When this method is called, the consider the input
+  // to be updated depending on whether this->Static is set or not. This method
+  // simply obtains the bounds from the data-object and returns it.
+  virtual void ComputeBounds();
+
+  // Description:
   // Called when the PainterInformation becomes obsolete. 
-  // It is called before the Render is initiated on the Painter.
+  // It is called before UpdateBounds or Render is initiated on the Painter
   virtual void UpdatePainterInformation();
 
   // Description:

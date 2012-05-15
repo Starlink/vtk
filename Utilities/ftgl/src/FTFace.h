@@ -9,6 +9,11 @@
 
 #include "FTSize.h"
 
+#ifdef FTGL_USE_NAMESPACE
+namespace ftgl
+{
+#endif
+
 class FTCharmap;
 
 /**
@@ -52,7 +57,7 @@ class FTGL_EXPORT FTFace
     bool Open( const unsigned char *pBufferBytes, size_t bufferSizeInBytes );
 
     /** 
-     * Attach auxilliary file to face (e.g., font metrics). 
+     * Attach auxiliary file to face (e.g., font metrics). 
      */ 
     bool Attach( const char* filename); 
 
@@ -158,5 +163,8 @@ class FTGL_EXPORT FTFace
     FT_Error err;
 };
 
+#ifdef FTGL_USE_NAMESPACE
+} // namespace ftgl
+#endif
 
 #endif  //  __FTFace__

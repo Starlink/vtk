@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMCubesWriter.h,v $
+  Module:    vtkMCubesWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_IO_EXPORT vtkMCubesWriter : public vtkPolyDataWriter
 {
 public:
   static vtkMCubesWriter *New();
-  vtkTypeRevisionMacro(vtkMCubesWriter,vtkPolyDataWriter);
+  vtkTypeMacro(vtkMCubesWriter,vtkPolyDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -48,8 +48,13 @@ public:
 protected:
   vtkMCubesWriter();
   ~vtkMCubesWriter();
-
+  
   void WriteData();
+  
+  void WriteMCubes(FILE *fp, vtkPoints *pts, vtkDataArray *normals, 
+                   vtkCellArray *polys);
+  void WriteLimits(FILE *fp, double *bounds);
+  
   char *LimitsFileName;
 private:
   vtkMCubesWriter(const vtkMCubesWriter&);  // Not implemented.

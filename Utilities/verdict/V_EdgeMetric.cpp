@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Module:    $RCSfile: V_EdgeMetric.cpp,v $
+  Module:    V_EdgeMetric.cpp
 
   Copyright (c) 2006 Sandia Corporation.
   All rights reserved.
@@ -20,8 +20,6 @@
  * This file is part of VERDICT
  *
  */
-
-#define VERDICT_EXPORTS
 
 #include "verdict.h"
 #include <math.h>

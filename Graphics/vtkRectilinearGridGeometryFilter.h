@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridGeometryFilter.h,v $
+  Module:    vtkRectilinearGridGeometryFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@
 class VTK_GRAPHICS_EXPORT vtkRectilinearGridGeometryFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkRectilinearGridGeometryFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkRectilinearGridGeometryFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

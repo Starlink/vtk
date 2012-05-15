@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBorderRepresentation.cxx,v $
+  Module:    vtkBorderRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkObjectFactory.h"
 
 
-vtkCxxRevisionMacro(vtkBorderRepresentation, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBorderRepresentation);
 
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformToGrid.h,v $
+  Module:    vtkTransformToGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_HYBRID_EXPORT vtkTransformToGrid : public vtkAlgorithm
 {
 public:
   static vtkTransformToGrid *New();
-  vtkTypeRevisionMacro(vtkTransformToGrid,vtkAlgorithm);
+  vtkTypeMacro(vtkTransformToGrid,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayData.h,v $
+  Module:    vtkArrayData.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,6 +19,21 @@
 
 =========================================================================*/
 
+// .NAME vtkArrayData - Pipeline data object that contains multiple vtkArray objects.
+//
+// .SECTION Description
+// Because vtkArray cannot be stored as attributes of data objects (yet), a "carrier"
+// object is needed to pass vtkArray through the pipeline.  vtkArrayData acts as a
+// container of zero-to-many vtkArray instances, which can be retrieved via a zero-based
+// index.  Note that a collection of arrays stored in vtkArrayData may-or-may-not have related
+// types, dimensions, or extents.
+//
+// .SECTION See Also
+// vtkArrayDataAlgorithm, vtkArray
+//
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
 #ifndef __vtkArrayData_h
 #define __vtkArrayData_h
 
@@ -26,42 +41,56 @@
 #include "vtkDataObject.h"
 
 class vtkArray;
-class vtkInformation;
-class vtkInformationVector;
-
-// .NAME vtkArrayData - Pipeline data object that acts as a container
-// for a single vtkArray
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
 class VTK_FILTERING_EXPORT vtkArrayData : public vtkDataObject
 {
 public:
   static vtkArrayData* New();
-  vtkTypeRevisionMacro(vtkArrayData, vtkDataObject);
+  vtkTypeMacro(vtkArrayData, vtkDataObject);
   void PrintSelf(ostream &os, vtkIndent indent);
 
   static vtkArrayData* GetData(vtkInformation* info);
   static vtkArrayData* GetData(vtkInformationVector* v, int i = 0);
 
   // Description:
-  // Sets the vtkArray instance contained by this object
-  virtual void SetArray(vtkArray*);
+  // Adds a vtkArray to the collection
+  void AddArray(vtkArray*);
   
   // Description:
-  // Returns the vtkArray instance (if any) contained by this object
-  vtkGetObjectMacro(Array, vtkArray);
+  // Clears the contents of the collection
+  void ClearArrays();
+  
+  // Description:
+  // Returns the number of vtkArray instances in the collection
+  vtkIdType GetNumberOfArrays();
+  
+  // Description:
+  // Returns the n-th vtkArray in the collection
+  vtkArray* GetArray(vtkIdType index);
+  
+  // Description:
+  // Returns the array having called name from the collection
+  vtkArray* GetArrayByName(const char *name);
+
+  // Description:
+  // Return class name of data type (VTK_ARRAY_DATA).
+  virtual int GetDataObjectType() {return VTK_ARRAY_DATA;}
+
+  virtual void ShallowCopy(vtkDataObject* other);
+  virtual void DeepCopy(vtkDataObject* other);
 
 protected:
   vtkArrayData();
   ~vtkArrayData();
 
-  vtkArray* Array;
-
 private:
   vtkArrayData(const vtkArrayData&); // Not implemented
   void operator=(const vtkArrayData&); // Not implemented
+
+//BTX
+  class implementation;
+  implementation* const Implementation;
+//ETX
 };
 
 #endif

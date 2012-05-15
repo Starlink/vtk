@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSource.h,v $
+  Module:    vtkSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ class vtkDataObjectToSourceFriendship;
 class VTK_FILTERING_EXPORT vtkSource : public vtkProcessObject
 {
 public:
-  vtkTypeRevisionMacro(vtkSource,vtkProcessObject);
+  vtkTypeMacro(vtkSource,vtkProcessObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

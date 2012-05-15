@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtk_netcdf.h,v $
+  Module:    vtk_netcdf.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,6 +16,6 @@
 #define __vtk_netcdf_h
 
 /* Use the netcdf library configured for VTK.  */
-#include <vtknetcdf/netcdf.h>
+#include <vtknetcdf/include/netcdf.h>
 
 #endif

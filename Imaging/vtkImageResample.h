@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageResample.h,v $
+  Module:    vtkImageResample.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IMAGING_EXPORT vtkImageResample : public vtkImageReslice
 {
 public:
   static vtkImageResample *New();
-  vtkTypeRevisionMacro(vtkImageResample,vtkImageReslice);
+  vtkTypeMacro(vtkImageResample,vtkImageReslice);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStandardPolyDataPainter.h,v $
+  Module:    vtkStandardPolyDataPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,12 +45,12 @@ class vtkDataArray;
 class vtkPointData;
 class vtkPoints;
 class vtkShaderDeviceAdapter;
-class vtkGLSLShaderDeviceAdapter2;
+class vtkShaderDeviceAdapter2;
 
 class VTK_RENDERING_EXPORT vtkStandardPolyDataPainter : public vtkPolyDataPainter
 {
 public:
-  vtkTypeRevisionMacro(vtkStandardPolyDataPainter, vtkPolyDataPainter);
+  vtkTypeMacro(vtkStandardPolyDataPainter, vtkPolyDataPainter);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
   static vtkStandardPolyDataPainter *New();
 
@@ -69,7 +69,7 @@ protected:
   void DrawCells(int mode, vtkCellArray *connectivity,
                  vtkIdType startCellId, 
                  vtkShaderDeviceAdapter *shaderDevice,
-                 vtkGLSLShaderDeviceAdapter2 *shaderDevice2,
+                 vtkShaderDeviceAdapter2 *shaderDevice2,
                  vtkRenderer *renderer, 
                  int buildnormals, int interpolation);
 
@@ -79,7 +79,7 @@ protected:
   virtual void ProcessInformation(vtkInformation*);
 
   void UpdateGenericAttributesCache(vtkShaderDeviceAdapter *shaderDevice,
-                                    vtkGLSLShaderDeviceAdapter2 *shaderDevice2);
+                                    vtkShaderDeviceAdapter2 *shaderDevice2);
 
   vtkIdType TotalCells;
 private:

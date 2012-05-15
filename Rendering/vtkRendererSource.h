@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRendererSource.h,v $
+  Module:    vtkRendererSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_RENDERING_EXPORT vtkRendererSource : public vtkAlgorithm
 {
 public:
   static vtkRendererSource *New();
-  vtkTypeRevisionMacro(vtkRendererSource,vtkAlgorithm);
+  vtkTypeMacro(vtkRendererSource,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

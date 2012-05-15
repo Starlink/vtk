@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXOpenGLRenderWindow.cxx,v $
+  Module:    vtkXOpenGLRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,8 +22,14 @@
 #include "vtkOpenGLActor.h"
 #include "vtkOpenGLPolyDataMapper.h"
 #include "vtkXRenderWindowInteractor.h"
-#include <GL/gl.h>
+
+#include "vtkOpenGL.h"
+
+// define GLX_GLXEXT_LEGACY to prevent glx.h to include glxext.h provided by
+// the system
+//#define GLX_GLXEXT_LEGACY
 #include "GL/glx.h"
+
 #include "vtkgl.h"
 #else
 #include "MangleMesaInclude/osmesa.h"
@@ -111,7 +117,6 @@ vtkXOpenGLRenderWindowInternal::vtkXOpenGLRenderWindowInternal(
 
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkXOpenGLRenderWindow, "$Revision: 1.102 $");
 vtkStandardNewMacro(vtkXOpenGLRenderWindow);
 #endif
 
@@ -437,18 +442,16 @@ vtkXOpenGLRenderWindow::~vtkXOpenGLRenderWindow()
 {
   // close-down all system-specific drawing resources
   this->Finalize();
-  
-  vtkRenderer* ren;
-  this->Renderers->InitTraversal();
-  for ( ren = vtkOpenGLRenderer::SafeDownCast(this->Renderers->GetNextItemAsObject());
-        ren != NULL;
-        ren = vtkOpenGLRenderer::SafeDownCast(this->Renderers->GetNextItemAsObject())  )
+
+  vtkRenderer *ren;
+  vtkCollectionSimpleIterator rit;
+  this->Renderers->InitTraversal(rit);
+  while ( (ren = this->Renderers->GetNextRenderer(rit)) )
     {
     ren->SetRenderWindow(NULL);
     }
 
   delete this->Internal;
-
 }
 
 // End the rendering process and display the image.
@@ -466,7 +469,7 @@ void vtkXOpenGLRenderWindow::Frame()
     glFlush();
     }
 }
- 
+
 //
 // Set the variable that indicates that we want a stereo capable window
 // be created. This method can only be called before a window is realized.
@@ -1005,12 +1008,26 @@ void vtkXOpenGLRenderWindow::ResizeOffScreenWindow(int width, int height)
     return;
     }
 
+  // Generally, we simply destroy and recreate the offscreen window/contexts.
+  // However, that's totally unnecessary for OSMesa. So we avoid that.
+#ifdef VTK_OPENGL_HAS_OSMESA
+  if (this->Internal->OffScreenContextId && this->Internal->OffScreenWindow)
+    {
+    vtkOSMesaDestroyWindow(this->Internal->OffScreenWindow);
+    this->Internal->OffScreenWindow = NULL;
+
+    // allocate new one.
+    this->Internal->OffScreenWindow = vtkOSMesaCreateWindow(width,height);
+    this->Size[0] = width;
+    this->Size[1] = height;      
+    this->OwnWindow = 1;
+    return;
+    }
+#endif
+
   if(this->Internal->PixmapContextId ||
      this->Internal->PbufferContextId || 
      this->OffScreenUseFrameBuffer 
-#ifdef VTK_OPENGL_HAS_OSMESA
-     || this->Internal->OffScreenContextId
-#endif
     )
     {
     this->DestroyOffScreenWindow();

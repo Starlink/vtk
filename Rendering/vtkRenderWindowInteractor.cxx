@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderWindowInteractor.cxx,v $
+  Module:    vtkRenderWindowInteractor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,9 +25,8 @@
 #include "vtkRendererCollection.h"
 #include "vtkDebugLeaks.h"
 #include "vtkObserverMediator.h"
-#include <vtkstd/map>
+#include <map>
 
-vtkCxxRevisionMacro(vtkRenderWindowInteractor, "$Revision: 1.121 $");
 
 // PIMPL'd class to keep track of timers. It maps the ids returned by CreateTimer()
 // to the platform-specific representation for timer ids.
@@ -46,8 +45,8 @@ struct vtkTimerStruct
 };
 
 
-class vtkTimerIdMap : public vtkstd::map<int,vtkTimerStruct> {};
-typedef vtkstd::map<int,vtkTimerStruct>::iterator vtkTimerIdMapIterator;
+class vtkTimerIdMap : public std::map<int,vtkTimerStruct> {};
+typedef std::map<int,vtkTimerStruct>::iterator vtkTimerIdMapIterator;
 
 // Initialize static variable that keeps track of timer ids for 
 // render window interactors.
@@ -108,6 +107,8 @@ vtkRenderWindowInteractor::vtkRenderWindowInteractor()
   this->TimerDuration = 10;
   this->ObserverMediator = 0;
   this->HandleEventLoop = false;
+  
+  this->UseTDx=false; // 3DConnexion device.
 }
 
 //----------------------------------------------------------------------
@@ -619,6 +620,7 @@ void vtkRenderWindowInteractor::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "TimerEventType: " << this->TimerEventType << "\n";
   os << indent << "TimerEventDuration: " << this->TimerEventDuration << "\n";
   os << indent << "TimerEventPlatformId: " << this->TimerEventPlatformId << "\n";
+  os << indent << "UseTDx: " << this->UseTDx << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -652,3 +654,175 @@ vtkObserverMediator *vtkRenderWindowInteractor::GetObserverMediator()
 
   return this->ObserverMediator;
 }
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::MouseMoveEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::MouseMoveEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::RightButtonPressEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::RightButtonPressEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::RightButtonReleaseEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::RightButtonReleaseEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::LeftButtonPressEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::LeftButtonPressEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::LeftButtonReleaseEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::LeftButtonReleaseEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::MiddleButtonPressEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::MiddleButtonPressEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::MiddleButtonReleaseEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::MiddleButtonReleaseEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::MouseWheelForwardEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::MouseWheelForwardEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::MouseWheelBackwardEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::MouseWheelBackwardEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::ExposeEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::ExposeEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::ConfigureEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::ConfigureEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::EnterEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::EnterEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::LeaveEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::LeaveEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::KeyPressEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::KeyPressEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::KeyReleaseEvent()
+{
+  if (!this->Enabled)
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::KeyReleaseEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::CharEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::CharEvent, NULL);
+}
+
+//------------------------------------------------------------------
+void vtkRenderWindowInteractor::ExitEvent()
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  this->InvokeEvent(vtkCommand::ExitEvent, NULL);
+}
+
+

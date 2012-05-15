@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaLine.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.8 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METALINE_H
@@ -35,7 +30,7 @@
  *    Reads and Writes MetaLineFiles.
  *
  * \author Julien Jomier
- * 
+ *
  * \date July 02, 2002
  *
  */
@@ -51,7 +46,7 @@ public:
   LinePnt(int dim);
 
   ~LinePnt();
-  
+
   unsigned int m_Dim;
   float*   m_X;
   float**  m_V;
@@ -79,10 +74,10 @@ class METAIO_EXPORT MetaLine : public MetaObject
     ////
     MetaLine(void);
 
-    MetaLine(const char *_headerName);   
+    MetaLine(const char *_headerName);
 
-    MetaLine(const MetaLine *_line); 
-    
+    MetaLine(const MetaLine *_line);
+
     MetaLine(unsigned int dim);
 
     ~MetaLine(void);

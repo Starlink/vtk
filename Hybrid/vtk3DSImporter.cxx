@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtk3DSImporter.cxx,v $
+  Module:    vtk3DSImporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkRenderer.h"
 #include "vtkStripper.h"
 
-vtkCxxRevisionMacro(vtk3DSImporter, "$Revision: 1.40 $");
 vtkStandardNewMacro(vtk3DSImporter);
 
 // Silent warning like
@@ -1074,10 +1073,13 @@ static word read_word(vtk3DSImporter *importer)
 {
   word data;
 
-  fread (&data, 2, 1, importer->GetFileFD());
+  if (fread (&data, 2, 1, importer->GetFileFD()) != 1)
+    {
+    vtkErrorWithObjectMacro(
+      importer, "Pre-mature end of file in read_word\n");
+    data = 0;
+    }
   vtkByteSwap::Swap2LE ((short *) &data);
-/*    swab ((char *) &data, (char *) &sdata, 2);*/
-
   return data;
 }
 
@@ -1087,7 +1089,8 @@ static dword read_dword(vtk3DSImporter *importer)
 
   if (fread (&data, 4, 1, importer->GetFileFD()) != 1)
     {
-//    vtkGenericWarningMacro(<<"Pre-mature end of file in read_dword\n");
+    vtkErrorWithObjectMacro(
+      importer, "Pre-mature end of file in read_dword\n");
     data = 0;
     }
 
@@ -1100,11 +1103,15 @@ static float read_float(vtk3DSImporter *importer)
 {
   float data;
 
-  fread (&data, 4, 1, importer->GetFileFD());
-  vtkByteSwap::Swap4LE ((char *) &data);
-/*    TIFFSwabLong (&data);*/
+  if (fread (&data, 4, 1, importer->GetFileFD()) != 1)
+    {
+    vtkErrorWithObjectMacro(
+      importer, "Pre-mature end of file in read_float\n");
+    data = 0;
+    }
 
-    return data;
+  vtkByteSwap::Swap4LE ((char *) &data);
+  return data;
 }
 
 

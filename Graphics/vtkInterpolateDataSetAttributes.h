@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInterpolateDataSetAttributes.h,v $
+  Module:    vtkInterpolateDataSetAttributes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_GRAPHICS_EXPORT vtkInterpolateDataSetAttributes : public vtkDataSetAlg
 {
 public:
   static vtkInterpolateDataSetAttributes *New();
-  vtkTypeRevisionMacro(vtkInterpolateDataSetAttributes,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkInterpolateDataSetAttributes,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

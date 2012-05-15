@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMemoryLimitImageDataStreamer.cxx,v $
+  Module:    vtkMemoryLimitImageDataStreamer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkPipelineSize.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkMemoryLimitImageDataStreamer, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkMemoryLimitImageDataStreamer);
 
 //----------------------------------------------------------------------------
@@ -102,6 +101,10 @@ vtkMemoryLimitImageDataStreamer
         // set the update extent
         inInfo->Set(
           vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), inExt, 6);
+        // set a hint not to combine with previous requests
+        inInfo->Set(
+          vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT_INITIALIZED(),
+          VTK_UPDATE_EXTENT_REPLACE);
         
         // then propagate it
         vtkAlgorithm *alg = input->GetProducerPort()->GetProducer();
@@ -109,6 +112,11 @@ vtkMemoryLimitImageDataStreamer
         vtkStreamingDemandDrivenPipeline *exec = 
           vtkStreamingDemandDrivenPipeline::SafeDownCast(alg->GetExecutive());
         exec->PropagateUpdateExtent(index);
+
+        // then reset the INITIALIZED flag to the default value COMBINE
+        inInfo->Set(
+          vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT_INITIALIZED(),
+          VTK_UPDATE_EXTENT_COMBINE);
 
         size = sizer->GetEstimatedSize(this,0,0);
         // watch for the first time through

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPChacoReader.cxx,v $
+  Module:    vtkPChacoReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkProcessGroup.h"
 
-vtkCxxRevisionMacro(vtkPChacoReader, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkPChacoReader);
 
 //----------------------------------------------------------------------------

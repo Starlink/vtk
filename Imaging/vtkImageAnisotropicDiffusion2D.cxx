@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageAnisotropicDiffusion2D.cxx,v $
+  Module:    vtkImageAnisotropicDiffusion2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageAnisotropicDiffusion2D, "$Revision: 1.49 $");
 vtkStandardNewMacro(vtkImageAnisotropicDiffusion2D);
 
 //----------------------------------------------------------------------------
@@ -252,7 +251,7 @@ void vtkImageAnisotropicDiffusion2D::Iterate(vtkImageData *inData,
   vtkDebugMacro(<< "Iteration count: " << count << " ("
   << min0 << ", " << max0 << ", " << min1 << ", " << max1 << ")");
   
-  // I apologize for explicitely diffusing each neighbor, but it is the easiest
+  // I apologize for explicitly diffusing each neighbor, but it is the easiest
   // way to deal with the boundary conditions.  Besides it is fast.
   // (Are you sure every one is correct?!!!)
   min2 = inMin2;

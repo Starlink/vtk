@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFFT.cxx,v $
+  Module:    vtkImageFFT.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageFFT, "$Revision: 1.43 $");
 vtkStandardNewMacro(vtkImageFFT);
 
 //----------------------------------------------------------------------------

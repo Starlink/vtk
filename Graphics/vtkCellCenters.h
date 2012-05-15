@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellCenters.h,v $
+  Module:    vtkCellCenters.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@
 class VTK_GRAPHICS_EXPORT vtkCellCenters : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkCellCenters,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkCellCenters,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -45,7 +45,8 @@ public:
   static vtkCellCenters *New();
 
   // Description:
-  // Enable/disable the generation of vertex cells.
+  // Enable/disable the generation of vertex cells. The default
+  // is Off.
   vtkSetMacro(VertexCells,int);
   vtkGetMacro(VertexCells,int);
   vtkBooleanMacro(VertexCells,int);

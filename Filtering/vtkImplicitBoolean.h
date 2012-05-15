@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitBoolean.h,v $
+  Module:    vtkImplicitBoolean.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class vtkImplicitFunctionCollection;
 class VTK_FILTERING_EXPORT vtkImplicitBoolean : public vtkImplicitFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkImplicitBoolean,vtkImplicitFunction);
+  vtkTypeMacro(vtkImplicitBoolean,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

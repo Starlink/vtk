@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:  $RCSfile: vtkDijkstraGraphGeodesicPath.cxx,v $
+  Module:  vtkDijkstraGraphGeodesicPath.cxx
   Language:  C++
-  Date:    $Date: 2008-08-31 11:46:41 $
-  Version:   $Revision: 1.13 $
+  Date:    $Date$
+  Version:   $Revision$
   
   Made by Rasmus Paulsen
   email:  rrp(at)imm.dtu.dk
@@ -18,6 +18,7 @@
 #include "vtkDijkstraGraphInternals.h"
 #include "vtkExecutive.h"
 #include "vtkFloatArray.h"
+#include "vtkDoubleArray.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -27,8 +28,6 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 
-
-vtkCxxRevisionMacro(vtkDijkstraGraphGeodesicPath, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkDijkstraGraphGeodesicPath);
 vtkCxxSetObjectMacro(vtkDijkstraGraphGeodesicPath,RepelVertices,vtkPoints);
 
@@ -56,6 +55,21 @@ vtkDijkstraGraphGeodesicPath::~vtkDijkstraGraphGeodesicPath()
     delete this->Internals;
     }
   this->SetRepelVertices(NULL);
+}
+
+//----------------------------------------------------------------------------
+void vtkDijkstraGraphGeodesicPath::GetCumulativeWeights(vtkDoubleArray *weights)
+{
+  if (!weights) 
+    {
+    return;
+    }
+  
+  weights->Initialize();
+  double *weightsArray = new double[this->Internals->CumulativeWeights.size()];
+  std::copy(this->Internals->CumulativeWeights.begin(),
+    this->Internals->CumulativeWeights.end(), weightsArray);
+  weights->SetArray(weightsArray, this->Internals->CumulativeWeights.size(), 0);
 }
 
 //----------------------------------------------------------------------------
@@ -123,17 +137,17 @@ void vtkDijkstraGraphGeodesicPath::Initialize( vtkDataSet *inData )
 //----------------------------------------------------------------------------
 void vtkDijkstraGraphGeodesicPath::Reset()
 {
-  vtkstd::fill( this->Internals->CumulativeWeights.begin(),
+  std::fill( this->Internals->CumulativeWeights.begin(),
     this->Internals->CumulativeWeights.end(), -1.0 );
-  vtkstd::fill( this->Internals->Predecessors.begin(),
+  std::fill( this->Internals->Predecessors.begin(),
     this->Internals->Predecessors.end(), -1 );
-  vtkstd::fill( this->Internals->OpenVertices.begin(),
+  std::fill( this->Internals->OpenVertices.begin(),
     this->Internals->OpenVertices.end(), false );
-  vtkstd::fill( this->Internals->ClosedVertices.begin(),
+  std::fill( this->Internals->ClosedVertices.begin(),
     this->Internals->ClosedVertices.end(), false );
   if( this->RepelPathFromVertices )
     {
-    vtkstd::fill( this->Internals->BlockedVertices.begin(),
+    std::fill( this->Internals->BlockedVertices.begin(),
       this->Internals->BlockedVertices.end(), false );
     }
 
@@ -199,18 +213,18 @@ void vtkDijkstraGraphGeodesicPath::BuildAdjacency(vtkDataSet *inData)
         vtkIdType u = pts[j];
         vtkIdType v = pts[(( j + 1 ) % npts)];
 
-        vtkstd::map<int,double>& mu = this->Internals->Adjacency[u];
+        std::map<int,double>& mu = this->Internals->Adjacency[u];
         if ( mu.find(v) == mu.end() )
           {
           cost = this->CalculateStaticEdgeCost( inData, u, v );
-          mu.insert( vtkstd::pair<int,double>( v, cost ) );
+          mu.insert( std::pair<int,double>( v, cost ) );
           }
 
-        vtkstd::map<int,double>& mv = this->Internals->Adjacency[v];
+        std::map<int,double>& mv = this->Internals->Adjacency[v];
         if ( mv.find(u) == mv.end() )
           {
           cost = this->CalculateStaticEdgeCost( inData, v, u );
-          mv.insert( vtkstd::pair<int,double>( u, cost ) );
+          mv.insert( std::pair<int,double>( u, cost ) );
           }
         }
       }
@@ -311,7 +325,7 @@ void vtkDijkstraGraphGeodesicPath::ShortestPath( vtkDataSet *inData,
       stop = true;
       }
     
-    vtkstd::map<int,double>::iterator it = this->Internals->Adjacency[u].begin();
+    std::map<int,double>::iterator it = this->Internals->Adjacency[u].begin();
      
     // Update all vertices v adjacent to u
     for ( ; it != this->Internals->Adjacency[u].end(); ++it )

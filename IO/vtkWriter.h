@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWriter.h,v $
+  Module:    vtkWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class vtkDataObject;
 class VTK_IO_EXPORT vtkWriter : public vtkAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkWriter,vtkAlgorithm);
+  vtkTypeMacro(vtkWriter,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

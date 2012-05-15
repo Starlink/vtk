@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericAttributeCollection.cxx,v $
+  Module:    vtkGenericAttributeCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,23 +19,22 @@
 #include "vtkGenericAttribute.h"
 
 
-#include <vtkstd/vector>
+#include <vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkGenericAttributeCollection,"$Revision: 1.10 $");
 vtkStandardNewMacro(vtkGenericAttributeCollection);
 
 class vtkGenericAttributeInternalVector
 {
 public:
-  typedef vtkstd::vector<vtkGenericAttribute* > VectorType;
+  typedef std::vector<vtkGenericAttribute* > VectorType;
   VectorType Vector;
 };
 
 class vtkIntInternalVector
 {
 public:
-  typedef vtkstd::vector<int> VectorType;
+  typedef std::vector<int> VectorType;
   VectorType Vector;
 };
 

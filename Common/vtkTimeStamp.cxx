@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimeStamp.cxx,v $
+  Module:    vtkTimeStamp.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,6 +57,11 @@ void vtkTimeStamp::Modified()
   static volatile int32_t vtkTimeStampTime = 0;
   this->ModifiedTime = (unsigned long)OSAtomicIncrement32Barrier(&vtkTimeStampTime);
  #endif
+
+// GCC and CLANG intrinsics
+#elif defined(VTK_HAVE_SYNC_BUILTINS)
+  static volatile unsigned long vtkTimeStampTime = 0;
+  this->ModifiedTime = __sync_add_and_fetch(&vtkTimeStampTime, 1);
 
 // General case
 #else

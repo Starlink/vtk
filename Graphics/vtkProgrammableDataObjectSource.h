@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableDataObjectSource.h,v $
+  Module:    vtkProgrammableDataObjectSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,8 +39,18 @@ class VTK_GRAPHICS_EXPORT vtkProgrammableDataObjectSource : public vtkDataObject
 {
 public:
   static vtkProgrammableDataObjectSource *New();
-  vtkTypeRevisionMacro(vtkProgrammableDataObjectSource,vtkDataObjectAlgorithm);
+  vtkTypeMacro(vtkProgrammableDataObjectSource,vtkDataObjectAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // Signature definition for programmable method callbacks. Methods passed to
+  // SetExecuteMethod or SetExecuteMethodArgDelete must conform to this
+  // signature.
+  // The presence of this typedef is useful for reference and for external
+  // analysis tools, but it cannot be used in the method signatures in these
+  // header files themselves because it prevents the internal VTK wrapper
+  // generators from wrapping these methods.
+  typedef void (*ProgrammableMethodCallbackType)(void *arg);
 
   // Description:
   // Specify the function to use to generate the output data object. Note
@@ -58,8 +68,8 @@ protected:
   virtual int RequestData(vtkInformation *, vtkInformationVector **,
                           vtkInformationVector *);
 
-  void (*ExecuteMethod)(void *); //function to invoke
-  void (*ExecuteMethodArgDelete)(void *);
+  ProgrammableMethodCallbackType ExecuteMethod; //function to invoke
+  ProgrammableMethodCallbackType ExecuteMethodArgDelete;
   void *ExecuteMethodArg;
 private:
   vtkProgrammableDataObjectSource(const vtkProgrammableDataObjectSource&);  // Not implemented.

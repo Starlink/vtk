@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestGroupLeafVertices.cxx,v $
+  Module:    TestGroupLeafVertices.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 #include "vtkTableToTreeFilter.h"
 #include "vtkTree.h"
 #include "vtkTreeLayoutStrategy.h"
-#include "vtkTreeMapViewer.h"
 
 #define VTK_CREATE(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricBoy.h,v $
+  Module:    vtkParametricBoy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_COMMON_EXPORT vtkParametricBoy : public vtkParametricFunction
 {
 public:
 
-  vtkTypeRevisionMacro(vtkParametricBoy,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricBoy,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

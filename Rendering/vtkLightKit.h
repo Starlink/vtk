@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLightKit.h,v $
+  Module:    vtkLightKit.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -99,7 +99,7 @@ class VTK_RENDERING_EXPORT vtkLightKit : public vtkObject
 {
 public:
   static vtkLightKit *New();
-  vtkTypeRevisionMacro(vtkLightKit, vtkObject);
+  vtkTypeMacro(vtkLightKit, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //BTX
@@ -293,7 +293,7 @@ public:
   // Description:
   // Helper method to go from a enum subtype to a string subtype
   // The difference from GetStringFromSubType is that it returns
-  // a shorter strings (usefull for GUI with minimun space)
+  // a shorter strings (useful for GUI with minimun space)
   static const char *GetShortStringFromSubType(int subtype);
   
   // Description:

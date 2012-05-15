@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEdgePoints.h,v $
+  Module:    vtkEdgePoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class vtkMergePoints;
 class VTK_GRAPHICS_EXPORT vtkEdgePoints : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkEdgePoints,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkEdgePoints,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

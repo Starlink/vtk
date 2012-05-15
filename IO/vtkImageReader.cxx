@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageReader.cxx,v $
+  Module:    vtkImageReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkImageReader, "$Revision: 1.122 $");
 vtkStandardNewMacro(vtkImageReader);
 
 vtkCxxSetObjectMacro(vtkImageReader,Transform,vtkTransform);
@@ -46,9 +45,8 @@ vtkImageReader::vtkImageReader()
     {
     this->DataVOI[idx*2] = this->DataVOI[idx*2 + 1] = 0;
     }
-  
-  // Left over from short reader
-  this->DataMask = 0xffff;
+
+  this->DataMask = static_cast<vtkTypeUInt64>(~0UL);
   this->Transform = NULL;
   
   this->ScalarArrayName = NULL;
@@ -211,7 +209,7 @@ void vtkImageReaderUpdate2(vtkImageReader *self, vtkImageData *data,
   int comp, pixelSkip;
   long filePos, correction = 0;
   unsigned long count = 0;
-  unsigned short DataMask;
+  vtkTypeUInt64 DataMask;
   unsigned long target;
   
   // Get the requested extents.
@@ -327,7 +325,7 @@ void vtkImageReaderUpdate2(vtkImageReader *self, vtkImageData *data,
       for (idx0 = dataExtent[0]; idx0 <= dataExtent[1]; ++idx0)
         {
         // Copy pixel into the output.
-        if (DataMask == 0xffff)
+        if (DataMask == static_cast<vtkTypeUInt64>(~0UL))
           {
           for (comp = 0; comp < pixelSkip; comp++)
             {
@@ -336,10 +334,9 @@ void vtkImageReaderUpdate2(vtkImageReader *self, vtkImageData *data,
           }
         else
           {
-          // left over from short reader (what about other types.
           for (comp = 0; comp < pixelSkip; comp++)
             {
-            outPtr0[comp] = (OT)((short)(inPtr[comp]) & DataMask);
+            outPtr0[comp] = (OT)((vtkTypeUInt64)(inPtr[comp]) & DataMask);
             }
           }
         // move to next pixel
@@ -423,7 +420,6 @@ void vtkImageReader::ExecuteData(vtkDataObject *output)
   vtkImageData *data = this->AllocateOutputData(output);
   
   void *ptr = NULL;
-  int *ext;
 
   if (!this->FileName && !this->FilePattern)
     {
@@ -431,13 +427,15 @@ void vtkImageReader::ExecuteData(vtkDataObject *output)
     return;
     }
 
-  ext = data->GetExtent();
   if (!data->GetPointData()->GetScalars())
     {
     return;
     }
   data->GetPointData()->GetScalars()->SetName(this->ScalarArrayName);
 
+#ifndef NDEBUG
+  int *ext = data->GetExtent();
+#endif
   vtkDebugMacro("Reading extent: " << ext[0] << ", " << ext[1] << ", " 
         << ext[2] << ", " << ext[3] << ", " << ext[4] << ", " << ext[5]);
   

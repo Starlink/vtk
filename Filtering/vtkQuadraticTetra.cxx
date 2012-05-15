@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticTetra.cxx,v $
+  Module:    vtkQuadraticTetra.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkDoubleArray.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticTetra, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkQuadraticTetra);
 
 //----------------------------------------------------------------------------
@@ -280,7 +279,7 @@ int vtkQuadraticTetra::CellBoundary(int subId, double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkQuadraticTetra::Contour(double value, vtkDataArray* cellScalars,
-                                vtkPointLocator* locator,
+                                vtkIncrementalPointLocator* locator,
                                 vtkCellArray *verts, vtkCellArray* lines,
                                 vtkCellArray* polys,
                                 vtkPointData* inPd, vtkPointData* outPd,
@@ -445,7 +444,7 @@ void vtkQuadraticTetra::Derivatives(int vtkNotUsed(subId),
 // Clip this quadratic tetra using the scalar value provided. Like contouring,
 // except that it cuts the tetra to produce other tetra.
 void vtkQuadraticTetra::Clip(double value, vtkDataArray* cellScalars,
-                             vtkPointLocator* locator, vtkCellArray* tetras,
+                             vtkIncrementalPointLocator* locator, vtkCellArray* tetras,
                              vtkPointData* inPd, vtkPointData* outPd,
                              vtkCellData* inCd, vtkIdType cellId,
                              vtkCellData* outCd, int insideOut)

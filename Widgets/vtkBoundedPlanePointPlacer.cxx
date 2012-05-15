@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoundedPlanePointPlacer.cxx,v $
+  Module:    vtkBoundedPlanePointPlacer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,10 +23,9 @@
 #include "vtkLine.h"
 #include "vtkCamera.h"
 
-#include <vtkstd/algorithm>
-#include <vtkstd/vector>
+#include <algorithm>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkBoundedPlanePointPlacer, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkBoundedPlanePointPlacer);
 
 vtkCxxSetObjectMacro(vtkBoundedPlanePointPlacer, ObliquePlane, vtkPlane);
@@ -412,6 +411,15 @@ void vtkBoundedPlanePointPlacer::PrintSelf(ostream& os, vtkIndent indent)
   if ( this->BoundingPlanes )
     {
     this->BoundingPlanes->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << " (none)\n";
+    }
+  os << indent << "Oblique plane:\n";
+  if ( this->ObliquePlane )
+    {
+    this->ObliquePlane->PrintSelf(os,indent.GetNextIndent());
     }
   else
     {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLDataReader.cxx,v $
+  Module:    vtkXMLDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 
 #include "assert.h"
 
-vtkCxxRevisionMacro(vtkXMLDataReader, "$Revision: 1.40 $");
 
 //----------------------------------------------------------------------------
 vtkXMLDataReader::vtkXMLDataReader()
@@ -194,11 +193,13 @@ int vtkXMLDataReader::SetUpdateExtentInfo(vtkXMLDataElement *eDSA,
     {
     vtkXMLDataElement* eNested = eDSA->GetNestedElement(i);
     vtkInformation *info = infoVector->GetInformationObject(i);
-    
+
     double range[2];
     if (eNested->GetScalarAttribute("RangeMin", range[0]) &&
         eNested->GetScalarAttribute("RangeMax", range[1]))
       {
+      info->Set(vtkDataObject::FIELD_ARRAY_NAME(),
+                eNested->GetAttribute("Name"));
       info->Set(vtkDataObject::PIECE_FIELD_RANGE(), range, 2);
       if (piece == 0 && numPieces == 1)
         {
@@ -206,7 +207,7 @@ int vtkXMLDataReader::SetUpdateExtentInfo(vtkXMLDataElement *eDSA,
         }
       }
     }
-  
+
   return 1;
 }
 
@@ -773,6 +774,14 @@ int vtkXMLDataReader::ReadArrayValues(vtkXMLDataElement* da, vtkIdType arrayInde
     {
     iter->Delete();
     }
+  // Marking the array modified is essential, since otherwise, when reading
+  // multiple time-steps, the array does not realize that its contents may have
+  // changed and does not recompute the array ranges.
+  // This becomes an issue only because we reuse the vtkAbstractArray* instance
+  // when reading time-steps. The array is allocated only for the first timestep
+  // read (see vtkXMLReader::ReadXMLData() and its use of
+  // this->TimeStepWasReadOnce flag).
+  array->Modified();
   this->InReadData = 0;
   return result;
 }

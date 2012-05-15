@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPStreamTracer.h,v $
+  Module:    vtkPStreamTracer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,16 +26,16 @@
 
 #include "vtkStreamTracer.h"
 
-#include "vtkSmartPointer.h" // This is a leaf node. No need to
-#include <vtkstd/vector>     // use PIMPL to avoid compile time penalty.
+#include "vtkSmartPointer.h" // This is a leaf node. No need to use PIMPL to avoid compile time penalty.
+#include <vector> // STL Header; Required for vector
 
-class vtkInterpolatedVelocityField;
+class vtkAbstractInterpolatedVelocityField;
 class vtkMultiProcessController;
 
 class VTK_PARALLEL_EXPORT vtkPStreamTracer : public vtkStreamTracer
 {
 public:
-  vtkTypeRevisionMacro(vtkPStreamTracer,vtkStreamTracer);
+  vtkTypeMacro(vtkPStreamTracer,vtkStreamTracer);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -57,8 +57,8 @@ protected:
 
   vtkMultiProcessController* Controller;
 
-  vtkInterpolatedVelocityField* Interpolator;
-  void SetInterpolator(vtkInterpolatedVelocityField*);
+  vtkAbstractInterpolatedVelocityField* Interpolator;
+  void SetInterpolator(vtkAbstractInterpolatedVelocityField*);
 
   // See the implementation for comments
   void SendCellPoint(vtkPolyData* data,
@@ -79,7 +79,7 @@ protected:
   int EmptyData;
 
 //BTX
-  typedef vtkstd::vector< vtkSmartPointer<vtkPolyData> > TmpOutputsType;
+  typedef std::vector< vtkSmartPointer<vtkPolyData> > TmpOutputsType;
 //ETX
 
   TmpOutputsType TmpOutputs;

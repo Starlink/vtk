@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeCompositer.h,v $
+  Module:    vtkTreeCompositer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@ class VTK_PARALLEL_EXPORT vtkTreeCompositer : public vtkCompositer
 {
 public:
   static vtkTreeCompositer *New();
-  vtkTypeRevisionMacro(vtkTreeCompositer,vtkCompositer);
+  vtkTypeMacro(vtkTreeCompositer,vtkCompositer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual void CompositeBuffer(vtkDataArray *pBuf, vtkFloatArray *zBuf,

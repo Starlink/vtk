@@ -7,6 +7,7 @@ set(DOXYGEN "@DOXYGEN@")
 set(DOXYGEN_DOT_EXECUTABLE "@DOXYGEN_DOT_EXECUTABLE@")
 set(HTML_HELP_COMPILER "@HTML_HELP_COMPILER@")
 set(PERL "@PERL@")
+set(DOXYGEN_KEEP_TEMP "@DOXYGEN_KEEP_TEMP@")
 
 # These checks should really be in the CMakeLists.txt file when VTK is
 # configured with BUILD_DOCUMENTATION ON:
@@ -81,27 +82,27 @@ set(INTERMEDIATE_DOX_DIR "${DOXTEMP}/dox")
 #
 set(DATA_ROOT "@VTK_DATA_ROOT@")
 
-# CVSWEB, CVSWEB_SUFFIX, CVSWEB__CHECKOUT, 
-# CVSWEB_DATA, CVSWEB_DATA_SUFFIX, CVSWEB_DATA_CHECKOUT:
-# URL to the CVSWeb of the project + same in checkout mode (i.e. appending a 
+# GITWEB, GITWEB_SUFFIX, GITWEB_CHECKOUT,
+# GITWEB_DATA, GITWEB_DATA_SUFFIX, GITWEB_DATA_CHECKOUT:
+# URL to the GITWeb of the project + same in checkout mode (i.e. appending a
 # file  name to this URL will retrieve the contents of the file). In the same way
-# CVSWEB_SUFFIX will be appended to the result. 
-# Same applies to CVSWEB_DATA, which is the URL to the CVSWeb
+# GITWEB_SUFFIX will be appended to the result.
+# Same applies to GITWEB_DATA, which is the URL to the GITWeb
 # of the Data's project.
 # Example: 
-#   CVSWEB=http://public.kitware.com/cgi-bin/cvsweb.cgi/VTK
-#   CVSWEB_SUFFIX=?cvsroot=VTK
-#   CVSWEB_CHECKOUT=http://public.kitware.com/cgi-bin/cvsweb.cgi/~checkout~/VTK
-#   CVSWEB_DATA=http://public.kitware.com/cgi-bin/cvsweb.cgi/VTKData
-#   CVSWEB_DATA_SUFFIX=?cvsroot=VTK
-#   CVSWEB_DATA_CHECKOUT=http://public.kitware.com/cgi-bin/cvsweb.cgi/~checkout~/VTKData
+#   GITWEB=http://public.kitware.com/cgi-bin/viewcvs.cgi
+#   GITWEB_SUFFIX=?root=VTK
+#   GITWEB_CHECKOUT=http://public.kitware.com/cgi-bin/viewcvs.cgi/*checkout*
+#   GITWEB_DATA=http://public.kitware.com/cgi-bin/viewcvs.cgi
+#   GITWEB_DATA_SUFFIX=?root=VTKData
+#   GITWEB_DATA_CHECKOUT=http://public.kitware.com/cgi-bin/viewcvs.cgi/*checkout*
 #
-set(CVSWEB http://public.kitware.com/cgi-bin/viewcvs.cgi)
-set(CVSWEB_SUFFIX ?root=VTK)
-set(CVSWEB_CHECKOUT http://public.kitware.com/cgi-bin/viewcvs.cgi/*checkout*)
-set(CVSWEB_DATA http://public.kitware.com/cgi-bin/viewcvs.cgi)
-set(CVSWEB_DATA_SUFFIX ?root=VTKData)
-set(CVSWEB_DATA_CHECKOUT http://public.kitware.com/cgi-bin/viewcvs.cgi/*checkout*)
+set(GITWEB http://vtk.org/gitweb) # not used
+set(GITWEB_SUFFIX ) #empty for git ?p=VTK)
+set(GITWEB_CHECKOUT http://vtk.org/gitweb?p=VTK.git;a=blob;f=)
+set(GITWEB_DATA http://vtk.org/gitweb)
+set(GITWEB_DATA_SUFFIX ) # empty for git ?p=VTKData)
+set(GITWEB_DATA_CHECKOUT http://vtk.org/gitweb?p=VTKData.git;a=blob;f=)
 
 # DOXYFILE:
 # Path to the Doxygen configuration file (i.e. doxyfile).
@@ -180,6 +181,8 @@ set(VTK_TAGFILE_DEST_DIR "${DOXTEMP}")
 # rushed edits...
 #
 set(SOURCE_DIRECTORIES
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Charts"
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Chemistry"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Common"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Filtering"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/GenericFiltering"
@@ -193,10 +196,11 @@ set(SOURCE_DIRECTORIES
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Infovis"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/IO"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Parallel"
-  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Widgets"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Rendering"
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/TextAnalysis"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Views"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/VolumeRendering"
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Widgets"
 )
 
 # ----------------------------------------------------------------------------
@@ -235,12 +239,12 @@ foreach(var
   DOXTEMP
   INTERMEDIATE_DOX_DIR
   DATA_ROOT
-  CVSWEB
-  CVSWEB_SUFFIX
-  CVSWEB_CHECKOUT
-  CVSWEB_DATA
-  CVSWEB_DATA_SUFFIX
-  CVSWEB_DATA_CHECKOUT
+  GITWEB
+  GITWEB_SUFFIX
+  GITWEB_CHECKOUT
+  GITWEB_DATA
+  GITWEB_DATA_SUFFIX
+  GITWEB_DATA_CHECKOUT
   DOXYFILE
   OUTPUT_DIRECTORY
   ALLOW_ERASE_OUTPUT_DIRECTORY
@@ -328,19 +332,20 @@ execute_process(COMMAND ${PERL}
   "${PATH_TO_VTK_DOX_SCRIPTS}/doc_class2example.pl"
   --baselinedir "${DATA_ROOT}/Baseline"
   --baselineicon "pic.gif"
-  --baselinelink "${CVSWEB_DATA_CHECKOUT}/Baseline"
-  --baselinelinksuffix "${CVSWEB_DATA_SUFFIX}"
+  --baselinelink "${GITWEB_DATA_CHECKOUT}Baseline"
+  --baselinelinksuffix "${GITWEB_DATA_SUFFIX}"
   --datamatch "\\W(VTK_DATA_ROOT|VTKData|(vtk)?GetDataRoot|ExpandDataFileName)\\W"
   --dataicon "paper-clip.gif"
-  --dirmatch "^Examples\\$"
+  --dirmatch "^Examples$"
   --label "Examples"
-  --link "${CVSWEB_CHECKOUT}"
-  --linksuffix "${CVSWEB_SUFFIX}"
+  --link "${GITWEB_CHECKOUT}"
+  --linksuffix "${GITWEB_SUFFIX}"
   --project "${PROJECT_NAME}"
   --store "doc_${PROJECT_NAME}_class2examples.dox"
   --title "Class To Examples"
   --to "${INTERMEDIATE_DOX_DIR}"
   --unique "e"
+  --remove_leading_slash=1
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}"
   RESULT_VARIABLE rv
 )
@@ -354,19 +359,20 @@ execute_process(COMMAND ${PERL}
   "${PATH_TO_VTK_DOX_SCRIPTS}/doc_class2example.pl"
   --baselinedir "${DATA_ROOT}/Baseline"
   --baselineicon "pic.gif"
-  --baselinelink "${CVSWEB_DATA_CHECKOUT}/Baseline"
-  --baselinelinksuffix "${CVSWEB_DATA_SUFFIX}"
+  --baselinelink "${GITWEB_DATA_CHECKOUT}Baseline"
+  --baselinelinksuffix "${GITWEB_DATA_SUFFIX}"
   --datamatch "\\W(VTK_DATA_ROOT|VTKData|(vtk)?GetDataRoot|ExpandDataFileName)\\W"
   --dataicon "paper-clip.gif"
   --dirmatch "^Testing$"
   --label "Tests"
-  --link "${CVSWEB_CHECKOUT}"
-  --linksuffix "${CVSWEB_SUFFIX}"
+  --link "${GITWEB_CHECKOUT}"
+  --linksuffix "${GITWEB_SUFFIX}"
   --project "${PROJECT_NAME}"
   --store "doc_${PROJECT_NAME}_class2tests.dox"
   --title "Class To Tests"
   --to "${INTERMEDIATE_DOX_DIR}"
   --unique "t"
+  --remove_leading_slash=1
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}"
   RESULT_VARIABLE rv
 )
@@ -467,19 +473,23 @@ endif()
 # ----------------------------------------------------------------------------
 # Clean-up.
 
-step(13 "clean up")
-file(REMOVE_RECURSE "${INTERMEDIATE_DOX_DIR}")
+if(DOXYGEN_KEEP_TEMP)
+  message("Skipping step 13: clean up.")
+else()
+  step(13 "clean up")
+  file(REMOVE_RECURSE "${INTERMEDIATE_DOX_DIR}")
 
-if(DOWNLOAD_VTK_TAGFILE)
-  if(NOT VTK_TAGFILE STREQUAL "")
-    file(REMOVE "${VTK_TAGFILE_DEST_DIR}/${VTK_TAGFILE}")
+  if(DOWNLOAD_VTK_TAGFILE)
+    if(NOT VTK_TAGFILE STREQUAL "")
+      file(REMOVE "${VTK_TAGFILE_DEST_DIR}/${VTK_TAGFILE}")
+   endif()
   endif()
-endif()
 
-if(COMPILE_HTML_HELP)
-  if(NOT RESULTING_HTML_HELP_FILE STREQUAL "")
-    if(ALLOW_ERASE_OUTPUT_DIRECTORY)
-      file(REMOVE_RECURSE "${OUTPUT_DIRECTORY}")
+  if(COMPILE_HTML_HELP)
+    if(NOT RESULTING_HTML_HELP_FILE STREQUAL "")
+      if(ALLOW_ERASE_OUTPUT_DIRECTORY)
+        file(REMOVE_RECURSE "${OUTPUT_DIRECTORY}")
+      endif()
     endif()
   endif()
 endif()

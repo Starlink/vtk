@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLDataParser.h,v $
+  Module:    vtkXMLDataParser.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkDataCompressor;
 class VTK_IO_EXPORT vtkXMLDataParser : public vtkXMLParser
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLDataParser,vtkXMLParser);
+  vtkTypeMacro(vtkXMLDataParser,vtkXMLParser);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkXMLDataParser* New();
 

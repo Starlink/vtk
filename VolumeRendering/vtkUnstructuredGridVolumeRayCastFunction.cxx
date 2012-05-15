@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridVolumeRayCastFunction.cxx,v $
+  Module:    vtkUnstructuredGridVolumeRayCastFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkUnstructuredGridVolumeRayCastFunction.h"
 
-vtkCxxRevisionMacro(vtkUnstructuredGridVolumeRayCastFunction, "$Revision: 1.1 $");
 
 //----------------------------------------------------------------------------
 void vtkUnstructuredGridVolumeRayCastFunction::PrintSelf(ostream& os, vtkIndent indent)

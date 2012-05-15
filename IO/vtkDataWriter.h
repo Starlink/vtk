@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataWriter.h,v $
+  Module:    vtkDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ class vtkTable;
 class VTK_IO_EXPORT vtkDataWriter : public vtkWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkDataWriter,vtkWriter);
+  vtkTypeMacro(vtkDataWriter,vtkWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -68,6 +68,11 @@ public:
     {
       return reinterpret_cast<unsigned char *>(this->OutputString);
     }
+
+  // Description:
+  // When WriteToOutputString is on, this method returns a copy of the
+  // output string in a vtkStdString.
+  vtkStdString GetOutputStdString();
       
   // Description:
   // This convenience method returns the string, sets the IVAR to NULL,

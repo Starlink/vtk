@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphicsFactory.cxx,v $
+  Module:    vtkGraphicsFactory.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,8 @@
 #include "vtkOpenGLClipPlanesPainter.h"
 #include "vtkOpenGLCoincidentTopologyResolutionPainter.h"
 #include "vtkOpenGLDisplayListPainter.h"
-#include "vtkOpenGLImageActor.h"
+#include "vtkOpenGLGlyph3DMapper.h"
+#include "vtkOpenGLImageSliceMapper.h"
 #include "vtkOpenGLLight.h"
 #include "vtkOpenGLLightingPainter.h"
 #include "vtkOpenGLPainterDeviceAdapter.h"
@@ -80,7 +81,7 @@
 #include "vtkMesaClipPlanesPainter.h"
 #include "vtkMesaCoincidentTopologyResolutionPainter.h"
 #include "vtkMesaDisplayListPainter.h"
-#include "vtkMesaImageActor.h"
+#include "vtkMesaImageSliceMapper.h"
 #include "vtkMesaLight.h"
 #include "vtkMesaLightingPainter.h"
 #include "vtkMesaPainterDeviceAdapter.h"
@@ -91,6 +92,18 @@
 #include "vtkMesaScalarsToColorsPainter.h"
 #include "vtkMesaTexture.h"
 #include "vtkXMesaRenderWindow.h"
+#endif
+
+#include "vtkDummyGPUInfoList.h"
+#ifdef VTK_USE_DIRECTX // Windows
+# include "vtkDirectXGPUInfoList.h"
+#else
+# ifdef VTK_USE_CORE_GRAPHICS // Mac
+#  include "vtkCoreGraphicsGPUInfoList.h"
+# endif
+#endif
+#ifdef VTK_USE_NVCONTROL // Linux and X server extensions queries
+# include "vtkXGPUInfoList.h"
 #endif
 
 #include "vtkCriticalSection.h"
@@ -107,7 +120,6 @@ int vtkGraphicsFactory::OffScreenOnlyMode = 1;
 int vtkGraphicsFactory::OffScreenOnlyMode = 0;
 #endif
 
-vtkCxxRevisionMacro(vtkGraphicsFactory, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkGraphicsFactory);
 
 const char *vtkGraphicsFactory::GetRenderLibrary()
@@ -195,6 +207,23 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
     }
 #endif
 
+  if(strcmp(vtkclassname, "vtkGPUInfoList") == 0)
+      {
+#ifdef VTK_USE_DIRECTX // Windows
+      return vtkDirectXGPUInfoList::New();     
+#else
+# ifdef VTK_USE_CORE_GRAPHICS // Mac
+      return vtkCoreGraphicsGPUInfoList::New();
+# else
+#  ifdef VTK_USE_NVCONTROL // X11
+      return vtkXGPUInfoList::New();
+#  else
+      return vtkDummyGPUInfoList::New();
+#  endif
+# endif
+#endif
+      }
+
 #if defined(VTK_USE_OSMESA)
   if(strcmp(vtkclassname, "vtkRenderWindow") == 0)
     {
@@ -202,7 +231,7 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
     }
   if(strcmp(vtkclassname, "vtkRenderWindowInteractor") == 0)
     {
-    return vtkRenderWindowInteractor::New();
+    return 0; // there is no interactor with OSMesa
     }
 #endif
 
@@ -273,15 +302,15 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
 #endif
       return vtkOpenGLCamera::New();
       }
-    if(strcmp(vtkclassname, "vtkImageActor") == 0)
+    if(strcmp(vtkclassname, "vtkImageSliceMapper") == 0)
       {
 #if defined(VTK_USE_MANGLED_MESA)
       if ( vtkGraphicsFactory::UseMesaClasses )
         {
-        return vtkMesaImageActor::New();
+        return vtkMesaImageSliceMapper::New();
         }
 #endif
-      return vtkOpenGLImageActor::New();
+      return vtkOpenGLImageSliceMapper::New();
       }
     if(strcmp(vtkclassname, "vtkLight") == 0)
       {
@@ -396,6 +425,16 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
         }
 #endif
       return vtkOpenGLTexture::New();
+      }
+    if(strcmp(vtkclassname, "vtkGlyph3DMapper") == 0)
+      {
+#if defined(VTK_USE_MANGLED_MESA)
+      if ( vtkGraphicsFactory::UseMesaClasses )
+        {
+        return NULL;
+        }
+#endif
+      return vtkOpenGLGlyph3DMapper::New();
       }
     }
 #endif

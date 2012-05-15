@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkReflectionFilter.h,v $
+  Module:    vtkReflectionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_GRAPHICS_EXPORT vtkReflectionFilter : public vtkDataObjectAlgorithm
 public:
   static vtkReflectionFilter *New();
   
-  vtkTypeRevisionMacro(vtkReflectionFilter, vtkDataObjectAlgorithm);
+  vtkTypeMacro(vtkReflectionFilter, vtkDataObjectAlgorithm);
   void PrintSelf(ostream &os, vtkIndent indent);
   
 //BTX

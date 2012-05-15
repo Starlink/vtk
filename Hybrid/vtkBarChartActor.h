@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBarChartActor.h,v $
+  Module:    vtkBarChartActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,11 +21,11 @@
 // rectangle in which the plot lies.  There are also many other instance
 // variables that control the look of the plot includes its title and legend.
 //
-// Set the text property/attributes of the title and the labels through the 
+// Set the text property/attributes of the title and the labels through the
 // vtkTextProperty objects associated with these components.
 
 // .SECTION See Also
-// vtkParallelCoordinatesActor vtkXYPlotActor2D vtkSpiderPlotActor 
+// vtkParallelCoordinatesActor vtkXYPlotActor vtkSpiderPlotActor
 // vtkPieChartActor
 
 #ifndef __vtkBarChartActor_h
@@ -48,7 +48,7 @@ class VTK_HYBRID_EXPORT vtkBarChartActor : public vtkActor2D
 public:
   // Description:
   // Standard methods for type information and printing.
-  vtkTypeRevisionMacro(vtkBarChartActor,vtkActor2D);
+  vtkTypeMacro(vtkBarChartActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

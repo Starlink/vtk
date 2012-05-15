@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCursor2D.cxx,v $
+  Module:    vtkCursor2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkPolyData.h"
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCursor2D, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkCursor2D);
 
 //---------------------------------------------------------------------------

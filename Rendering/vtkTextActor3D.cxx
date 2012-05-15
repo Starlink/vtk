@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTextActor3D.cxx,v $
+  Module:    vtkTextActor3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkMatrix4x4.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkTextActor3D, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkTextActor3D);
 
 vtkCxxSetObjectMacro(vtkTextActor3D, TextProperty, vtkTextProperty);
@@ -263,17 +262,14 @@ int vtkTextActor3D::UpdateImageActor()
   // Position the actor
   if (this->ImageActor)
     {
-    // Which one is faster ?
-#if 1
-    vtkMatrix4x4 *matrix = vtkMatrix4x4::New();
+    vtkMatrix4x4 *matrix = this->ImageActor->GetUserMatrix();
+    if (!matrix)
+      {
+      matrix = vtkMatrix4x4::New();
+      this->ImageActor->SetUserMatrix(matrix);
+      matrix->Delete();
+      }
     this->GetMatrix(matrix);
-    this->ImageActor->SetUserMatrix(matrix);
-    matrix->Delete();
-#else
-    this->ImageActor->SetPosition(this->GetPosition());
-    this->ImageActor->SetScale(this->GetScale());
-    this->ImageActor->SetOrientation(this->GetOrientation());
-#endif
     }
 
   return 1;

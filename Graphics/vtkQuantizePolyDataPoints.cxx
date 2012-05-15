@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuantizePolyDataPoints.cxx,v $
+  Module:    vtkQuantizePolyDataPoints.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkQuantizePolyDataPoints, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkQuantizePolyDataPoints);
 
 //--------------------------------------------------------------------------

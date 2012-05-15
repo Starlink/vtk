@@ -24,17 +24,17 @@
 #endif
 
 
-#include <vtkstd/map>
-#include <vtkstd/string>
+#include <map>
+#include <string>
 #include <vtksys/SystemTools.hxx>
 
 class vtkShaderCodeLibrary::vtkInternal
 {
 public:
-  vtkstd::map<vtkstd::string, vtkstd::string> Codes;
+  std::map<std::string, std::string> Codes;
   const char* GetShaderCode(const char* name)
     {
-    vtkstd::map<vtkstd::string, vtkstd::string>::iterator iter;
+    std::map<std::string, std::string>::iterator iter;
     iter = this->Codes.find(name);
     if (iter != this->Codes.end())
       {
@@ -55,7 +55,6 @@ vtkShaderCodeLibrary::vtkInternalCleanup::~vtkInternalCleanup()
 
 
 vtkStandardNewMacro(vtkShaderCodeLibrary);
-vtkCxxRevisionMacro(vtkShaderCodeLibrary, "$Revision: 1.4 $");
 //-----------------------------------------------------------------------------
 vtkShaderCodeLibrary::vtkShaderCodeLibrary()
 {

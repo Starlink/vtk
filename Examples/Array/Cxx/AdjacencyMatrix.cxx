@@ -11,7 +11,7 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkViewTheme.h>
 
-int main(int argc, char* argv[])
+int main(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   vtkSmartPointer<vtkDiagonalMatrixSource> source = vtkSmartPointer<vtkDiagonalMatrixSource>::New();
   source->SetExtents(10);
@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
   source->Update();
 
   cout << "adjacency matrix:\n";
-  vtkPrintMatrixFormat(cout, vtkDenseArray<double>::SafeDownCast(source->GetOutput()->GetArray()));
+  vtkPrintMatrixFormat(cout, vtkDenseArray<double>::SafeDownCast(source->GetOutput()->GetArray(0)));
   cout << "\n";
 
   vtkSmartPointer<vtkAdjacencyMatrixToEdgeTable> edges = vtkSmartPointer<vtkAdjacencyMatrixToEdgeTable>::New();
@@ -51,11 +51,9 @@ int main(int argc, char* argv[])
   view->SetEdgeLabelFontSize(18);
   view->VertexLabelVisibilityOn();
 
-  vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
-  window->SetSize(600, 600);
-  view->SetupRenderWindow(window);
-  view->GetRenderer()->ResetCamera();
-  window->GetInteractor()->Start();
+  view->GetRenderWindow()->SetSize(600, 600);
+  view->ResetCamera();
+  view->GetInteractor()->Start();
  
   return 0;
 }

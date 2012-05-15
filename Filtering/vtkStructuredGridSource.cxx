@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredGridSource.cxx,v $
+  Module:    vtkStructuredGridSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkStructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkStructuredGridSource, "$Revision: 1.32 $");
 
 //----------------------------------------------------------------------------
 vtkStructuredGridSource::vtkStructuredGridSource()

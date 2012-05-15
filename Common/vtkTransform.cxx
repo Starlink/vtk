@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransform.cxx,v $
+  Module:    vtkTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 
 #include <stdlib.h>
 
-vtkCxxRevisionMacro(vtkTransform, "$Revision: 1.110 $");
 vtkStandardNewMacro(vtkTransform);
 
 //----------------------------------------------------------------------------
@@ -343,6 +342,7 @@ void vtkTransform::GetOrientation(double orientation[3],
                                   vtkMatrix4x4 *amatrix)
 {
 #define VTK_AXIS_EPSILON 0.001
+#define VTK_ORTHO_EPSILON 4e-16
   int i;
 
   // convenient access to matrix
@@ -362,7 +362,16 @@ void vtkTransform::GetOrientation(double orientation[3],
     ortho[2][2] = -ortho[2][2];
     }
 
-  vtkMath::Orthogonalize3x3(ortho, ortho);
+  // Check whether matrix is orthogonal
+  double r1 = vtkMath::Dot(ortho[0],ortho[1]);
+  double r2 = vtkMath::Dot(ortho[0],ortho[2]);
+  double r3 = vtkMath::Dot(ortho[1],ortho[2]);
+
+  // Orthogonalize the matrix if it isn't already orthogonal
+  if ((r1*r1) + (r2*r2) + (r3*r3) > (VTK_ORTHO_EPSILON*VTK_ORTHO_EPSILON))
+    {
+    vtkMath::Orthogonalize3x3(ortho, ortho);
+    }
 
   // first rotate about y axis
   double x2 = ortho[2][0];

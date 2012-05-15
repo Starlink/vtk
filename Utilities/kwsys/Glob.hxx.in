@@ -1,16 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  KWSys - Kitware System Library
+  Copyright 2000-2009 Kitware, Inc., Insight Software Consortium
 
-  Program:   KWSys - Kitware System Library
-  Module:    $RCSfile: Glob.hxx.in,v $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Kitware, Inc., Insight Consortium.  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifndef @KWSYS_NAMESPACE@_Glob_hxx
 #define @KWSYS_NAMESPACE@_Glob_hxx
 
@@ -79,17 +77,18 @@ public:
       whole strings, but may be disabled to support concatenating
       expressions more easily (regex1|regex2|etc).  */
   static kwsys_stl::string PatternToRegex(const kwsys_stl::string& pattern,
-                                          bool require_whole_string = true);
+                                          bool require_whole_string = true,
+                                          bool preserve_case = false);
 
 protected:
   //! Process directory
   void ProcessDirectory(kwsys_stl::string::size_type start,
-    const kwsys_stl::string& dir, bool dir_only);
+    const kwsys_stl::string& dir);
 
   //! Process last directory, but only when recurse flags is on. That is
   // effectively like saying: /path/to/file/**/file
   void RecurseDirectory(kwsys_stl::string::size_type start,
-    const kwsys_stl::string& dir, bool dir_only);
+    const kwsys_stl::string& dir);
 
   //! Add regular expression
   void AddExpression(const char* expr);

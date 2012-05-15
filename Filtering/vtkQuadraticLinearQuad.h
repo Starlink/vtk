@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticLinearQuad.h,v $
+  Module:    vtkQuadraticLinearQuad.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_FILTERING_EXPORT vtkQuadraticLinearQuad : public vtkNonLinearCell
 {
 public:
   static vtkQuadraticLinearQuad *New();
-  vtkTypeRevisionMacro(vtkQuadraticLinearQuad, vtkNonLinearCell);
+  vtkTypeMacro(vtkQuadraticLinearQuad, vtkNonLinearCell);
   void PrintSelf(ostream & os, vtkIndent indent);
 
   // Description:
@@ -59,7 +59,7 @@ public:
 
   int CellBoundary (int subId, double pcoords[3], vtkIdList * pts);
   void Contour (double value, vtkDataArray * cellScalars,
-    vtkPointLocator * locator, vtkCellArray * verts,
+    vtkIncrementalPointLocator * locator, vtkCellArray * verts,
     vtkCellArray * lines, vtkCellArray * polys,
     vtkPointData * inPd, vtkPointData * outPd, vtkCellData * inCd,
     vtkIdType cellId, vtkCellData * outCd);
@@ -76,7 +76,7 @@ public:
   // Clip this quadratic linear quad using scalar value provided. Like
   // contouring, except that it cuts the quad to produce linear triangles.
   void Clip (double value, vtkDataArray * cellScalars,
-       vtkPointLocator * locator, vtkCellArray * polys,
+       vtkIncrementalPointLocator * locator, vtkCellArray * polys,
        vtkPointData * inPd, vtkPointData * outPd,
        vtkCellData * inCd, vtkIdType cellId, vtkCellData * outCd,
        int insideOut);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLTreeReader.cxx,v $
+  Module:    vtkXMLTreeReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,6 @@
 #include VTKLIBXML2_HEADER(parser.h)
 #include VTKLIBXML2_HEADER(tree.h)
 
-vtkCxxRevisionMacro(vtkXMLTreeReader, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkXMLTreeReader);
 
 const char * vtkXMLTreeReader::TagNameField = ".tagname";
@@ -224,6 +223,8 @@ int vtkXMLTreeReader::RequestData(
   // Get the root element node
   xmlNode *rootElement = xmlDocGetRootElement(doc);
   vtkXMLTreeReaderProcessElement(builder, -1, rootElement, this->ReadCharData, this->MaskArrays);
+
+  xmlFreeDoc(doc);
 
   // Make all the arrays the same size
   for (int i = 0; i < data->GetNumberOfArrays(); i++)

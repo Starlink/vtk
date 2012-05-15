@@ -29,7 +29,6 @@
 #include <vtkQtTableView.h>
 #include <vtkRenderer.h>
 #include <vtkSelection.h>
-#include <vtkSelectionLink.h>
 #include <vtkTable.h>
 #include <vtkViewTheme.h>
 #include <vtkViewUpdater.h>
@@ -55,11 +54,17 @@ StatsView::StatsView()
   this->TableView4 = vtkSmartPointer<vtkQtTableView>::New();
   
   // Set widgets for the tree and table views
-  this->TableView1->SetItemView(this->ui->tableView1);
-  this->TableView2->SetItemView(this->ui->tableView2);
-  this->TableView3->SetItemView(this->ui->tableView3);
-  this->TableView4->SetItemView(this->ui->tableView4);
-  
+  this->ui->tableFrame1->layout()->addWidget(this->TableView1->GetWidget());
+  this->ui->tableFrame2->layout()->addWidget(this->TableView2->GetWidget());
+  this->ui->tableFrame3->layout()->addWidget(this->TableView3->GetWidget());
+  this->ui->tableFrame4->layout()->addWidget(this->TableView4->GetWidget());
+
+  // Tweak the layout so we have a good out-of-box experience
+  const int window_width = this->width();
+  int left_column = static_cast<int>(window_width * 0.7);
+  int right_column = static_cast<int>(window_width * 0.3);
+  this->ui->splitter->setSizes(QList<int>() << left_column << right_column << 0);
+
   // Set up action signals and slots
   connect(this->ui->actionOpenSQLiteDB, SIGNAL(triggered()), this, SLOT(slotOpenSQLiteDB()));
 };
@@ -129,7 +134,7 @@ void StatsView::slotOpenSQLiteDB()
   VTK_CREATE(vtkCorrelativeStatistics,correlative);
   correlative->SetInputConnection( 0, this->RowQueryToTable->GetOutputPort() );
   correlative->AddColumnPair( "Temp1", "Temp2" );
-  correlative->SetAssess( true );
+  correlative->SetAssessOption( true );
   correlative->Update();
 
   // Assign tables to table views
@@ -153,6 +158,12 @@ void StatsView::slotOpenSQLiteDB()
   VTK_CREATE(vtkTable,correlativeC);
   correlativeC->ShallowCopy( correlative->GetOutput( 0 ) );
   this->TableView4->SetRepresentationFromInput( correlativeC );
+
+  // All views need to be updated
+  this->TableView1->Update();
+  this->TableView2->Update();
+  this->TableView3->Update();
+  this->TableView4->Update();
 
   // Clean up 
   query->Delete();

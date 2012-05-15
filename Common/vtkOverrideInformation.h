@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOverrideInformation.h,v $
+  Module:    vtkOverrideInformation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_COMMON_EXPORT vtkOverrideInformation : public vtkObject
 {
 public: 
   static vtkOverrideInformation* New();
-  vtkTypeRevisionMacro(vtkOverrideInformation,vtkObject);
+  vtkTypeMacro(vtkOverrideInformation,vtkObject);
   // Description:
   // Print ObjectFactor to stream.
   virtual void PrintSelf(ostream& os, vtkIndent indent);

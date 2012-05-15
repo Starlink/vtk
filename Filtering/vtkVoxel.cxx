@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVoxel.cxx,v $
+  Module:    vtkVoxel.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,11 +21,11 @@
 #include "vtkObjectFactory.h"
 #include "vtkPixel.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkPoints.h"
 #include "vtkBox.h"
+#include "vtkMarchingCubesTriangleCases.h"
 
-vtkCxxRevisionMacro(vtkVoxel, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkVoxel);
 
 //----------------------------------------------------------------------------
@@ -44,15 +44,21 @@ vtkVoxel::vtkVoxel()
     {
     this->PointIds->SetId(i,0);
     }
-  this->Line = vtkLine::New();
-  this->Pixel = vtkPixel::New();
+  this->Line = 0;
+  this->Pixel = 0;
 }
 
 //----------------------------------------------------------------------------
 vtkVoxel::~vtkVoxel()
 {
-  this->Line->Delete();
-  this->Pixel->Delete();
+  if (this->Line)
+    {
+    this->Line->Delete();
+    }
+  if (this->Pixel)
+    {
+    this->Pixel->Delete();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -295,7 +301,7 @@ static int faces[6][4] = { {2,0,6,4}, {1,3,5,7},
 #include "vtkMarchingCubesCases.h"
 
 void vtkVoxel::Contour(double value, vtkDataArray *cellScalars, 
-                       vtkPointLocator *locator,
+                       vtkIncrementalPointLocator *locator,
                        vtkCellArray *verts, 
                        vtkCellArray *lines, 
                        vtkCellArray *polys,
@@ -369,8 +375,13 @@ int *vtkVoxel::GetEdgeArray(int edgeId)
 //----------------------------------------------------------------------------
 vtkCell *vtkVoxel::GetEdge(int edgeId)
 {
+  if (!this->Line)
+    {
+    this->Line = vtkLine::New();
+    }
+
   int *verts;
-  
+
   verts = edges[edgeId];
 
   // load point id's
@@ -393,6 +404,11 @@ int *vtkVoxel::GetFaceArray(int faceId)
 //----------------------------------------------------------------------------
 vtkCell *vtkVoxel::GetFace(int faceId)
 {
+  if (!this->Pixel)
+    {
+    this->Pixel = vtkPixel::New();
+    }
+
   int *verts, i;
 
   verts = faces[faceId];
@@ -602,7 +618,21 @@ void vtkVoxel::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
   
   os << indent << "Line:\n";
-  this->Line->PrintSelf(os,indent.GetNextIndent());
+  if (this->Line)
+    {
+    this->Line->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << "None\n";
+    }
   os << indent << "Pixel:\n";
-  this->Pixel->PrintSelf(os,indent.GetNextIndent());
+  if (this->Pixel)
+    {
+    this->Pixel->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << "None\n";
+    }
 }

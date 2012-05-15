@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkGenericGlyph3DFilter.cxx,v $
+Module:    vtkGenericGlyph3DFilter.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -35,7 +35,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTransform.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkGenericGlyph3DFilter, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkGenericGlyph3DFilter);
 
 // Construct object with scaling on, scaling mode is by scalar value,
@@ -527,7 +526,7 @@ int vtkGenericGlyph3DFilter::RequestData(
     // ghostLevel > 0.  I am leaving this over glyphing here because
     // it make a nice example (sphereGhost.tcl) to show the 
     // point ghost levels with the glyph filter.  I am not certain 
-    // of the usefullness of point ghost levels over 1, but I will have
+    // of the usefulness of point ghost levels over 1, but I will have
     // to think about it.
     if (inGhostLevels && inGhostLevels[inPtId] > requestedGhostLevel)
       {

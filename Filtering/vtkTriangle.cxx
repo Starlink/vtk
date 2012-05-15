@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTriangle.cxx,v $
+  Module:    vtkTriangle.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,12 +21,11 @@
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkPoints.h"
 #include "vtkPolygon.h"
 #include "vtkQuadric.h"
 
-vtkCxxRevisionMacro(vtkTriangle, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkTriangle);
 
 //----------------------------------------------------------------------------
@@ -47,6 +46,21 @@ vtkTriangle::vtkTriangle()
 vtkTriangle::~vtkTriangle()
 {
   this->Line->Delete();
+}
+
+//----------------------------------------------------------------------------
+// This function simply calls the static function:
+// vtkTriangle::TriangleArea(double p1[3], double p2[3], double p3[3])
+// with the appropriate parameters from the instantiated vtkTriangle.
+double vtkTriangle::ComputeArea()
+{
+  double p0[3];
+  double p1[3];
+  double p2[3];
+  this->GetPoints()->GetPoint(0, p0);
+  this->GetPoints()->GetPoint(1, p1);
+  this->GetPoints()->GetPoint(2, p2);
+  return vtkTriangle::TriangleArea(p0, p1, p2);
 }
 
 
@@ -365,7 +379,7 @@ int *vtkTriangle::GetEdgeArray(int edgeId)
 
 //----------------------------------------------------------------------------
 void vtkTriangle::Contour(double value, vtkDataArray *cellScalars, 
-                          vtkPointLocator *locator,
+                          vtkIncrementalPointLocator *locator,
                           vtkCellArray *verts, 
                           vtkCellArray *lines, 
                           vtkCellArray *vtkNotUsed(polys), 
@@ -836,7 +850,7 @@ static TRIANGLE_CASES triangleCases[] = {
 // Clip this triangle using scalar value provided. Like contouring, except
 // that it cuts the triangle to produce other triangles.
 void vtkTriangle::Clip(double value, vtkDataArray *cellScalars, 
-                       vtkPointLocator *locator, vtkCellArray *tris,
+                       vtkIncrementalPointLocator *locator, vtkCellArray *tris,
                        vtkPointData *inPd, vtkPointData *outPd,
                        vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
                        int insideOut)

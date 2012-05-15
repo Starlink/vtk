@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestRenderView.cxx,v $
+  Module:    TestRenderView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,16 +18,16 @@
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
+#include "vtkAnnotationLink.h"
 #include "vtkCommand.h"
 #include "vtkCubeSource.h"
 #include "vtkInteractorEventRecorder.h"
-#include "vtkSurfaceRepresentation.h"
+#include "vtkRenderedSurfaceRepresentation.h"
 #include "vtkRenderView.h"
 #include "vtkRegressionTestImage.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkSelectionLink.h"
 #include "vtkSphereSource.h"
 #include "vtkTestUtilities.h"
 #include "vtkTransform.h"
@@ -297,13 +297,13 @@ char RenderViewEventLog[] =
 "MouseMoveEvent 39 207 0 0 0 0 0\n"
 "MouseMoveEvent 39 208 0 0 0 0 0\n"
 "MouseMoveEvent 39 209 0 0 0 0 0\n"
-"LeftButtonPressEvent 39 209 0 0 0 0 0\n"
-"StartInteractionEvent 39 209 0 0 0 0 0\n"
-"MouseMoveEvent 40 207 0 0 0 0 0\n"
-"MouseMoveEvent 42 205 0 0 0 0 0\n"
-"MouseMoveEvent 45 200 0 0 0 0 0\n"
-"MouseMoveEvent 50 196 0 0 0 0 0\n"
-"MouseMoveEvent 55 191 0 0 0 0 0\n"
+"LeftButtonPressEvent 39 190 0 0 0 0 0\n"
+"StartInteractionEvent 39 190 0 0 0 0 0\n"
+"MouseMoveEvent 40 190 0 0 0 0 0\n"
+"MouseMoveEvent 42 190 0 0 0 0 0\n"
+"MouseMoveEvent 45 190 0 0 0 0 0\n"
+"MouseMoveEvent 50 190 0 0 0 0 0\n"
+"MouseMoveEvent 55 190 0 0 0 0 0\n"
 "MouseMoveEvent 62 186 0 0 0 0 0\n"
 "MouseMoveEvent 68 181 0 0 0 0 0\n"
 "MouseMoveEvent 78 174 0 0 0 0 0\n"
@@ -1068,7 +1068,7 @@ char RenderViewEventLog[] =
 
 int TestRenderView(int argc, char* argv[])
 {
-  VTK_CREATE(vtkSelectionLink, link);
+  VTK_CREATE(vtkAnnotationLink, link);
   VTK_CREATE(TestRenderViewUpdater, updater);
   
   VTK_CREATE(vtkSphereSource, sphere);
@@ -1082,32 +1082,30 @@ int TestRenderView(int argc, char* argv[])
   transform->SetInputConnection(sphere->GetOutputPort());
   
   // Render view 1
-  VTK_CREATE(vtkRenderWindow, win);
-  VTK_CREATE(vtkRenderWindowInteractor, iren);
-  iren->SetRenderWindow(win);
   VTK_CREATE(vtkRenderView, view);
-  view->SetupRenderWindow(win);
+  view->DisplayHoverTextOff();
+  view->GetRenderWindow()->SetMultiSamples(0);
   updater->AddView(view);
   
   // Sphere 1
-  VTK_CREATE(vtkSurfaceRepresentation, sphereRep1);
+  VTK_CREATE(vtkRenderedSurfaceRepresentation, sphereRep1);
   sphereRep1->SetInputConnection(sphere->GetOutputPort());
-  sphereRep1->SetSelectionLink(link);
+  sphereRep1->SetAnnotationLink(link);
   view->AddRepresentation(sphereRep1);
   view->Update();
   
   // Cube 1
-  VTK_CREATE(vtkSurfaceRepresentation, cubeRep1);
+  VTK_CREATE(vtkRenderedSurfaceRepresentation, cubeRep1);
   cubeRep1->SetInputConnection(cube->GetOutputPort());
   view->AddRepresentation(cubeRep1);
   view->Update();
 
-  view->GetRenderer()->ResetCamera();
-  view->Update();
+  view->ResetCamera();
+  view->GetRenderer()->GradientBackgroundOff();
 
   // record events
   VTK_CREATE(vtkInteractorEventRecorder, recorder);
-  recorder->SetInteractor(iren);
+  recorder->SetInteractor(view->GetInteractor());
 #ifdef RECORD
   recorder->SetFileName("record.log");
   recorder->SetEnabled(true);
@@ -1120,8 +1118,8 @@ int TestRenderView(int argc, char* argv[])
   // interact with data
   // render the image
   //
-  iren->Initialize();
-  win->Render();
+  view->GetInteractor()->Initialize();
+  view->Render();
 #ifdef RECORD
 #else
   recorder->Play();
@@ -1131,38 +1129,32 @@ int TestRenderView(int argc, char* argv[])
   recorder->Off();
 #endif
   
-  int retVal = vtkRegressionTestImage(win);
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
     // If interactive, make a second view to play with.
     
     // Render view 2
-    VTK_CREATE(vtkRenderWindow, win2);
-    VTK_CREATE(vtkRenderWindowInteractor, iren2);
-    iren2->SetRenderWindow(win2);
     VTK_CREATE(vtkRenderView, view2);
-    view2->SetupRenderWindow(win2);
     updater->AddView(view2);
     
     // Sphere 2
-    VTK_CREATE(vtkSurfaceRepresentation, sphereRep2);
+    VTK_CREATE(vtkRenderedSurfaceRepresentation, sphereRep2);
     sphereRep2->SetInputConnection(sphere->GetOutputPort());
-    sphereRep2->SetSelectionLink(link);
+    sphereRep2->SetAnnotationLink(link);
     view2->AddRepresentation(sphereRep2);
     view2->Update();
     
     // Sphere 3
-    VTK_CREATE(vtkSurfaceRepresentation, sphereRep3);
+    VTK_CREATE(vtkRenderedSurfaceRepresentation, sphereRep3);
     sphereRep3->SetInputConnection(transform->GetOutputPort());
-    sphereRep3->SetSelectionLink(link);
+    sphereRep3->SetAnnotationLink(link);
     view2->AddRepresentation(sphereRep3);
-    view2->Update();
     
-    view2->GetRenderer()->ResetCamera();
-    view2->Update();
+    view2->ResetCamera();
     
-    iren->Initialize();
-    iren->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
     retVal = vtkRegressionTester::PASSED;
     }
   

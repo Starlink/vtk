@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimerLog.h,v $
+  Module:    vtkTimerLog.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -76,7 +76,7 @@ class VTK_COMMON_EXPORT vtkTimerLog : public vtkObject
 public:
   static vtkTimerLog *New();
 
-  vtkTypeRevisionMacro(vtkTimerLog,vtkObject);
+  vtkTypeMacro(vtkTimerLog,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

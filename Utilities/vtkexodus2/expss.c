@@ -47,7 +47,6 @@
 *
 * revision history - 
 *
-*  $Id: expss.c,v 1.4 2009-01-16 14:32:01 utkarsh Exp $
 *
 *****************************************************************************/
 
@@ -69,5 +68,5 @@ int ex_put_side_set (int   exoid,
                      const int  *side_set_side_list)
 {
   return ex_put_set(exoid, EX_SIDE_SET, side_set_id,
-		    side_set_elem_list, side_set_side_list);
+        side_set_elem_list, side_set_side_list);
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSeedRepresentation.cxx,v $
+  Module:    vtkSeedRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,17 +24,16 @@
 #include "vtkProperty2D.h"
 #include "vtkRenderer.h"
 #include "vtkTextProperty.h"
-#include <vtkstd/iterator>
-#include <vtkstd/list>
+#include <iterator>
+#include <list>
 
-vtkCxxRevisionMacro(vtkSeedRepresentation, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkSeedRepresentation);
 
 vtkCxxSetObjectMacro(vtkSeedRepresentation,HandleRepresentation,vtkHandleRepresentation);
 
 // The vtkHandleList is a PIMPLed list<T>.
-class vtkHandleList : public vtkstd::list<vtkHandleRepresentation*> {};
-typedef vtkstd::list<vtkHandleRepresentation*>::iterator vtkHandleListIterator;
+class vtkHandleList : public std::list<vtkHandleRepresentation*> {};
+typedef std::list<vtkHandleRepresentation*>::iterator vtkHandleListIterator;
 
 
 //----------------------------------------------------------------------
@@ -67,18 +66,24 @@ vtkSeedRepresentation::~vtkSeedRepresentation()
 }
 
 //----------------------------------------------------------------------
-vtkHandleRepresentation *vtkSeedRepresentation::GetHandleRepresentation(unsigned int num)
+vtkHandleRepresentation *vtkSeedRepresentation
+::GetHandleRepresentation(unsigned int num)
 {
   if ( num < this->Handles->size() )
     {
     vtkHandleListIterator iter = this->Handles->begin();
-    vtkstd::advance(iter,num);
+    std::advance(iter,num);
     return (*iter);
     }
   else //create one
     {
+    if (this->HandleRepresentation == NULL)
+      {
+      vtkErrorMacro("GetHandleRepresentation " << num << ", no handle representation has been set yet, cannot create a new handle.");
+      return NULL;
+      }
     vtkHandleRepresentation *rep = this->HandleRepresentation->NewInstance();
-    rep->ShallowCopy(this->HandleRepresentation);
+    rep->DeepCopy(this->HandleRepresentation);
     this->Handles->push_back( rep );
     return rep;
     }
@@ -93,7 +98,7 @@ void vtkSeedRepresentation::GetSeedWorldPosition(unsigned int seedNum, double po
     return;
     }
   vtkHandleListIterator iter = this->Handles->begin();
-  vtkstd::advance(iter,seedNum);
+  std::advance(iter,seedNum);
   (*iter)->GetWorldPosition(pos);
 }
 
@@ -106,7 +111,7 @@ void vtkSeedRepresentation::SetSeedDisplayPosition(unsigned int seedNum, double 
     return;
     }
   vtkHandleListIterator iter = this->Handles->begin();
-  vtkstd::advance(iter,seedNum);
+  std::advance(iter,seedNum);
   (*iter)->SetDisplayPosition(pos);
 }
 
@@ -119,7 +124,7 @@ void vtkSeedRepresentation::GetSeedDisplayPosition(unsigned int seedNum, double 
     return;
     }
   vtkHandleListIterator iter = this->Handles->begin();
-  vtkstd::advance(iter,seedNum);
+  std::advance(iter,seedNum);
   (*iter)->GetDisplayPosition(pos);
 }
 
@@ -130,26 +135,20 @@ int vtkSeedRepresentation::GetNumberOfSeeds()
 }
 
 //----------------------------------------------------------------------
-int vtkSeedRepresentation::ComputeInteractionState(int X, int Y, int vtkNotUsed(modify))
+int vtkSeedRepresentation::
+ComputeInteractionState(int vtkNotUsed(X), int vtkNotUsed(Y), int vtkNotUsed(modify))
 {
   // Loop over all the seeds to see if the point is close to any of them.
-  double xyz[3], pos[3];
-  double tol2 = this->Tolerance*this->Tolerance;
-  xyz[0] = static_cast<double>(X);
-  xyz[1] = static_cast<double>(Y);
-  xyz[2] = 0.0;
-
   int i;
   vtkHandleListIterator iter;
   for ( i = 0, iter = this->Handles->begin(); iter != this->Handles->end(); ++iter, ++i )
     {
     if ( *iter != NULL )
       {
-      (*iter)->GetDisplayPosition(pos);
-      if ( vtkMath::Distance2BetweenPoints(xyz,pos) <= tol2 )
+      if ( (*iter)->GetInteractionState() != vtkHandleRepresentation::Outside )
         {
-        this->InteractionState = vtkSeedRepresentation::NearSeed;
         this->ActiveHandle = i;
+        this->InteractionState = vtkSeedRepresentation::NearSeed;
         return this->InteractionState;
         }
       }
@@ -176,7 +175,13 @@ int vtkSeedRepresentation::CreateHandle(double e[2])
 
   vtkHandleRepresentation *rep = this->GetHandleRepresentation(
     static_cast<int>(this->Handles->size()));
+  if (rep == NULL)
+    {
+    vtkErrorMacro("CreateHandle: no handle representation set yet! Cannot create a new handle.");
+    return -1;
+    }
   rep->SetDisplayPosition(pos);
+  rep->SetTolerance(this->Tolerance); //needed to ensure that picking is consistent
   this->ActiveHandle = static_cast<int>(this->Handles->size()) - 1;
   return this->ActiveHandle;
 }
@@ -195,6 +200,29 @@ void vtkSeedRepresentation::RemoveLastHandle()
 }
 
 //----------------------------------------------------------------------
+void vtkSeedRepresentation::RemoveHandle( int n )
+{
+  // Remove nth handle
+  
+  if (n == this->ActiveHandle)
+    {
+    this->RemoveActiveHandle();
+    return;
+    }
+
+  if (static_cast<int>(this->Handles->size()) <= n )
+    {
+    return;
+    }
+
+  vtkHandleListIterator iter = this->Handles->begin();
+  std::advance( iter, n );
+  vtkHandleRepresentation *hr = *iter;
+  this->Handles->erase( iter );
+  hr->Delete();
+}
+
+//----------------------------------------------------------------------
 void vtkSeedRepresentation::RemoveActiveHandle()
 {
   if ( this->Handles->size() < 1 )
@@ -204,9 +232,10 @@ void vtkSeedRepresentation::RemoveActiveHandle()
   if ( this->ActiveHandle >= 0 && this->ActiveHandle < static_cast<int>(this->Handles->size()) )
     {
     vtkHandleListIterator iter = this->Handles->begin();
-    vtkstd::advance( iter, this->ActiveHandle );
+    std::advance( iter, this->ActiveHandle );
+    vtkHandleRepresentation *hr = *iter;
     this->Handles->erase( iter );
-    ( *iter )->Delete();
+    hr->Delete();
     this->ActiveHandle = -1;
     }
 }

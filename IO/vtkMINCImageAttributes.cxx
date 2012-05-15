@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageAttributes.cxx,v $
+  Module:    vtkMINCImageAttributes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,13 +62,13 @@ POSSIBILITY OF SUCH DAMAGES.
 #include "vtkSmartPointer.h"
 
 #include "vtkMINC.h"
-#include "vtknetcdf/netcdf.h"
+#include "vtk_netcdf.h"
 
 #include <stdlib.h>
 #include <ctype.h>
 #include <float.h>
-#include <vtkstd/string>
-#include <vtkstd/map>
+#include <string>
+#include <map>
 #include <vtksys/ios/sstream>
 
 //-------------------------------------------------------------------------
@@ -76,7 +76,7 @@ POSSIBILITY OF SUCH DAMAGES.
 class vtkMINCImageAttributeMap
 {
 public:
-  typedef vtkstd::map<vtkstd::string, vtkSmartPointer<vtkObject> > MapType;
+  typedef std::map<std::string, vtkSmartPointer<vtkObject> > MapType;
 
   static vtkMINCImageAttributeMap *New() {
     return new vtkMINCImageAttributeMap; };
@@ -122,7 +122,6 @@ private:
 };
 
 //--------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMINCImageAttributes, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkMINCImageAttributes);
 
 vtkCxxSetObjectMacro(vtkMINCImageAttributes,ImageMin,vtkDoubleArray);
@@ -152,6 +151,8 @@ vtkMINCImageAttributes::vtkMINCImageAttributes()
 
   this->Name = 0;
   this->DataType = VTK_VOID;
+
+  this->ValidateAttributes = 1;
 }
 
 //-------------------------------------------------------------------------
@@ -216,6 +217,8 @@ void vtkMINCImageAttributes::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "ImageMax: " << this->ImageMax << "\n";
   os << indent << "NumberOfImageMinMaxDimensions: " 
      << this->NumberOfImageMinMaxDimensions << "\n";
+  os << indent << "ValidateAttributes: "
+     << (this->ValidateAttributes ? "On\n" : "Off\n");
 }
 
 //-------------------------------------------------------------------------
@@ -341,7 +344,7 @@ const char *vtkMINCImageAttributes::ConvertDataArrayToString(
     }
 
     // Store the string
-    vtkstd::string str = os.str();
+    std::string str = os.str();
     const char *result = 0;
 
     if (this->StringStore == 0)
@@ -665,7 +668,7 @@ vtkDataArray *vtkMINCImageAttributes::GetAttributeValueAsArray(
   const char *variable,
   const char *attribute)
 {
-  vtkstd::string path = MI_GRPNAME;
+  std::string path = MI_GRPNAME;
   if (variable && variable[0] != '\0')
     {
     path += MI_GRP_SEP;
@@ -798,7 +801,7 @@ void vtkMINCImageAttributes::SetAttributeValueAsArray(
   const char *attribute,
   vtkDataArray *array)
 {
-  vtkstd::string path = MI_GRPNAME;
+  std::string path = MI_GRPNAME;
   if (variable && variable[0] != '\0')
     {
     path += MI_GRP_SEP;
@@ -850,8 +853,17 @@ void vtkMINCImageAttributes::SetAttributeValueAsArray(
     attribs->InsertNextValue(attribute);
     }
 
-  // Print warning if there is something wrong with the attribute
-  this->ValidateAttribute(variable, attribute, array);
+  if (this->ValidateAttributes)
+    {
+    // Print warning if there is something wrong with the attribute
+    int result = this->ValidateAttribute(variable, attribute, array);
+
+    if (result > 1)
+      {
+      vtkWarningMacro("Attribute " << variable << ":" << attribute
+                      << " is not a valid attribute.");
+      }
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -1366,12 +1378,6 @@ int vtkMINCImageAttributes::ValidateAttribute(
       }
     }
   
-  if (result > 1)
-    {
-    vtkWarningMacro("Attribute " << varname << ":" << attname
-                    << " is not a valid attribute.");
-    }
-
   return result;
 }
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMutableGraphHelper.h,v $
+  Module:    vtkMutableGraphHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_INFOVIS_EXPORT vtkMutableGraphHelper : public vtkObject
 {
 public:
   static vtkMutableGraphHelper *New();
-  vtkTypeRevisionMacro(vtkMutableGraphHelper, vtkObject);
+  vtkTypeMacro(vtkMutableGraphHelper, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -54,16 +54,32 @@ public:
   void SetGraph(vtkGraph* g);
   vtkGraph* GetGraph();
 
+//BTX
   // Description:
   // Add an edge to the underlying mutable graph.
-  //BTX
   vtkEdgeType AddEdge(vtkIdType u, vtkIdType v);
-  //ETX
+//ETX
   vtkGraphEdge* AddGraphEdge(vtkIdType u, vtkIdType v);
 
   // Description:
   // Add a vertex to the underlying mutable graph.
   vtkIdType AddVertex();
+
+  // Description:
+  // Remove a vertex from the underlying mutable graph.
+  void RemoveVertex(vtkIdType v);
+
+  // Description:
+  // Remove a collection of vertices from the underlying mutable graph.
+  void RemoveVertices(vtkIdTypeArray* verts);
+
+  // Description:
+  // Remove an edge from the underlying mutable graph.
+  void RemoveEdge(vtkIdType e);
+
+  // Description:
+  // Remove a collection of edges from the underlying mutable graph.
+  void RemoveEdges(vtkIdTypeArray* edges);
 
 protected:
   vtkMutableGraphHelper();

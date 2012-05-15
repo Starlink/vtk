@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericGeometryFilter.cxx,v $
+  Module:    vtkGenericGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,11 +38,12 @@
 #include "vtkGenericAttributeCollection.h"
 #include "vtkGenericAttribute.h"
 #include "vtkGenericCellTessellator.h"
+#include "vtkIncrementalPointLocator.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkGenericGeometryFilter, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkGenericGeometryFilter);
 
-vtkCxxSetObjectMacro(vtkGenericGeometryFilter,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkGenericGeometryFilter,Locator,vtkIncrementalPointLocator);
 //----------------------------------------------------------------------------
 // Construct with all types of clipping turned off.
 vtkGenericGeometryFilter::vtkGenericGeometryFilter()
@@ -288,7 +289,7 @@ int vtkGenericGeometryFilter::RequestData(
       }
     }
   
-  vtkPointLocator *locator = 0;
+  vtkIncrementalPointLocator *locator = 0;
   if ( this->Merging )
     {
     if ( this->Locator == NULL )
@@ -487,30 +488,34 @@ unsigned long int vtkGenericGeometryFilter::GetMTime()
 //----------------------------------------------------------------------------
 int vtkGenericGeometryFilter::RequestUpdateExtent(
   vtkInformation *vtkNotUsed(request),
-  vtkInformationVector **vtkNotUsed(inputVector),
+  vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
   // get the info objects
-//  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  int piece, numPieces;
-  
-  if (this->GetInput() == NULL)
-    {
-    vtkErrorMacro("No Input");
-    return 1;
-    }
-  
-  vtkPolyData *output = vtkPolyData::SafeDownCast(
-    outInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
-  piece = output->GetUpdatePiece();
-  numPieces = output->GetUpdateNumberOfPieces();
-  
-  this->GetInput()->SetUpdateExtent(piece, numPieces, 0);
+  int piece, numPieces, ghostLevels;
 
-  this->GetInput()->RequestExactExtentOn();
+  piece =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
+  numPieces =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
+  ghostLevels =
+    outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS());
+
+  if (numPieces > 1)
+    {
+    ++ghostLevels;
+    }
+
+  inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(), piece);
+  inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
+              numPieces);
+  inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
+              ghostLevels);
+  inInfo->Set(vtkStreamingDemandDrivenPipeline::EXACT_EXTENT(), 1);
+
   return 1;
 }
 

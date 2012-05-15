@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestVariantSerialization.cxx,v $
+  Module:    TestVariantSerialization.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,14 +45,14 @@ int TestVariantSerialization(int vtkNotUsed(argc), char* vtkNotUsed(argv)[])
   sourceArray->SetValue(5, 42l);
 
   // Serialize the array
-  vtkstd::ostringstream out_stream;
+  std::ostringstream out_stream;
   boost::archive::text_oarchive out(out_stream);
   out << static_cast<const vtkVariantArray&>(*sourceArray);
 
   // De-serialize the array
   vtkSmartPointer<vtkVariantArray> sinkArray 
     =  vtkSmartPointer<vtkVariantArray>::New();
-  vtkstd::istringstream in_stream(out_stream.str());
+  std::istringstream in_stream(out_stream.str());
   boost::archive::text_iarchive in(in_stream);
   in >> *sinkArray;
 

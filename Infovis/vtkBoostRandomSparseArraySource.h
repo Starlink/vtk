@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostRandomSparseArraySource.h,v $
+  Module:    vtkBoostRandomSparseArraySource.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,33 +19,33 @@
 
 =========================================================================*/
 
+// .NAME vtkBoostRandomSparseArraySource - generates a sparse N-way array containing random values.
+//
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
 #ifndef __vtkBoostRandomSparseArraySource_h
 #define __vtkBoostRandomSparseArraySource_h
 
 #include "vtkArrayDataAlgorithm.h"
 #include "vtkArrayExtents.h"
 
-// .NAME vtkBoostRandomSparseArraySource - generates a sparse N-way array containing random values.
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
 class VTK_INFOVIS_EXPORT vtkBoostRandomSparseArraySource : public vtkArrayDataAlgorithm
 {
 public:
   static vtkBoostRandomSparseArraySource* New();
-  vtkTypeRevisionMacro(vtkBoostRandomSparseArraySource, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkBoostRandomSparseArraySource, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX
   // Description:
   // Sets the extents (dimensionality and size) of the output array
   void SetExtents(const vtkArrayExtents&);
-//ETX
 
   // Description:
   // Returns the extents (dimensionality and size) of the output array
   vtkArrayExtents GetExtents();
+//ETX
 
   // Description:
   // Stores a random-number-seed for determining which elements within
@@ -74,6 +74,7 @@ public:
   vtkGetMacro(MaxValue, double);
   vtkSetMacro(MaxValue, double);
 
+//BTX
 protected:
   vtkBoostRandomSparseArraySource();
   ~vtkBoostRandomSparseArraySource();
@@ -95,6 +96,7 @@ private:
   vtkTypeUInt32 ElementValueSeed;
   double MinValue;
   double MaxValue;
+//ETX
 };
 
 #endif

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationIterator.cxx,v $
+  Module:    vtkInformationIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,25 +19,63 @@
 #include "vtkInformationKey.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkInformationIterator, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkInformationIterator);
 
-vtkCxxSetObjectMacro(vtkInformationIterator, Information, vtkInformation);
+class vtkInformationIteratorInternals
+{
+public:
+  vtkInformationInternals::MapType::iterator Iterator;
+};
 
 //----------------------------------------------------------------------------
 vtkInformationIterator::vtkInformationIterator()
 {
+  this->Internal = new vtkInformationIteratorInternals;
   this->Information = 0;
-  this->Index = 0;
+  this->ReferenceIsWeak = false;
 }
 
 //----------------------------------------------------------------------------
 vtkInformationIterator::~vtkInformationIterator()
 {
+  if (this->ReferenceIsWeak)
+    {
+    this->Information = 0;
+    }
   if (this->Information)
     {
     this->Information->Delete();
     }
+  delete this->Internal;
+}
+
+//----------------------------------------------------------------------------
+void vtkInformationIterator::SetInformation(vtkInformation* inf)
+{
+  if (this->ReferenceIsWeak)
+    {
+    this->Information = 0;
+    }
+  this->ReferenceIsWeak = false;
+  vtkSetObjectBodyMacro(Information, vtkInformation, inf);
+}
+
+//----------------------------------------------------------------------------
+void vtkInformationIterator::SetInformationWeak(vtkInformation* inf)
+{
+  if (!this->ReferenceIsWeak)
+    {
+    this->SetInformation(0);
+    }
+
+  this->ReferenceIsWeak = true;
+
+  if (this->Information != inf)
+    {
+    this->Information = inf;
+    this->Modified();
+    }
+
 }
 
 //----------------------------------------------------------------------------
@@ -48,18 +86,7 @@ void vtkInformationIterator::GoToFirstItem()
     vtkErrorMacro("No information has been set.");
     return;
     }
-  this->Index = 0;
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  unsigned short tableSize = this->Information->Internal->TableSize;
-  if (!keys)
-    {
-    return;
-    }
-
-  while(this->Index < tableSize && !keys[this->Index])
-    {
-    this->Index++;
-    }
+  this->Internal->Iterator = this->Information->Internal->Map.begin();
 }
 
 //----------------------------------------------------------------------------
@@ -71,14 +98,7 @@ void vtkInformationIterator::GoToNextItem()
     return;
     }
 
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  unsigned short tableSize = this->Information->Internal->TableSize;
-
-  this->Index++;
-  while(this->Index < tableSize && !keys[this->Index])
-    {
-    this->Index++;
-    }
+  ++this->Internal->Iterator;
 }
 
 //----------------------------------------------------------------------------
@@ -90,11 +110,10 @@ int vtkInformationIterator::IsDoneWithTraversal()
     return 1;
     }
 
-  if (this->Index >= this->Information->Internal->TableSize)
+  if(this->Internal->Iterator == this->Information->Internal->Map.end())
     {
     return 1;
     }
-
   return 0;
 }
 
@@ -106,8 +125,7 @@ vtkInformationKey* vtkInformationIterator::GetCurrentKey()
     return 0;
     }
 
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  return keys[this->Index];
+  return this->Internal->Iterator->first;
 }
 
 //----------------------------------------------------------------------------

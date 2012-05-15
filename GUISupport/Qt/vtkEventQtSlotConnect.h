@@ -43,7 +43,7 @@
 #include "vtkObject.h"
 #include "vtkCommand.h"  // for event defines
 #include "QVTKWin32Header.h"  // for export define
-#include "qobject.h"          // for version info
+#include <QtCore/QObject>          // for version info
 
 class QObject;
 class vtkQtConnections;
@@ -66,11 +66,7 @@ class QVTK_EXPORT vtkEventQtSlotConnect : public vtkObject
     virtual void Connect(vtkObject* vtk_obj, unsigned long event, 
                          const QObject* qt_obj, const char* slot, 
                          void* client_data=NULL, float priority=0.0
-#if QT_VERSION >= 0x040000
                          ,Qt::ConnectionType type = Qt::AutoConnection);
-#else
-                         );
-#endif
     
     // Description:
     // Disconnect a vtk object from a qt object.
@@ -82,6 +78,11 @@ class QVTK_EXPORT vtkEventQtSlotConnect : public vtkObject
     virtual void Disconnect(
       vtkObject* vtk_obj=NULL, unsigned long event=vtkCommand::NoEvent, 
       const QObject* qt_obj=NULL, const char* slot = 0, void* client_data=NULL);
+
+    // Description:
+    // Allow to query vtkEventQtSlotConnect to know if some Connect() have been
+    // setup and how many.
+    virtual int GetNumberOfConnections() const;
 
   protected:
     vtkQtConnections* Connections;

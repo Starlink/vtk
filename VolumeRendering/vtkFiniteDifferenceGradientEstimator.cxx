@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFiniteDifferenceGradientEstimator.cxx,v $
+  Module:    vtkFiniteDifferenceGradientEstimator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkFiniteDifferenceGradientEstimator, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkFiniteDifferenceGradientEstimator);
 
 // This is the templated function that actually computes the EncodedNormal
@@ -42,9 +41,9 @@ void vtkComputeGradients(
   vtkFiniteDifferenceGradientEstimator *estimator, T *data_ptr,
   int thread_id, int thread_count )
 {
-  int                 xstep, ystep, zstep;
+  vtkIdType           xstep, ystep, zstep;
   int                 x, y, z;
-  int                 offset;
+  vtkIdType           offset;
   int                 x_start, x_limit;
   int                 y_start, y_limit;
   int                 z_start, z_limit;
@@ -81,7 +80,7 @@ void vtkComputeGradients(
   // Compute steps through the volume in x, y, and z
   xstep = 1;
   ystep = size[0];
-  zstep = size[0] * size[1];
+  zstep = ystep * size[1];
 
   // Multiply by the spacing used for normal estimation
   xstep *= estimator->SampleSpacingInVoxels;
@@ -158,7 +157,7 @@ void vtkComputeGradients(
         xlow = x_start;
         xhigh = x_limit;
         }
-      offset = z * size[0] * size[1] + y * size[0] + xlow;
+      offset = z * zstep + y * ystep + xlow;
       
       // Set some pointers
       dptr = data_ptr + offset;

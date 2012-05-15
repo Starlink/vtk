@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractDataSets.cxx,v $
+  Module:    vtkExtractDataSets.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,7 @@
 #include "vtkUniformGrid.h"
 #include "vtkAMRBox.h"
 #include "vtkUnsignedCharArray.h"
-#include <vtkstd/set>
+#include <set>
 
 class vtkExtractDataSets::vtkInternals
 {
@@ -42,12 +42,11 @@ public:
     };
 
 
-  typedef vtkstd::set<Node, Node> DatasetsType;
+  typedef std::set<Node, Node> DatasetsType;
   DatasetsType Datasets;
 };
 
 vtkStandardNewMacro(vtkExtractDataSets);
-vtkCxxRevisionMacro(vtkExtractDataSets, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkExtractDataSets::vtkExtractDataSets()
 {
@@ -136,7 +135,7 @@ int vtkExtractDataSets::RequestData(
     }
 
   // regenerate blanking.
-//  output->GenerateVisibilityArrays();
+  output->GenerateVisibilityArrays();
   return 1;
 }
 

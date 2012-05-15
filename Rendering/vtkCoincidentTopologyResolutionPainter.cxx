@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCoincidentTopologyResolutionPainter.cxx,v $
+  Module:    vtkCoincidentTopologyResolutionPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkCoincidentTopologyResolutionPainter);
-vtkCxxRevisionMacro(vtkCoincidentTopologyResolutionPainter, "$Revision: 1.4 $");
 vtkInformationKeyMacro(vtkCoincidentTopologyResolutionPainter, 
   RESOLVE_COINCIDENT_TOPOLOGY, Integer);
 vtkInformationKeyMacro(vtkCoincidentTopologyResolutionPainter, Z_SHIFT, Double);

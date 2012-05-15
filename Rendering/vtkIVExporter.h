@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIVExporter.h,v $
+  Module:    vtkIVExporter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_RENDERING_EXPORT vtkIVExporter : public vtkExporter
 {
 public:
   static vtkIVExporter *New();
-  vtkTypeRevisionMacro(vtkIVExporter,vtkExporter);
+  vtkTypeMacro(vtkIVExporter,vtkExporter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

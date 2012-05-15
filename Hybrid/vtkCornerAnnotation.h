@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCornerAnnotation.h,v $
+  Module:    vtkCornerAnnotation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,6 +16,16 @@
 // .SECTION Description
 // This is an annotation object that manages four text actors / mappers
 // to provide annotation in the four corners of a viewport
+//
+// .SECTION Special input text:
+// - <image> : will be replaced with slice number (relative number)
+// - <slice> : will be replaced with slice number (relative number)
+// - <image_and_max> : will be replaced with slice number and slice max (relative)
+// - <slice_and_max> : will be replaced with slice number and slice max (relative)
+// - <slice_pos> : will be replaced by the position of the current slice
+// - <window> : will be replaced with window value
+// - <level> : will be replaced with level value
+// - <window_level> : will be replaced with window and level value
 //
 // .SECTION See Also
 // vtkActor2D vtkTextMapper
@@ -33,7 +43,7 @@ class vtkTextProperty;
 class VTK_HYBRID_EXPORT vtkCornerAnnotation : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkCornerAnnotation,vtkActor2D);
+  vtkTypeMacro(vtkCornerAnnotation,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

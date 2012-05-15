@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTensorProbeRepresentation.h,v $
+  Module:    vtkTensorProbeRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,6 @@
 class vtkActor;
 class vtkPolyData;
 class vtkPolyDataMapper;
-class vtkCellLocator;
 class vtkGenericCell;
 
 class VTK_WIDGETS_EXPORT vtkTensorProbeRepresentation :
@@ -39,7 +38,7 @@ class VTK_WIDGETS_EXPORT vtkTensorProbeRepresentation :
 public:
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkTensorProbeRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkTensorProbeRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -89,7 +88,6 @@ protected:
   vtkActor           * TrajectoryActor;
   vtkPolyDataMapper  * TrajectoryMapper;
   vtkPolyData        * Trajectory;
-  vtkCellLocator     * CellLocator;
   double               ProbePosition[3];
   vtkIdType            ProbeCellId;
 

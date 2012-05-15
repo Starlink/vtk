@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCoordinate.h,v $
+  Module:    vtkCoordinate.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,7 +60,7 @@ class vtkViewport;
 class VTK_FILTERING_EXPORT vtkCoordinate : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCoordinate,vtkObject);
+  vtkTypeMacro(vtkCoordinate,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

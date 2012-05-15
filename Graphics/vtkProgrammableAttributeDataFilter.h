@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableAttributeDataFilter.h,v $
+  Module:    vtkProgrammableAttributeDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -79,7 +79,7 @@ class VTK_GRAPHICS_EXPORT vtkProgrammableAttributeDataFilter : public vtkDataSet
 {
 public:
   static vtkProgrammableAttributeDataFilter *New();
-  vtkTypeRevisionMacro(vtkProgrammableAttributeDataFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkProgrammableAttributeDataFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -93,6 +93,16 @@ public:
   // Description:
   // Return the list of inputs.
   vtkDataSetCollection *GetInputList() {return this->InputList;};
+
+  // Description:
+  // Signature definition for programmable method callbacks. Methods passed to
+  // SetExecuteMethod or SetExecuteMethodArgDelete must conform to this
+  // signature.
+  // The presence of this typedef is useful for reference and for external
+  // analysis tools, but it cannot be used in the method signatures in these
+  // header files themselves because it prevents the internal VTK wrapper
+  // generators from wrapping these methods.
+  typedef void (*ProgrammableMethodCallbackType)(void *arg);
 
   // Description:
   // Specify the function to use to operate on the point attribute data. Note
@@ -109,8 +119,8 @@ protected:
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   vtkDataSetCollection *InputList; //list of datasets to process
-  void (*ExecuteMethod)(void *); //function to invoke
-  void (*ExecuteMethodArgDelete)(void *);
+  ProgrammableMethodCallbackType ExecuteMethod; //function to invoke
+  ProgrammableMethodCallbackType ExecuteMethodArgDelete;
   void *ExecuteMethodArg;
 
   virtual void ReportReferences(vtkGarbageCollector*);

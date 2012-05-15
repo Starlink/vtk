@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinearExtrusionFilter.h,v $
+  Module:    vtkLinearExtrusionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -59,7 +59,7 @@ class vtkDataArray;
 class VTK_GRAPHICS_EXPORT vtkLinearExtrusionFilter : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkLinearExtrusionFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkLinearExtrusionFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -113,11 +113,11 @@ protected:
   double ExtrusionPoint[3];
 
   //BTX
-  double *(vtkLinearExtrusionFilter::*ExtrudePoint)(double x[3], vtkIdType id, 
+  void (vtkLinearExtrusionFilter::*ExtrudePoint)(double x[3], vtkIdType id,
                                                    vtkDataArray *normals);
-  double *ViaNormal(double x[3], vtkIdType id, vtkDataArray *normals);
-  double *ViaVector(double x[3], vtkIdType id, vtkDataArray *normals=0);
-  double *ViaPoint(double x[3], vtkIdType id, vtkDataArray *normals=0);
+  void ViaNormal(double x[3], vtkIdType id, vtkDataArray *normals);
+  void ViaVector(double x[3], vtkIdType id, vtkDataArray *normals=0);
+  void ViaPoint(double x[3], vtkIdType id, vtkDataArray *normals=0);
   //ETX
  
 private:

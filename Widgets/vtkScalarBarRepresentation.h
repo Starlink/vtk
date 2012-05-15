@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarBarRepresentation.h,v $
+  Module:    vtkScalarBarRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class vtkScalarBarActor;
 class VTK_WIDGETS_EXPORT vtkScalarBarRepresentation : public vtkBorderRepresentation
 {
 public:
-  vtkTypeRevisionMacro(vtkScalarBarRepresentation, vtkBorderRepresentation);
+  vtkTypeMacro(vtkScalarBarRepresentation, vtkBorderRepresentation);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
   static vtkScalarBarRepresentation *New();
 

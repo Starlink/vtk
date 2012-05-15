@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoAdaptiveArcs.cxx,v $
+  Module:    vtkGeoAdaptiveArcs.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,6 @@
 #include <vtksys/stl/map>
 using vtksys_stl::map;
 
-vtkCxxRevisionMacro(vtkGeoAdaptiveArcs, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkGeoAdaptiveArcs);
 
 //-------------------------------------------------------------------------
@@ -77,7 +76,7 @@ int vtkGeoAdaptiveArcs::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -131,9 +130,9 @@ int vtkGeoAdaptiveArcs::RequestData(
     bool lastPointOnOtherSide = false;
 #endif
     double curPoint[3];
-    double lastPtLL[2];
+    double lastPtLL[2] = {0.0, 0.0};
     double curPtLL[2];
-    double lastVec[3];
+    double lastVec[3] = {0.0, 0.0, 0.0};
     double curVec[3];
     curPoint[0] = pointsPtr[3*pts[0]+0];
     curPoint[1] = pointsPtr[3*pts[0]+1];

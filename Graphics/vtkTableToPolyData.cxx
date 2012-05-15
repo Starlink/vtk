@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkTableToPolyData.cxx,v $
+  Module:    vtkTableToPolyData.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -24,16 +24,20 @@
 #include "vtkInformation.h"
 
 vtkStandardNewMacro(vtkTableToPolyData);
-vtkCxxRevisionMacro(vtkTableToPolyData, "$Revision: 1.3 $");
 //----------------------------------------------------------------------------
 vtkTableToPolyData::vtkTableToPolyData()
 {
   this->XColumn = 0;
   this->YColumn = 0;
   this->ZColumn = 0;
+  this->XColumnIndex = -1;
+  this->YColumnIndex = -1;
+  this->ZColumnIndex = -1;
   this->XComponent = 0;
   this->YComponent = 0;
   this->ZComponent = 0;
+  this->Create2DPoints = 0;
+  this->PreserveCoordinateColumnsAsDataArrays = false;
 }
 
 //----------------------------------------------------------------------------
@@ -65,19 +69,50 @@ int vtkTableToPolyData::RequestData(vtkInformation* vtkNotUsed(request),
     return 1;
     }
 
-  vtkDataArray* xarray = vtkDataArray::SafeDownCast(
-    input->GetColumnByName(this->XColumn));
-  vtkDataArray* yarray = vtkDataArray::SafeDownCast(
-    input->GetColumnByName(this->YColumn));
-  vtkDataArray* zarray = vtkDataArray::SafeDownCast(
-    input->GetColumnByName(this->ZColumn));
-  if (!xarray || !yarray || !zarray)
+  vtkDataArray* xarray = NULL;
+  vtkDataArray* yarray = NULL;
+  vtkDataArray* zarray = NULL;
+
+
+  if(this->XColumn && this->YColumn)
     {
-    vtkErrorMacro("Failed to locate  the columns to use for the point"
-      " coordinates");
-    return 0;
+    xarray = vtkDataArray::SafeDownCast(
+      input->GetColumnByName(this->XColumn));
+    yarray = vtkDataArray::SafeDownCast(
+      input->GetColumnByName(this->YColumn));
+    zarray = vtkDataArray::SafeDownCast(
+      input->GetColumnByName(this->ZColumn));
+    }
+  else if(this->XColumnIndex >= 0)
+    {
+    xarray = vtkDataArray::SafeDownCast(
+      input->GetColumn(this->XColumnIndex));
+    yarray = vtkDataArray::SafeDownCast(
+      input->GetColumn(this->YColumnIndex));
+    zarray = vtkDataArray::SafeDownCast(
+      input->GetColumn(this->ZColumnIndex));
     }
 
+  // zarray is optional
+  if(this->Create2DPoints)
+    {
+    if (!xarray || !yarray)
+      {
+      vtkErrorMacro("Failed to locate  the columns to use for the point"
+        " coordinates");
+      return 0;
+      }
+    }
+  else
+    {
+    if (!xarray || !yarray || !zarray)
+      {
+      vtkErrorMacro("Failed to locate  the columns to use for the point"
+        " coordinates");
+      return 0;
+      }
+    }
+  
   vtkPoints* newPoints = vtkPoints::New();
 
   if (xarray == yarray && yarray == zarray && 
@@ -96,11 +131,23 @@ int vtkTableToPolyData::RequestData(vtkInformation* vtkNotUsed(request),
     newData->SetNumberOfComponents(3);
     newData->SetNumberOfTuples(input->GetNumberOfRows());
     vtkIdType numtuples = newData->GetNumberOfTuples();
-    for (vtkIdType cc=0; cc < numtuples; cc++)
+    if(this->Create2DPoints)
       {
-      newData->SetComponent(cc, 0, xarray->GetComponent(cc, this->XComponent));
-      newData->SetComponent(cc, 1, yarray->GetComponent(cc, this->YComponent));
-      newData->SetComponent(cc, 2, zarray->GetComponent(cc, this->ZComponent));
+      for (vtkIdType cc=0; cc < numtuples; cc++)
+        {
+        newData->SetComponent(cc, 0, xarray->GetComponent(cc, this->XComponent));
+        newData->SetComponent(cc, 1, yarray->GetComponent(cc, this->YComponent));
+        newData->SetComponent(cc, 2, 0.0);
+        }
+      }
+    else
+      {
+      for (vtkIdType cc=0; cc < numtuples; cc++)
+        {
+        newData->SetComponent(cc, 0, xarray->GetComponent(cc, this->XComponent));
+        newData->SetComponent(cc, 1, yarray->GetComponent(cc, this->YComponent));
+        newData->SetComponent(cc, 2, zarray->GetComponent(cc, this->ZComponent));
+        }
       }
     newPoints->SetData(newData);
     newData->Delete();
@@ -124,7 +171,11 @@ int vtkTableToPolyData::RequestData(vtkInformation* vtkNotUsed(request),
   for (int cc=0; cc < input->GetNumberOfColumns(); cc++)
     {
     vtkAbstractArray* arr = input->GetColumn(cc);
-    if (arr != xarray && arr != yarray && arr != zarray)
+    if(this->PreserveCoordinateColumnsAsDataArrays)
+      {
+      output->GetPointData()->AddArray(arr);
+      }
+    else if (arr != xarray && arr != yarray && arr != zarray)
       {
       output->GetPointData()->AddArray(arr);
       }
@@ -139,12 +190,18 @@ void vtkTableToPolyData::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "XColumn: " 
     << (this->XColumn? this->XColumn : "(none)") << endl;
   os << indent << "XComponent: " << this->XComponent << endl;
+  os << indent << "XColumnIndex: " << this->XColumnIndex << endl;
   os << indent << "YColumn: " 
     << (this->YColumn? this->YColumn : "(none)") << endl;
   os << indent << "YComponent: " << this->YComponent << endl;
+  os << indent << "YColumnIndex: " << this->YColumnIndex << endl;
   os << indent << "ZColumn: " 
     << (this->ZColumn? this->ZColumn : "(none)") << endl;
   os << indent << "ZComponent: " << this->ZComponent << endl;
+  os << indent << "ZColumnIndex: " << this->ZColumnIndex << endl;
+  os << indent << "Create2DPoints: " << (this->Create2DPoints ? "true" : "false") << endl;
+  os << indent << "PreserveCoordinateColumnsAsDataArrays: "
+     << (this->PreserveCoordinateColumnsAsDataArrays ? "true" : "false") << endl;
 }
 
 

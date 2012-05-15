@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkReflectionFilter.cxx,v $
+  Module:    vtkReflectionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkReflectionFilter, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkReflectionFilter);
 
 //---------------------------------------------------------------------------
@@ -55,7 +54,7 @@ void vtkReflectionFilter::FlipVector(double tuple[3], int mirrorDir[3])
 //---------------------------------------------------------------------------
 int vtkReflectionFilter::ComputeBounds(vtkDataObject* input, double bounds[6])
 {
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *inputDS = vtkDataSet::SafeDownCast(input);;
   vtkCompositeDataSet* inputCD = vtkCompositeDataSet::SafeDownCast(input);
 
@@ -98,7 +97,7 @@ int vtkReflectionFilter::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *inputDS = vtkDataSet::GetData(inputVector[0], 0);
   vtkUnstructuredGrid *outputUG = vtkUnstructuredGrid::GetData(outputVector, 0);
 
@@ -272,8 +271,18 @@ int vtkReflectionFilter::RequestDataInternal(
     {
     for (i = 0; i < numCells; i++)
       {
-      input->GetCellPoints(i, ptIds);
-      output->InsertNextCell(input->GetCellType(i), ptIds);
+      // special handling for polyhedron cells
+      if (vtkUnstructuredGrid::SafeDownCast(input) &&
+          input->GetCellType(i) == VTK_POLYHEDRON)
+        {
+        vtkUnstructuredGrid::SafeDownCast(input)->GetFaceStream(i, ptIds);
+        output->InsertNextCell(VTK_POLYHEDRON, ptIds);
+        }
+      else
+        {
+        input->GetCellPoints(i, ptIds);
+        output->InsertNextCell(input->GetCellType(i), ptIds);
+        }
       outCD->CopyData(inCD, i, i);
       }
     }
@@ -284,12 +293,12 @@ int vtkReflectionFilter::RequestDataInternal(
     input->GetCell(i, cell);
     numCellPts = cell->GetNumberOfPoints();
     cellType = cell->GetCellType();
-    cellPts = cell->GetPointIds();
     // Triangle strips with even number of triangles have
     // to be handled specially. A degenerate triangle is
     // introduce to flip all the triangles properly.
     if (cellType == VTK_TRIANGLE_STRIP && numCellPts % 2 == 0)
       {
+      cellPts = cell->GetPointIds();
       numCellPts++;  
       newCellPts = new vtkIdType[numCellPts];
       newCellPts[0] = cellPts->GetId(0);
@@ -304,9 +313,65 @@ int vtkReflectionFilter::RequestDataInternal(
           newCellPts[j] += numPts;
           }
         }
+      cellId = output->InsertNextCell(cellType, numCellPts, newCellPts);
+      delete [] newCellPts;
       }
+    else if (cellType == VTK_POLYHEDRON && 
+             vtkUnstructuredGrid::SafeDownCast(input))
+      {
+      cellPts = vtkIdList::New();
+      vtkUnstructuredGrid::SafeDownCast(input)->GetFaceStream(i, cellPts);
+      vtkIdType* idPtr = cellPts->GetPointer(0);;
+      int nfaces = static_cast<int>(*idPtr++);
+      for (j = 0; j < nfaces; j++)
+        {
+        vtkIdType npts = *idPtr++;
+        for (vtkIdType k = 0; k < (npts+1)/2; k++)
+          {
+          vtkIdType temp = idPtr[k];
+          idPtr[k] = idPtr[npts-1-k];
+          idPtr[npts-1-k] = temp;
+          }
+        if (this->CopyInput)
+          {
+          for (vtkIdType k = 0; k < npts; k++)
+            {
+            idPtr[k] += numPts;
+            }
+          }
+        idPtr += npts;
+        }
+      cellId = output->InsertNextCell(cellType, cellPts);
+      cellPts->Delete();
+      }
+    else if  (cellType == VTK_PYRAMID  && vtkUnstructuredGrid::SafeDownCast(input))
+      {
+      if(numCellPts != 5)
+        {
+        vtkErrorMacro("Pyramid cell must have exactly 5 points")
+        } 
+      int four  = numCellPts-1;
+      cellPts = cell->GetPointIds();
+      newCellPts = new vtkIdType[numCellPts];
+      for (j = four-1; j >= 0; j--)
+        {
+        newCellPts[four-1-j] = cellPts->GetId(j);
+        if (this->CopyInput)
+          {
+          newCellPts[four-1-j] += numPts;
+          }
+        } 
+      newCellPts[four] = cellPts->GetId(four);
+      if (this->CopyInput)
+        {
+        newCellPts[four] += numPts;
+        }
+      cellId = output->InsertNextCell(cellType, numCellPts, newCellPts);
+      delete [] newCellPts;
+      } 
     else
       {
+      cellPts = cell->GetPointIds();
       newCellPts = new vtkIdType[numCellPts];
       for (j = numCellPts-1; j >= 0; j--)
         {
@@ -316,9 +381,9 @@ int vtkReflectionFilter::RequestDataInternal(
           newCellPts[numCellPts-1-j] += numPts;
           }
         }
+      cellId = output->InsertNextCell(cellType, numCellPts, newCellPts);
+      delete [] newCellPts;
       }
-    cellId = output->InsertNextCell(cellType, numCellPts, newCellPts);
-    delete [] newCellPts;
     outCD->CopyData(inCD, i, cellId);
     if (inCellVectors)
       {
@@ -388,8 +453,6 @@ int vtkReflectionFilter::RequestDataObject(
         }
       newOutput->SetPipelineInformation(outInfo);
       newOutput->Delete();
-      this->GetOutputPortInformation(0)->Set(
-        vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
       }
     return 1;
     }

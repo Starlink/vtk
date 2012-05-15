@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointWidget.h,v $
+  Module:    vtkPointWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -80,7 +80,7 @@ public:
   // Instantiate this widget
   static vtkPointWidget *New();
 
-  vtkTypeRevisionMacro(vtkPointWidget,vtk3DWidget);
+  vtkTypeMacro(vtkPointWidget,vtk3DWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

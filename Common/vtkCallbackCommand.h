@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCallbackCommand.h,v $
+  Module:    vtkCallbackCommand.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,6 +40,8 @@
 class VTK_COMMON_EXPORT vtkCallbackCommand : public vtkCommand
 {
 public:
+  vtkTypeMacro(vtkCallbackCommand,vtkCommand);
+
   static vtkCallbackCommand *New()
     {return new vtkCallbackCommand;};
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeProVP1000Mapper.h,v $
+  Module:    vtkVolumeProVP1000Mapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -68,7 +68,7 @@
 class VTK_VOLUMERENDERING_EXPORT vtkVolumeProVP1000Mapper : public vtkVolumeProMapper
 {
 public:
-  vtkTypeRevisionMacro(vtkVolumeProVP1000Mapper,vtkVolumeProMapper);
+  vtkTypeMacro(vtkVolumeProVP1000Mapper,vtkVolumeProMapper);
   static vtkVolumeProVP1000Mapper *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastFunction.cxx,v $
+  Module:    vtkVolumeRayCastFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkVolumeProperty.h"
 #include "vtkVolumeRayCastMapper.h"
 
-vtkCxxRevisionMacro(vtkVolumeRayCastFunction, "$Revision: 1.1 $");
 
 // Grab everything we need for rendering now. This procedure will be called
 // during the initialization phase of ray casting. It is called once per 
@@ -62,8 +61,9 @@ void vtkVolumeRayCastFunction::FunctionInitialize(
   // What are the data increments? 
   // (One voxel, one row, and one slice offsets)
   staticInfo->DataIncrement[0] = 1;
-  staticInfo->DataIncrement[1] = staticInfo->DataSize[0];
-  staticInfo->DataIncrement[2] = staticInfo->DataSize[0] * staticInfo->DataSize[1];
+  staticInfo->DataIncrement[1] = static_cast<vtkIdType>(staticInfo->DataSize[0]);
+  staticInfo->DataIncrement[2] = static_cast<vtkIdType>(staticInfo->DataSize[0])*
+                                 static_cast<vtkIdType>(staticInfo->DataSize[1]);
 
 
   // Get the encoded normals from the normal encoder in the

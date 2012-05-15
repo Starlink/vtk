@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDynamicLoader.h,v $
+  Module:    vtkDynamicLoader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_COMMON_EXPORT vtkDynamicLoader : public vtkObject
 {
 public:
   static vtkDynamicLoader* New();
-  vtkTypeRevisionMacro(vtkDynamicLoader,vtkObject);
+  vtkTypeMacro(vtkDynamicLoader,vtkObject);
 
   //BTX
   // Description:

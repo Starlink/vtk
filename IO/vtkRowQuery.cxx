@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRowQuery.cxx,v $
+  Module:    vtkRowQuery.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <ctype.h>
 
-vtkCxxRevisionMacro(vtkRowQuery, "$Revision: 1.7 $");
 
 vtkRowQuery::vtkRowQuery()
 {
@@ -47,7 +46,7 @@ void vtkRowQuery::PrintSelf(ostream &os, vtkIndent indent)
 int vtkRowQuery::GetFieldIndex(char* name)
 {
   vtkStdString lcSearchName(name);
-  vtkstd::transform(lcSearchName.begin(),
+  std::transform(lcSearchName.begin(),
                     lcSearchName.end(),
                     lcSearchName.begin(),
                     (int(*)(int))tolower);
@@ -67,7 +66,7 @@ int vtkRowQuery::GetFieldIndex(char* name)
     else
       {
       vtkStdString fieldName(this->GetFieldName(index));
-      vtkstd::transform(fieldName.begin(),
+      std::transform(fieldName.begin(),
                         fieldName.end(),
                         fieldName.begin(),
                         (int(*)(int))tolower);

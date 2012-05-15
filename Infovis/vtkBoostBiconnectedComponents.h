@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBiconnectedComponents.h,v $
+  Module:    vtkBoostBiconnectedComponents.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,6 +32,9 @@
 // to, traverse its edge list and collect the distinct component ids for its
 // incident edges.
 //
+// Self-loop edges that start and end at the same vertex are not
+// assigned a biconnected component, and are given component id -1.
+//
 // .SECTION Caveats
 // The boost graph bindings currently only support boost version 1.33.1.
 // There are apparently backwards-compatibility issues with later versions.
@@ -45,7 +48,7 @@ class VTK_INFOVIS_EXPORT vtkBoostBiconnectedComponents : public vtkUndirectedGra
 {
 public:
   static vtkBoostBiconnectedComponents *New();
-  vtkTypeRevisionMacro(vtkBoostBiconnectedComponents, vtkUndirectedGraphAlgorithm);
+  vtkTypeMacro(vtkBoostBiconnectedComponents, vtkUndirectedGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

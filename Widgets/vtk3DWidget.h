@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtk3DWidget.h,v $
+  Module:    vtk3DWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@ class vtkProp3D;
 class VTK_WIDGETS_EXPORT vtk3DWidget : public vtkInteractorObserver
 {
 public:
-  vtkTypeRevisionMacro(vtk3DWidget,vtkInteractorObserver);
+  vtkTypeMacro(vtk3DWidget,vtkInteractorObserver);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

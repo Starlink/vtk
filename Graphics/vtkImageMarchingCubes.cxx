@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMarchingCubes.cxx,v $
+  Module:    vtkImageMarchingCubes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,14 +20,13 @@
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkMarchingCubesCases.h"
+#include "vtkMarchingCubesTriangleCases.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageMarchingCubes, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkImageMarchingCubes);
 
 //----------------------------------------------------------------------------
@@ -80,7 +79,7 @@ int vtkImageMarchingCubes::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkImageData *inData = vtkImageData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -124,7 +123,6 @@ int vtkImageMarchingCubes::RequestData(
   // multiply by the area of each slice
   temp *= extent[1] - extent[0] + 1;
   temp *= extent[3] - extent[2] + 1;
-  temp = temp;
   // temp holds memory per image. (+1 to avoid dividing by zero)
   this->NumberOfSlicesPerChunk = this->InputMemoryLimit * 1024 / (temp + 1);
   if (this->NumberOfSlicesPerChunk < minSlicesPerChunk)
@@ -311,7 +309,7 @@ void vtkImageMarchingCubesComputePointGradient(T *ptr, double *g,
 
 
 //----------------------------------------------------------------------------
-// This method interpolates verticies to make a new point.
+// This method interpolates vertices to make a new point.
 template <class T>
 int vtkImageMarchingCubesMakeNewPoint(vtkImageMarchingCubes *self,
                                       int idx0, int idx1, int idx2,
@@ -663,7 +661,7 @@ void vtkImageMarchingCubes::March(vtkImageData *inData,
 
 
 //============================================================================
-// These method act as the point locator so verticies will be shared.
+// These method act as the point locator so vertices will be shared.
 // One 2d array of cubes is stored. (z dimension is ignored).
 // Points are indexed by their cube and edge.
 // Shared edges are only represented once.  Cubes are responsible for
@@ -785,7 +783,7 @@ int *vtkImageMarchingCubes::GetLocatorPointer(int cellX,int cellY,int edge)
   cellY -= this->LocatorMinY;
 
   // compute new indexes for edges (0 to 4) 
-  // must be compatable with LocatorIncrementZ.
+  // must be compatible with LocatorIncrementZ.
   if (edge == 7)
     {
     edge = 1;

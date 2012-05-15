@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageData.cxx,v $
+  Module:    vtkImageData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkCellData.h"
 #include "vtkDataArray.h"
-#include "vtkExtentTranslator.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationIntegerKey.h"
@@ -32,7 +31,7 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkImageData, "$Revision: 1.34 $");
+
 vtkStandardNewMacro(vtkImageData);
 
 //----------------------------------------------------------------------------
@@ -40,10 +39,10 @@ vtkImageData::vtkImageData()
 {
   int idx;
 
-  this->Vertex = vtkVertex::New();
-  this->Line = vtkLine::New();
-  this->Pixel = vtkPixel::New();
-  this->Voxel = vtkVoxel::New();
+  this->Vertex = 0;
+  this->Line = 0;
+  this->Pixel = 0;
+  this->Voxel = 0;
 
   this->DataDescription = VTK_EMPTY;
 
@@ -65,10 +64,22 @@ vtkImageData::vtkImageData()
 //----------------------------------------------------------------------------
 vtkImageData::~vtkImageData()
 {
-  this->Vertex->Delete();
-  this->Line->Delete();
-  this->Pixel->Delete();
-  this->Voxel->Delete();
+  if (this->Vertex)
+    {
+    this->Vertex->Delete();
+    }
+  if (this->Line)
+    {
+    this->Line->Delete();
+    }
+  if (this->Pixel)
+    {
+    this->Pixel->Delete();
+    }
+  if (this->Voxel)
+    {
+    this->Voxel->Delete();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -103,7 +114,6 @@ void vtkImageData::CopyStructure(vtkDataSet *ds)
       thisPInfo->CopyEntry(thatPInfo, CELL_DATA_VECTOR());
       }
     }
-  this->DataDescription = sPts->DataDescription;
   this->CopyInformation(sPts);
 }
 
@@ -640,44 +650,40 @@ double *vtkImageData::GetPoint(vtkIdType ptId)
     return x;
     }
 
+  // "loc" holds the point x,y,z indices
+  loc[0] = loc[1] = loc[2] = 0;
+
   switch (this->DataDescription)
     {
     case VTK_EMPTY:
       return x;
 
     case VTK_SINGLE_POINT:
-      loc[0] = loc[1] = loc[2] = 0;
       break;
 
     case VTK_X_LINE:
-      loc[1] = loc[2] = 0;
       loc[0] = ptId;
       break;
 
     case VTK_Y_LINE:
-      loc[0] = loc[2] = 0;
       loc[1] = ptId;
       break;
 
     case VTK_Z_LINE:
-      loc[0] = loc[1] = 0;
       loc[2] = ptId;
       break;
 
     case VTK_XY_PLANE:
-      loc[2] = 0;
       loc[0] = ptId % dims[0];
       loc[1] = ptId / dims[0];
       break;
 
     case VTK_YZ_PLANE:
-      loc[0] = 0;
       loc[1] = ptId % dims[1];
       loc[2] = ptId / dims[1];
       break;
 
     case VTK_XZ_PLANE:
-      loc[1] = 0;
       loc[0] = ptId % dims[0];
       loc[2] = ptId / dims[0];
       break;
@@ -717,7 +723,7 @@ vtkIdType vtkImageData::FindPoint(double x[3])
   for (i=0; i<3; i++)
     {
     d = x[i] - origin[i];
-    loc[i] = static_cast<int>((d / spacing[i]) + 0.5);
+    loc[i] = vtkMath::Floor((d / spacing[i]) + 0.5);
     if ( loc[i] < extent[i*2] || loc[i] > extent[i*2+1] )
       {
       return -1;
@@ -736,160 +742,117 @@ vtkIdType vtkImageData::FindPoint(double x[3])
 vtkIdType vtkImageData::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
                                  vtkGenericCell *vtkNotUsed(gencell),
                                  vtkIdType vtkNotUsed(cellId),
-                                  double vtkNotUsed(tol2),
-                                  int& subId, double pcoords[3],
-                                  double *weights)
+                                 double tol2,
+                                 int& subId, double pcoords[3],
+                                 double *weights)
 {
   return
-    this->FindCell( x, NULL, 0, 0.0, subId, pcoords, weights );
+    this->FindCell( x, NULL, 0, tol2, subId, pcoords, weights );
 }
 
 //----------------------------------------------------------------------------
 vtkIdType vtkImageData::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
                                  vtkIdType vtkNotUsed(cellId),
-                                 double vtkNotUsed(tol2),
+                                 double tol2,
                                  int& subId, double pcoords[3], double *weights)
 {
-  int loc[3];
-  const int *extent = this->GetExtent();
+  int idx[3];
 
-  // Use vtkIdType to avoid overflow on large images
-  vtkIdType dims[3];
-  dims[0] = extent[1] - extent[0] + 1;
-  dims[1] = extent[3] - extent[2] + 1;
-  dims[2] = extent[5] - extent[4] + 1;
-
-  if ( this->ComputeStructuredCoordinates(x, loc, pcoords) == 0 )
+  // Compute the voxel index
+  if ( this->ComputeStructuredCoordinates(x, idx, pcoords) == 0 )
     {
-    return -1;
+    // If voxel index is out of bounds, check point "x" against the
+    // bounds to see if within tolerance of the bounds.
+    const int* extent = this->Extent;
+    const double* spacing = this->Spacing;
+    const double* bounds = this->Bounds;
+
+    // Compute squared distance of point x from the boundary
+    double dist2 = 0.0;
+
+    for (int i=0; i<3; i++)
+      {
+      int minIdx = extent[i*2];
+      int maxIdx = extent[i*2+1];
+      int negSpacing = (spacing[i] < 0);
+      double minBound = bounds[i*2 + negSpacing];
+      double maxBound = bounds[i*2 + (1-negSpacing)];
+
+      if ( idx[i] < minIdx )
+        {
+        idx[i] = minIdx;
+        pcoords[i] = 0.0;
+        double dist = x[i] - minBound;
+        dist2 += dist*dist;
+        }
+      else if ( idx[i] >= maxIdx )
+        {
+        if (maxIdx == minIdx)
+          {
+          idx[i] = minIdx;
+          pcoords[i] = 0.0;
+          }
+        else
+          {
+          idx[i] = maxIdx-1;
+          pcoords[i] = 1.0;
+          }
+        double dist = x[i] - maxBound;
+        dist2 += dist*dist;
+        }
+      }
+
+    // Check squared distance against the tolerance
+    if (dist2 > tol2)
+      {
+      return -1;
+      }
     }
 
-  this->Voxel->InterpolateFunctions(pcoords,weights);
+  if (weights)
+    {
+    // Shift parametric coordinates for XZ/YZ planes
+    if( this->DataDescription == VTK_XZ_PLANE )
+      {
+      pcoords[1] = pcoords[2];
+      pcoords[2] = 0.0;
+      }
+    else if( this->DataDescription == VTK_YZ_PLANE )
+      {
+      pcoords[0] = pcoords[1];
+      pcoords[1] = pcoords[2];
+      pcoords[2] = 0.0;  
+      }
+    else if( this->DataDescription == VTK_XY_PLANE )
+      {
+      pcoords[2] = 0.0;
+      }
+    vtkVoxel::InterpolationFunctions( pcoords, weights );
+    }
 
   //
   //  From this location get the cell id
   //
   subId = 0;
-  return loc[2] * (dims[0]-1)*(dims[1]-1) +
-         loc[1] * (dims[0]-1) + loc[0];
+  return this->ComputeCellId(idx);
 }
 
 //----------------------------------------------------------------------------
 vtkCell *vtkImageData::FindAndGetCell(double x[3],
                                       vtkCell *vtkNotUsed(cell),
                                       vtkIdType vtkNotUsed(cellId),
-                                      double vtkNotUsed(tol2), int& subId,
+                                      double tol2, int& subId,
                                       double pcoords[3], double *weights)
 {
-  int i, j, k, loc[3];
-  vtkIdType npts, idx;
-  double xOut[3];
-  int iMax = 0;
-  int jMax = 0;
-  int kMax = 0;;
-  vtkCell *cell = NULL;
-  const double *origin = this->Origin;
-  const double *spacing = this->Spacing;
-  const int* extent = this->Extent;
+  vtkIdType cellId = this->FindCell(x, 0, 0, tol2, subId, pcoords, 0);
 
-  vtkIdType dims[3];
-  dims[0] = extent[1] - extent[0] + 1;
-  dims[1] = extent[3] - extent[2] + 1;
-  dims[2] = extent[5] - extent[4] + 1;
-  vtkIdType d01 = dims[0]*dims[1];
-
-  if ( this->ComputeStructuredCoordinates(x, loc, pcoords) == 0 )
+  if (cellId < 0)
     {
     return NULL;
     }
 
-  //
-  // Get the parametric coordinates and weights for interpolation
-  //
-  switch (this->DataDescription)
-    {
-    case VTK_EMPTY:
-      return NULL;
-
-    case VTK_SINGLE_POINT: // cellId can only be = 0
-      iMax = loc[0];
-      jMax = loc[1];
-      kMax = loc[2];
-      cell = this->Vertex;
-      break;
-
-    case VTK_X_LINE:
-      iMax = loc[0] + 1;
-      jMax = loc[1];
-      kMax = loc[2];
-      cell = this->Line;
-      break;
-
-    case VTK_Y_LINE:
-      iMax = loc[0];
-      jMax = loc[1] + 1;
-      kMax = loc[2];
-      cell = this->Line;
-      break;
-
-    case VTK_Z_LINE:
-      iMax = loc[0];
-      jMax = loc[1];
-      kMax = loc[2] + 1;
-      cell = this->Line;
-      break;
-
-    case VTK_XY_PLANE:
-      iMax = loc[0] + 1;
-      jMax = loc[1] + 1;
-      kMax = loc[2];
-      cell = this->Pixel;
-      break;
-
-    case VTK_YZ_PLANE:
-      iMax = loc[0];
-      jMax = loc[1] + 1;
-      kMax = loc[2] + 1;
-      cell = this->Pixel;
-      break;
-
-    case VTK_XZ_PLANE:
-      iMax = loc[0] + 1;
-      jMax = loc[1];
-      kMax = loc[2] + 1;
-      cell = this->Pixel;
-      break;
-
-    case VTK_XYZ_GRID:
-      iMax = loc[0] + 1;
-      jMax = loc[1] + 1;
-      kMax = loc[2] + 1;
-      cell = this->Voxel;
-      break;
-    }
+  vtkCell *cell = this->GetCell(cellId);
   cell->InterpolateFunctions(pcoords, weights);
-
-  npts = 0;
-  for (k = loc[2]; k <= kMax; k++)
-    {
-    xOut[2] = origin[2] + k * spacing[2];
-    for (j = loc[1]; j <= jMax; j++)
-      {
-      xOut[1] = origin[1] + j * spacing[1];
-      // make idx relative to the extent not the whole extent
-      idx = loc[0] + j*dims[0] + k*d01;
-//      idx = loc[0]-extent[0] + (j-extent[2])*dims[0]
-//        + (k-extent[4])*d01;
-      for (i = loc[0]; i <= iMax; i++, idx++)
-        {
-        xOut[0] = origin[0] + i * spacing[0];
-
-        cell->PointIds->SetId(npts,idx);
-        cell->Points->SetPoint(npts++,xOut);
-        }
-      }
-    }
-  subId = 0;
 
   return cell;
 }
@@ -994,6 +957,18 @@ void vtkImageData::GetPointGradient(int i, int j, int k, vtkDataArray *s,
 
   vtkIdType ijsize=dims[0]*dims[1];
 
+  // Adjust i,j,k to the start of the extent
+  i -= extent[0];
+  j -= extent[2];
+  k -= extent[4];
+
+  // Check for out-of-bounds
+  if (i < 0 || i >= dims[0] || j < 0 || j >= dims[1] || k < 0 || k >= dims[2])
+    {
+    g[0] = g[1] = g[2] = 0.0;
+    return;
+    }
+
   // x-direction
   if ( dims[0] == 1 )
     {
@@ -1082,7 +1057,6 @@ void vtkImageData::SetDimensions(const int dim[3])
 }
 
 
-// streaming change: ijk is in extent coordinate system.
 //----------------------------------------------------------------------------
 // Convenience function computes the structured coordinates for a point x[3].
 // The voxel is specified by the array ijk[3], and the parametric coordinates
@@ -1091,54 +1065,90 @@ void vtkImageData::SetDimensions(const int dim[3])
 int vtkImageData::ComputeStructuredCoordinates(double x[3], int ijk[3],
                                                double pcoords[3])
 {
-  int i;
-  double d, doubleLoc;
-  const double *origin = this->Origin;
-  const double *spacing = this->Spacing;
-  const int* extent = this->Extent;
+  // tolerance is needed for 2D data (this is squared tolerance)
+  const double tol2 = 1e-12;
 
-  vtkIdType dims[3];
-  dims[0] = extent[1] - extent[0] + 1;
-  dims[1] = extent[3] - extent[2] + 1;
-  dims[2] = extent[5] - extent[4] + 1;
+  const int* extent = this->Extent;
+  const double* spacing = this->Spacing;
+  const double* origin = this->Origin;
+  const double* bounds = NULL;
 
   //
   //  Compute the ijk location
   //
-  for (i=0; i<3; i++)
+  int isInBounds = 1;
+  for (int i = 0; i < 3; i++)
     {
-    d = x[i] - origin[i];
-    doubleLoc = d / spacing[i];
+    double d = x[i] - origin[i];
+    double doubleLoc = d / spacing[i];
     // Floor for negative indexes.
-    ijk[i] = static_cast<int>(floor(doubleLoc));
-    if ( ijk[i] >= extent[i*2] && ijk[i] < extent[i*2 + 1] )
-      {
-      pcoords[i] = doubleLoc - static_cast<double>(ijk[i]);
-      }
+    ijk[i] = vtkMath::Floor(doubleLoc);
+    pcoords[i] = doubleLoc - static_cast<double>(ijk[i]);
 
-    else if ( ijk[i] < extent[i*2] || ijk[i] > extent[i*2+1] )
-      {
-      return 0;
-      }
+    int tmpInBounds = 0;
+    int minExt = extent[i*2];
+    int maxExt = extent[i*2 + 1];
 
-    else //if ( ijk[i] == extent[i*2+1] )
+    // check if data is one pixel thick
+    if ( minExt == maxExt )
       {
-      if (dims[i] == 1)
+      if (!bounds)
+        {
+        bounds = this->GetBounds();
+        }
+      double dist = x[i] - bounds[2*i];
+      if (dist*dist <= spacing[i]*spacing[i]*tol2)
         {
         pcoords[i] = 0.0;
-        }
-      else
-        {
-        ijk[i] -= 1;
-        pcoords[i] = 1.0;
+        ijk[i] = minExt;
+        tmpInBounds = 1;
         }
       }
-    // We now need to subtract the lower extent to shift to
-    // the correct location in the image (mapping {extent[0],
-    // extent[2], extent[4]) to (0, 0, 0)
-    ijk[i] -= extent[i*2];
+
+    // low boundary check
+    else if ( ijk[i] < minExt)
+      {
+      if (!bounds)
+        {
+        bounds = this->GetBounds();
+        }
+      if ( (spacing[i] >= 0 && x[i] >= bounds[i*2]) ||
+           (spacing[i] < 0 && x[i] <= bounds[i*2 + 1]) )
+        {
+        pcoords[i] = 0.0;
+        ijk[i] = minExt;
+        tmpInBounds = 1;
+        }
+      }
+
+    // high boundary check
+    else if ( ijk[i] >= maxExt )
+      {
+      if (!bounds)
+        {
+        bounds = this->GetBounds();
+        }
+      if ( (spacing[i] >= 0 && x[i] <= bounds[i*2 + 1]) ||
+           (spacing[i] < 0 && x[i] >= bounds[i*2]) )
+        {
+        // make sure index is within the allowed cell index range
+        pcoords[i] = 1.0;
+        ijk[i] = maxExt - 1;
+        tmpInBounds = 1;
+        }
+      }
+
+    // else index is definitely within bounds
+    else
+      {
+      tmpInBounds = 1;
+      }
+
+    // clear isInBounds if out of bounds for this dimension
+    isInBounds = (isInBounds & tmpInBounds);
     }
-  return 1;
+
+  return isInBounds;
 }
 
 
@@ -1200,7 +1210,7 @@ void vtkImageData::SetNumberOfScalarComponents(int num)
     vtkErrorMacro("SetNumberOfScalarComponents called with no "
                   "executive producing this image data object.");
     }
-  this->ComputeIncrements();
+  this->ComputeIncrements(num);
 }
 
 //----------------------------------------------------------------------------
@@ -1230,32 +1240,61 @@ vtkIdType *vtkImageData::GetIncrements()
 }
 
 //----------------------------------------------------------------------------
-void vtkImageData::GetIncrements(vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ)
+vtkIdType *vtkImageData::GetIncrements(vtkDataArray *scalars)
 {
   // Make sure the increments are up to date. The filter bypass and update
   // mechanism make it tricky to update the increments anywhere other than here
-  this->ComputeIncrements();
+  this->ComputeIncrements(scalars);
 
-  incX = this->Increments[0];
-  incY = this->Increments[1];
-  incZ = this->Increments[2];
+  return this->Increments;
+}
+
+//----------------------------------------------------------------------------
+void vtkImageData::GetIncrements(vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ)
+{
+  vtkIdType inc[3];
+  this->ComputeIncrements(inc);
+  incX = inc[0];
+  incY = inc[1];
+  incZ = inc[2];
+}
+
+//----------------------------------------------------------------------------
+void vtkImageData::GetIncrements(vtkDataArray *scalars,
+                                 vtkIdType &incX, vtkIdType &incY, vtkIdType &incZ)
+{
+  vtkIdType inc[3];
+  this->ComputeIncrements(scalars, inc);
+  incX = inc[0];
+  incY = inc[1];
+  incZ = inc[2];
 }
 
 //----------------------------------------------------------------------------
 void vtkImageData::GetIncrements(vtkIdType inc[3])
 {
-  // Make sure the increments are up to date. The filter bypass and update
-  // mechanism make it tricky to update the increments anywhere other than here
-  this->ComputeIncrements();
+  this->ComputeIncrements(inc);
+}
 
-  inc[0] = this->Increments[0];
-  inc[1] = this->Increments[1];
-  inc[2] = this->Increments[2];
+
+//----------------------------------------------------------------------------
+void vtkImageData::GetIncrements(vtkDataArray* vtkNotUsed(scalars),
+                                 vtkIdType inc[3])
+{
+  this->ComputeIncrements(inc);
 }
 
 
 //----------------------------------------------------------------------------
 void vtkImageData::GetContinuousIncrements(int extent[6], vtkIdType &incX,
+                                           vtkIdType &incY, vtkIdType &incZ)
+{
+  this->GetContinuousIncrements(this->GetPointData()->GetScalars(),
+                                extent, incX, incY, incZ);
+}
+//----------------------------------------------------------------------------
+void vtkImageData::GetContinuousIncrements(vtkDataArray *scalars,
+                                           int extent[6], vtkIdType &incX,
                                            vtkIdType &incY, vtkIdType &incZ)
 {
   int e0, e1, e2, e3;
@@ -1285,30 +1324,48 @@ void vtkImageData::GetContinuousIncrements(int extent[6], vtkIdType &incX,
     }
 
   // Make sure the increments are up to date
-  this->ComputeIncrements();
+  vtkIdType inc[3];
+  this->ComputeIncrements(scalars, inc);
 
-  incY = this->Increments[1] - (e1 - e0 + 1)*this->Increments[0];
-  incZ = this->Increments[2] - (e3 - e2 + 1)*this->Increments[1];
+  incY = inc[1] - (e1 - e0 + 1)*inc[0];
+  incZ = inc[2] - (e3 - e2 + 1)*inc[1];
 }
 
 
 //----------------------------------------------------------------------------
 // This method computes the increments from the MemoryOrder and the extent.
-void vtkImageData::ComputeIncrements()
+// This version assumes we are using the Active Scalars
+void vtkImageData::ComputeIncrements(vtkIdType inc[3])
+{
+  this->ComputeIncrements(this->GetPointData()->GetScalars(), inc);
+}
+
+//----------------------------------------------------------------------------
+// This method computes the increments from the MemoryOrder and the extent.
+void vtkImageData::ComputeIncrements(vtkDataArray *scalars, vtkIdType inc[3])
+{
+  if (!scalars)
+    {
+    vtkErrorMacro("No Scalar Field has been specified - assuming 1 component!");
+    this->ComputeIncrements(1, inc);
+    }
+  else
+    {
+    this->ComputeIncrements(scalars->GetNumberOfComponents(), inc);
+    }
+}
+//----------------------------------------------------------------------------
+// This method computes the increments from the MemoryOrder and the extent.
+void vtkImageData::ComputeIncrements(int numberOfComponents, vtkIdType inc[3])
 {
   int idx;
-  // make sure we have data before computing incrments to traverse it
-  if (!this->GetPointData()->GetScalars())
-    {
-    return;
-    }
-  vtkIdType inc = this->GetPointData()->GetScalars()->GetNumberOfComponents();
+  vtkIdType incr = numberOfComponents;
   const int* extent = this->Extent;
 
   for (idx = 0; idx < 3; ++idx)
     {
-    this->Increments[idx] = inc;
-    inc *= (extent[idx*2+1] - extent[idx*2] + 1);
+    inc[idx] = incr;
+    incr *= (extent[idx*2+1] - extent[idx*2] + 1);
     }
 }
 
@@ -1576,6 +1633,7 @@ void vtkImageData::AllocateScalars()
   // allocate the new scalars
   scalars = vtkDataArray::CreateDataArray(newType);
   scalars->SetNumberOfComponents(newNumComp);
+  scalars->SetName("ImageScalars");
 
   // allocate enough memory
   scalars->SetNumberOfTuples(imageSize);
@@ -1699,7 +1757,7 @@ void vtkImageData::Crop()
   int           maxX, maxY, maxZ;
   vtkIdType     outId, inId, inIdY, inIdZ, incZ, incY;
   vtkImageData  *newImage;
-  int numPts, numCells, tmp;
+  vtkIdType numPts, numCells, tmp;
   const int* extent = this->Extent;
 
   int updateExtent[6] = {0,-1,0,-1,0,-1};
@@ -1867,6 +1925,60 @@ void vtkImageData::SetExtent(int x1, int x2, int y1, int y2, int z1, int z2)
 }
 
 //----------------------------------------------------------------------------
+void vtkImageData::SetDataDescription(int desc)
+{
+  if (desc == this->DataDescription)
+    {
+    return;
+    }
+
+  this->DataDescription = desc;
+
+  if (this->Vertex)
+    {
+    this->Vertex->Delete();
+    this->Vertex = 0;
+    }
+  if (this->Line)
+    {
+    this->Line->Delete();
+    this->Line = 0;
+    }
+  if (this->Pixel)
+    {
+    this->Pixel->Delete();
+    this->Pixel = 0;
+    }
+  if (this->Voxel)
+    {
+    this->Voxel->Delete();
+    this->Voxel = 0;
+    }
+  switch (this->DataDescription)
+    {
+    case VTK_SINGLE_POINT:
+      this->Vertex = vtkVertex::New();
+      break;
+
+    case VTK_X_LINE:
+    case VTK_Y_LINE:
+    case VTK_Z_LINE:
+      this->Line = vtkLine::New();
+      break;
+
+    case VTK_XY_PLANE:
+    case VTK_YZ_PLANE:
+    case VTK_XZ_PLANE:
+      this->Pixel = vtkPixel::New();
+      break;
+
+    case VTK_XYZ_GRID:
+      this->Voxel = vtkVoxel::New();;
+      break;
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkImageData::SetExtent(int *extent)
 {
   int description;
@@ -1882,7 +1994,7 @@ void vtkImageData::SetExtent(int *extent)
     return;
     }
 
-  this->DataDescription = description;
+  this->SetDataDescription(description);
 
   this->Modified();
 }
@@ -1998,7 +2110,6 @@ void vtkImageData::InternalImageDataCopy(vtkImageData *src)
 {
   int idx;
 
-  this->DataDescription = src->DataDescription;
   this->SetScalarType(src->GetScalarType());
   this->SetNumberOfScalarComponents(src->GetNumberOfScalarComponents());
   for (idx = 0; idx < 3; ++idx)
@@ -2008,7 +2119,7 @@ void vtkImageData::InternalImageDataCopy(vtkImageData *src)
     this->Origin[idx] = src->Origin[idx];
     this->Spacing[idx] = src->Spacing[idx];
     }
-  memcpy(this->Extent, src->GetExtent(), 6*sizeof(int));
+  this->SetExtent(src->GetExtent());
 }
 
 
@@ -2078,7 +2189,7 @@ void *vtkImageData::GetArrayPointerForExtent(vtkDataArray* array,
 void *vtkImageData::GetArrayPointer(vtkDataArray* array, int coordinate[3])
 {
   vtkIdType incs[3];
-  int idx;
+  vtkIdType idx;
 
   if (array == NULL)
     {

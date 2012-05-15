@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygonalSurfaceContourLineInterpolator.h,v $
+  Module:    vtkPolygonalSurfaceContourLineInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,13 +40,14 @@
 #include "vtkPolyDataContourLineInterpolator.h"
 
 class vtkDijkstraGraphGeodesicPath;
+class vtkIdList;
 
 class VTK_WIDGETS_EXPORT vtkPolygonalSurfaceContourLineInterpolator : public vtkPolyDataContourLineInterpolator
 {
 public:
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkPolygonalSurfaceContourLineInterpolator, vtkPolyDataContourLineInterpolator);
+  vtkTypeMacro(vtkPolygonalSurfaceContourLineInterpolator, vtkPolyDataContourLineInterpolator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkPolygonalSurfaceContourLineInterpolator *New();
@@ -76,6 +77,11 @@ public:
   // vtkPolyDataNormals).
   vtkSetMacro( DistanceOffset, double ); 
   vtkGetMacro( DistanceOffset, double ); 
+
+  // Description:
+  // Get the contour point ids. These point ids correspond to those on the
+  // polygonal surface
+  void GetContourPointIds( vtkContourRepresentation *rep, vtkIdList *idList );
   
 protected:
   vtkPolygonalSurfaceContourLineInterpolator();

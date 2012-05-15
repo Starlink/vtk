@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCameraInterpolator.h,v $
+  Module:    vtkCameraInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -57,7 +57,7 @@ class vtkCameraList;
 class VTK_RENDERING_EXPORT vtkCameraInterpolator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCameraInterpolator, vtkObject);
+  vtkTypeMacro(vtkCameraInterpolator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

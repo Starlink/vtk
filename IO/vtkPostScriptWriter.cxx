@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPostScriptWriter.cxx,v $
+  Module:    vtkPostScriptWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkPostScriptWriter, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkPostScriptWriter);
 
 #define VTK_MARGIN 0.95
@@ -129,7 +128,7 @@ void vtkPostScriptWriter::WriteFile(ofstream *file, vtkImageData *data,
   float area;
   int *wExtent;
   static int itemsperline = 0;
-  char* hexits = (char *) "0123456789abcdef";
+  const char* hexits = "0123456789abcdef";
   
   // Make sure we actually have data.
   if ( !data->GetPointData()->GetScalars())

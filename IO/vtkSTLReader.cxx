@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSTLReader.cxx,v $
+  Module:    vtkSTLReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,27 +14,29 @@
 =========================================================================*/
 #include "vtkSTLReader.h"
 
-#include "vtkObjectFactory.h"
 #include "vtkByteSwap.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkFloatArray.h"
-#include "vtkMergePoints.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMergePoints.h"
+#include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
 #include <ctype.h>
 #include <vtksys/SystemTools.hxx>
 
-vtkCxxRevisionMacro(vtkSTLReader, "$Revision: 1.74 $");
 vtkStandardNewMacro(vtkSTLReader);
 
 #define VTK_ASCII 0
 #define VTK_BINARY 1
 
-vtkCxxSetObjectMacro(vtkSTLReader,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkSTLReader,Locator,vtkIncrementalPointLocator);
 
 // Construct object with merging set to true.
 vtkSTLReader::vtkSTLReader()
@@ -95,6 +97,7 @@ int vtkSTLReader::RequestData(
   if (!this->FileName || (this->FileName && (0==strlen(this->FileName))))
     {
     vtkErrorMacro(<<"A FileName must be specified.");
+    this->SetErrorCode( vtkErrorCode::NoFileNameError );
     return 0;
     }
 
@@ -103,18 +106,19 @@ int vtkSTLReader::RequestData(
   if ((fp = fopen(this->FileName, "r")) == NULL)
     {
     vtkErrorMacro(<< "File " << this->FileName << " not found");
+    this->SetErrorCode( vtkErrorCode::CannotOpenFileError );
     return 0;
     }
 
   newPts = vtkPoints::New();
-  newPts->Allocate(5000,10000);
   newPolys = vtkCellArray::New();
-  newPolys->Allocate(10000,20000);
 
   // Depending upon file type, read differently
   //
   if ( this->GetSTLFileType(this->FileName) == VTK_ASCII )
     {
+    newPts->Allocate(5000,10000);
+    newPolys->Allocate(10000,20000);
     if (this->ScalarTags)
       {
       newScalars = vtkFloatArray::New();
@@ -162,18 +166,19 @@ int vtkSTLReader::RequestData(
       mergedScalars->Allocate(newPolys->GetSize());
       }
 
-    if ( this->Locator == NULL )
+    vtkSmartPointer<vtkIncrementalPointLocator> locator = this->Locator;
+    if (this->Locator == NULL)
       {
-      this->CreateDefaultLocator();
+      locator.TakeReference(this->NewDefaultLocator());
       }
-    this->Locator->InitPointInsertion (mergedPts, newPts->GetBounds());
+    locator->InitPointInsertion (mergedPts, newPts->GetBounds());
 
     for (newPolys->InitTraversal(); newPolys->GetNextCell(npts,pts); )
       {
       for (i=0; i < 3; i++)
         {
         newPts->GetPoint(pts[i],x);
-        this->Locator->InsertUniquePoint(x, nodes[i]);
+        locator->InsertUniquePoint(x, nodes[i]);
         }
 
       if ( nodes[0] != nodes[1] &&
@@ -217,6 +222,7 @@ int vtkSTLReader::RequestData(
 
   if (mergedScalars) 
     {
+    mergedScalars->SetName("STLSolidLabeling");
     output->GetCellData()->SetScalars(mergedScalars);
     mergedScalars->Delete();
     }
@@ -246,8 +252,20 @@ int vtkSTLReader::ReadBinarySTL(FILE *fp, vtkPoints *newPts,
 
   //  File is read to obtain raw information as well as bounding box
   //
-  fread (header, 1, 80, fp);
-  fread (&ulint, 1, 4, fp);
+  if (fread (header, 1, 80, fp) != 80)
+    {
+    vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                   << " Premature EOF while reading header.");
+    fclose(fp);
+    return 0;
+    }
+  if (fread (&ulint, 1, 4, fp) != 4)
+    {
+    vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                   << " Premature EOF while reading header.");
+    fclose(fp);
+    return 0;
+    }
   vtkByteSwap::Swap4LE(&ulint);
 
   // Many .stl files contain bogus count.  Hence we will ignore and read 
@@ -259,9 +277,27 @@ int vtkSTLReader::ReadBinarySTL(FILE *fp, vtkPoints *newPts,
     << numTris << ")");
     }
 
+  // Verify the numTris with the length of the file
+  unsigned long ulFileLength = vtksys::SystemTools::FileLength(this->FileName);
+  ulFileLength -= (80 + 4); // 80 byte - header, 4 byte - tringle count
+  ulFileLength /= 50;       // 50 byte - twelve 32-bit-floating point numbers + 2 byte for attribute byte count
+
+  if (numTris < static_cast<int>(ulFileLength))
+    numTris = static_cast<int>(ulFileLength);
+
+  // now we can allocate the memory we need for this STL file
+  newPts->Allocate(numTris*3,10000);
+  newPolys->Allocate(numTris,20000);
+
   for ( i=0; fread(&facet,48,1,fp) > 0; i++ )
     {
-    fread(&ibuff2,2,1,fp); //read extra junk
+    if (fread(&ibuff2,2,1,fp) != 1) //read extra junk
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading extra junk.");
+      fclose(fp);
+      return 0;
+      }
 
     vtkByteSwap::Swap4LE (facet.n);
     vtkByteSwap::Swap4LE (facet.n+1);
@@ -287,7 +323,7 @@ int vtkSTLReader::ReadBinarySTL(FILE *fp, vtkPoints *newPts,
     if ( (i % 5000) == 0 && i != 0 )
       {
       vtkDebugMacro(<< "triangle# " << i);
-      this->UpdateProgress((i%50000)/50000.0);
+      this->UpdateProgress(static_cast<double>(i)/numTris);
       }
     }
 
@@ -307,9 +343,18 @@ int vtkSTLReader::ReadASCIISTL(FILE *fp, vtkPoints *newPts,
 
   //  Ingest header and junk to get to first vertex
   //
-  fgets (line, 255, fp);
+  if (!fgets (line, 255, fp))
+    {
+    vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                   << " Premature EOF while reading header.");
+    return 0;
+    }
 
   done = (fscanf(fp,"%s %*s %f %f %f\n", line, x, x+1, x+2)==EOF);
+  if ((strcmp(line, "COLOR") == 0) || (strcmp(line, "color") == 0))
+    {
+      done = (fscanf(fp,"%s %*s %f %f %f\n", line, x, x+1, x+2)==EOF);
+    }
 
   //  Go into loop, reading  facet normal and vertices
   //
@@ -320,15 +365,54 @@ int vtkSTLReader::ReadASCIISTL(FILE *fp, vtkPoints *newPts,
 //    fprintf(stdout, "Reading record %d\n", ctr);
 //}
 //ctr += 7;
-    fgets (line, 255, fp);
-    fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2);
+    if (!fgets (line, 255, fp))
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading header.");
+      return 0;
+      }
+
+    if (fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2) != 3)
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading point.");
+      fclose(fp);
+      return 0;
+      }
+
     pts[0] = newPts->InsertNextPoint(x);
-    fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2);
+    if (fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2) != 3)
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading point.");
+      fclose(fp);
+      return 0;
+      }
+
     pts[1] = newPts->InsertNextPoint(x);
-    fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2);
+    if (fscanf (fp, "%*s %f %f %f\n", x,x+1,x+2) != 3)
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading point.");
+      fclose(fp);
+      return 0;
+      }
+
     pts[2] = newPts->InsertNextPoint(x);
-    fgets (line, 255, fp); // end loop
-    fgets (line, 255, fp); // end facet
+    if (!fgets (line, 255, fp)) // end loop
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading end loop.");
+      fclose(fp);
+      return 0;
+      }
+    if (!fgets (line, 255, fp)) // end facet
+      {
+      vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                     << " Premature EOF while reading end facet.");
+      fclose(fp);
+      return 0;
+      }
 
     newPolys->InsertNextCell(3,pts);
     if (scalars) 
@@ -345,15 +429,34 @@ int vtkSTLReader::ReadASCIISTL(FILE *fp, vtkPoints *newPts,
     if ((strcmp(line, "ENDSOLID") == 0) || (strcmp(line, "endsolid") == 0)) 
       {
       currentSolid++;
-      fgets(line, 255, fp);
+      if (!fgets(line, 255, fp))
+        {
+        vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                       << " Premature EOF while reading solid.");
+        fclose(fp);
+        return 0;
+        }
+
       done = feof(fp);
       while ((strstr(line, "SOLID") == 0) && (strstr(line, "solid") == 0) && !done) 
         {
-        fgets(line, 255, fp);
+        if (!fgets(line, 255, fp))
+          {
+          vtkErrorMacro ("STLReader error reading file: " << this->FileName
+                         << " Premature EOF while reading end solid.");
+          fclose(fp);
+          return 0;
+          }
+
         done = feof(fp);
         }
 
       done = (fscanf(fp,"%s", line)==EOF);
+      if ((strstr(line, "COLOR") == 0) || (strstr(line, "color") == 0))
+        {
+          done = (fscanf(fp,"%f %f %f\n", x,x+1,x+2)==EOF);
+          done = (fscanf(fp,"%s", line)==EOF);
+        }
       }
     if (!done) {
     done = (fscanf(fp,"%*s %f %f %f\n", x, x+1, x+2)==EOF);
@@ -389,14 +492,9 @@ int vtkSTLReader::GetSTLFileType(const char *filename)
 
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkSTLReader::CreateDefaultLocator()
+vtkIncrementalPointLocator* vtkSTLReader::NewDefaultLocator()
 {
-  if ( this->Locator == NULL )
-    {
-    this->Locator = vtkMergePoints::New();
-    this->Locator->Register(this);
-    this->Locator->Delete();
-    }
+  return vtkMergePoints::New();
 }
 
 void vtkSTLReader::PrintSelf(ostream& os, vtkIndent indent)

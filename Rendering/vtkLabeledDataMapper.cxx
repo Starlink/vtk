@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabeledDataMapper.cxx,v $
+  Module:    vtkLabeledDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,17 +21,29 @@
 #include "vtkDataSet.h"
 #include "vtkExecutive.h"
 #include "vtkInformation.h"
+#include "vtkIntArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkPointSet.h"
+#include "vtkSmartPointer.h"
 #include "vtkStringArray.h"
+#include "vtkTable.h"
 #include "vtkTextMapper.h"
 #include "vtkTextProperty.h"
+#include "vtkTypeTraits.h"
 #include "vtkTransform.h"
+#include "vtkUnicodeStringArray.h"
 
-vtkCxxRevisionMacro(vtkLabeledDataMapper, "$Revision: 1.55 $");
+#include <map>
+
+class vtkLabeledDataMapper::Internals
+{
+public:
+  std::map<int, vtkSmartPointer<vtkTextProperty> > TextProperties;
+};
+
 vtkStandardNewMacro(vtkLabeledDataMapper);
 
-vtkCxxSetObjectMacro(vtkLabeledDataMapper,LabelTextProperty,vtkTextProperty);
 vtkCxxSetObjectMacro(vtkLabeledDataMapper,Transform,vtkTransform);
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -54,6 +66,8 @@ void vtkLabeledDataMapper_PrintComponent(char *output, const char *format, int i
 
 vtkLabeledDataMapper::vtkLabeledDataMapper()
 {
+  this->Implementation = new Internals;
+
   this->Input = NULL;
   this->LabelMode = VTK_LABEL_IDS;
 
@@ -70,14 +84,19 @@ vtkLabeledDataMapper::vtkLabeledDataMapper()
   this->TextMappers = 0;
   this->AllocateLabels(50);
 
-  this->LabelTextProperty = vtkTextProperty::New();
-  this->LabelTextProperty->SetFontSize(12);
-  this->LabelTextProperty->SetBold(1);
-  this->LabelTextProperty->SetItalic(1);
-  this->LabelTextProperty->SetShadow(1);
-  this->LabelTextProperty->SetFontFamilyToArial();
+  vtkSmartPointer<vtkTextProperty> prop =
+    vtkSmartPointer<vtkTextProperty>::New();
+  prop->SetFontSize(12);
+  prop->SetBold(1);
+  prop->SetItalic(1);
+  prop->SetShadow(1);
+  prop->SetFontFamilyToArial();
+  this->Implementation->TextProperties[0] = prop;
+
+  this->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "type");
   
   this->Transform = 0;
+  this->CoordinateSystem = vtkLabeledDataMapper::WORLD;
 }
 
 //----------------------------------------------------------------------------
@@ -98,9 +117,9 @@ vtkLabeledDataMapper::~vtkLabeledDataMapper()
     delete [] this->TextMappers;
     }
   
-  this->SetLabelTextProperty(NULL);
   this->SetFieldDataName(NULL);
   this->SetTransform(NULL);
+  delete this->Implementation;
 }
 
 //----------------------------------------------------------------------------
@@ -132,6 +151,24 @@ void vtkLabeledDataMapper::AllocateLabels(int numLabels)
       this->LabelPositions[3*i+2] = 0;
       }
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkLabeledDataMapper::SetLabelTextProperty(vtkTextProperty* prop, int type)
+{
+  this->Implementation->TextProperties[type] = prop;
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+vtkTextProperty* vtkLabeledDataMapper::GetLabelTextProperty(int type)
+{
+  if (this->Implementation->TextProperties.find(type) !=
+      this->Implementation->TextProperties.end())
+    {
+    return this->Implementation->TextProperties[type];
+    }
+  return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -184,8 +221,18 @@ void vtkLabeledDataMapper::RenderOverlay(vtkViewport *viewport,
       {
       pos = this->Transform->TransformDoublePoint(x);
       }
-    actor->GetPositionCoordinate()->SetCoordinateSystemToWorld();
-    actor->GetPositionCoordinate()->SetValue(pos);
+
+    if(this->CoordinateSystem == vtkLabeledDataMapper::WORLD)
+      {
+      actor->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+      actor->GetPositionCoordinate()->SetValue(pos);
+      }
+    else if(this->CoordinateSystem == vtkLabeledDataMapper::DISPLAY)
+      {
+      actor->GetPositionCoordinate()->SetCoordinateSystemToDisplay();
+      actor->GetPositionCoordinate()->SetValue(pos);
+      }
+
     this->TextMappers[i]->RenderOverlay(viewport, actor);
     }
 }
@@ -194,10 +241,10 @@ void vtkLabeledDataMapper::RenderOverlay(vtkViewport *viewport,
 void vtkLabeledDataMapper::RenderOpaqueGeometry(vtkViewport *viewport, 
                                                 vtkActor2D *actor)
 {
-  vtkTextProperty *tprop = this->LabelTextProperty;
+  vtkTextProperty *tprop = this->Implementation->TextProperties[0];
   if (!tprop)
     {
-    vtkErrorMacro(<<"Need text property to render labels");
+    vtkErrorMacro(<<"Need default text property to render labels");
     return;
     }
 
@@ -212,10 +259,24 @@ void vtkLabeledDataMapper::RenderOpaqueGeometry(vtkViewport *viewport,
     return;
     }
 
+  // Check for property updates.
+  unsigned long propMTime = 0;
+  std::map<int, vtkSmartPointer<vtkTextProperty> >::iterator it, itEnd;
+  it = this->Implementation->TextProperties.begin();
+  itEnd = this->Implementation->TextProperties.end();
+  for (; it != itEnd; ++it)
+    {
+    vtkTextProperty* prop = it->second;
+    if (prop && prop->GetMTime() > propMTime)
+      {
+      propMTime = prop->GetMTime();
+      }
+    }
+
   // Check to see whether we have to rebuild everything
   if ( this->GetMTime() > this->BuildTime || 
        inputDO->GetMTime() > this->BuildTime ||
-       tprop->GetMTime() > this->BuildTime)
+       propMTime > this->BuildTime)
     {
     this->BuildLabels();
     }
@@ -227,8 +288,18 @@ void vtkLabeledDataMapper::RenderOpaqueGeometry(vtkViewport *viewport,
       {
       pos = this->Transform->TransformDoublePoint(pos);
       }
-    actor->GetPositionCoordinate()->SetCoordinateSystemToWorld();
-    actor->GetPositionCoordinate()->SetValue(pos);
+
+    if(this->CoordinateSystem == vtkLabeledDataMapper::WORLD)
+      {
+      actor->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+      actor->GetPositionCoordinate()->SetValue(pos);
+      }
+    else if(this->CoordinateSystem == vtkLabeledDataMapper::DISPLAY)
+      {
+      actor->GetPositionCoordinate()->SetCoordinateSystemToDisplay();
+      actor->GetPositionCoordinate()->SetValue(pos);
+      }
+
     this->TextMappers[i]->RenderOpaqueGeometry(viewport, actor);
     }
 }
@@ -277,13 +348,16 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
   vtkAbstractArray *abstractData = NULL;
   vtkDataArray *numericData = NULL;
   vtkStringArray *stringData = NULL;
+  vtkUnicodeStringArray *uStringData = NULL;
+
+  if (input->GetNumberOfPoints() == 0)
+    {
+    return;
+    }
 
   vtkPointData *pd = input->GetPointData();
   // figure out what to label, and if we can label it
   pointIdLabels = 0;
-  abstractData = NULL;
-  numericData = NULL;
-  stringData = NULL;
   switch (this->LabelMode)
     {
     case VTK_LABEL_IDS:
@@ -337,6 +411,7 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
       }
     numericData = vtkDataArray::SafeDownCast(abstractData);
     stringData = vtkStringArray::SafeDownCast(abstractData);
+    uStringData = vtkUnicodeStringArray::SafeDownCast(abstractData);
     }; break;
     }
 
@@ -361,6 +436,10 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
     if ( stringData )
       {
       numComp = stringData->GetNumberOfComponents();
+      }
+    else if( uStringData )
+      {
+      numComp = uStringData->GetNumberOfComponents();
       }
     else
       {
@@ -401,34 +480,47 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
         {
         case VTK_VOID: FormatString = "0x%x"; break;
 
-        case VTK_BIT:
-        case VTK_SHORT:
-        case VTK_UNSIGNED_SHORT:
-        case VTK_INT:
-        case VTK_UNSIGNED_INT:
-          FormatString = "%d"; break;
+        // dont use vtkTypeTraits::ParseFormat for character types as parse formats
+          // aren't the same as print formats for these types.
+          case VTK_BIT:
+          case VTK_SHORT:
+          case VTK_UNSIGNED_SHORT:
+          case VTK_INT:
+          case VTK_UNSIGNED_INT:
+            FormatString = "%d"; break;
 
-        case VTK_CHAR:
-        case VTK_SIGNED_CHAR:
-        case VTK_UNSIGNED_CHAR:
-          FormatString = "%c"; break;
+          case VTK_CHAR:
+          case VTK_SIGNED_CHAR:
+          case VTK_UNSIGNED_CHAR:
+            FormatString = "%c"; break;
 
-        case VTK_LONG:
-        case VTK_UNSIGNED_LONG:
-        case VTK_ID_TYPE:
-          FormatString = "%ld"; break;
+          case VTK_LONG:
+            FormatString = vtkTypeTraits<long>::ParseFormat(); break;
+          case VTK_UNSIGNED_LONG:
+            FormatString = vtkTypeTraits<unsigned long>::ParseFormat(); break;
 
-        case VTK_LONG_LONG:
-        case VTK_UNSIGNED_LONG_LONG:
-        case VTK___INT64:
-        case VTK_UNSIGNED___INT64:
-          FormatString = "%lld"; break;
+          case VTK_ID_TYPE:
+            FormatString = vtkTypeTraits<vtkIdType>::ParseFormat(); break;
 
-        case VTK_FLOAT:
-          FormatString = "%f"; break;
+#if defined(VTK_TYPE_USE_LONG_LONG)
+          case VTK_LONG_LONG:
+            FormatString = vtkTypeTraits<long long>::ParseFormat(); break;
+          case VTK_UNSIGNED_LONG_LONG:
+            FormatString = vtkTypeTraits<unsigned long long>::ParseFormat(); break;
+#endif
 
-        case VTK_DOUBLE:
-          FormatString = "%g"; break;
+#if defined(VTK_TYPE_USE___INT64)
+          case VTK___INT64:
+            FormatString = vtkTypeTraits<__int64>::ParseFormat(); break;
+          case VTK_UNSIGNED___INT64:
+            FormatString = vtkTypeTraits<unsigned __int64>::ParseFormat(); break;
+#endif
+
+          case VTK_FLOAT:
+            FormatString = vtkTypeTraits<float>::ParseFormat(); break;
+
+          case VTK_DOUBLE:
+            FormatString = vtkTypeTraits<double>::ParseFormat(); break;
 
         default:
           FormatString = "BUG - UNKNOWN DATA FORMAT"; break;
@@ -437,6 +529,11 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
     else if (stringData)
       {
       FormatString = ""; // we'll use vtkStdString::operator+ instead of sprintf
+      }
+    else if (uStringData)
+      {
+      vtkWarningMacro( "Unicode string arrays are not adequately supported by the vtkLabeledDataMapper.  Unicode strings will be converted to vtkStdStrings for rendering.");
+      FormatString = "unicode"; // we'll use vtkStdString::operator+ instead of sprintf
       }
     else
       {
@@ -464,6 +561,8 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
   const char *LiveFormatString = FormatString.c_str();
   char TempString[1024];
 
+  vtkIntArray *typeArr = vtkIntArray::SafeDownCast(
+    this->GetInputAbstractArrayToProcess(0, input));
   for (i=0; i < numCurLabels; i++)
     {
     vtkStdString ResultString; 
@@ -522,19 +621,38 @@ void vtkLabeledDataMapper::BuildLabelsInternal(vtkDataSet* input)
         // we'll sidestep a lot of sprintf nonsense.
         if (this->LabelFormat == NULL)
           {
-          ResultString = stringData->GetValue(i);
+          if( uStringData )
+            {
+            ResultString = uStringData->GetValue(i).utf8_str();
+            }
+          else
+            {
+            ResultString = stringData->GetValue(i);
+            }
           }
         else // the user specified a label format
           {
           SNPRINTF(TempString, 1023, LiveFormatString, 
                    stringData->GetValue(i).c_str());
-            ResultString = TempString;
+          ResultString = TempString;
           } // done printing strings with label format
         } // done printing strings
       } // done creating string 
 
     this->TextMappers[i+this->NumberOfLabels]->SetInput(ResultString.c_str());
-    this->TextMappers[i+this->NumberOfLabels]->SetTextProperty(this->LabelTextProperty);
+
+    // Find the correct property type
+    int type = 0;
+    if (typeArr)
+      {
+      type = typeArr->GetValue(i);
+      }
+    vtkTextProperty* prop = this->Implementation->TextProperties[type];
+    if (!prop)
+      {
+      prop = this->Implementation->TextProperties[0];
+      }
+    this->TextMappers[i+this->NumberOfLabels]->SetTextProperty(prop);
 
     double x[3];
     input->GetPoint(i, x);
@@ -569,14 +687,21 @@ void vtkLabeledDataMapper::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "Input: (none)\n";
     }
 
-  if (this->LabelTextProperty)
+  std::map<int, vtkSmartPointer<vtkTextProperty> >::iterator it, itEnd;
+  it = this->Implementation->TextProperties.begin();
+  itEnd = this->Implementation->TextProperties.end();
+  for (; it != itEnd; ++it)
     {
-    os << indent << "Label Text Property:\n";
-    this->LabelTextProperty->PrintSelf(os,indent.GetNextIndent());
-    }
-  else
-    {
-    os << indent << "Label Text Property: (none)\n";
+    vtkTextProperty* prop = it->second;
+    if (prop)
+      {
+      os << indent << "LabelTextProperty " << it->first << ":\n";
+      prop->PrintSelf(os, indent.GetNextIndent());
+      }
+    else
+      {
+      os << indent << "LabelTextProperty " << it->first << ": (none)\n";
+      }
     }
 
   os << indent << "Label Mode: ";
@@ -627,8 +752,10 @@ void vtkLabeledDataMapper::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Transform: " << (this->Transform ? "" : "(none)") << endl;
   if (this->Transform)
     {
-    this->LabelTextProperty->PrintSelf(os,indent.GetNextIndent());
+    this->Transform->PrintSelf(os,indent.GetNextIndent());
     }
+
+  os << indent << "CoordinateSystem: " << this->CoordinateSystem << endl;
 }
 
 // ----------------------------------------------------------------------
@@ -650,6 +777,26 @@ vtkLabeledDataMapper::SetFieldDataArray(int arrayIndex)
                              (arrayIndex > VTK_LARGE_INTEGER ? VTK_LARGE_INTEGER : arrayIndex ));
     this->Modified();
     }
+}
+
+// ----------------------------------------------------------------------
+unsigned long
+vtkLabeledDataMapper::GetMTime()
+{
+  unsigned long mtime = this->Superclass::GetMTime();
+  std::map<int, vtkSmartPointer<vtkTextProperty> >::iterator it, itEnd;
+  it = this->Implementation->TextProperties.begin();
+  itEnd = this->Implementation->TextProperties.end();
+  for (; it != itEnd; ++it)
+    {
+    vtkTextProperty* p = it->second;
+    unsigned long curMTime = p->GetMTime();
+    if (curMTime > mtime)
+      {
+      mtime = curMTime;
+      }
+    }
+  return mtime;
 }
 
 // ----------------------------------------------------------------------

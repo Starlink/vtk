@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimePointUtility.h,v $
+  Module:    vtkTimePointUtility.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_COMMON_EXPORT vtkTimePointUtility : public vtkObject
 {
 public:
   static vtkTimePointUtility *New();
-  vtkTypeRevisionMacro(vtkTimePointUtility,vtkObject);
+  vtkTypeMacro(vtkTimePointUtility,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

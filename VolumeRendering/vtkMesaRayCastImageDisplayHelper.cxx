@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaRayCastImageDisplayHelper.cxx,v $
+  Module:    vtkMesaRayCastImageDisplayHelper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,5 +33,4 @@
 #include "vtkOpenGLRayCastImageDisplayHelper.cxx"
 #undef vtkOpenGLRayCastImageDisplayHelper
 
-vtkCxxRevisionMacro(vtkMesaRayCastImageDisplayHelper, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkMesaRayCastImageDisplayHelper);

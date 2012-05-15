@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLMinimumSpanningTree.h,v $
+  Module:    vtkPBGLMinimumSpanningTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_PARALLEL_EXPORT vtkPBGLMinimumSpanningTree : public vtkGraphAlgorithm
 {
 public:
   static vtkPBGLMinimumSpanningTree *New();
-  vtkTypeRevisionMacro(vtkPBGLMinimumSpanningTree, vtkGraphAlgorithm);
+  vtkTypeMacro(vtkPBGLMinimumSpanningTree, vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

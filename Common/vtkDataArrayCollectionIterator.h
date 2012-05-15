@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataArrayCollectionIterator.h,v $
+  Module:    vtkDataArrayCollectionIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class vtkDataArrayCollection;
 class VTK_COMMON_EXPORT vtkDataArrayCollectionIterator : public vtkCollectionIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkDataArrayCollectionIterator,vtkCollectionIterator);
+  vtkTypeMacro(vtkDataArrayCollectionIterator,vtkCollectionIterator);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkDataArrayCollectionIterator* New();  
   

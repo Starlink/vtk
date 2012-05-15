@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMatrixToLinearTransform.h,v $
+  Module:    vtkMatrixToLinearTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_COMMON_EXPORT vtkMatrixToLinearTransform : public vtkLinearTransform
 {
  public:
   static vtkMatrixToLinearTransform *New();
-  vtkTypeRevisionMacro(vtkMatrixToLinearTransform,vtkLinearTransform);
+  vtkTypeMacro(vtkMatrixToLinearTransform,vtkLinearTransform);
   void PrintSelf (ostream& os, vtkIndent indent);
 
   // Description:

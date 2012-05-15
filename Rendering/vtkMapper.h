@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMapper.h,v $
+  Module:    vtkMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -77,7 +77,7 @@ class vtkImageData;
 class VTK_RENDERING_EXPORT vtkMapper : public vtkAbstractMapper3D
 {
 public:
-  vtkTypeRevisionMacro(vtkMapper,vtkAbstractMapper3D);
+  vtkTypeMacro(vtkMapper,vtkAbstractMapper3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -363,6 +363,15 @@ public:
   // Description:
   // Return the light-model color mode.
   const char *GetScalarMaterialModeAsString();
+
+  // Description:
+  // Returns if the mapper does not expect to have translucent geometry. This
+  // may happen when using ColorMode is set to not map scalars i.e. render the
+  // scalar array directly as colors and the scalar array has opacity i.e. alpha
+  // component.  Default implementation simply returns true. Note that even if
+  // this method returns true, an actor may treat the geometry as translucent
+  // since a constant translucency is set on the property, for example.
+  virtual bool GetIsOpaque() { return true; }
 
   // Description:
   // WARNING: INTERNAL METHOD - NOT INTENDED FOR GENERAL USE

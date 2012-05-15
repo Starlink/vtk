@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXRenderWindowInteractor.cxx,v $
+  Module:    vtkXRenderWindowInteractor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,9 +32,13 @@
 #include "vtkObjectFactory.h"
 #include "vtkCommand.h"
 
-#include <vtkstd/map>
+#include <map>
 
-vtkCxxRevisionMacro(vtkXRenderWindowInteractor, "$Revision: 1.138 $");
+#include "vtkTDxConfigure.h" // defines VTK_USE_TDX
+#ifdef VTK_USE_TDX
+#include "vtkTDxUnixDevice.h"
+#endif
+
 vtkStandardNewMacro(vtkXRenderWindowInteractor);
 
 // Map between the X native id to our own integer count id.  Note this
@@ -47,6 +51,15 @@ public:
   vtkXRenderWindowInteractorInternals()
     {
     this->TimerIdCount = 1;
+#ifdef VTK_USE_TDX
+    this->Device=vtkTDxUnixDevice::New();
+#endif
+    }
+  ~vtkXRenderWindowInteractorInternals()
+    {
+#ifdef VTK_USE_TDX
+      this->Device->Delete();
+#endif
     }
 
   int CreateLocalId(XtIntervalId xid)
@@ -69,16 +82,25 @@ public:
     this->XToLocal.erase(xid);
     return xid;
     }
-
+#ifdef VTK_USE_TDX
+  vtkTDxUnixDevice *GetDevice()
+    {
+      return this->Device;
+    }
+protected:
+  vtkTDxUnixDevice *Device;
+#endif
+  
 private:
   int TimerIdCount;
-  vtkstd::map<int, XtIntervalId> LocalToX;
-  vtkstd::map<XtIntervalId, int> XToLocal;
+  std::map<int, XtIntervalId> LocalToX;
+  std::map<XtIntervalId, int> XToLocal;
 };
 
 // Initialize static members:
 int vtkXRenderWindowInteractor::NumAppInitialized = 0;
 XtAppContext vtkXRenderWindowInteractor::App = 0;
+int vtkXRenderWindowInteractor::BreakLoopFlag = 1;
 
 
 typedef struct
@@ -96,11 +118,6 @@ vtkXRenderWindowInteractor::vtkXRenderWindowInteractor()
   this->OwnTop = 0;
   this->OwnApp = 0;
   this->TopLevelShell = NULL;
-  this->BreakLoopFlag = 0;
-  this->BreakXtLoopCallback = vtkCallbackCommand::New();
-  this->BreakXtLoopCallback->SetClientData(this);
-  this->BreakXtLoopCallback->SetCallback(
-    &vtkXRenderWindowInteractor::BreakXtLoop);
 }
 
 //-------------------------------------------------------------------------
@@ -113,8 +130,8 @@ vtkXRenderWindowInteractor::~vtkXRenderWindowInteractor()
     XtDestroyWidget(this->Top);
     }
 
-  this->BreakXtLoopCallback->Delete();
-  
+  delete this->Internal;
+
   if (vtkXRenderWindowInteractor::App)
     {
     if(vtkXRenderWindowInteractor::NumAppInitialized == 1)
@@ -127,8 +144,6 @@ vtkXRenderWindowInteractor::~vtkXRenderWindowInteractor()
       }
     vtkXRenderWindowInteractor::NumAppInitialized--;
     }
-
-  delete this->Internal;
 }
 
 //-------------------------------------------------------------------------
@@ -186,31 +201,42 @@ void vtkXRenderWindowInteractor::SetTopLevelShell(Widget topLevel)
 }
 
 //-------------------------------------------------------------------------
-// This function replaces TerminateApp() if Start() is called.
-// This way, when the user hits the exit key, Start() returns
-// and the application continues instead of calling exit().
-// With this change, it is possible to have clean-up code after
-// the interactor loop.
-void vtkXRenderWindowInteractor::BreakXtLoop(vtkObject*, unsigned long,
-                                             void* viren, void*)
+// TerminateApp() notifies the event loop to exit.
+// The event loop is started by Start() or by one own's method.
+// This results in Start() returning to its caller.
+void vtkXRenderWindowInteractor::TerminateApp()
 {
-  vtkXRenderWindowInteractor *iren =
-    static_cast<vtkXRenderWindowInteractor*>(viren);
+  if(this->BreakLoopFlag)
+    {
+    return;
+    }
 
-  iren->SetBreakLoopFlag(1);
+  this->BreakLoopFlag = 1;
 
-  // Send a VTK_BreakXtLoop ClientMessage event so we pop out of the current
-  // call to XtAppNextEvent and notice that BreakLoopFlag has been set...
-  //
+#ifdef VTK_USE_TDX
+  // 3DConnexion device
+  if(this->UseTDx)
+    {
+    vtkTDxUnixDevice *d=this->Internal->GetDevice();
+    if(d->GetInitialized())
+      {
+      d->Close();
+      }
+    }
+#endif
+  
+  // Send a VTK_BreakXtLoop ClientMessage event to be sure we pop out of the
+  // event loop.  This "wakes up" the event loop.  Otherwise, it might sit idle 
+  // waiting for an event before realizing an exit was requested.
   XClientMessageEvent client;
   memset(&client, 0, sizeof(client));
 
   client.type = ClientMessage;
   //client.serial; //leave zeroed
   //client.send_event; //leave zeroed
-  client.display = iren->DisplayId;
-  client.window = iren->WindowId;
-  client.message_type = XInternAtom(iren->DisplayId, "VTK_BreakXtLoop",
+  client.display = this->DisplayId;
+  client.window = this->WindowId;
+  client.message_type = XInternAtom(this->DisplayId, "VTK_BreakXtLoop",
     False);
   client.format = 32; // indicates size of data chunks: 8, 16 or 32 bits...
   //client.data; //leave zeroed
@@ -220,10 +246,34 @@ void vtkXRenderWindowInteractor::BreakXtLoop(vtkObject*, unsigned long,
   XFlush(client.display);
 }
 
+void vtkXRenderWindowInteractor::SetBreakLoopFlag(int f)
+{
+  if(f)
+    {
+    this->BreakLoopFlagOn();
+    }
+  else
+    {
+    this->BreakLoopFlagOff();
+    }
+}
+
+void vtkXRenderWindowInteractor::BreakLoopFlagOff()
+{
+  this->BreakLoopFlag = 0;
+  this->Modified();
+}
+
+void vtkXRenderWindowInteractor::BreakLoopFlagOn()
+{
+  this->TerminateApp();
+  this->Modified();
+}
+
 //-------------------------------------------------------------------------
-// This will start up the X event loop and never return. If you
+// This will start up the X event loop. If you
 // call this method it will loop processing X events until the
-// application is exited.
+// loop is exited.
 void vtkXRenderWindowInteractor::Start()
 {
   // Let the compositing handle the event loop if it wants to.
@@ -242,16 +292,15 @@ void vtkXRenderWindowInteractor::Start()
     return;
     }
 
-  unsigned long ExitTag = this->AddObserver(vtkCommand::ExitEvent, this->BreakXtLoopCallback);
   this->BreakLoopFlag = 0;
-  do 
+  do
     {
     XEvent event;
     XtAppNextEvent(vtkXRenderWindowInteractor::App, &event);
     XtDispatchEvent(&event);
     }
   while (this->BreakLoopFlag == 0);
-  this->RemoveObserver(ExitTag);
+
 }
 
 //-------------------------------------------------------------------------
@@ -330,7 +379,7 @@ void vtkXRenderWindowInteractor::Initialize()
   // get the info we need from the RenderingWindow
   ren->SetDisplayId(this->DisplayId);
 
-  size    = ren->GetSize();
+  size    = ren->GetActualSize();
   size[0] = ((size[0] > 0) ? size[0] : 300);
   size[1] = ((size[1] > 0) ? size[1] : 300);
   if (!this->Top)
@@ -381,6 +430,23 @@ void vtkXRenderWindowInteractor::Initialize()
     }
 
   this->WindowId = XtWindow(this->Top);
+  
+#ifdef VTK_USE_TDX
+  // 3DConnexion device
+  if(this->UseTDx)
+    {
+    vtkTDxUnixDevice *d=this->Internal->GetDevice();
+    d->SetDisplayId(this->DisplayId);
+    d->SetWindowId(static_cast<vtkTDxUnixDeviceWindow>(this->WindowId));
+    d->SetInteractor(this);
+    d->Initialize();
+    if(!d->GetInitialized())
+      {
+      vtkWarningMacro(<< "failed to initialize a 3Dconnexion device.");
+      }
+    }
+#endif
+  
   ren->Start();
   this->Enable();
   this->Size[0] = size[0];
@@ -474,9 +540,9 @@ void vtkXRenderWindowInteractor::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << indent << "App: (none)\n";
     }
-
-  os << indent << "BreakLoopFlag: " 
-     << (this->BreakLoopFlag ? "On\n" : "Off\n");
+    
+  os << indent << "BreakLoopFlag: "                                                           
+     << (this->BreakLoopFlag ? "On\n" : "Off\n");     
 }
 
 //-------------------------------------------------------------------------
@@ -570,6 +636,7 @@ void vtkXRenderWindowInteractorCallback(Widget vtkNotUsed(w),
       yp = exposeEvent->y;
       yp = me->Size[1] - yp - 1;
       me->SetEventPosition(xp, yp);
+      
       // only render if we are currently accepting events
       if (me->Enabled)
         {
@@ -604,6 +671,7 @@ void vtkXRenderWindowInteractorCallback(Widget vtkNotUsed(w),
       int height = (reinterpret_cast<XConfigureEvent *>(event))->height;
       if (width != me->Size[0] || height != me->Size[1])
         {
+        bool resizeSmaller=width<=me->Size[0] && height<=me->Size[1];
         me->UpdateSize(width, height);
         xp = (reinterpret_cast<XButtonEvent*>(event))->x;
         yp = (reinterpret_cast<XButtonEvent*>(event))->y;
@@ -612,7 +680,19 @@ void vtkXRenderWindowInteractorCallback(Widget vtkNotUsed(w),
         if (me->Enabled)
           {
           me->InvokeEvent(vtkCommand::ConfigureEvent,NULL);
-          me->Render();
+          if(resizeSmaller)
+            {
+            // Don't call Render when the window is resized to be larger:
+            //
+            // - if the window is resized to be larger, an Expose event will
+            // be trigged by the X server which will trigger a call to
+            // Render().
+            // - if the window is resized to be smaller, no Expose event will
+            // be trigged by the X server, as no new area become visible.
+            // only in this case, we need to explicitly call Render()
+            // in ConfigureNotify.
+            me->Render();
+            }
           }
         }
       }
@@ -837,11 +917,21 @@ void vtkXRenderWindowInteractorCallback(Widget vtkNotUsed(w),
       //  << XGetAtomName(me->DisplayId,
       //       (reinterpret_cast<XClientMessageEvent *>(event))->message_type)
       //  << endl;
-
       if( static_cast<Atom>(event->xclient.data.l[0]) == me->KillAtom )
         {
-        me->InvokeEvent(vtkCommand::ExitEvent, NULL);
+        me->ExitCallback();
         }
+#ifdef VTK_USE_TDX
+      else
+        {
+        vtkTDxUnixDevice *d=me->Internal->GetDevice();
+        bool caught=false;
+        if(d->GetInitialized())
+          {
+          caught=d->ProcessEvent(event);
+          }
+        }
+#endif
       }
       break;
     }

@@ -1,11 +1,11 @@
-SUBDIRS(Cxx)
+ADD_SUBDIRECTORY(Cxx)
 
 IF (VTK_WRAP_TCL)
-  SUBDIRS(Tcl)
+  ADD_SUBDIRECTORY(Tcl)
 ENDIF (VTK_WRAP_TCL)
 
 IF (VTK_WRAP_PYTHON)
-  SUBDIRS(Python)
+  ADD_SUBDIRECTORY(Python)
 ENDIF (VTK_WRAP_PYTHON)
 
 IF(PYTHON_EXECUTABLE)
@@ -13,6 +13,7 @@ IF(PYTHON_EXECUTABLE)
     ${VTK_SOURCE_DIR}/Common/Testing/HeaderTesting.py
     "${VTK_SOURCE_DIR}/Common"
     VTK_COMMON_EXPORT
+    vtkABI.h
     vtkAbstractIterator.h
     vtkAbstractList.h
     vtkAbstractMap.h
@@ -20,20 +21,22 @@ IF(PYTHON_EXECUTABLE)
     vtkArrayCoordinateIterator.h
     vtkArrayCoordinates.h
     vtkArrayExtents.h
+    vtkArrayExtentsList.h
     vtkArrayInterpolate.h
-    vtkArrayPrint.h
-    vtkArrayRange.h
-    vtkArraySlices.h
-    vtkArraySlice.h
-    vtkArrayWeights.h
     vtkArrayIteratorIncludes.h
     vtkArrayIteratorTemplate.h
     vtkArrayMap.h
     vtkArrayMapIterator.h
+    vtkArrayPrint.h
+    vtkArrayRange.h
+    vtkArraySort.h
+    vtkArrayWeights.h
     vtkAssemblyPaths.h
     vtkBoundingBox.h
+    vtkBreakPoint.h
     vtkByteSwap.h
     vtkCallbackCommand.h
+    vtkColor.h
     vtkCommand.h
     vtkCommonInformationKeyManager.h
     vtkContainer.h
@@ -43,17 +46,17 @@ IF(PYTHON_EXECUTABLE)
     vtkDebugLeaksManager.h
     vtkDenseArray.h
     vtkDynamicLoader.h
-    vtkEventForwarderCommand.h
     vtkErrorCode.h
+    vtkEventForwarderCommand.h
     vtkFloatingPointExceptions.h
     vtkGarbageCollector.h
     vtkGarbageCollectorManager.h
     vtkHashMap.h
     vtkHashMapIterator.h
-    vtkIdListCollection.h
-    vtkImplicitFunctionCollection.h
     vtkIOStream.h
     vtkIOStreamFwd.h
+    vtkIdListCollection.h
+    vtkImplicitFunctionCollection.h
     vtkIndent.h
     vtkInformation.h
     vtkInformationInternals.h
@@ -62,6 +65,8 @@ IF(PYTHON_EXECUTABLE)
     vtkLargeInteger.h
     vtkLinkedList.h
     vtkLinkedListIterator.h
+    vtkMathUtilities.h
+    vtkNew.h
     vtkOStrStreamWrapper.h
     vtkOStreamWrapper.h
     vtkObject.h
@@ -71,11 +76,10 @@ IF(PYTHON_EXECUTABLE)
     vtkOnePieceExtentTranslator.h
     vtkOverrideInformationCollection.h
     vtkPlaneCollection.h
-    vtkProcessStatistics.h
     vtkPropCollection.h
-    vtkPython.h
-    vtkPythonUtil.h
+    vtkPythonCommand.h
     vtkRayCastStructures.h
+    vtkRect.h
     vtkRungeKutta2.h 
     vtkSetGet.h
     vtkSmartPointer.h
@@ -84,29 +88,33 @@ IF(PYTHON_EXECUTABLE)
     vtkStdString.h
     vtkStructuredData.h
     vtkSystemIncludes.h
+    vtkTcl.h
     vtkTclUtil.h
     vtkTemplateAliasMacro.h
     vtkTimeStamp.h
+    vtkTk.h
     vtkTransformCollection.h
+    vtkTryDowncast.h
     vtkType.h
     vtkTypeTemplate.h
     vtkTypeTraits.h
     vtkTypedArray.h
+    vtkUnicodeString.h
+    vtkVariant.h
     vtkVariantBoostSerialization.h
     vtkVariantCast.h
+    vtkVariantCreate.h
     vtkVariantExtract.h
     vtkVariantInlineOperators.h
     vtkVector.h
+    vtkTuple.h
     vtkVectorIterator.h
-    vtkWin32Header.h
-    vtkWinCE.h
-    vtkWindows.h
-    vtkTcl.h
-    vtkTk.h
-    vtkVariant.h
+    vtkVectorOperators.h
     vtkVersion.h
-    vtkWeakPointerBase.h
     vtkWeakPointer.h
+    vtkWeakPointerBase.h
+    vtkWin32Header.h
+    vtkWindows.h
     vtkXMLFileOutputWindow.h
     )
 ENDIF(PYTHON_EXECUTABLE)

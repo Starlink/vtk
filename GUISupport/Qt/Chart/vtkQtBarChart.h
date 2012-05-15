@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtBarChart.h,v $
+  Module:    vtkQtBarChart.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,13 +67,6 @@ public:
   /// \param options The new bar chart drawing options.
   void setOptions(const vtkQtBarChartOptions &options);
 
-  /// \brief
-  ///   Gets the bar chart series options.
-  /// \param series The series index.
-  /// \return
-  ///   A pointer to the bar chart series options.
-  vtkQtBarChartSeriesOptions *getBarSeriesOptions(int series) const;
-
   virtual QPixmap getSeriesIcon(int series) const;
   //@}
 
@@ -124,19 +117,6 @@ public slots:
   /// it is used to populate the bar chart.
   void reset();
 
-protected:
-  /// \brief
-  ///   Creates a new bar chart series options object.
-  /// \param parent The parent object.
-  /// \return
-  ///   A pointer to the new bar chart series options object.
-  virtual vtkQtChartSeriesOptions *createOptions(QObject *parent);
-
-  /// \brief
-  ///   Sets up the series options defaults.
-  /// \param options The new series options object.
-  virtual void setupOptions(vtkQtChartSeriesOptions *options);
-
 private slots:
   /// \brief
   ///   Prepares the bar chart for a series insertion.
@@ -169,30 +149,31 @@ private slots:
   void handleOutlineChange();
 
   /// \brief
-  ///   Changes the series visibility.
-  ///
-  /// The signal sender is used to determine which series has changed.
-  ///
-  /// \param visible True if the series should be shown.
-  void handleSeriesVisibilityChange(bool visible);
-
-  /// \brief
-  ///   Changes the series pen.
-  /// \param pen The new series pen.
-  void handleSeriesPenChange(const QPen &pen);
-
-  /// \brief
-  ///   Changes the series brush.
-  /// \param brush The new series brush.
-  void handleSeriesBrushChange(const QBrush &brush);
-
-  /// \brief
   ///   Called to set up the highlights.
   ///
   /// The set up request is ignored if the model is being changed.
   void updateHighlights();
 
+protected slots:
+  /// \brief
+  ///   Called when any of the series options are changed.
+  ///  Default implementation fires the modelSeriesChanged() signal.
+  /// \param options The options that fired the dataChanged() signal.
+  /// \param type Type of the option that was changed.
+  /// \param newValue The new value for the option.
+  /// \param oldValue The previous value for the option, if any.
+  virtual void handleOptionsChanged(vtkQtChartSeriesOptions*,
+    int type, const QVariant& newvalue, const QVariant& oldvalue);
+
 private:
+  /// \brief
+  ///   Changes the series visibility.
+  ///
+  /// The signal sender is used to determine which series has changed.
+  /// \param options The options that changed.
+  /// \param visible True if the series should be shown.
+  void handleSeriesVisibilityChange(vtkQtChartSeriesOptions* options, bool visible);
+
   /// \brief
   ///   Adds the domain for the given series to the current domain.
   /// \param series The series index.

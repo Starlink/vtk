@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCylinder.h,v $
+  Module:    vtkCylinder.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@
 class VTK_FILTERING_EXPORT vtkCylinder : public vtkImplicitFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkCylinder,vtkImplicitFunction);
+  vtkTypeMacro(vtkCylinder,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRTXMLPolyDataReader.cxx,v $
+  Module:    vtkRTXMLPolyDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,17 +15,16 @@
 #include "vtkRTXMLPolyDataReader.h"
 #include "vtkObjectFactory.h"
 #include "vtkDirectory.h"
-#include <vtkstd/vector>
-#include <vtkstd/string>
+#include <vector>
+#include <string>
 
-vtkCxxRevisionMacro(vtkRTXMLPolyDataReader, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkRTXMLPolyDataReader);
 
 class vtkRTXMLPolyDataReaderInternals
 {
 public:
-  vtkstd::vector<vtkstd::string> AvailableDataFileList;
-  vtkstd::vector<vtkstd::string> ProcessedFileList;
+  std::vector<std::string> AvailableDataFileList;
+  std::vector<std::string> ProcessedFileList;
 };
 
 //----------------------------------------------------------------------------

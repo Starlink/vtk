@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThresholdTable.h,v $
+  Module:    vtkThresholdTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_INFOVIS_EXPORT vtkThresholdTable : public vtkTableAlgorithm
 {
 public:
   static vtkThresholdTable* New();
-  vtkTypeRevisionMacro(vtkThresholdTable, vtkTableAlgorithm);
+  vtkTypeMacro(vtkThresholdTable, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //BTX
@@ -55,7 +55,6 @@ public:
   vtkSetClampMacro(Mode, int, 0, 3);
   vtkGetMacro(Mode, int);
 
-  //BTX
   // Description:
   // The minumum value for the threshold.
   // This may be any data type stored in a vtkVariant.
@@ -86,8 +85,6 @@ public:
   // Criterion is rows whose scalars are between lower and upper thresholds
   // (inclusive of the end values).
   void ThresholdBetween(vtkVariant lower, vtkVariant upper);
-
-  //ETX
 
   // Description:
   // The minumum value for the threshold as a double.

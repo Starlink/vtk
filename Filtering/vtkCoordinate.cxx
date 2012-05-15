@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCoordinate.cxx,v $
+  Module:    vtkCoordinate.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkViewport.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCoordinate, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkCoordinate);
 
 vtkCxxSetObjectMacro(vtkCoordinate,ReferenceCoordinate,vtkCoordinate);
@@ -341,6 +340,9 @@ double *vtkCoordinate::GetComputedDoubleDisplayValue(vtkViewport* viewport)
       }
     else
       {
+      this->ComputedDoubleDisplayValue[0] = static_cast<double>(VTK_LARGE_INTEGER);
+      this->ComputedDoubleDisplayValue[1] = static_cast<double>(VTK_LARGE_INTEGER);
+
       vtkErrorMacro("Request for coordinate transformation without required viewport");
       }
     return this->ComputedDoubleDisplayValue;

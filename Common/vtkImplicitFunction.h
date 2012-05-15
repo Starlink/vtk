@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitFunction.h,v $
+  Module:    vtkImplicitFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@ class vtkAbstractTransform;
 class VTK_COMMON_EXPORT vtkImplicitFunction : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkImplicitFunction,vtkObject);
+  vtkTypeMacro(vtkImplicitFunction,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -83,7 +83,7 @@ public:
   // Set/Get a transformation to apply to input points before
   // executing the implicit function.
   virtual void SetTransform(vtkAbstractTransform*);
-  virtual void SetTransform(double elements[16]);
+  virtual void SetTransform(const double elements[16]);
   vtkGetObjectMacro(Transform,vtkAbstractTransform);
 
   // Description:

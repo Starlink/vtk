@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestGeoView2D.cxx,v $
+  Module:    TestGeoView2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,6 +40,7 @@
 #include "vtkTIFFReader.h"
 
 #include <vtksys/ios/sstream>
+#include <vtksys/SystemTools.hxx>
 
 int TestGeoView2D(int argc, char* argv[])
 {
@@ -51,8 +52,6 @@ int TestGeoView2D(int argc, char* argv[])
   vtkStdString imageSavePath = ".";
   vtkStdString terrainReadPath = ".";
   vtkStdString terrainSavePath = ".";
-  double locationTol = 5.0;
-  double textureTol = 1.0;
   for (int a = 1; a < argc; a++)
     {
     if (!strcmp(argv[a], "-P"))
@@ -91,18 +90,6 @@ int TestGeoView2D(int argc, char* argv[])
       terrainSavePath = argv[a];
       continue;
       }
-    if (!strcmp(argv[a], "-LT"))
-      {
-      ++a;
-      locationTol = atof(argv[a]);
-      continue;
-      }
-    if (!strcmp(argv[a], "-TT"))
-      {
-      ++a;
-      textureTol = atof(argv[a]);
-      continue;
-      }
     if (!strcmp(argv[a], "-I"))
       {
       continue;
@@ -128,9 +115,9 @@ int TestGeoView2D(int argc, char* argv[])
     }
 
   // Create the view
-  vtkSmartPointer<vtkRenderWindow> win = vtkSmartPointer<vtkRenderWindow>::New();
   vtkSmartPointer<vtkGeoView2D> view = vtkSmartPointer<vtkGeoView2D>::New();
-  view->SetupRenderWindow(win);
+  view->DisplayHoverTextOff();
+  view->GetRenderer()->GradientBackgroundOff();
 
   // Create the terrain
   vtkSmartPointer<vtkGeoTerrain2D> terrain =
@@ -205,7 +192,7 @@ int TestGeoView2D(int argc, char* argv[])
   imageRep->SetSource(imageSource);
 
   // Set up the viewport
-  win->SetSize(600, 600);
+  view->GetRenderWindow()->SetSize(600, 600);
   vtkSmartPointer<vtkGeoTerrainNode> root =
     vtkSmartPointer<vtkGeoTerrainNode>::New();
   terrainSource->FetchRoot(root);
@@ -220,12 +207,13 @@ int TestGeoView2D(int argc, char* argv[])
   double scale = (scalex > scaley) ? scalex : scaley;
   view->GetRenderer()->GetActiveCamera()->SetParallelScale(scale);
 
-  view->Update();
-  int retVal = vtkRegressionTestImage(win);
+  view->Render();
+  vtksys::SystemTools::Delay(2000);
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
-    win->GetInteractor()->Initialize();
-    win->GetInteractor()->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
     }
 
   terrainSource->ShutDown();

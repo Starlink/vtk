@@ -1,52 +1,32 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtView.cxx,v $
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+  Module:    vtkQtView.cxx
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2009 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
 #include "vtkQtView.h"
 
+#include <QApplication>
+#include <QPixmap>
 #include "vtkObjectFactory.h"
-
-vtkCxxRevisionMacro(vtkQtView, "$Revision: 1.2 $");
-vtkStandardNewMacro(vtkQtView);
 
 
 //----------------------------------------------------------------------------
 vtkQtView::vtkQtView()
 {
-  this->Widget = 0;
+
 }
 
 //----------------------------------------------------------------------------
 vtkQtView::~vtkQtView()
 {
-}
 
-//----------------------------------------------------------------------------
-void vtkQtView::SetWidget(QWidget *w)
-{
-  this->Widget = w;
-}
-
-//----------------------------------------------------------------------------
-QWidget* vtkQtView::GetWidget()
-{
-  return this->Widget;
 }
 
 //----------------------------------------------------------------------------
@@ -55,3 +35,21 @@ void vtkQtView::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
 }
 
+//----------------------------------------------------------------------------
+void vtkQtView::ProcessQtEvents()
+{
+  QApplication::processEvents();
+}
+
+//----------------------------------------------------------------------------
+void vtkQtView::ProcessQtEventsNoUserInput()
+{
+  QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+//----------------------------------------------------------------------------
+bool vtkQtView::SaveImage(const char* filename)
+{
+  // This is ok even if this->GetWidget() returns null.
+  return QPixmap::grabWidget(this->GetWidget()).save(filename);
+}

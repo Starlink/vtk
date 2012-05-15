@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreePointsGrabber.h,v $
+  Module:    vtkHyperOctreePointsGrabber.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@
 class VTK_FILTERING_EXPORT vtkHyperOctreePointsGrabber : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkHyperOctreePointsGrabber,vtkObject);
+  vtkTypeMacro(vtkHyperOctreePointsGrabber,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

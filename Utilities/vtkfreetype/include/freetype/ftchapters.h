@@ -90,6 +90,7 @@
 /*    computations                                                         */
 /*    list_processing                                                      */
 /*    outline_processing                                                   */
+/*    quick_advance                                                        */
 /*    bitmap_handling                                                      */
 /*    raster                                                               */
 /*    glyph_stroker                                                        */
@@ -97,6 +98,7 @@
 /*    module_management                                                    */
 /*    gzip                                                                 */
 /*    lzw                                                                  */
+/*    bzip2                                                                */
 /*    lcd_filtering                                                        */
 /*                                                                         */
 /***************************************************************************/

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVisibilitySort.cxx,v $
+  Module:    vtkVisibilitySort.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 
 //-----------------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkVisibilitySort, "$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkVisibilitySort, Camera, vtkCamera);
 vtkCxxSetObjectMacro(vtkVisibilitySort, Input, vtkDataSet);
 

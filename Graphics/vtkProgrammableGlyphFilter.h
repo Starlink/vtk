@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableGlyphFilter.h,v $
+  Module:    vtkProgrammableGlyphFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ class vtkPointData;
 class VTK_GRAPHICS_EXPORT vtkProgrammableGlyphFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkProgrammableGlyphFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkProgrammableGlyphFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description
@@ -80,6 +80,15 @@ public:
   // Note: you can change the source during execution of this filter.
   void SetSource(vtkPolyData *source);
   vtkPolyData *GetSource();
+
+  // Description:
+  // Signature definition for programmable method callbacks. Methods passed to
+  // SetGlyphMethod or SetGlyphMethodArgDelete must conform to this signature.
+  // The presence of this typedef is useful for reference and for external
+  // analysis tools, but it cannot be used in the method signatures in these
+  // header files themselves because it prevents the internal VTK wrapper
+  // generators from wrapping these methods.
+  typedef void (*ProgrammableMethodCallbackType)(void *arg);
 
   // Description:
   // Specify function to be called for each input point.
@@ -128,8 +137,8 @@ protected:
   vtkPointData *PointData;
   int ColorMode;
   
-  void (*GlyphMethod)(void *); // Support GlyphMethod
-  void (*GlyphMethodArgDelete)(void *);
+  ProgrammableMethodCallbackType GlyphMethod; // Support GlyphMethod
+  ProgrammableMethodCallbackType GlyphMethodArgDelete;
   void *GlyphMethodArg;
   
 private:

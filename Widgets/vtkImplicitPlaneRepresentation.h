@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitPlaneRepresentation.h,v $
+  Module:    vtkImplicitPlaneRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,6 +55,7 @@ class vtkPolyData;
 class vtkPolyDataAlgorithm;
 class vtkTransform;
 class vtkBox;
+class vtkLookupTable;
 
 class VTK_WIDGETS_EXPORT vtkImplicitPlaneRepresentation : public vtkWidgetRepresentation
 {
@@ -65,7 +66,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkImplicitPlaneRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkImplicitPlaneRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -79,9 +80,10 @@ public:
   // Get the normal to the plane.
   void SetNormal(double x, double y, double z);
   void SetNormal(double x[3]);
+  void SetNormalToCamera();
   double* GetNormal();
   void GetNormal(double xyz[3]);
-  
+
   // Description:
   // Force the plane widget to be aligned with one of the x-y-z axes.
   // If one axis is set on, the other two will be set off.
@@ -97,6 +99,14 @@ public:
   void SetNormalToZAxis(int);
   vtkGetMacro(NormalToZAxis,int);
   vtkBooleanMacro(NormalToZAxis,int);
+
+  // Description:
+  // If enabled, and a vtkCamera is available through the renderer, then
+  // LockNormalToCamera will cause the normal to follow the camera's
+  // normal.
+  virtual void SetLockNormalToCamera(int);
+  vtkGetMacro(LockNormalToCamera,int);
+  vtkBooleanMacro(LockNormalToCamera,int);
 
   // Description:
   // Turn on/off tubing of the wire outline of the plane. The tube thickens
@@ -143,7 +153,7 @@ public:
   // Satisfies superclass API.  This returns a pointer to the underlying
   // PolyData (which represents the plane).
   vtkPolyDataAlgorithm* GetPolyDataAlgorithm();
-   
+
   // Description:
   // Get the implicit function for the plane. The user must provide the
   // instance of the class vtkPlane. Note that vtkPlane is a subclass of
@@ -160,9 +170,9 @@ public:
   // Get the properties on the normal (line and cone).
   vtkGetObjectMacro(NormalProperty,vtkProperty);
   vtkGetObjectMacro(SelectedNormalProperty,vtkProperty);
-  
+
   // Description:
-  // Get the plane properties. The properties of the plane when selected 
+  // Get the plane properties. The properties of the plane when selected
   // and unselected can be manipulated.
   vtkGetObjectMacro(PlaneProperty,vtkProperty);
   vtkGetObjectMacro(SelectedPlaneProperty,vtkProperty);
@@ -176,6 +186,34 @@ public:
   // Get the property of the intersection edges. (This property also
   // applies to the edges when tubed.)
   vtkGetObjectMacro(EdgesProperty,vtkProperty);
+  // Description
+  // Set color to the edge
+  void SetEdgeColor(vtkLookupTable*);
+  void SetEdgeColor(double, double, double);
+  void SetEdgeColor(double x[3]);
+
+  // Description:
+  // Specify a translation distance used by the BumpPlane() method. Note that the
+  // distance is normalized; it is the fraction of the length of the bounding
+  // box of the wire outline.
+  vtkSetClampMacro(BumpDistance,double,0.000001,1);
+  vtkGetMacro(BumpDistance,double);
+
+  // Description:
+  // Translate the plane in the direction of the normal by the
+  // specified BumpDistance.  The dir parameter controls which
+  // direction the pushing occurs, either in the same direction
+  // as the normal, or when negative, in the opposite direction.
+  // The factor controls whether what percentage of the bump is
+  // used.
+  void BumpPlane(int dir, double factor);
+
+  // Description:
+  // Push the plane the distance specified along the normal. Positive
+  // values are in the direction of the normal; negative values are
+  // in the opposite direction of the normal. The distance value is
+  // expressed in world coordinates.
+  void PushPlane(double distance);
 
   // Description:
   // Methods to interface with the vtkSliderWidget.
@@ -185,7 +223,6 @@ public:
   virtual void StartWidgetInteraction(double eventPos[2]);
   virtual void WidgetInteraction(double newEventPos[2]);
   virtual void EndWidgetInteraction(double newEventPos[2]);
-
   // Decsription:
   // Methods supporting the rendering process.
   virtual double *GetBounds();
@@ -194,7 +231,7 @@ public:
   virtual int RenderOpaqueGeometry(vtkViewport*);
   virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
   virtual int HasTranslucentPolygonalGeometry();
-  
+
 //BTX - manage the state of the widget
   enum _InteractionState
   {
@@ -204,7 +241,6 @@ public:
     MovingOrigin,
     Rotating,
     Pushing,
-    MovingPlane,
     Scaling
   };
 //ETX
@@ -239,6 +275,12 @@ protected:
   int NormalToYAxis;
   int NormalToZAxis;
 
+  // Locking normal to camera
+  int LockNormalToCamera;
+
+  // Controlling the push operation
+  double BumpDistance;
+
   // The actual plane which is being manipulated
   vtkPlane *Plane;
 
@@ -249,16 +291,16 @@ protected:
   vtkActor          *OutlineActor;
   void HighlightOutline(int highlight);
   int  OutlineTranslation; //whether the outline can be moved
-  int  ScaleEnabled; //whether the widget can be scaled 
+  int  ScaleEnabled; //whether the widget can be scaled
   int  OutsideBounds; //whether the widget can be moved outside input's bounds
-  
+
   // The cut plane is produced with a vtkCutter
   vtkCutter         *Cutter;
   vtkPolyDataMapper *CutMapper;
   vtkActor          *CutActor;
   int                DrawPlane;
   void HighlightPlane(int highlight);
-  
+
   // Optional tubes are represented by extracting boundary edges and tubing
   vtkFeatureEdges   *Edges;
   vtkTubeFilter     *EdgesTuber;
@@ -294,10 +336,10 @@ protected:
 
   // Do the picking
   vtkCellPicker *Picker;
-  
+
   // Transform the normal (used for rotation)
   vtkTransform *Transform;
-  
+
   // Methods to manipulate the plane
   void ConstrainOrigin(double x[3]);
   void Rotate(double X, double Y, double *p1, double *p2, double *vpn);
@@ -318,12 +360,12 @@ protected:
   vtkProperty *SelectedOutlineProperty;
   vtkProperty *EdgesProperty;
   void CreateDefaultProperties();
-  
+
   void GeneratePlane();
-  
+
   // Support GetBounds() method
   vtkBox *BoundingBox;
-  
+
 private:
   vtkImplicitPlaneRepresentation(const vtkImplicitPlaneRepresentation&);  //Not implemented
   void operator=(const vtkImplicitPlaneRepresentation&);  //Not implemented

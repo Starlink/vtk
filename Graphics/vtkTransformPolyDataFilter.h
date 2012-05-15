@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformPolyDataFilter.h,v $
+  Module:    vtkTransformPolyDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_GRAPHICS_EXPORT vtkTransformPolyDataFilter : public vtkPolyDataAlgorit
 {
 public:
   static vtkTransformPolyDataFilter *New();
-  vtkTypeRevisionMacro(vtkTransformPolyDataFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkTransformPolyDataFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

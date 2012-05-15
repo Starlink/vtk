@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColorsPainter.h,v $
+  Module:    vtkScalarsToColorsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_RENDERING_EXPORT vtkScalarsToColorsPainter : public vtkPainter
 {
 public:
   static vtkScalarsToColorsPainter* New();
-  vtkTypeRevisionMacro(vtkScalarsToColorsPainter, vtkPainter);
+  vtkTypeMacro(vtkScalarsToColorsPainter, vtkPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -118,6 +118,12 @@ public:
   // Subclasses need to override this to return the output of the pipeline.
   virtual vtkDataObject *GetOutput();
 
+  // Description:
+  // Return the texture size limit. Subclasses need to override this
+  // to return the actual correct texture size limit.  Here it is
+  // hardcoded to 1024.
+  virtual vtkIdType GetTextureSizeLimit();
+
 //BTX
 protected:
   vtkScalarsToColorsPainter();
@@ -125,7 +131,7 @@ protected:
  
   // Description:
   // Create a new shallow-copied clone for data with no scalars.
-  vtkDataObject* NewClone(vtkDataObject* data);
+  virtual vtkDataObject* NewClone(vtkDataObject* data);
 
   // Description:
   // Create texture coordinates for the output assuming a texture for the
@@ -170,7 +176,7 @@ protected:
   void UpdateColorTextureMap(double alpha, int multiply_with_alpha);
 
   // Methods to set the ivars. These are purposefully protected.
-  // The only means of affecting these should be using teh vtkInformation 
+  // The only means of affecting these should be using the vtkInformation
   // object.
   vtkSetMacro(UseLookupTableScalarRange,int);
   vtkSetVector2Macro(ScalarRange,double);
@@ -202,6 +208,7 @@ protected:
   int ScalarMaterialMode;
   double LastUsedAlpha; // Essential to ensure alpha changes work correctly 
                         // for composite datasets.
+  int LastUsedMultiplyWithAlpha;
   double ScalarRange[2];
   int ScalarVisibility;
   int UseLookupTableScalarRange;

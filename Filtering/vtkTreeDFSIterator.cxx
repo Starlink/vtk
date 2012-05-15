@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeDFSIterator.cxx,v $
+  Module:    vtkTreeDFSIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,13 +19,13 @@
 -------------------------------------------------------------------------*/
 
 #include "vtkTreeDFSIterator.h"
-#include "vtkTree.h"
-#include "vtkObjectFactory.h"
-#include "vtkIntArray.h"
-#include "vtkIdList.h"
 
-#include <vtkstd/stack>
-using vtkstd::stack;
+#include "vtkIntArray.h"
+#include "vtkObjectFactory.h"
+#include "vtkTree.h"
+
+#include <stack>
+using std::stack;
 
 struct vtkTreeDFSIteratorPosition
 {
@@ -41,16 +41,14 @@ public:
   stack<vtkTreeDFSIteratorPosition> Stack;
 };
 
-vtkCxxRevisionMacro(vtkTreeDFSIterator, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkTreeDFSIterator);
 
 vtkTreeDFSIterator::vtkTreeDFSIterator()
 {
   this->Internals = new vtkTreeDFSIteratorInternals();
-  this->Tree = NULL;
   this->Color = vtkIntArray::New();
-  this->StartVertex = -1;
   this->Mode = 0;
+  this->CurRoot = -1;
 }
 
 vtkTreeDFSIterator::~vtkTreeDFSIterator()
@@ -59,11 +57,6 @@ vtkTreeDFSIterator::~vtkTreeDFSIterator()
     {
     delete this->Internals;
     this->Internals = NULL;
-    }
-  if (this->Tree)
-    {
-    this->Tree->Delete();
-    this->Tree = NULL;
     }
   if (this->Color)
     {
@@ -76,7 +69,7 @@ void vtkTreeDFSIterator::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   os << indent << "Mode: " << this->Mode << endl;
-  os << indent << "StartVertex: " << this->StartVertex << endl;
+  os << indent << "CurRoot: " << this->CurRoot << endl;
 }
 
 void vtkTreeDFSIterator::Initialize()
@@ -112,35 +105,6 @@ void vtkTreeDFSIterator::Initialize()
     }
 }
 
-void vtkTreeDFSIterator::SetTree(vtkTree* tree)
-{
-  vtkDebugMacro(<< this->GetClassName() << " (" << this
-                << "): setting Tree to " << tree );
-  if (this->Tree != tree)
-    {
-    vtkTree* temp = this->Tree;
-    this->Tree = tree;
-    if (this->Tree != NULL) { this->Tree->Register(this); }
-    if (temp != NULL)
-      {
-      temp->UnRegister(this);
-      }
-    this->StartVertex = -1;
-    this->Initialize();
-    this->Modified();
-    }
-}
-
-void vtkTreeDFSIterator::SetStartVertex(vtkIdType vertex)
-{
-  if (this->StartVertex != vertex)
-    {
-    this->StartVertex = vertex;
-    this->Initialize();
-    this->Modified();
-    }
-}
-
 void vtkTreeDFSIterator::SetMode(int mode)
 {
   if (this->Mode != mode)
@@ -149,13 +113,6 @@ void vtkTreeDFSIterator::SetMode(int mode)
     this->Initialize();
     this->Modified();
     }
-}
-
-vtkIdType vtkTreeDFSIterator::Next()
-{
-  vtkIdType last = this->NextId;
-  this->NextId = this->NextInternal();
-  return last;
 }
 
 vtkIdType vtkTreeDFSIterator::NextInternal()
@@ -237,9 +194,4 @@ vtkIdType vtkTreeDFSIterator::NextInternal()
     }
   //cout << "DFS no more!" << endl;
   return -1;
-}
-
-bool vtkTreeDFSIterator::HasNext()
-{
-  return this->NextId != -1;
 }

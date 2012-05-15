@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuaternionInterpolator.h,v $
+  Module:    vtkQuaternionInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -58,7 +58,7 @@ class vtkQuaternionList;
 class VTK_RENDERING_EXPORT vtkQuaternionInterpolator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkQuaternionInterpolator, vtkObject);
+  vtkTypeMacro(vtkQuaternionInterpolator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

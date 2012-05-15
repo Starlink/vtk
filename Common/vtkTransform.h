@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransform.h,v $
+  Module:    vtkTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class VTK_COMMON_EXPORT vtkTransform : public vtkLinearTransform
 {
  public:
   static vtkTransform *New();
-  vtkTypeRevisionMacro(vtkTransform,vtkLinearTransform);
+  vtkTypeMacro(vtkTransform,vtkLinearTransform);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

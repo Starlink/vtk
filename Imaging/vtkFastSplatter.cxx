@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFastSplatter.cxx,v $
+  Module:    vtkFastSplatter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedIntArray.h"
 
-#include <vtkstd/algorithm>
+#include <algorithm>
 
 #ifndef MIN
 #define MIN(x, y)       ((x) < (y) ? (x) : (y))
@@ -41,7 +41,6 @@
 #define MAX(x, y)       ((x) > (y) ? (x) : (y))
 #endif
 
-vtkCxxRevisionMacro(vtkFastSplatter, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkFastSplatter);
 
 //-----------------------------------------------------------------------------
@@ -277,7 +276,7 @@ void vtkFastSplatterBucketPoints(const T *points, vtkIdType numPoints,
                                  const double spacing[3])
 {
   // Clear out the buckets.
-  vtkstd::fill_n(buckets, dimensions[0]*dimensions[1]*dimensions[2], 0);
+  std::fill_n(buckets, dimensions[0]*dimensions[1]*dimensions[2], 0);
 
   // Iterate over all the points.
   for (vtkIdType i = 0; i < numPoints; i++)
@@ -316,7 +315,7 @@ void vtkFastSplatterConvolve(T *splat, const int splatDims[3],
   int numPoints = 0;
 
   // First, clear out the output image.
-  vtkstd::fill_n(output, imageDims[0]*imageDims[1]*imageDims[2],
+  std::fill_n(output, imageDims[0]*imageDims[1]*imageDims[2],
                  static_cast<T>(0));
 
   int splatCenter[3];

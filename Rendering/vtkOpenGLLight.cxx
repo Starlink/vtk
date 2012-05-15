@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLLight.cxx,v $
+  Module:    vtkOpenGLLight.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLLight, "$Revision: 1.24 $");
 vtkStandardNewMacro(vtkOpenGLLight);
 #endif
 
@@ -35,7 +34,6 @@ void vtkOpenGLLight::Render(vtkRenderer *vtkNotUsed(ren),int light_index)
   float dx, dy, dz;
   float color[4];
   float Info[4];
-  vtkMatrix4x4 *xform = NULL;
 
   // get required info from light
 
@@ -45,13 +43,12 @@ void vtkOpenGLLight::Render(vtkRenderer *vtkNotUsed(ren),int light_index)
 
   if(this->TransformMatrix != NULL) 
     {
-    xform = vtkMatrix4x4::New();
-    xform->DeepCopy(this->TransformMatrix);
-    xform->Transpose();
+    double xform[16];
+    vtkMatrix4x4::Transpose(*this->TransformMatrix->Element, xform);
 
     // code assumes that we're already in GL_MODELVIEW matrix mode
     glPushMatrix();
-    glMultMatrixd(xform->Element[0]);
+    glMultMatrixd(xform);
     }
 
   color[0] = this->Intensity * this->AmbientColor[0];
@@ -120,7 +117,6 @@ void vtkOpenGLLight::Render(vtkRenderer *vtkNotUsed(ren),int light_index)
   if(this->TransformMatrix != NULL) 
     {
     glPopMatrix();
-    xform->Delete();
     }
 }
 

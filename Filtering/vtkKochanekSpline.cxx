@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKochanekSpline.cxx,v $
+  Module:    vtkKochanekSpline.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPiecewiseFunction.h"
 
-vtkCxxRevisionMacro(vtkKochanekSpline, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkKochanekSpline);
 
 //----------------------------------------------------------------------------
@@ -218,20 +217,6 @@ void vtkKochanekSpline::Fit1D (int size, double *x, double *y,
   int           N;              /* top point number             */
   int           i;
 
-  if (size == 2)
-    {
-    // two points, set coefficients for a straight line
-    coefficients[0][3] = 0.0;
-    coefficients[1][3] = 0.0;
-    coefficients[0][2] = 0.0;
-    coefficients[1][2] = 0.0;
-    coefficients[0][1] = (y[1] - y[0]) / (x[1] - x[0]);
-    coefficients[1][1] = coefficients[0][1];
-    coefficients[0][0] = y[0];
-    coefficients[1][0] = y[1];
-    return;
-    }
-
   N = size - 1;
 
   for (i=1; i < N; i++)
@@ -260,6 +245,9 @@ void vtkKochanekSpline::Fit1D (int size, double *x, double *y,
   // Calculate the deriviatives at the end points
   coefficients[0][0] = y[0];
   coefficients[N][0] = y[N];
+  coefficients[N][1] = 0.0;
+  coefficients[N][2] = 0.0;
+  coefficients[N][3] = 0.0;
 
   if ( this->Closed ) //the curve is continuous and closed at P0=Pn
     {
@@ -275,8 +263,8 @@ void vtkKochanekSpline::Fit1D (int size, double *x, double *y,
     // adjust deriviatives for non uniform spacing between nodes
     n1  = x[1] - x[0];
     n0  = x[N] - x[N-1];
-    ds *= (2 * n1 / (n0 + n1));
-    dd *= (2 * n0 / (n0 + n1));
+    ds *= (2 * n0 / (n0 + n1));
+    dd *= (2 * n1 / (n0 + n1));
 
     coefficients[0][1] = dd;
     coefficients[0][2] = ds;

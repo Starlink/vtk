@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataArraySelection.cxx,v $
+  Module:    vtkDataArraySelection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,17 +15,16 @@
 #include "vtkDataArraySelection.h"
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/vector>
-#include <vtkstd/string>
+#include <vector>
+#include <string>
 
-vtkCxxRevisionMacro(vtkDataArraySelection, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkDataArraySelection);
 
 class vtkDataArraySelectionInternals
 {
 public:
-  vtkstd::vector<vtkstd::string> ArrayNames;
-  vtkstd::vector<int> ArraySettings;
+  std::vector<std::string> ArrayNames;
+  std::vector<int> ArraySettings;
 };
 
 //----------------------------------------------------------------------------
@@ -123,7 +122,7 @@ void vtkDataArraySelection::EnableAllArrays()
 {
   vtkDebugMacro("Enabling all arrays.");
   int modified = 0;
-  for(vtkstd::vector<int>::iterator i = this->Internal->ArraySettings.begin();
+  for(std::vector<int>::iterator i = this->Internal->ArraySettings.begin();
       i != this->Internal->ArraySettings.end(); ++i)
     {
     if(!*i)
@@ -143,7 +142,7 @@ void vtkDataArraySelection::DisableAllArrays()
 {
   vtkDebugMacro("Disabling all arrays.");
   int modified = 0;
-  for(vtkstd::vector<int>::iterator i = this->Internal->ArraySettings.begin();
+  for(std::vector<int>::iterator i = this->Internal->ArraySettings.begin();
       i != this->Internal->ArraySettings.end(); ++i)
     {
     if(*i)
@@ -168,7 +167,7 @@ int vtkDataArraySelection::GetNumberOfArrays()
 int vtkDataArraySelection::GetNumberOfArraysEnabled()
 {
   int numArrays = 0;
-  for(vtkstd::vector<int>::iterator i = this->Internal->ArraySettings.begin();
+  for(std::vector<int>::iterator i = this->Internal->ArraySettings.begin();
       i != this->Internal->ArraySettings.end(); ++i)
     {
     if(*i)

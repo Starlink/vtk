@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTexturedActor2D.h,v $
+  Module:    vtkTexturedActor2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_RENDERING_EXPORT vtkTexturedActor2D : public vtkActor2D
 public:
   static vtkTexturedActor2D* New();
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkTexturedActor2D, vtkActor2D);
+  vtkTypeMacro(vtkTexturedActor2D, vtkActor2D);
 
   // Description: 
   // Set/Get the texture object to control rendering texture maps.  This will

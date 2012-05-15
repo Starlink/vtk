@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWriter.cxx,v $
+  Module:    vtkWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,11 @@
 
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkWriter, "$Revision: 1.45 $");
+
+namespace 
+{
+  const char hex_digits[] = "0123456789ABCDEF";
+};
 
 // Construct with no start and end write methods or arguments.
 vtkWriter::vtkWriter()
@@ -127,10 +131,13 @@ int vtkWriter::RequestData(
   unsigned long lastUpdateTime =  this->GetInput(0)->GetUpdateTime();
   for (idx = 1; idx < this->GetNumberOfInputPorts(); ++idx)
     {
-    unsigned long updateTime = this->GetInput(idx)->GetUpdateTime();
-    if ( updateTime > lastUpdateTime )
+    if (this->GetInput(idx))
       {
-      lastUpdateTime = updateTime;
+      unsigned long updateTime = this->GetInput(idx)->GetUpdateTime();
+      if ( updateTime > lastUpdateTime )
+        {
+        lastUpdateTime = updateTime;
+        }
       }
     }
 
@@ -182,7 +189,7 @@ void vtkWriter::EncodeString(char* resname, const char* name, bool doublePercent
     if ( name[cc] < 33  || name[cc] > 126 ||
          name[cc] == '\"' || name[cc] == '%' )
       {
-      sprintf(buffer, "%02X", name[cc]);
+      sprintf(buffer, "%02X", static_cast<unsigned char>(name[cc]));
       if (doublePercent)
         {
         str << "%%";
@@ -219,7 +226,7 @@ void vtkWriter::EncodeWriteString(ostream* out, const char* name, bool doublePer
     if ( name[cc] < 33  || name[cc] > 126 ||
          name[cc] == '\"' || name[cc] == '%' )
       {
-      sprintf(buffer, "%02X", name[cc]);
+      sprintf(buffer, "%02X", static_cast<unsigned char>(name[cc]));
       if (doublePercent)
         {
         *out << "%%";

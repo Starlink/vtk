@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericGlyph3DFilter.h,v $
+  Module:    vtkGenericGlyph3DFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -93,7 +93,7 @@
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericGlyph3DFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericGlyph3DFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGenericGlyph3DFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

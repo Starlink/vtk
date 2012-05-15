@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricCrossCap.h,v $
+  Module:    vtkParametricCrossCap.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_COMMON_EXPORT vtkParametricCrossCap : public vtkParametricFunction
 {
 public:
 
-  vtkTypeRevisionMacro(vtkParametricCrossCap,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricCrossCap,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

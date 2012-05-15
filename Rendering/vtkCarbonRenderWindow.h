@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkCarbonRenderWindow.h,v $
+Module:    vtkCarbonRenderWindow.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -56,7 +56,7 @@ class VTK_RENDERING_EXPORT vtkCarbonRenderWindow : public vtkOpenGLRenderWindow
 {
 public:
   static vtkCarbonRenderWindow *New();
-  vtkTypeRevisionMacro(vtkCarbonRenderWindow,vtkOpenGLRenderWindow);
+  vtkTypeMacro(vtkCarbonRenderWindow,vtkOpenGLRenderWindow);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -115,7 +115,7 @@ public:
 
   // Description:
   // Set the position of the window.
-  virtual void SetPosition(int*);
+  virtual void SetPosition(int a[2]);
   virtual void SetPosition(int,int);
 
   // Description:
@@ -210,6 +210,11 @@ public:
   // on the next render.
   void SetForceMakeCurrent();
 
+  // Description:
+  // Is this render window using hardware acceleration? 0-false, 1-true.
+  // Always true for Carbon.
+  virtual int IsDirect();
+  
   // Description:
   // Check to see if an event is pending for this window.
   // This is a useful check to abort a long render.

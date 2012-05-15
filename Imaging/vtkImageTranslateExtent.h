@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageTranslateExtent.h,v $
+  Module:    vtkImageTranslateExtent.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_IMAGING_EXPORT vtkImageTranslateExtent : public vtkImageAlgorithm
 {
 public:
   static vtkImageTranslateExtent *New();
-  vtkTypeRevisionMacro(vtkImageTranslateExtent,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageTranslateExtent,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

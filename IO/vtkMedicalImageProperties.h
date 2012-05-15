@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMedicalImageProperties.h,v $
+  Module:    vtkMedicalImageProperties.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_IO_EXPORT vtkMedicalImageProperties : public vtkObject
 {
 public:
   static vtkMedicalImageProperties *New();
-  vtkTypeRevisionMacro(vtkMedicalImageProperties,vtkObject);
+  vtkTypeMacro(vtkMedicalImageProperties,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -148,6 +148,12 @@ public:
   // different fields namely: year month day
   // Return 0 on error, 1 on success
   static int GetDateAsFields(const char *date, int &year, int &month, int &day);
+
+  // Description:
+  // Take as input a string in VR:TM format (HHMMSS) and extract the
+  // different fields namely: hour, minute and second
+  // Return 0 on error, 1 on success
+  static int GetTimeAsFields(const char *time, int &hour, int &minute, int &second /* , long &milliseconds */);
 
   // Description:
   // Take as input a string in ISO 8601 date (YYYY/MM/DD) and construct a
@@ -397,9 +403,9 @@ protected:
   char *XRayTubeCurrent;
   double DirectionCosine[6];
 
+  //BTX
   // Description:
   // PIMPL Encapsulation for STL containers
-  //BTX
   vtkMedicalImagePropertiesInternals *Internals;
   //ETX
 

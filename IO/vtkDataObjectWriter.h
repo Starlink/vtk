@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectWriter.h,v $
+  Module:    vtkDataObjectWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,13 +28,14 @@
 #define __vtkDataObjectWriter_h
 
 #include "vtkWriter.h"
-#include "vtkDataWriter.h" // Neds data because it calls methods on it
+#include "vtkDataWriter.h" // Needs data because it calls methods on it
+#include "vtkStdString.h" // For string used in api
 
 class VTK_IO_EXPORT vtkDataObjectWriter : public vtkWriter
 {
 public:
   static vtkDataObjectWriter *New();
-  vtkTypeRevisionMacro(vtkDataObjectWriter,vtkWriter);
+  vtkTypeMacro(vtkDataObjectWriter,vtkWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -47,6 +48,14 @@ public:
   int GetFileType() {return this->Writer->GetFileType();};
   void SetFileTypeToASCII() {this->Writer->SetFileType(VTK_ASCII);};
   void SetFileTypeToBinary() {this->Writer->SetFileType(VTK_BINARY);};
+  void SetWriteToOutputString(int b) {this->Writer->SetWriteToOutputString(b);};
+  void WriteToOutputStringOn() {this->Writer->WriteToOutputStringOn();};
+  void WriteToOutputStringOff() {this->Writer->WriteToOutputStringOff();};
+  int GetWriteToOutputString() {return this->Writer->GetWriteToOutputString();};
+  char* GetOutputString() {return this->Writer->GetOutputString();};
+  vtkStdString GetOutputStdString() {return this->Writer->GetOutputStdString();};
+  int GetOutputStringLength() {return this->Writer->GetOutputStringLength();};
+  unsigned char* GetBinaryOutputString() {return this->Writer->GetBinaryOutputString();};
   void SetFieldDataName(const char *fieldname) {this->Writer->SetFieldDataName(fieldname);};
   char *GetFieldDataName() {return this->Writer->GetFieldDataName();};
 

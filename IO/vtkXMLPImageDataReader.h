@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPImageDataReader.h,v $
+  Module:    vtkXMLPImageDataReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class vtkImageData;
 class VTK_IO_EXPORT vtkXMLPImageDataReader : public vtkXMLPStructuredDataReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLPImageDataReader,vtkXMLPStructuredDataReader);
+  vtkTypeMacro(vtkXMLPImageDataReader,vtkXMLPStructuredDataReader);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkXMLPImageDataReader *New();
   

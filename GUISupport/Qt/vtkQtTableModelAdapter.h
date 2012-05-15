@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtTableModelAdapter.h,v $
+  Module:    vtkQtTableModelAdapter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,15 +29,13 @@
 #ifndef __vtkQtTableModelAdapter_h
 #define __vtkQtTableModelAdapter_h
 
-#include "QVTKWin32Header.h"
-#include "vtkType.h"
-
 #include "vtkQtAbstractModelAdapter.h"
+#include <QMimeData>
+#include <QImage>
 
-#include "vtkSelection.h"
-#include <QHash>
-
+class vtkSelection;
 class vtkTable;
+class vtkVariant;
 
 class QVTK_EXPORT vtkQtTableModelAdapter : public vtkQtAbstractModelAdapter
 {
@@ -48,17 +46,50 @@ public:
   vtkQtTableModelAdapter(vtkTable* table, QObject *parent = 0);
   ~vtkQtTableModelAdapter();
   
+  // Description:
   // Set/Get the VTK data object as input to this adapter
   virtual void SetVTKDataObject(vtkDataObject *data);
   virtual vtkDataObject* GetVTKDataObject() const;
   
-  vtkIdType IdToPedigree(vtkIdType id) const;
-  vtkIdType PedigreeToId(vtkIdType pedigree) const;
-  QModelIndex PedigreeToQModelIndex(vtkIdType id) const;
-  vtkIdType QModelIndexToPedigree(QModelIndex index) const;
+  // Description:
+  // Selection conversion from VTK land to Qt land
+  virtual vtkSelection* QModelIndexListToVTKIndexSelection(
+    const QModelIndexList qmil) const;
+  virtual QItemSelection VTKIndexSelectionToQItemSelection(
+    vtkSelection *vtksel) const;
   
   virtual void SetKeyColumnName(const char* name);
+  virtual void SetColorColumnName(const char* name);
+  void SetIconIndexColumnName(const char* name);
 
+  enum 
+  {
+    HEADER = 0,
+    ITEM = 1
+  };
+
+  enum 
+  {
+    COLORS = 0,
+    ICONS = 1,
+    NONE = 2
+  };
+
+  // Description:
+  // Specify how to color rows if colors are provided by SetColorColumnName().
+  // Default is the vertical header. 
+  void SetDecorationLocation(int s);
+
+  // Description:
+  // Specify how to color rows if colors are provided by SetColorColumnName().
+  // Default is the vertical header. 
+  void SetDecorationStrategy(int s);
+
+  bool GetSplitMultiComponentColumns() const;
+  void SetSplitMultiComponentColumns(bool value);
+
+  // Description:
+  // Set up the model based on the current table.
   void setTable(vtkTable* table);
   vtkTable* table() const { return this->Table; }
   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
@@ -72,16 +103,37 @@ public:
   int rowCount(const QModelIndex &parent = QModelIndex()) const;
   int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
-private:
-  void GenerateHashMap();
-  bool noTableCheck() const;
+  virtual bool dropMimeData(const QMimeData * data, Qt::DropAction action, int row, int column, const QModelIndex & parent) ;
+  virtual QMimeData * mimeData ( const QModelIndexList & indexes ) const;
+  virtual QStringList mimeTypes () const ;
+  Qt::DropActions supportedDropActions() const;
 
-  vtkTable* Table;
-  QHash<vtkIdType, vtkIdType> IdToPedigreeHash;
-  QHash<vtkIdType, QModelIndex> PedigreeToIndexHash;
-  QHash<QModelIndex, vtkIdType> IndexToIdHash;
-  
-  QHash<QModelIndex, QVariant> IndexToDecoration;
+  void SetIconSheet(QImage sheet);
+  void SetIconSize(int w, int h);
+  void SetIconSheetSize(int w, int h);
+
+signals:
+  void selectionDropped(vtkSelection*);
+
+private:
+
+  void getValue(int row, int column, vtkVariant& retVal) const;
+  bool noTableCheck() const;
+  void updateModelColumnHashTables();
+  QVariant getColorIcon(int row) const;
+  QVariant getIcon(int row) const;
+
+  bool        SplitMultiComponentColumns;
+  vtkTable*   Table;
+  int         DecorationLocation;
+  int         DecorationStrategy;
+  QImage      IconSheet;
+  int         IconSize[2];
+  int         IconSheetSize[2];
+  int         IconIndexColumn;
+
+  class vtkInternal;
+  vtkInternal* Internal;
   
   vtkQtTableModelAdapter(const vtkQtTableModelAdapter &);  // Not implemented
   void operator=(const vtkQtTableModelAdapter&);  // Not implemented.

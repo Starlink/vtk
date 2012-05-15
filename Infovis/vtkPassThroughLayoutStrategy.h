@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassThroughLayoutStrategy.h,v $
+  Module:    vtkPassThroughLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_INFOVIS_EXPORT vtkPassThroughLayoutStrategy : public vtkGraphLayoutStr
 public:
   static vtkPassThroughLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkPassThroughLayoutStrategy, vtkGraphLayoutStrategy);
+  vtkTypeMacro(vtkPassThroughLayoutStrategy, vtkGraphLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkElevationFilter.h,v $
+  Module:    vtkElevationFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_GRAPHICS_EXPORT vtkElevationFilter : public vtkDataSetAlgorithm
 {
 public:
   static vtkElevationFilter* New();
-  vtkTypeRevisionMacro(vtkElevationFilter, vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkElevationFilter, vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositePolyDataMapper.cxx,v $
+  Module:    vtkCompositePolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,15 +26,14 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkCompositePolyDataMapper, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCompositePolyDataMapper);
 
 class vtkCompositePolyDataMapperInternals
 {
 public:
-  vtkstd::vector<vtkPolyDataMapper*> Mappers;
+  std::vector<vtkPolyDataMapper*> Mappers;
 };
 
 vtkCompositePolyDataMapper::vtkCompositePolyDataMapper()
@@ -94,7 +93,7 @@ void vtkCompositePolyDataMapper::BuildPolyDataMapper()
       // Make a copy of the data to break the pipeline here
       vtkPolyData *newpd = vtkPolyData::New();
       newpd->ShallowCopy(pd);
-      vtkPolyDataMapper *pdmapper = vtkPolyDataMapper::New();
+      vtkPolyDataMapper *pdmapper = this->MakeAMapper();
       pdmapper->Register( this );
       pdmapper->SetInput(newpd);
       this->Internal->Mappers.push_back(pdmapper);
@@ -122,7 +121,7 @@ void vtkCompositePolyDataMapper::BuildPolyDataMapper()
         // Make a copy of the data to break the pipeline here
         vtkPolyData *newpd = vtkPolyData::New();
         newpd->ShallowCopy(pd);
-        vtkPolyDataMapper *pdmapper = vtkPolyDataMapper::New();
+        vtkPolyDataMapper *pdmapper = this->MakeAMapper();
         pdmapper->Register(this);
         pdmapper->SetInput(newpd);
         this->Internal->Mappers.push_back(pdmapper);
@@ -135,7 +134,7 @@ void vtkCompositePolyDataMapper::BuildPolyDataMapper()
         {
         if ( !warnOnce )
           {
-          vtkErrorMacro("All data in the hierachical dataset must be polydata.");
+          vtkErrorMacro("All data in the hierarchical dataset must be polydata.");
           warnOnce = 1;
           }
         }
@@ -305,4 +304,9 @@ void vtkCompositePolyDataMapper::ReleaseGraphicsResources( vtkWindow *win )
 void vtkCompositePolyDataMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+}
+
+vtkPolyDataMapper *vtkCompositePolyDataMapper::MakeAMapper()
+{
+  return vtkPolyDataMapper::New();
 }

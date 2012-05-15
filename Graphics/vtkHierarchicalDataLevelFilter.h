@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalDataLevelFilter.h,v $
+  Module:    vtkHierarchicalDataLevelFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@
 class VTK_GRAPHICS_EXPORT vtkHierarchicalDataLevelFilter : public vtkLevelIdScalars 
 {
 public:
-  vtkTypeRevisionMacro(vtkHierarchicalDataLevelFilter,vtkLevelIdScalars);
+  vtkTypeMacro(vtkHierarchicalDataLevelFilter,vtkLevelIdScalars);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

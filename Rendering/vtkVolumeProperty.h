@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeProperty.h,v $
+  Module:    vtkVolumeProperty.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class VTK_RENDERING_EXPORT vtkVolumeProperty : public vtkObject
 {
 public:
   static vtkVolumeProperty *New();
-  vtkTypeRevisionMacro(vtkVolumeProperty,vtkObject);
+  vtkTypeMacro(vtkVolumeProperty,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   void DeepCopy(vtkVolumeProperty *p);
 
@@ -80,7 +80,8 @@ public:
   vtkBooleanMacro( IndependentComponents, int );
 
   // Description:
-  // Set the interpolation type for sampling a volume.
+  // Set the interpolation type for sampling a volume. Initial value is
+  // VTK_NEAREST_INTERPOLATION.
   vtkSetClampMacro( InterpolationType, int,
         VTK_NEAREST_INTERPOLATION, VTK_LINEAR_INTERPOLATION);
   vtkGetMacro(InterpolationType,int);

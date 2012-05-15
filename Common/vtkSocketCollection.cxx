@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSocketCollection.cxx,v $
+  Module:    vtkSocketCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkSocket.h"
 
 vtkStandardNewMacro(vtkSocketCollection);
-vtkCxxRevisionMacro(vtkSocketCollection, "$Revision: 1.1 $");
 //-----------------------------------------------------------------------------
 vtkSocketCollection::vtkSocketCollection()
 {

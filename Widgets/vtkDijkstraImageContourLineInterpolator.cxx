@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDijkstraImageContourLineInterpolator.cxx,v $
+  Module:    vtkDijkstraImageContourLineInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkDijkstraImageContourLineInterpolator,"$Revision: 1.4 $");
 vtkStandardNewMacro(vtkDijkstraImageContourLineInterpolator);
 
 //----------------------------------------------------------------------
@@ -66,17 +65,18 @@ int vtkDijkstraImageContourLineInterpolator::InterpolateLine(
   vtkRenderer* vtkNotUsed(ren), vtkContourRepresentation *rep,
   int idx1, int idx2 )
 {
-  vtkImageActorPointPlacer *placer =
-    vtkImageActorPointPlacer::SafeDownCast(rep->GetPointPlacer());
-
-  if ( !placer ) 
-    {
-    return 1;
-    }
-
   // if the user didn't set the image, try to get it from the actor
   if ( !this->CostImage )
     {
+
+    vtkImageActorPointPlacer *placer =
+      vtkImageActorPointPlacer::SafeDownCast(rep->GetPointPlacer());
+
+    if ( !placer ) 
+      {
+      return 1;
+      }
+      
     vtkImageActor* actor = placer->GetImageActor();
     if ( !actor || !(this->CostImage = actor->GetInput()) )
       {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeSurfaceFilter.h,v $
+  Module:    vtkHyperOctreeSurfaceFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,12 +27,13 @@
 class vtkHyperOctreeCursor;
 class vtkDataSetAttributes;
 class vtkIdTypeArray;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkHyperOctreeSurfaceFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkHyperOctreeSurfaceFilter *New();
-  vtkTypeRevisionMacro(vtkHyperOctreeSurfaceFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeSurfaceFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -46,8 +47,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Return the MTime also considering the locator.
@@ -82,7 +83,7 @@ protected:
   void CreateDefaultLocator();
   
   int Merging;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   
   // Variables used by generate recursively.
   // It avoids to pass to much argument.

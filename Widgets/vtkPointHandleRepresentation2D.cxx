@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointHandleRepresentation2D.cxx,v $
+  Module:    vtkPointHandleRepresentation2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkCamera.h"
 #include "vtkPointPlacer.h"
 
-vtkCxxRevisionMacro(vtkPointHandleRepresentation2D, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkPointHandleRepresentation2D);
 
 vtkCxxSetObjectMacro(vtkPointHandleRepresentation2D,Property,vtkProperty2D);
@@ -138,6 +137,12 @@ void vtkPointHandleRepresentation2D::SetDisplayPosition(double p[3])
   this->Superclass::SetDisplayPosition(p);
   this->FocalPoint->SetPoint(0, p);
   this->FocalPoint->Modified();
+
+  if (this->PointPlacer)
+    {
+    // The point placer will compute the world position for us.
+    return;
+    }
 
   double w[4];
   if( this->Renderer )
@@ -345,6 +350,21 @@ void vtkPointHandleRepresentation2D::ShallowCopy(vtkProp *prop)
     this->Actor->SetProperty(this->Property);
     }
   this->Superclass::ShallowCopy(prop);
+}
+
+//----------------------------------------------------------------------
+void vtkPointHandleRepresentation2D::DeepCopy(vtkProp *prop)
+{
+  vtkPointHandleRepresentation2D *rep = 
+    vtkPointHandleRepresentation2D::SafeDownCast(prop);
+  if ( rep )
+    {
+    this->SetCursorShape(rep->GetCursorShape());
+    this->Property->DeepCopy(rep->GetProperty());
+    this->SelectedProperty->DeepCopy(rep->GetSelectedProperty());
+    this->Actor->SetProperty(this->Property);
+    }
+  this->Superclass::DeepCopy(prop);
 }
 
 //----------------------------------------------------------------------

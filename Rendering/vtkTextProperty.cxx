@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTextProperty.cxx,v $
+  Module:    vtkTextProperty.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkTextProperty.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkTextProperty, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkTextProperty);
 
 //----------------------------------------------------------------------------
@@ -27,7 +26,8 @@ vtkTextProperty::vtkTextProperty()
 
   this->Opacity  = 1.0;
 
-  this->FontFamily = VTK_ARIAL;
+  this->FontFamilyAsString = 0;
+  this->SetFontFamilyAsString( "Arial" );
   this->FontSize = 12;
 
   this->Bold = 0;
@@ -45,6 +45,11 @@ vtkTextProperty::vtkTextProperty()
   this->Orientation = 0.0;
 }
 
+vtkTextProperty::~vtkTextProperty()
+{
+  this->SetFontFamilyAsString(NULL);
+}
+
 //----------------------------------------------------------------------------
 void vtkTextProperty::ShallowCopy(vtkTextProperty *tprop)
 {
@@ -56,7 +61,7 @@ void vtkTextProperty::ShallowCopy(vtkTextProperty *tprop)
   this->SetColor(tprop->GetColor());
   this->SetOpacity(tprop->GetOpacity());
 
-  this->SetFontFamily(tprop->GetFontFamily());
+  this->SetFontFamilyAsString(tprop->GetFontFamilyAsString());
   this->SetFontSize(tprop->GetFontSize());
 
   this->SetBold(tprop->GetBold());
@@ -71,6 +76,7 @@ void vtkTextProperty::ShallowCopy(vtkTextProperty *tprop)
   this->SetLineOffset(tprop->GetLineOffset());
   this->SetLineSpacing(tprop->GetLineSpacing());
 
+  this->SetShadowOffset(tprop->GetShadowOffset());
 }
 
 //----------------------------------------------------------------------------
@@ -97,7 +103,8 @@ void vtkTextProperty::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Opacity: " << this->Opacity << "\n";
 
-  os << indent << "FontFamily: " << this->GetFontFamilyAsString() << "\n";
+  os << indent << "FontFamilyAsString: " 
+     << (this->FontFamilyAsString ? this->FontFamilyAsString : "(null)") << endl;
   os << indent << "FontSize: " << this->FontSize << "\n";
 
   os << indent << "Bold: " << (this->Bold ? "On\n" : "Off\n");

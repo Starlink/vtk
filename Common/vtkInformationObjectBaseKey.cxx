@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationObjectBaseKey.cxx,v $
+  Module:    vtkInformationObjectBaseKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkInformation.h" // For vtkErrorWithObjectMacro
 
-vtkCxxRevisionMacro(vtkInformationObjectBaseKey, "$Revision: 1.2 $");
 
 //----------------------------------------------------------------------------
 vtkInformationObjectBaseKey

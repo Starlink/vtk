@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericCellTessellator.h,v $
+  Module:    vtkGenericCellTessellator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,7 +55,7 @@ class vtkGenericDataSet;
 class VTK_FILTERING_EXPORT vtkGenericCellTessellator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericCellTessellator,vtkObject);
+  vtkTypeMacro(vtkGenericCellTessellator,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

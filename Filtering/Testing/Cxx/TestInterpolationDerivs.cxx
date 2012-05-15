@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestInterpolationDerivs.cxx,v $
+  Module:    TestInterpolationDerivs.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,6 +54,10 @@
 #include "vtkQuadraticLinearQuad.h"
 #include "vtkQuadraticLinearWedge.h"
 #include "vtkTriQuadraticHexahedron.h"
+
+// New Bi-Class
+#include "vtkBiQuadraticTriangle.h"
+#include "vtkCubicLine.h"
 
 
 template <class TCell>
@@ -144,6 +148,8 @@ int TestInterpolationDerivs(int, char *[])
   r += TestOneInterpolationDerivs<vtkQuadraticLinearQuad>();
   r += TestOneInterpolationDerivs<vtkQuadraticLinearWedge>();
   r += TestOneInterpolationDerivs<vtkTriQuadraticHexahedron>();
+  r += TestOneInterpolationDerivs<vtkBiQuadraticTriangle>();
+  r += TestOneInterpolationDerivs<vtkCubicLine>();
 
 
   return r;

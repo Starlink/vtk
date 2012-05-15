@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridToPolyDataFilter.cxx,v $
+  Module:    vtkRectilinearGridToPolyDataFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkInformation.h"
 #include "vtkRectilinearGrid.h"
 
-vtkCxxRevisionMacro(vtkRectilinearGridToPolyDataFilter, "$Revision: 1.18 $");
 
 //----------------------------------------------------------------------------
 vtkRectilinearGridToPolyDataFilter::vtkRectilinearGridToPolyDataFilter()

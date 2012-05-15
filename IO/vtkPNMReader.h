@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPNMReader.h,v $
+  Module:    vtkPNMReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ class VTK_IO_EXPORT vtkPNMReader : public vtkImageReader
 {
 public:
   static vtkPNMReader *New();
-  vtkTypeRevisionMacro(vtkPNMReader,vtkImageReader);
+  vtkTypeMacro(vtkPNMReader,vtkImageReader);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   int CanReadFile(const char* fname); 

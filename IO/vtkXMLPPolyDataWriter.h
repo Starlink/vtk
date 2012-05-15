@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPPolyDataWriter.h,v $
+  Module:    vtkXMLPPolyDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_IO_EXPORT vtkXMLPPolyDataWriter : public vtkXMLPUnstructuredDataWriter
 {
 public:
   static vtkXMLPPolyDataWriter* New();
-  vtkTypeRevisionMacro(vtkXMLPPolyDataWriter,vtkXMLPUnstructuredDataWriter);
+  vtkTypeMacro(vtkXMLPPolyDataWriter,vtkXMLPUnstructuredDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //BTX

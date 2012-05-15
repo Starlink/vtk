@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollection.cxx,v $
+  Module:    vtkCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCollection, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkCollection);
 
 // Construct with empty list.
@@ -169,6 +168,12 @@ void vtkCollection::RemoveAllItems()
 {
   vtkCollectionElement *elem;
 
+  // Don't modify if collection is empty
+  if(this->NumberOfItems == 0)
+    {
+    return;
+    }
+
   while (this->NumberOfItems )
     {
     elem = this->Top;
@@ -207,13 +212,6 @@ int vtkCollection::IsItemPresent(vtkObject *a)
     }
 
   return 0;
-}
-
-
-// Return the number of objects in the list.
-int vtkCollection::GetNumberOfItems()
-{
-  return this->NumberOfItems;
 }
 
 

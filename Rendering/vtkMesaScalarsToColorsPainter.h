@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaScalarsToColorsPainter.h,v $
+  Module:    vtkMesaScalarsToColorsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,8 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+
+// .NAME vtkMesaScalarsToColorsPainter
 
 #ifndef __vtkMesaScalarsToColorsPainter_h
 #define __vtkMesaScalarsToColorsPainter_h
@@ -25,7 +27,7 @@ class VTK_RENDERING_EXPORT vtkMesaScalarsToColorsPainter :
 {
 public:
   static vtkMesaScalarsToColorsPainter* New();
-  vtkTypeRevisionMacro(vtkMesaScalarsToColorsPainter, 
+  vtkTypeMacro(vtkMesaScalarsToColorsPainter,
     vtkScalarsToColorsPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
@@ -35,6 +37,11 @@ public:
   // The parameter window could be used to determine which graphic
   // resources to release. 
   virtual void ReleaseGraphicsResources(vtkWindow *);
+
+  // Description:
+  // Return the texture size limit, i.e. GL_MAX_TEXTURE_SIZE.
+  virtual vtkIdType GetTextureSizeLimit();
+
 protected:
   vtkMesaScalarsToColorsPainter();
   ~vtkMesaScalarsToColorsPainter();

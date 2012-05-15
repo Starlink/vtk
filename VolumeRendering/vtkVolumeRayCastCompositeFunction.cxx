@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastCompositeFunction.cxx,v $
+  Module:    vtkVolumeRayCastCompositeFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolumeRayCastCompositeFunction, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkVolumeRayCastCompositeFunction);
 
 #define VTK_REMAINING_OPACITY           0.02
@@ -43,7 +42,7 @@ void vtkCastRay_NN_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *dynamicIn
   float           opacity=0.0;
   float           gradient_opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   int             prev_voxel[3];
@@ -51,7 +50,7 @@ void vtkCastRay_NN_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *dynamicIn
   float           *CTF;
   float           *GTF;
   float           *GOTF;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   int             grad_op_is_constant;
   float           gradient_opacity_constant;
@@ -264,7 +263,7 @@ void vtkCastRay_NN_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *dynamicInfo
   float           opacity = 0.0;
   float           gradient_opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   int             prev_voxel[3];
@@ -278,7 +277,7 @@ void vtkCastRay_NN_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *dynamicInfo
   float           red_shaded_value   = 0.0;
   float           green_shaded_value = 0.0;
   float           blue_shaded_value  = 0.0;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   int             grad_op_is_constant;
   float           gradient_opacity_constant;
@@ -552,7 +551,7 @@ void vtkCastRay_TrilinSample_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInfo 
   float           red_value, green_value, blue_value;
   float           opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   float           A, B, C, D, E, F, G, H;
@@ -563,7 +562,7 @@ void vtkCastRay_TrilinSample_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInfo 
   float           *GTF;
   float           *GOTF;
   float           x, y, z, t1, t2, t3;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   float           gradient_value;
   float           scalar_value;
@@ -902,7 +901,7 @@ void vtkCastRay_TrilinSample_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *d
   float           remaining_opacity;
   float           opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   float           A, B, C, D, E, F, G, H;
@@ -921,7 +920,7 @@ void vtkCastRay_TrilinSample_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo *d
   float           *red_s_shade, *green_s_shade, *blue_s_shade;
   unsigned short  *encoded_normals, *nptr;
   float           red_shaded_value, green_shaded_value, blue_shaded_value;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   int             gradient_value;
   int             scalar_value;
@@ -1360,7 +1359,7 @@ void vtkCastRay_TrilinVertices_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInf
   float           red_value, green_value, blue_value;
   float           opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   int             prev_voxel[3];
@@ -1374,7 +1373,7 @@ void vtkCastRay_TrilinVertices_Unshaded( T *data_ptr, vtkVolumeRayCastDynamicInf
   float           *GOTF;
   float           x, y, z, t1, t2, t3;
   float           weight;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   int             num_steps;
   float           *ray_start, *ray_increment;
@@ -1815,7 +1814,7 @@ void vtkCastRay_TrilinVertices_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo 
   float           remaining_opacity;
   float           opacity;
   int             loop;
-  int             xinc, yinc, zinc;
+  vtkIdType       xinc, yinc, zinc;
   int             voxel[3];
   float           ray_position[3];
   int             prev_voxel[3];
@@ -1833,7 +1832,7 @@ void vtkCastRay_TrilinVertices_Shaded( T *data_ptr, vtkVolumeRayCastDynamicInfo 
   float           *red_s_shade, *green_s_shade, *blue_s_shade;
   unsigned short  *encoded_normals, *nptr;
   float           red_shaded_value, green_shaded_value, blue_shaded_value;
-  int             offset;
+  vtkIdType       offset;
   int             steps_this_ray = 0;
   int             grad_op_is_constant;
   float           gradient_opacity_constant;

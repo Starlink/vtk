@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConnectivityFilter.cxx,v $
+  Module:    vtkConnectivityFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdTypeArray.h"
 
-vtkCxxRevisionMacro(vtkConnectivityFilter, "$Revision: 1.74 $");
 vtkStandardNewMacro(vtkConnectivityFilter);
 
 // Construct with default extraction mode to extract largest regions.
@@ -76,7 +75,7 @@ int vtkConnectivityFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -293,11 +292,23 @@ int vtkConnectivityFilter::RequestData(
       {
       if ( this->Visited[cellId] >= 0 )
         {
-        input->GetCellPoints(cellId, this->PointIds);
-        for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+        // special handling for polyhedron cells
+        if (vtkUnstructuredGrid::SafeDownCast(input) &&
+            input->GetCellType(cellId) == VTK_POLYHEDRON)
           {
-          id = this->PointMap[this->PointIds->GetId(i)];
-          this->PointIds->InsertId(i,id);
+          vtkUnstructuredGrid::SafeDownCast(input)->
+            GetFaceStream(cellId, this->PointIds);
+          vtkUnstructuredGrid::ConvertFaceStreamPointIds(this->PointIds, 
+                                                         this->PointMap);
+          }
+        else
+          {        
+          input->GetCellPoints(cellId, this->PointIds);
+          for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+            {
+            id = this->PointMap[this->PointIds->GetId(i)];
+            this->PointIds->InsertId(i,id);
+            }
           }
         newCellId = output->InsertNextCell(input->GetCellType(cellId),
                                            this->PointIds);
@@ -322,14 +333,26 @@ int vtkConnectivityFilter::RequestData(
           }
         if ( inReg )
           {
-          input->GetCellPoints(cellId, this->PointIds);
-          for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+          // special handling for polyhedron cells
+          if (vtkUnstructuredGrid::SafeDownCast(input) &&
+              input->GetCellType(cellId) == VTK_POLYHEDRON)
             {
-            id = this->PointMap[this->PointIds->GetId(i)];
-            this->PointIds->InsertId(i,id);
+            vtkUnstructuredGrid::SafeDownCast(input)->
+              GetFaceStream(cellId, this->PointIds);
+            vtkUnstructuredGrid::ConvertFaceStreamPointIds(this->PointIds, 
+                                                           this->PointMap);
             }
-          newCellId =output->InsertNextCell(input->GetCellType(cellId),
-                                            this->PointIds);
+          else
+            {        
+            input->GetCellPoints(cellId, this->PointIds);
+            for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+              {
+              id = this->PointMap[this->PointIds->GetId(i)];
+              this->PointIds->InsertId(i,id);
+              }
+            }
+          newCellId = output->InsertNextCell(input->GetCellType(cellId),
+                                             this->PointIds);
           outputCD->CopyData(cd,cellId,newCellId);
           }
         }
@@ -341,11 +364,23 @@ int vtkConnectivityFilter::RequestData(
       {
       if ( this->Visited[cellId] == largestRegionId )
         {
-        input->GetCellPoints(cellId, this->PointIds);
-        for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+        // special handling for polyhedron cells
+        if (vtkUnstructuredGrid::SafeDownCast(input) &&
+            input->GetCellType(cellId) == VTK_POLYHEDRON)
           {
-          id = this->PointMap[this->PointIds->GetId(i)];
-          this->PointIds->InsertId(i,id);
+          vtkUnstructuredGrid::SafeDownCast(input)->
+            GetFaceStream(cellId, this->PointIds);
+          vtkUnstructuredGrid::ConvertFaceStreamPointIds(this->PointIds, 
+                                                         this->PointMap);
+          }
+        else
+          {        
+          input->GetCellPoints(cellId, this->PointIds);
+          for (i=0; i < this->PointIds->GetNumberOfIds(); i++)
+            {
+            id = this->PointMap[this->PointIds->GetId(i)];
+            this->PointIds->InsertId(i,id);
+            }
           }
         newCellId = output->InsertNextCell(input->GetCellType(cellId),
                                            this->PointIds);

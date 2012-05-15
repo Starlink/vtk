@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOnePieceExtentTranslator.cxx,v $
+  Module:    vtkOnePieceExtentTranslator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkOnePieceExtentTranslator);
-vtkCxxRevisionMacro(vtkOnePieceExtentTranslator, "$Revision: 1.1 $");
 //-----------------------------------------------------------------------------
 vtkOnePieceExtentTranslator::vtkOnePieceExtentTranslator()
 {

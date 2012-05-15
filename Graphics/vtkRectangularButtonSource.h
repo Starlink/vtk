@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectangularButtonSource.h,v $
+  Module:    vtkRectangularButtonSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_GRAPHICS_EXPORT vtkRectangularButtonSource : public vtkButtonSource
 {
 public:
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkRectangularButtonSource,vtkButtonSource);
+  vtkTypeMacro(vtkRectangularButtonSource,vtkButtonSource);
 
   // Description:
   // Construct a circular button with depth 10% of its height.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDiscreteMarchingCubes.cxx,v $
+  Module:    vtkDiscreteMarchingCubes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,7 @@
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
 #include "vtkLongArray.h"
-#include "vtkMarchingCubesCases.h"
+#include "vtkMarchingCubesTriangleCases.h"
 #include "vtkMath.h"
 #include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
@@ -42,7 +42,6 @@
 #define vtkFloatingPointType float
 #endif
 
-vtkCxxRevisionMacro(vtkDiscreteMarchingCubes, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkDiscreteMarchingCubes);
 
 // Description:
@@ -67,7 +66,7 @@ template <class T>
 void vtkDiscreteMarchingCubesComputeGradient(
   vtkDiscreteMarchingCubes *self,T *scalars, int dims[3], 
   vtkFloatingPointType origin[3], vtkFloatingPointType Spacing[3],
-  vtkPointLocator *locator, 
+  vtkIncrementalPointLocator *locator, 
   vtkDataArray *newCellScalars, 
   vtkCellArray *newPolys, vtkFloatingPointType *values, 
   int numValues)

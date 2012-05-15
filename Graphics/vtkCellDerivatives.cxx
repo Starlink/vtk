@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellDerivatives.cxx,v $
+  Module:    vtkCellDerivatives.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCellDerivatives, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkCellDerivatives);
 
 vtkCellDerivatives::vtkCellDerivatives()
@@ -53,7 +52,7 @@ int vtkCellDerivatives::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkDataSet *output = vtkDataSet::SafeDownCast(
@@ -188,7 +187,7 @@ int vtkCellDerivatives::RequestData(
           
           outTensors->InsertTuple(cellId, tens->T);
           }
-        else // this->TensorMode == VTK_TENSOR_MODE_COMPUTE_STRAIN
+        else if (this->TensorMode == VTK_TENSOR_MODE_COMPUTE_STRAIN)
           {
           tens->SetComponent(0,0, derivs[0]);
           tens->SetComponent(0,1, 0.5*(derivs[1]+derivs[3]));
@@ -201,6 +200,10 @@ int vtkCellDerivatives::RequestData(
           tens->SetComponent(2,2, derivs[8]);
           
           outTensors->InsertTuple(cellId, tens->T);
+          }
+        else if (this->TensorMode == VTK_TENSOR_MODE_PASS_TENSORS)
+          {
+          // do nothing.
           }
 
         if ( computeVorticity )

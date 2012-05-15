@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiBlockPLOT3DReader.cxx,v $
+  Module:    vtkMultiBlockPLOT3DReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,9 +30,8 @@
 #include "vtkUnsignedCharArray.h"
 
 #include "vtkSmartPointer.h"
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkMultiBlockPLOT3DReader, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkMultiBlockPLOT3DReader);
 
 #define VTK_RHOINF 1.0
@@ -42,7 +41,7 @@ vtkStandardNewMacro(vtkMultiBlockPLOT3DReader);
 
 struct vtkMultiBlockPLOT3DReaderInternals
 {
-  vtkstd::vector<vtkSmartPointer<vtkStructuredGrid> > Blocks;
+  std::vector<vtkSmartPointer<vtkStructuredGrid> > Blocks;
 };
 
 vtkMultiBlockPLOT3DReader::vtkMultiBlockPLOT3DReader()
@@ -157,7 +156,13 @@ void vtkMultiBlockPLOT3DReader::SkipByteCount(FILE* fp)
   if (this->BinaryFile && this->HasByteCount)
     {
     int tmp;
-    fread(&tmp, sizeof(int), 1, fp);
+    if (fread(&tmp, sizeof(int), 1, fp) != 1)
+      {
+      vtkErrorMacro ("MultiBlockPLOT3DReader error reading file: " << this->XYZFileName
+                     << " Premature EOF while reading skipping byte count.");
+      fclose (fp);
+      return;
+      }
     }
 }
 
@@ -318,7 +323,13 @@ int vtkMultiBlockPLOT3DReader::GenerateDefaultConfiguration()
     return 0;
     }
   char buf[1024];
-  fread(buf, 1, 1024, xyzFp);
+  if (fread(buf, 1024, 1, xyzFp) != 1)
+    {
+    vtkErrorMacro ("MultiBlockPLOT3DReader error reading file: " << this->XYZFileName
+                   << " Premature EOF while reading buffer.");
+    fclose (xyzFp);
+    return 0;
+    }
   int retVal = this->VerifySettings(buf, 1024);
   fclose(xyzFp);
   return retVal;

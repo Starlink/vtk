@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassInputTypeAlgorithm.cxx,v $
+  Module:    vtkPassInputTypeAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkTable.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkPassInputTypeAlgorithm, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkPassInputTypeAlgorithm);
 
 //----------------------------------------------------------------------------
@@ -193,6 +192,11 @@ int vtkPassInputTypeAlgorithm::RequestDataObject(
   vtkInformationVector** inputVector , 
   vtkInformationVector* outputVector)
 {
+  if (this->GetNumberOfInputPorts() == 0 || this->GetNumberOfOutputPorts() == 0)
+    {
+    return 1;
+    }
+
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
   if (!inInfo)
     {
@@ -213,8 +217,6 @@ int vtkPassInputTypeAlgorithm::RequestDataObject(
         vtkDataObject* newOutput = input->NewInstance();
         newOutput->SetPipelineInformation(info);
         newOutput->Delete();
-        this->GetOutputPortInformation(0)->Set(
-          vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
         }
       }
     return 1;

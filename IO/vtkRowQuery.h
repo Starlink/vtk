@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRowQuery.h,v $
+  Module:    vtkRowQuery.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,7 +58,7 @@ class vtkVariantArray;
 class VTK_IO_EXPORT vtkRowQuery : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkRowQuery, vtkObject);
+  vtkTypeMacro(vtkRowQuery, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -95,7 +95,6 @@ public:
   // inactive query.
   virtual bool IsActive() = 0;
 
-//BTX
   // Description:
   // Advance row, return false if past end.
   // Also, fill array with row values.
@@ -104,7 +103,6 @@ public:
   // Description:
   // Return data in current row, field c
   virtual vtkVariant DataValue(vtkIdType c) = 0;
-//ETX
 
   // Description:
   // Returns true if an error is set, otherwise false.

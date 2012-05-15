@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredGridToPolyDataFilter.h,v $
+  Module:    vtkStructuredGridToPolyDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class vtkStructuredGrid;
 class VTK_FILTERING_EXPORT vtkStructuredGridToPolyDataFilter : public vtkPolyDataSource
 {
 public:
-  vtkTypeRevisionMacro(vtkStructuredGridToPolyDataFilter,vtkPolyDataSource);
+  vtkTypeMacro(vtkStructuredGridToPolyDataFilter,vtkPolyDataSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

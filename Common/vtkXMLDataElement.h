@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLDataElement.h,v $
+  Module:    vtkXMLDataElement.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class vtkXMLDataParser;
 class VTK_COMMON_EXPORT vtkXMLDataElement : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLDataElement,vtkObject);
+  vtkTypeMacro(vtkXMLDataElement,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkXMLDataElement* New();
 
@@ -271,6 +271,7 @@ protected:
   vtkXMLDataElement* LookupElementUpScope(const char* id);
   static int IsSpace(char c);
   void PrintCharacterData(ostream &os,vtkIndent indent);
+  static void PrintWithEscapedData(ostream& os, const char* data);
 
   //BTX
   friend class vtkXMLDataParser;

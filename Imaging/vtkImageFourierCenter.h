@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFourierCenter.h,v $
+  Module:    vtkImageFourierCenter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IMAGING_EXPORT vtkImageFourierCenter : public vtkImageDecomposeFilter
 {
 public:
   static vtkImageFourierCenter *New();
-  vtkTypeRevisionMacro(vtkImageFourierCenter,vtkImageDecomposeFilter);
+  vtkTypeMacro(vtkImageFourierCenter,vtkImageDecomposeFilter);
 
 protected:
   vtkImageFourierCenter();

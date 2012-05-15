@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPoints.h,v $
+  Module:    vtkPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ public:
 //ETX
   static vtkPoints *New();
 
-  vtkTypeRevisionMacro(vtkPoints,vtkObject);
+  vtkTypeMacro(vtkPoints,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -111,6 +111,9 @@ public:
 
   // Description:
   // Return a pointer to a double point x[3] for a specific id.
+  // WARNING: Just don't use this error-prone method, the returned pointer
+  // and its values are only valid as long as another method invocation is not
+  // performed. Prefer GetPoint() with the return value in argument.
   double *GetPoint(vtkIdType id) { return this->Data->GetTuple(id);};
 
   // Description:

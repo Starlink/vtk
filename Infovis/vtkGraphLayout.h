@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphLayout.h,v $
+  Module:    vtkGraphLayout.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,6 +33,7 @@
 
 #include "vtkGraphAlgorithm.h"
 
+class vtkAbstractTransform;
 class vtkEventForwarderCommand;
 class vtkGraphLayoutStrategy;
 
@@ -40,7 +41,7 @@ class VTK_INFOVIS_EXPORT vtkGraphLayout : public vtkGraphAlgorithm
 {
 public:
   static vtkGraphLayout *New();
-  vtkTypeRevisionMacro(vtkGraphLayout, vtkGraphAlgorithm);
+  vtkTypeMacro(vtkGraphLayout, vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -56,6 +57,25 @@ public:
   // Get the modification time of the layout algorithm.
   virtual unsigned long GetMTime();
 
+  // Description:
+  // Set the ZRange for the output data.
+  // If the initial layout is planar (i.e. all z coordinates are zero),
+  // the coordinates will be evenly spaced from 0.0 to ZRange.
+  // The default is zero, which has no effect.
+  vtkGetMacro(ZRange, double);
+  vtkSetMacro(ZRange, double);
+
+  // Description:
+  // Transform the graph vertices after the layout.
+  vtkGetObjectMacro(Transform, vtkAbstractTransform);
+  virtual void SetTransform(vtkAbstractTransform* t);
+
+  // Description:
+  // Whether to use the specified transform after layout.
+  vtkSetMacro(UseTransform, bool);
+  vtkGetMacro(UseTransform, bool);
+  vtkBooleanMacro(UseTransform, bool);
+
 protected:
   vtkGraphLayout();
   ~vtkGraphLayout();
@@ -66,7 +86,6 @@ protected:
   // This intercepts events from the strategy object and re-emits them
   // as if they came from the layout engine itself.
   vtkEventForwarderCommand *EventForwarder;
-  unsigned long ObserverTag;
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   
@@ -76,6 +95,9 @@ private:
   vtkGraph* InternalGraph;
   unsigned long LastInputMTime;
   bool StrategyChanged;
+  double ZRange;
+  vtkAbstractTransform* Transform;
+  bool UseTransform;
 
   vtkGraphLayout(const vtkGraphLayout&);  // Not implemented.
   void operator=(const vtkGraphLayout&);  // Not implemented.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVertexListIterator.cxx,v $
+  Module:    vtkVertexListIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkGraph.h"
 
-vtkCxxRevisionMacro(vtkVertexListIterator, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkVertexListIterator);
 //----------------------------------------------------------------------------
 vtkVertexListIterator::vtkVertexListIterator()

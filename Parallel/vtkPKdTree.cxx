@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPKdTree.cxx,v $
+  Module:    vtkPKdTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,8 +34,9 @@
 #include "vtkSubGroup.h"
 #include "vtkCommand.h"
 
-#include <vtkstd/queue>
-#include <vtkstd/algorithm>
+#include <queue>
+#include <algorithm>
+#include <assert.h>
 
 // Timing data ---------------------------------------------
 
@@ -78,7 +79,6 @@ static char * makeEntry(const char *s)
 
 // Timing data ---------------------------------------------
 
-vtkCxxRevisionMacro(vtkPKdTree, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkPKdTree);
 
 const int vtkPKdTree::NoRegionAssignment = 0;   // default
@@ -283,21 +283,18 @@ void vtkPKdTree::AllCheckParameters()
   max[2] = (bounds[5] > max[2] ? bounds[5] : max[2]); \
 }
 
-double *vtkPKdTree::VolumeBounds()
+bool vtkPKdTree::VolumeBounds(double* volBounds)
 {
   int i;
 
   // Get the spatial bounds of the whole volume
-  
-  double *volBounds = new double [6];
   double localMin[3], localMax[3], globalMin[3], globalMax[3];
 
   int number_of_datasets = this->GetNumberOfDataSets();
   if (number_of_datasets == 0)
     {
     VTKERROR("NumberOfDatasets = 0, cannot determine volume bounds.");
-    delete []volBounds;
-    return NULL;
+    return false;
     }
 
   for (i=0; i < number_of_datasets; i++)
@@ -346,8 +343,7 @@ double *vtkPKdTree::VolumeBounds()
   if ((aLittle /= 100.0) <= 0.0)
     {
      VTKERROR("VolumeBounds - degenerate volume");
-     delete []volBounds;
-     return NULL;
+     return false;
     }
 
   this->FudgeFactor = aLittle * 10e-4;
@@ -359,12 +355,13 @@ double *vtkPKdTree::VolumeBounds()
         volBounds[2*i]   -= aLittle;
         volBounds[2*i+1] += aLittle;
       }
-    else // need lower bound to be strictly less than any point in decomposition
+    else
       {
       volBounds[2*i] -= this->GetFudgeFactor();
+      volBounds[2*i+1] += this->GetFudgeFactor();
       }
     }
-  return volBounds;
+  return true;
 }
 
 // BuildLocator must be called by all processes in the parallel application
@@ -424,9 +421,8 @@ void vtkPKdTree::BuildLocator()
 
     this->AllCheckParameters();   // global operation to ensure same parameters
 
-    double *volBounds = this->VolumeBounds();  // global operation to get bounds
-
-    if (volBounds == NULL)
+    double volBounds[6];
+    if(this->VolumeBounds(volBounds) == false)  // global operation to get bounds
       {
       goto doneError;
       }
@@ -440,8 +436,6 @@ void vtkPKdTree::BuildLocator()
       {
       fail = this->MultiProcessBuildLocator(volBounds);
       }
-
-    FreeList(volBounds);
 
     if (fail) goto doneError;
 
@@ -620,7 +614,7 @@ int vtkPKdTree::BreadthFirstDivide(double *volBounds)
 {
   int returnVal = 0;
 
-  vtkstd::queue <vtkNodeInfo> Queue;
+  std::queue <vtkNodeInfo> Queue;
 
   if (this->AllocateDoubleBuffer())
     {
@@ -2436,6 +2430,7 @@ int vtkPKdTree::BuildGlobalIndexLists(vtkIdType numMyCells)
 void vtkPKdTree::InitializeRegionAssignmentLists()
 {
   this->RegionAssignmentMap = NULL;
+  this->RegionAssignmentMapLength = 0;
   this->ProcessAssignmentMap = NULL;
   this->NumRegionsAssigned  = NULL;
 }
@@ -3431,6 +3426,8 @@ int vtkPKdTree::DepthOrderAllProcesses(double *dop, vtkIntArray *orderedList)
 int vtkPKdTree::ViewOrderAllProcessesInDirection(const double dop[3],
                                                  vtkIntArray *orderedList)
 {
+  assert("pre: orderedList_exists" && orderedList!=0);
+  
   vtkIntArray *regionList = vtkIntArray::New();
   
   this->ViewOrderAllRegionsInDirection(dop, regionList);
@@ -3461,6 +3458,8 @@ int vtkPKdTree::ViewOrderAllProcessesInDirection(const double dop[3],
 int vtkPKdTree::ViewOrderAllProcessesFromPosition(const double pos[3],
                                                   vtkIntArray *orderedList)
 {
+  assert("pre: orderedList_exists" && orderedList!=0);
+  
   vtkIntArray *regionList = vtkIntArray::New();
   
   this->ViewOrderAllRegionsFromPosition(pos, regionList);
@@ -3905,6 +3904,8 @@ void vtkPKdTree::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "MyId: " << this->MyId << endl;
 
   os << indent << "RegionAssignmentMap: " << this->RegionAssignmentMap << endl;
+  os << indent << "RegionAssignmentMapLength: "
+    << this->RegionAssignmentMapLength << endl;
   os << indent << "NumRegionsAssigned: " << this->NumRegionsAssigned << endl;
   os << indent << "NumProcessesInRegion: " << this->NumProcessesInRegion << endl;
   os << indent << "ProcessList: " << this->ProcessList << endl;

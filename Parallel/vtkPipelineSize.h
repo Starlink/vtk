@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPipelineSize.h,v $
+  Module:    vtkPipelineSize.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_PARALLEL_EXPORT vtkPipelineSize : public vtkObject
 {
 public:
   static vtkPipelineSize* New();
-  vtkTypeRevisionMacro(vtkPipelineSize,vtkObject);
+  vtkTypeMacro(vtkPipelineSize,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

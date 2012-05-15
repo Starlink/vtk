@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCgShader.cxx,v $
+  Module:    vtkCgShader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,15 +33,16 @@
 #include "vtkOpenGLTexture.h"
 #include "vtkProperty.h"
 #include "vtkRenderer.h"
+#include "vtkWindow.h"
 #include "vtkXMLDataElement.h"
 #include "vtkXMLShader.h"
 
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
 
-#include <vtkstd/string>
-#include <vtkstd/vector>
-#include <vtkstd/map>
+#include <string>
+#include <vector>
+#include <map>
 
 #define CG_UNIFORM_DOUBLE_AS_FLOAT 1
 
@@ -70,7 +71,7 @@ class CgStateMatrixMap
     // Their destructors are call automatically when this class is destroyed
     }
 
-  bool HaveCGGLenum( vtkstd::string name )
+  bool HaveCGGLenum( std::string name )
     {
     if( this->StateMap.find(name) == this->StateMap.end() )
       {
@@ -85,23 +86,23 @@ class CgStateMatrixMap
       {
       return 0;
       }
-    vtkstd::string Name = name;
+    std::string Name = name;
     return this->HaveCGGLenum(Name);
     }
 
-  CGGLenum GetCGGLenum( vtkstd::string name )
+  CGGLenum GetCGGLenum( std::string name )
     {
     return this->StateMap[ name ];
     }
   CGGLenum GetCGGLenum( const char* name )
     {
-    vtkstd::string Name = name;
+    std::string Name = name;
     return this->GetCGGLenum( Name );
     }
 
   protected:
   private:
-    vtkstd::map< vtkstd::string, CGGLenum > StateMap;
+    std::map< std::string, CGGLenum > StateMap;
 };
 
 //-----------------------------------------------------------------------------
@@ -154,7 +155,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCgShader, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkCgShader);
 
 //-----------------------------------------------------------------------------
@@ -171,13 +171,16 @@ vtkCgShader::~vtkCgShader()
 }
 
 //-----------------------------------------------------------------------------
-void vtkCgShader::ReleaseGraphicsResources(vtkWindow*)
+void vtkCgShader::ReleaseGraphicsResources(vtkWindow* window)
 {
-  if (cgIsContext(this->Internals->Context))
+  if (window &&
+    window->GetMapped() &&
+    cgIsContext(this->Internals->Context))
     {
     // This will also destroy any programs contained in the context.
     cgDestroyContext(this->Internals->Context);
     }
+  this->Internals->Context = 0;
 }
 
 //-----------------------------------------------------------------------------

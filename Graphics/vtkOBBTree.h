@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOBBTree.h,v $
+  Module:    vtkOBBTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,7 +57,7 @@ class vtkMatrix4x4;
 //
 //BTX
 //
-class vtkOBBNode { //;prevent man page generation
+class VTK_GRAPHICS_EXPORT vtkOBBNode { //;prevent man page generation
 public:
   vtkOBBNode();
   ~vtkOBBNode();
@@ -76,7 +76,7 @@ public:
 class VTK_GRAPHICS_EXPORT vtkOBBTree : public vtkAbstractCellLocator
 {
 public:
-  vtkTypeRevisionMacro(vtkOBBTree,vtkAbstractCellLocator);
+  vtkTypeMacro(vtkOBBTree,vtkAbstractCellLocator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -204,7 +204,7 @@ public:
   // Compute an OBB from the list of points given. Return the corner point
   // and the three axes defining the orientation of the OBB. Also return
   // a sorted list of relative "sizes" of axes for comparison purposes.
-  void ComputeOBB(vtkPoints *pts, double corner[3], double max[3], 
+  static void ComputeOBB(vtkPoints *pts, double corner[3], double max[3], 
                   double mid[3], double min[3], double size[3]);
 
   // Description:

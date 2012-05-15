@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBlockDistribution.h,v $
+  Module:    vtkBlockDistribution.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@
 #ifndef __vtkBlockDistribution_h
 #define __vtkBlockDistribution_h
 
-class VTK_COMMON_EXPORT vtkBlockDistribution
+class VTK_PARALLEL_EXPORT vtkBlockDistribution
 {
 public:
   // Description:

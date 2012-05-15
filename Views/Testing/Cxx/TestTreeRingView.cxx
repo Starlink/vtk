@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTreeRingView.cxx,v $
+  Module:    TestTreeRingView.cxx
 
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -22,8 +22,12 @@
 #include "vtkDataRepresentation.h"
 #include "vtkRenderWindow.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderedTreeAreaRepresentation.h"
+#include "vtkRenderer.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkSplineGraphEdges.h"
 #include "vtkTestUtilities.h"
+#include "vtkTextProperty.h"
 #include "vtkTreeRingView.h"
 #include "vtkViewTheme.h"
 #include "vtkXMLTreeReader.h"
@@ -31,7 +35,7 @@
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
-using vtkstd::string;
+using std::string;
 
 int TestTreeRingView(int argc, char* argv[])
 {
@@ -44,13 +48,13 @@ int TestTreeRingView(int argc, char* argv[])
   // We need to put the graph and tree edges in different domains.
   VTK_CREATE(vtkXMLTreeReader, reader1);
   reader1->SetFileName(treeFileName.c_str());
-  reader1->SetEdgePedigreeIdArrayName("tree edge");
+  reader1->SetEdgePedigreeIdArrayName("graph edge");
   reader1->GenerateVertexPedigreeIdsOff();
   reader1->SetVertexPedigreeIdArrayName("id");
 
   VTK_CREATE(vtkXMLTreeReader, reader2);
   reader2->SetFileName(graphFileName.c_str());
-  reader2->SetEdgePedigreeIdArrayName("graph edge");
+  reader2->SetEdgePedigreeIdArrayName("tree edge");
   reader2->GenerateVertexPedigreeIdsOff();
   reader2->SetVertexPedigreeIdArrayName("id");
 
@@ -58,33 +62,44 @@ int TestTreeRingView(int argc, char* argv[])
   reader2->Update();
 
   VTK_CREATE(vtkTreeRingView, view);
+  view->DisplayHoverTextOn();
   view->SetTreeFromInputConnection(reader2->GetOutputPort());
   view->SetGraphFromInputConnection(reader1->GetOutputPort());
+  view->Update();
 
-  view->SetAreaColorArrayName("GraphVertexDegree");
-  //view->SetEdgeColorArrayName("tree edge");
-  view->SetEdgeColorToSplineFraction();
-  view->SetColorEdges(true);
+  view->SetAreaColorArrayName("VertexDegree");
+
+  // Uncomment for edge colors
+  //view->SetEdgeColorArrayName("graph edge");
+  //view->SetColorEdges(true);
+
+  // Uncomment for edge labels
+  //view->SetEdgeLabelArrayName("graph edge");
+  //view->SetEdgeLabelVisibility(true);
+
   view->SetAreaLabelArrayName("id");
-  view->SetAreaHoverArrayName("id");
   view->SetAreaLabelVisibility(true);
-  view->SetAreaSizeArrayName("GraphVertexDegree");
+  view->SetAreaHoverArrayName("id");
+  view->SetAreaSizeArrayName("VertexDegree");
+  vtkRenderedTreeAreaRepresentation::SafeDownCast(view->GetRepresentation())->SetGraphHoverArrayName("graph edge");
+  vtkRenderedTreeAreaRepresentation::SafeDownCast(view->GetRepresentation())->SetGraphSplineType(vtkSplineGraphEdges::CUSTOM, 0);
 
   // Apply a theme to the views
   vtkViewTheme* const theme = vtkViewTheme::CreateMellowTheme();
+  theme->SetLineWidth(1);
+  theme->GetPointTextProperty()->ShadowOn();
   view->ApplyViewTheme(theme);
   theme->Delete();
 
-  VTK_CREATE(vtkRenderWindow, win);
-  win->SetMultiSamples(0); // ensure to have the same test image everywhere
-  view->SetupRenderWindow(win);
-  view->Update();
-
-  int retVal = vtkRegressionTestImage(win);
+  view->GetRenderWindow()->SetMultiSamples(0); // ensure to have the same test image everywhere
+  view->ResetCamera();
+  view->Render();
+  
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if( retVal == vtkRegressionTester::DO_INTERACTOR )
     {
-    win->GetInteractor()->Initialize();
-    win->GetInteractor()->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
 
     retVal = vtkRegressionTester::PASSED;
     }

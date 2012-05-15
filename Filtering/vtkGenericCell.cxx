@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericCell.cxx,v $
+  Module:    vtkGenericCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,14 +41,17 @@
 #include "vtkQuadraticWedge.h"
 #include "vtkQuadraticPyramid.h"
 #include "vtkConvexPointSet.h"
+#include "vtkPolyhedron.h"
 #include "vtkQuadraticLinearQuad.h"
+#include "vtkCubicLine.h"
 #include "vtkBiQuadraticQuad.h"
 #include "vtkTriQuadraticHexahedron.h"
 #include "vtkQuadraticLinearWedge.h"
+#include "vtkBiQuadraticTriangle.h"
 #include "vtkBiQuadraticQuadraticWedge.h"
 #include "vtkBiQuadraticQuadraticHexahedron.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkGenericCell, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkGenericCell);
 
 //----------------------------------------------------------------------------
@@ -99,6 +102,26 @@ int vtkGenericCell::RequiresInitialization()
 {
   return this->Cell->RequiresInitialization();
 }
+
+//----------------------------------------------------------------------------
+int vtkGenericCell::RequiresExplicitFaceRepresentation()
+{
+  return this->Cell->RequiresExplicitFaceRepresentation();
+}
+
+//----------------------------------------------------------------------------
+void vtkGenericCell::SetFaces(vtkIdType *faces)
+{
+  this->Cell->SetFaces(faces);
+}
+
+
+//----------------------------------------------------------------------------
+vtkIdType *vtkGenericCell::GetFaces()
+{
+  return this->Cell->GetFaces();
+}
+
 
 //----------------------------------------------------------------------------
 void vtkGenericCell::Initialize()
@@ -154,7 +177,7 @@ void vtkGenericCell::EvaluateLocation(int& subId, double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkGenericCell::Contour(double value, vtkDataArray *cellScalars, 
-                             vtkPointLocator *locator, vtkCellArray *verts, 
+                             vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                              vtkCellArray *lines, vtkCellArray *polys, 
                              vtkPointData *inPd, vtkPointData *outPd,
                              vtkCellData *inCd, vtkIdType cellId,
@@ -166,7 +189,7 @@ void vtkGenericCell::Contour(double value, vtkDataArray *cellScalars,
 
 //----------------------------------------------------------------------------
 void vtkGenericCell::Clip(double value, vtkDataArray *cellScalars, 
-                          vtkPointLocator *locator, vtkCellArray *connectivity,
+                          vtkIncrementalPointLocator *locator, vtkCellArray *connectivity,
                           vtkPointData *inPd, vtkPointData *outPd,
                           vtkCellData *inCd, vtkIdType cellId,
                           vtkCellData *outCd, int insideOut)
@@ -310,8 +333,17 @@ vtkCell *vtkGenericCell::InstantiateCell(int cellType)
   case VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON:
     cell = vtkBiQuadraticQuadraticHexahedron::New ();
     break;
+  case VTK_BIQUADRATIC_TRIANGLE:
+    cell = vtkBiQuadraticTriangle::New();
+    break;
+  case VTK_CUBIC_LINE:
+    cell = vtkCubicLine::New();
+    break;
   case VTK_CONVEX_POINT_SET:
     cell = vtkConvexPointSet::New();
+    break;
+  case VTK_POLYHEDRON:
+    cell = vtkPolyhedron::New();
     break;
     }
   return cell;

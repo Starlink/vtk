@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStreamLine.h,v $
+  Module:    vtkStreamLine.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@
 class VTK_GRAPHICS_EXPORT vtkStreamLine : public vtkStreamer
 {
 public:
-  vtkTypeRevisionMacro(vtkStreamLine,vtkStreamer);
+  vtkTypeMacro(vtkStreamLine,vtkStreamer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

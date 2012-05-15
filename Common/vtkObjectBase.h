@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkObjectBase.h,v $
+  Module:    vtkObjectBase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,6 +45,8 @@
 
 class vtkGarbageCollector;
 class vtkGarbageCollectorToObjectBaseFriendship;
+class vtkWeakPointerBase;
+class vtkWeakPointerBaseToObjectBaseFriendship;
 
 class VTK_COMMON_EXPORT vtkObjectBase
 {
@@ -59,7 +61,7 @@ public:
 
   // Description:
   // Return the class name as a string. This method is defined
-  // in all subclasses of vtkObjectBase with the vtkTypeRevisionMacro found
+  // in all subclasses of vtkObjectBase with the vtkTypeMacro found
   // in vtkSetGet.h.
   const char* GetClassName() const;
 
@@ -76,13 +78,13 @@ public:
   // Description:
   // Return 1 if this class type is the same type of (or a subclass of)
   // the named class. Returns 0 otherwise. This method works in
-  // combination with vtkTypeRevisionMacro found in vtkSetGet.h.
+  // combination with vtkTypeMacro found in vtkSetGet.h.
   static int IsTypeOf(const char *name);
 
   // Description:
   // Return 1 if this class is the same type of (or a subclass of)
   // the named class. Returns 0 otherwise. This method works in
-  // combination with vtkTypeRevisionMacro found in vtkSetGet.h.
+  // combination with vtkTypeMacro found in vtkSetGet.h.
   virtual int IsA(const char *name);
 
   // Description:
@@ -159,7 +161,8 @@ protected:
 
   virtual void CollectRevisions(ostream& os);
   
-  int ReferenceCount;      // Number of uses of this object by other objects
+  int ReferenceCount;
+  vtkWeakPointerBase **WeakPointers;
 
   // Internal Register/UnRegister implementation that accounts for
   // possible garbage collection participation.  The second argument
@@ -169,10 +172,12 @@ protected:
 
   // See vtkGarbageCollector.h:
   virtual void ReportReferences(vtkGarbageCollector*);
+
 private:
   //BTX
   friend VTK_COMMON_EXPORT ostream& operator<<(ostream& os, vtkObjectBase& o);
   friend class vtkGarbageCollectorToObjectBaseFriendship;
+  friend class vtkWeakPointerBaseToObjectBaseFriendship;
   //ETX
 protected:
 //BTX

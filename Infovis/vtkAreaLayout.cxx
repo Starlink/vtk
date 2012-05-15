@@ -1,7 +1,7 @@
 /*=========================================================================
   
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAreaLayout.cxx,v $
+  Module:    vtkAreaLayout.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkTreeFieldAggregator.h"
 #include "vtkTreeDFSIterator.h"
 
-vtkCxxRevisionMacro(vtkAreaLayout, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkAreaLayout);
 vtkCxxSetObjectMacro(vtkAreaLayout, LayoutStrategy, vtkAreaLayoutStrategy);
 
@@ -155,6 +154,11 @@ vtkIdType vtkAreaLayout::FindVertex(float pnt[2])
   vtkDataArray *array = otree->GetVertexData()->
     GetArray(this->AreaArrayName);
   if (!array)
+    {
+    return -1;
+    }
+
+  if( otree->GetNumberOfVertices() == 0)
     {
     return -1;
     }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPChacoReader.h,v $
+  Module:    vtkPChacoReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_PARALLEL_EXPORT vtkPChacoReader : public vtkChacoReader
 {
 public:
   static vtkPChacoReader *New();
-  vtkTypeRevisionMacro(vtkPChacoReader,vtkChacoReader);
+  vtkTypeMacro(vtkPChacoReader,vtkChacoReader);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

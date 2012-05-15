@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoxWidget2.h,v $
+  Module:    vtkBoxWidget2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -105,7 +105,7 @@ public:
 
   // Description:
   // Standard class methods for type information and printing.
-  vtkTypeRevisionMacro(vtkBoxWidget2,vtkAbstractWidget);
+  vtkTypeMacro(vtkBoxWidget2,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -117,8 +117,11 @@ public:
   
   // Description:
   // Control the behavior of the widget (i.e., how it processes
-  // events). Translation, rotation, and scaling can all be enabled and
-  // disabled.
+  // events). Translation, rotation, scaling and face movement can all be enabled and
+  // disabled. Scaling refers to scaling of the whole widget at once,
+  // (default is through right mouse button) while face movement refers to
+  // scaling of the widget one face (axis) at a time (default through grabbing
+  // one of the representation spherical handles).
   vtkSetMacro(TranslationEnabled,int);
   vtkGetMacro(TranslationEnabled,int);
   vtkBooleanMacro(TranslationEnabled,int);
@@ -128,6 +131,9 @@ public:
   vtkSetMacro(RotationEnabled,int);
   vtkGetMacro(RotationEnabled,int);
   vtkBooleanMacro(RotationEnabled,int);
+  vtkSetMacro(MoveFacesEnabled,int);
+  vtkGetMacro(MoveFacesEnabled,int);
+  vtkBooleanMacro(MoveFacesEnabled,int);
 
   // Description:
   // Create the default widget representation if one is not set. By default,
@@ -154,6 +160,7 @@ protected:
   int TranslationEnabled;
   int ScalingEnabled;
   int RotationEnabled;
+  int MoveFacesEnabled;
 private:
   vtkBoxWidget2(const vtkBoxWidget2&);  //Not implemented
   void operator=(const vtkBoxWidget2&);  //Not implemented

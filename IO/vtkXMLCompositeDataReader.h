@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkXMLCompositeDataReader.h,v $
+  Module:    vtkXMLCompositeDataReader.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -29,6 +29,8 @@
 #include "vtkXMLReader.h"
 
 class vtkCompositeDataSet;
+class vtkInformationIntegerKey;
+class vtkInformationIntegerVectorKey;
 //BTX
 struct vtkXMLCompositeDataReaderInternals;
 //ETX
@@ -36,7 +38,7 @@ struct vtkXMLCompositeDataReaderInternals;
 class VTK_IO_EXPORT vtkXMLCompositeDataReader : public vtkXMLReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLCompositeDataReader,vtkXMLReader);
+  vtkTypeMacro(vtkXMLCompositeDataReader,vtkXMLReader);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

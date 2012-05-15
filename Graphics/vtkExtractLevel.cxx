@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractLevel.cxx,v $
+  Module:    vtkExtractLevel.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,14 +21,13 @@
 #include "vtkUniformGrid.h"
 #include "vtkAMRBox.h"
 
-#include <vtkstd/set>
+#include <set>
 
-class vtkExtractLevel::vtkSet : public vtkstd::set<unsigned int>
+class vtkExtractLevel::vtkSet : public std::set<unsigned int>
 {
 };
 
 vtkStandardNewMacro(vtkExtractLevel);
-vtkCxxRevisionMacro(vtkExtractLevel, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkExtractLevel::vtkExtractLevel()
 {

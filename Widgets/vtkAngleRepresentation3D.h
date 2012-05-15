@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAngleRepresentation3D.h,v $
+  Module:    vtkAngleRepresentation3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ public:
 
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkAngleRepresentation3D,vtkAngleRepresentation);
+  vtkTypeMacro(vtkAngleRepresentation3D,vtkAngleRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -80,7 +80,8 @@ public:
   // properties, etc.
   vtkGetObjectMacro(Ray1,vtkActor);
   vtkGetObjectMacro(Ray2,vtkActor);
-  //vtkGetObjectMacro(Arc,vtkActor);
+  vtkGetObjectMacro(Arc,vtkActor);
+  vtkGetObjectMacro(TextActor,vtkFollower);
   
   // Description:
   // Scale text.

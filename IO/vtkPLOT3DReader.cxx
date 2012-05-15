@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPLOT3DReader.cxx,v $
+  Module:    vtkPLOT3DReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkDataArrayCollection.h"
 
-vtkCxxRevisionMacro(vtkPLOT3DReader, "$Revision: 1.89 $");
 vtkStandardNewMacro(vtkPLOT3DReader);
 
 #define VTK_RHOINF 1.0
@@ -160,7 +159,13 @@ void vtkPLOT3DReader::SkipByteCount(FILE* fp)
   if (this->BinaryFile && this->HasByteCount)
     {
     int tmp;
-    fread(&tmp, sizeof(int), 1, fp);
+    if (fread(&tmp, sizeof(int), 1, fp) != 1)
+      {
+      vtkErrorMacro ("PLOT3DReader error reading file: " << this->XYZFileName
+                     << " Premature EOF while reading skipping byte count.");
+      fclose (fp);
+      return;
+      }
     }
 }
 

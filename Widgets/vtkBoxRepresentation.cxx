@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoxRepresentation.cxx,v $
+  Module:    vtkBoxRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+
 #include "vtkBoxRepresentation.h"
 #include "vtkActor.h"
 #include "vtkSphereSource.h"
@@ -37,7 +38,6 @@
 #include "vtkObjectFactory.h"
 
 
-vtkCxxRevisionMacro(vtkBoxRepresentation, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkBoxRepresentation);
 
 //----------------------------------------------------------------------------
@@ -1101,7 +1101,10 @@ int vtkBoxRepresentation::RenderOpaqueGeometry(vtkViewport *v)
   // render the handles
   for (int j=0; j<7; j++)
     {
-    count += this->Handle[j]->RenderOpaqueGeometry(v);
+    if(this->Handle[j]->GetVisibility())
+      {
+      count += this->Handle[j]->RenderOpaqueGeometry(v);
+      }
     }
 
   return count;
@@ -1119,7 +1122,10 @@ int vtkBoxRepresentation::RenderTranslucentPolygonalGeometry(vtkViewport *v)
   // render the handles
   for (int j=0; j<7; j++)
     {
-    count += this->Handle[j]->RenderTranslucentPolygonalGeometry(v);
+    if(this->Handle[j]->GetVisibility())
+      {
+      count += this->Handle[j]->RenderTranslucentPolygonalGeometry(v);
+      }
     }
 
   return count;

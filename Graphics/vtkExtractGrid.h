@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractGrid.h,v $
+  Module:    vtkExtractGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractGrid : public vtkStructuredGridAlgorithm
 {
 public:
   static vtkExtractGrid *New();
-  vtkTypeRevisionMacro(vtkExtractGrid,vtkStructuredGridAlgorithm);
+  vtkTypeMacro(vtkExtractGrid,vtkStructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -58,6 +58,7 @@ public:
   // then the resulting VOI will be subsampled representation of the input.
   // For example, if the SampleRate=(2,2,2), every other point will be
   // selected, resulting in a volume 1/8th the original size.
+  // Initial value is (1,1,1).
   vtkSetVector3Macro(SampleRate, int);
   vtkGetVectorMacro(SampleRate, int, 3);
 

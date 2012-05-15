@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeClipCutPointsGrabber.h,v $
+  Module:    vtkHyperOctreeClipCutPointsGrabber.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_GRAPHICS_EXPORT vtkHyperOctreeClipCutPointsGrabber : public vtkHyperOc
 public:
   static vtkHyperOctreeClipCutPointsGrabber *New();
   
-  vtkTypeRevisionMacro(vtkHyperOctreeClipCutPointsGrabber,vtkHyperOctreePointsGrabber);
+  vtkTypeMacro(vtkHyperOctreeClipCutPointsGrabber,vtkHyperOctreePointsGrabber);
   
   void PrintSelf(ostream& os, vtkIndent indent);
   

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLMaterialParser.cxx,v $
+  Module:    vtkXMLMaterialParser.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,20 +31,19 @@
 
 #include "vtkXMLUtilities.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 
 //-----------------------------------------------------------------------------
 class vtkXMLMaterialParserInternals
 {
 public:
-  typedef vtkstd::vector<vtkSmartPointer<vtkXMLDataElement> > VectorOfElements;
+  typedef std::vector<vtkSmartPointer<vtkXMLDataElement> > VectorOfElements;
   VectorOfElements Stack;
 };
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkXMLMaterialParser);
-vtkCxxRevisionMacro(vtkXMLMaterialParser, "$Revision: 1.5 $" );
 vtkCxxSetObjectMacro(vtkXMLMaterialParser, Material, vtkXMLMaterial);
 
 //-----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageQuantizeRGBToIndex.h,v $
+  Module:    vtkImageQuantizeRGBToIndex.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_IMAGING_EXPORT vtkImageQuantizeRGBToIndex : public vtkImageAlgorithm
 {
 public:
   static vtkImageQuantizeRGBToIndex *New();
-  vtkTypeRevisionMacro(vtkImageQuantizeRGBToIndex,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageQuantizeRGBToIndex,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

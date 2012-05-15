@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageWriter.cxx,v $
+  Module:    vtkMINCImageWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -71,7 +71,7 @@ POSSIBILITY OF SUCH DAMAGES.
 
 #include "vtkMINCImageAttributes.h"
 #include "vtkMINC.h"
-#include "vtknetcdf/netcdf.h"
+#include "vtk_netcdf.h"
 
 #ifdef _WIN32
 #include "vtkWindows.h"
@@ -83,14 +83,13 @@ POSSIBILITY OF SUCH DAMAGES.
 #include <stdlib.h>
 #include <float.h>
 #include <time.h>
-#include <vtkstd/string>
-#include <vtkstd/vector>
-#include <vtkstd/map>
+#include <string>
+#include <vector>
+#include <map>
 
 #define VTK_MINC_MAX_DIMS 8
 
 //--------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMINCImageWriter, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkMINCImageWriter);
 
 vtkCxxSetObjectMacro(vtkMINCImageWriter,DirectionCosines,vtkMatrix4x4);
@@ -383,7 +382,7 @@ void vtkMINCImageWriter::ComputePermutationFromOrientation(
 
 //-------------------------------------------------------------------------
 // Create an identity string for a file.
-vtkstd::string vtkMINCImageWriterCreateIdentString()
+std::string vtkMINCImageWriterCreateIdentString()
 {
   // A static counter for this process.
   static int identx = 1;
@@ -419,7 +418,7 @@ vtkstd::string vtkMINCImageWriterCreateIdentString()
     {
     hostname = "unknown";
     }
-  vtkstd::string ident = username;
+  std::string ident = username;
   ident.append(itemsep);
   ident.append(hostname);
   ident.append(itemsep);
@@ -532,7 +531,7 @@ int vtkMINCImageWriter::CreateMINCDimensions(
   defaultdims[this->Permutation[2]] = MIzspace;
 
   int hasTimeDim = 0;
-  vtkstd::vector<vtkstd::string> dimensions;
+  std::vector<std::string> dimensions;
   int nuserdims = 0;
   vtkStringArray *dimensionNames = 0;
   if (this->ImageAttributes)
@@ -670,7 +669,7 @@ int vtkMINCImageWriter::CreateMINCVariables(
     0
   };
 
-  vtkstd::vector<vtkstd::string> variables;
+  std::vector<std::string> variables;
 
   // Get the information from the input
   double spacing[3];
@@ -754,7 +753,7 @@ int vtkMINCImageWriter::CreateMINCVariables(
 
   // ------------------------
   // Find the children of the root variable
-  vtkstd::string rootChildren = MI_EMPTY_STRING;
+  std::string rootChildren = MI_EMPTY_STRING;
 
   int nvars = static_cast<int>(variables.size());
   int ivar = 0;
@@ -992,11 +991,11 @@ int vtkMINCImageWriter::CreateMINCVariables(
       varid = -1;
 
       // Global attributes: ident and history
-      vtkstd::string ident = vtkMINCImageWriterCreateIdentString();
+      std::string ident = vtkMINCImageWriterCreateIdentString();
       vtkMINCImageWriterPutAttributeTextMacro(MIident, ident.c_str());
 
       // For history, include any previous history
-      vtkstd::string history = MI_EMPTY_STRING;
+      std::string history = MI_EMPTY_STRING;
       const char *previousHistory = 0;
       if (this->ImageAttributes)
         {
@@ -1015,7 +1014,7 @@ int vtkMINCImageWriter::CreateMINCVariables(
 
       time_t t;
       time(&t);
-      vtkstd::string timestamp = ctime(&t);
+      std::string timestamp = ctime(&t);
       history.append(timestamp.substr(0, timestamp.size()-1) + ">>>");
       if (this->HistoryAddition)
         {
@@ -1036,7 +1035,7 @@ int vtkMINCImageWriter::CreateMINCVariables(
       }
     if (attArray)
       {
-      vtkstd::string varpath = MI_GRPNAME MI_GRP_SEP;
+      std::string varpath = MI_GRPNAME MI_GRP_SEP;
       int natts = attArray->GetNumberOfValues();
       for (int iatt = 0; iatt < natts; iatt++)
         {

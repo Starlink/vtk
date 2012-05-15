@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericAdaptorCell.h,v $
+  Module:    vtkGenericAdaptorCell.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,6 @@
 class vtkLine;
 class vtkTetra;
 class vtkPoints;
-class vtkPointLocator;
 class vtkVertex;
 class vtkTriangle;
 class vtkCellData;
@@ -70,7 +69,7 @@ class vtkPointData;
 class vtkCellArray;
 class vtkDoubleArray;
 class vtkGenericCellIterator;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkContourValues;
 class vtkImplicitFunction;
 class vtkGenericCellTessellator;
@@ -89,7 +88,7 @@ class vtkPyramid;
 class VTK_FILTERING_EXPORT vtkGenericAdaptorCell : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericAdaptorCell,vtkObject);
+  vtkTypeMacro(vtkGenericAdaptorCell,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -323,7 +322,7 @@ public:
                        vtkImplicitFunction *f,
                        vtkGenericAttributeCollection *attributes,
                        vtkGenericCellTessellator *tess,
-                       vtkPointLocator *locator,
+                       vtkIncrementalPointLocator *locator,
                        vtkCellArray *verts,
                        vtkCellArray *lines,
                        vtkCellArray *polys,
@@ -377,7 +376,7 @@ public:
                     vtkGenericAttributeCollection *attributes,
                     vtkGenericCellTessellator *tess,
                     int insideOut,
-                    vtkPointLocator *locator, 
+                    vtkIncrementalPointLocator *locator, 
                     vtkCellArray *connectivity,
                     vtkPointData *outPd,
                     vtkCellData *outCd,
@@ -482,7 +481,7 @@ public:
   virtual void Tessellate(vtkGenericAttributeCollection *attributes, 
                           vtkGenericCellTessellator *tess,
                           vtkPoints *points,
-                          vtkPointLocator *locator,
+                          vtkIncrementalPointLocator *locator,
                           vtkCellArray* cellArray,
                           vtkPointData *internalPd,
                           vtkPointData *pd, vtkCellData* cd,
@@ -524,7 +523,7 @@ public:
   virtual void TriangulateFace(vtkGenericAttributeCollection *attributes,
                                vtkGenericCellTessellator *tess, int index, 
                                vtkPoints *points,
-                               vtkPointLocator *locator,
+                               vtkIncrementalPointLocator *locator,
                                vtkCellArray *cellArray,
                                vtkPointData *internalPd,
                                vtkPointData *pd, vtkCellData *cd );

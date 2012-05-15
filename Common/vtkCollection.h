@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollection.h,v $
+  Module:    vtkCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class vtkCollectionIterator;
 class VTK_COMMON_EXPORT vtkCollection : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCollection,vtkObject);
+  vtkTypeMacro(vtkCollection,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -92,7 +92,7 @@ public:
 
   // Description:
   // Return the number of objects in the list.
-  int  GetNumberOfItems();
+  int  GetNumberOfItems() { return this->NumberOfItems; }
 
   // Description:
   // Initialize the traversal of the collection. This means the data pointer

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygon.h,v $
+  Module:    vtkPolygon.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,12 +30,13 @@ class vtkLine;
 class vtkPoints;
 class vtkQuad;
 class vtkTriangle;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkPolygon : public vtkCell
 {
 public:
   static vtkPolygon *New();
-  vtkTypeRevisionMacro(vtkPolygon,vtkCell);
+  vtkTypeMacro(vtkPolygon,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -48,12 +49,12 @@ public:
   vtkCell *GetFace(int) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator,vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator,vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *tris,
+            vtkIncrementalPointLocator *locator, vtkCellArray *tris,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);
@@ -70,10 +71,22 @@ public:
   int IsPrimaryCell() {return 0;}
 
   // Description:
-  // Compute the interpolation functions/derivatives
+  // Compute the area of a polygon. This is a convenience function
+  // which simply calls static double ComputeArea(vtkPoints *p, 
+  // vtkIdType numPts, vtkIdType *pts, double normal[3]);
+  // with the appropriate parameters from the instantiated vtkPolygon.
+  double ComputeArea();
+
+  // Description:
+  // Compute the interpolation functions/derivatives. 
   // (aka shape functions/derivatives)
-  virtual void InterpolateFunctions(double pcoords[3], double *sf);
-  virtual void InterpolateDerivs(double pcoords[3], double *derivs);
+  // Two interpolation algorithms are available: 1/r^2 and Mean Value 
+  // Coordinate. The former is used by default. To use the second algorithm, 
+  // set UseMVCInterpolation to be true.
+  // The function assumes the input point lies on the polygon plane without
+  // checking that.
+  virtual void InterpolateFunctions(double x[3], double *sf);
+  virtual void InterpolateDerivs(double x[3], double *derivs);
 
   // Description:
   // Polygon specific methods.
@@ -101,6 +114,8 @@ public:
   // Compute the area of a polygon in 3D. The area is returned, as well as
   // the normal (a side effect of using this method). If you desire to
   // compute the area of a triangle, use vtkTriangleArea which is faster.
+  // If you already have a vtkPolygon instantiated, a convenience function,
+  // ComputeArea() is provided.
   static double ComputeArea(vtkPoints *p, vtkIdType numPts, vtkIdType *pts,
                             double normal[3]);
 
@@ -153,7 +168,6 @@ public:
                                          double x[3]);
 
   // Description:
-
   // Intersect two convex 2D polygons to produce a line segment as output.
   // The return status of the methods indicated no intersection (returns 0);
   // a single point of intersection (returns 1); or a line segment (i.e., two
@@ -166,9 +180,20 @@ public:
   static int IntersectConvex2DCells(vtkCell *cell1, vtkCell *cell2,
                                     double tol, double p0[3], double p1[3]);
 
+  // Description:
+  // Set/Get the flag indicating whether to use Mean Value Coordinate for the
+  // interpolation. If true, InterpolateFunctions() uses the Mean Value
+  // Coordinate to compute weights. Otherwise, the conventional 1/r^2 method
+  // is used. The UseMVCInterpolation parameter is set to false by default.
+  vtkGetMacro(UseMVCInterpolation, bool);
+  vtkSetMacro(UseMVCInterpolation, bool);
+  
 protected:
   vtkPolygon();
   ~vtkPolygon();
+
+  // Compute the interpolation functions using Mean Value Coordinate.
+  void InterpolateFunctionsUsingMVC(double x[3], double *weights);
 
   // variables used by instances of this class
   double   Tolerance; // Intersection tolerance
@@ -180,6 +205,10 @@ protected:
   vtkDoubleArray *TriScalars;
   vtkLine *Line;
 
+  // Parameter indicating whether to use Mean Value Coordinate algorithm 
+  // for interpolation. The parameter is false by default.
+  bool     UseMVCInterpolation;
+  
   // Helper methods for triangulation------------------------------
   // Description:
   // A fast triangulation method. Uses recursive divide and

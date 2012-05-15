@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBitArrayIterator.cxx,v $
+  Module:    vtkBitArrayIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkBitArrayIterator);
-vtkCxxRevisionMacro(vtkBitArrayIterator, "$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkBitArrayIterator, Array, vtkBitArray);
 //-----------------------------------------------------------------------------
 vtkBitArrayIterator::vtkBitArrayIterator()

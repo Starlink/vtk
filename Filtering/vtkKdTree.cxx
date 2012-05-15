@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKdTree.cxx,v $
+  Module:    vtkKdTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,13 +45,12 @@
 #ifdef _MSC_VER
 #pragma warning ( disable : 4100 )
 #endif
-#include <vtkstd/algorithm>
-#include <vtkstd/list>
-#include <vtkstd/map>
-#include <vtkstd/queue>
-#include <vtkstd/set>
+#include <algorithm>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
 
-vtkCxxRevisionMacro(vtkKdTree, "$Revision: 1.5 $");
 
 // Timing data ---------------------------------------------
 
@@ -115,11 +114,11 @@ namespace
       {
         if(dist2 <= this->LargestDist2 || this->NumPoints < this->NumDesiredPoints)
           {
-          vtkstd::map<float, vtkstd::list<vtkIdType> >::iterator it=this->dist2ToIds.find(dist2);
+          std::map<float, std::list<vtkIdType> >::iterator it=this->dist2ToIds.find(dist2);
           this->NumPoints++;
           if(it == this->dist2ToIds.end())
             {
-            vtkstd::list<vtkIdType> idset;
+            std::list<vtkIdType> idset;
             idset.push_back(id);
             this->dist2ToIds[dist2] = idset;
             }
@@ -134,7 +133,7 @@ namespace
             if((this->NumPoints-it->second.size()) > this->NumDesiredPoints)
               {
               this->NumPoints -= it->second.size();
-              vtkstd::map<float, vtkstd::list<vtkIdType> >::iterator it2 = it;
+              std::map<float, std::list<vtkIdType> >::iterator it2 = it;
               it2--;
               this->LargestDist2 = it2->first;
               this->dist2ToIds.erase(it);
@@ -149,10 +148,10 @@ namespace
           ? this->NumDesiredPoints : this->NumPoints;
         ids->SetNumberOfIds(numIds);
         vtkIdType counter = 0;
-        vtkstd::map<float, vtkstd::list<vtkIdType> >::iterator it=this->dist2ToIds.begin();
+        std::map<float, std::list<vtkIdType> >::iterator it=this->dist2ToIds.begin();
         while(counter < numIds && it!=this->dist2ToIds.end())
           {
-          vtkstd::list<vtkIdType>::iterator lit=it->second.begin();
+          std::list<vtkIdType>::iterator lit=it->second.begin();
           while(counter < numIds && lit!=it->second.end())
             {
             ids->InsertId(counter, *lit);
@@ -171,7 +170,7 @@ namespace
   private:
     size_t NumDesiredPoints, NumPoints;
     float LargestDist2;
-    vtkstd::map<float, vtkstd::list<vtkIdType> > dist2ToIds; // map from dist^2 to a list of ids
+    std::map<float, std::list<vtkIdType> > dist2ToIds; // map from dist^2 to a list of ids
   };
 }
 
@@ -2307,7 +2306,13 @@ vtkIdType vtkKdTree::FindClosestPoint(double x, double y, double z, double &dist
 vtkIdType vtkKdTree::FindClosestPointWithinRadius(
   double radius, const double x[3], double& dist2)
 {
-  return this->FindClosestPointInSphere(x[0], x[1], x[2], radius, -1, dist2);
+  int localCloseId = 
+    this->FindClosestPointInSphere(x[0], x[1], x[2], radius, -1, dist2);
+  if(localCloseId >= 0)
+    {
+    return static_cast<vtkIdType>(this->LocatorIds[localCloseId]);
+    }
+  return -1;
 }
 
 
@@ -2385,6 +2390,7 @@ int vtkKdTree::_FindClosestPointInRegion(int regionId,
   return minId;
 }
 
+//----------------------------------------------------------------------------
 int vtkKdTree::FindClosestPointInSphere(double x, double y, double z, 
                                         double radius, int skipRegion,
                                         double &dist2)
@@ -2423,7 +2429,7 @@ int vtkKdTree::FindClosestPointInSphere(double x, double y, double z,
       int newLocalCloseId = this->_FindClosestPointInRegion(neighbor,
                                                             x, y, z, newDistance2);
       
-      if (newDistance2 < minDistance2)
+      if (newDistance2 < minDistance2 && newDistance2 <= radius*radius)
         {
         minDistance2 = newDistance2;
         localCloseId = newLocalCloseId;
@@ -2435,12 +2441,7 @@ int vtkKdTree::FindClosestPointInSphere(double x, double y, double z,
   delete [] regionIds;
 
   dist2 = minDistance2;
-  vtkIdType originalId = -1;
-  if(localCloseId >= 0)
-    {
-    originalId = static_cast<vtkIdType>(this->LocatorIds[localCloseId]);
-    }
-  return originalId;
+  return localCloseId;
 }
 
 //----------------------------------------------------------------------------
@@ -2688,7 +2689,7 @@ void vtkKdTree::FindClosestNPoints(int N, const double x[3],
   double delta[3] = {0,0,0};
   double bounds[6];
   node = this->Top;
-  vtkstd::queue<vtkKdNode*> nodesToBeSearched;
+  std::queue<vtkKdNode*> nodesToBeSearched;
   nodesToBeSearched.push(node);
   while(!nodesToBeSearched.empty())
     {
@@ -3519,7 +3520,7 @@ void vtkKdTree::GenerateRepresentation(int *regions, int len, vtkPolyData *pd)
 //----------------------------------------------------------------------------
 //  Cell ID lists
 //
-#define SORTLIST(l, lsize) vtkstd::sort(l, l + lsize)
+#define SORTLIST(l, lsize) std::sort(l, l + lsize)
 
 #define REMOVEDUPLICATES(l, lsize, newsize) \
 {                                     \
@@ -3970,8 +3971,8 @@ vtkIdType vtkKdTree::GetCellLists(vtkIntArray *regions, vtkDataSet *set,
 
   int CheckSet = (onBoundaryCells && (nregions > 1));
 
-  vtkstd::set<vtkIdType> ids;
-  vtkstd::pair<vtkstd::set<vtkIdType>::iterator, bool> idRec;
+  std::set<vtkIdType> ids;
+  std::pair<std::set<vtkIdType>::iterator, bool> idRec;
 
   vtkIdType totalRegionCells = 0;
   vtkIdType totalBoundaryCells = 0;
@@ -4211,8 +4212,8 @@ int vtkKdTree::MinimalNumberOfConvexSubRegions(vtkIntArray *regionIdList,
 
   // create a sorted list of unique region Ids
 
-  vtkstd::set<int> idSet;
-  vtkstd::set<int>::iterator it;
+  std::set<int> idSet;
+  std::set<int>::iterator it;
 
   for (i=0; i<nids; i++)
     {
@@ -4342,8 +4343,8 @@ int vtkKdTree::ViewOrderRegionsInDirection(
     {   
     // Created sorted list of unique ids
       
-    vtkstd::set<int> ids;
-    vtkstd::set<int>::iterator it;
+    std::set<int> ids;
+    std::set<int>::iterator it;
     int nids = regionIds->GetNumberOfTuples();
 
     for (i=0; i<nids; i++)
@@ -4397,8 +4398,8 @@ int vtkKdTree::ViewOrderRegionsFromPosition(vtkIntArray *regionIds,
     {   
     // Created sorted list of unique ids
       
-    vtkstd::set<int> ids;
-    vtkstd::set<int>::iterator it;
+    std::set<int> ids;
+    std::set<int>::iterator it;
     int nids = regionIds->GetNumberOfTuples();
 
     for (i=0; i<nids; i++)

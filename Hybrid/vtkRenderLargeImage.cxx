@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderLargeImage.cxx,v $
+  Module:    vtkRenderLargeImage.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,9 +27,8 @@
 #include "vtkActor2D.h"
 #include "vtkProp.h"
 
-#include <vtkstd/vector>
+#include <vector>
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkRenderLargeImage, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkRenderLargeImage);
 
 vtkCxxSetObjectMacro(vtkRenderLargeImage,Input,vtkRenderer);
@@ -45,8 +44,8 @@ public:
   vtkCollection        *Coord1s;
   vtkCollection        *Coord2s;
   // Store the display coords for adjustment during tiling
-  vtkstd::vector< vtkstd::pair<int, int> > Coords1;
-  vtkstd::vector< vtkstd::pair<int, int> > Coords2;
+  std::vector< std::pair<int, int> > Coords1;
+  std::vector< std::pair<int, int> > Coords2;
   //
   vtkRenderLargeImage2DHelperClass() 
   {
@@ -365,9 +364,9 @@ void vtkRenderLargeImage::Rescale2DActors()
           d2[1] = p2[1]*this->Magnification;
           d2[2] = 0.0;
           this->StoredData->Coords1.push_back( 
-            vtkstd::pair<int, int>(static_cast<int>(d1[0]), static_cast<int>(d1[1])) );
+            std::pair<int, int>(static_cast<int>(d1[0]), static_cast<int>(d1[1])) );
           this->StoredData->Coords2.push_back( 
-            vtkstd::pair<int, int>(static_cast<int>(d2[0]), static_cast<int>(d2[1])) );
+            std::pair<int, int>(static_cast<int>(d2[0]), static_cast<int>(d2[1])) );
           // Make sure they have no dodgy offsets
           n1->SetCoordinateSystemToDisplay();
           n2->SetCoordinateSystemToDisplay();

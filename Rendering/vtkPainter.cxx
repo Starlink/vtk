@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainter.cxx,v $
+  Module:    vtkPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkTimerLog.h"
 
-vtkCxxRevisionMacro(vtkPainter, "$Revision: 1.7 $");
 vtkCxxSetObjectMacro(vtkPainter, Input, vtkDataObject);
 vtkCxxSetObjectMacro(vtkPainter, Information, vtkInformation);
 vtkInformationKeyMacro(vtkPainter, STATIC_DATA, Integer);

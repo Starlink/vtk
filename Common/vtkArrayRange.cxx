@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayRange.cxx,v $
+  Module:    vtkArrayRange.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -21,37 +21,53 @@
 
 #include "vtkArrayRange.h"
 
+#include <algorithm> // for std::max()
+
 vtkArrayRange::vtkArrayRange() :
   Begin(0),
   End(0)
 {
 }
 
-vtkArrayRange::vtkArrayRange(vtkIdType index) :
-  Begin(index),
-  End(index + 1)
-{
-}
-
-vtkArrayRange::vtkArrayRange(vtkIdType begin, vtkIdType end) :
+vtkArrayRange::vtkArrayRange(CoordinateT begin, CoordinateT end) :
   Begin(begin),
-  End(vtkstd::max(begin, end))
+  End(std::max(begin, end))
 {
 }
 
-vtkIdType vtkArrayRange::GetBegin() const
+vtkArrayRange::CoordinateT vtkArrayRange::GetBegin() const
 {
   return this->Begin;
 }
 
-vtkIdType vtkArrayRange::GetEnd() const
+vtkArrayRange::CoordinateT vtkArrayRange::GetEnd() const
 {
   return this->End;
 }
 
-vtkIdType vtkArrayRange::GetExtent() const
+vtkArrayRange::CoordinateT vtkArrayRange::GetSize() const
 {
   return this->End - this->Begin;
+}
+
+bool vtkArrayRange::Contains(const vtkArrayRange& range) const
+{
+  return this->Begin <= range.Begin && range.End <= this->End;
+}
+
+bool vtkArrayRange::Contains(const CoordinateT coordinate) const
+{
+  return this->Begin <= coordinate && coordinate < this->End;
+}
+
+bool operator==(const vtkArrayRange& lhs, const vtkArrayRange& rhs)
+{
+  return lhs.Begin == rhs.Begin && lhs.End == rhs.End;
+}
+
+bool operator!=(const vtkArrayRange& lhs, const vtkArrayRange& rhs)
+{
+  return !(lhs == rhs);
 }
 
 ostream& operator<<(ostream& stream, const vtkArrayRange& rhs)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericStreamTracer.h,v $
+  Module:    vtkGenericStreamTracer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -79,7 +79,7 @@ class vtkGenericDataSet;
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericStreamTracer : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericStreamTracer,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGenericStreamTracer,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -100,6 +100,11 @@ public:
   // Specify the source object used to generate starting points.
   void SetSource(vtkDataSet *source);
   vtkDataSet *GetSource();
+
+  // Description:
+  // Specify the source object used to generate starting points (seeds).
+  // New style.
+  void SetSourceConnection(vtkAlgorithmOutput* algOutput);
   
   int FillInputPortInformation(int port, vtkInformation* info);
   
@@ -245,6 +250,15 @@ public:
   // is terminated.
   vtkSetMacro(TerminalSpeed, double);
   vtkGetMacro(TerminalSpeed, double);
+
+  // Description:
+  // Simplified API to set an homogeneous unit across Min/Max/Init IntegrationStepUnit
+  void SetIntegrationStepUnit(int unit)
+    {
+    this->SetInitialIntegrationStepUnit(unit);
+    this->SetMinimumIntegrationStepUnit(unit);
+    this->SetMaximumIntegrationStepUnit(unit);
+    }
 
 //BTX
   enum

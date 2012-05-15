@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLWriter.cxx,v $
+  Module:    vtkXMLWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@
 #include <vtksys/ios/sstream>
 
 #include <assert.h>
-#include <vtkstd/string>
+#include <string>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -52,6 +52,9 @@
 #if defined(__BORLANDC__)
 #include <ctype.h> // isalnum is defined here for some versions of Borland
 #endif
+
+#include <locale> // C++ locale
+
 
 //*****************************************************************************
 // Friend class to enable access for  template functions to the protected
@@ -211,7 +214,6 @@ int vtkXMLWriterWriteBinaryDataBlocks(vtkXMLWriter* writer,
 }
 //*****************************************************************************
 
-vtkCxxRevisionMacro(vtkXMLWriter, "$Revision: 1.74 $");
 vtkCxxSetObjectMacro(vtkXMLWriter, Compressor, vtkDataCompressor);
 //----------------------------------------------------------------------------
 vtkXMLWriter::vtkXMLWriter()
@@ -275,6 +277,33 @@ vtkXMLWriter::~vtkXMLWriter()
 
   delete this->FieldDataOM;
   delete[] this->NumberOfTimeValues;
+}
+
+//----------------------------------------------------------------------------
+void vtkXMLWriter::SetCompressorType(int compressorType)
+{
+  if (compressorType == NONE)
+    {
+    if (this->Compressor)
+      {
+      this->Compressor->Delete();
+      this->Compressor = 0;
+      this->Modified();
+      }
+    return;
+    }
+
+  if (compressorType == ZLIB)
+    {
+    if (this->Compressor && !this->Compressor->IsTypeOf("vtkZLibDataCompressor"))
+      {
+      this->Compressor->Delete();
+      }
+
+    this->Compressor = vtkZLibDataCompressor::New();
+    this->Modified();
+    return;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -616,6 +645,8 @@ int vtkXMLWriter::WriteInternal()
     return 0;
     }
 
+  (*this->Stream).imbue(std::locale::classic());
+  
   // Tell the subclass to write the data.
   int result = this->WriteData();
 
@@ -658,6 +689,8 @@ int vtkXMLWriter::StartFile()
     os << "<?xml version=\"1.0\"?>\n";
     }
 
+  os.imbue(std::locale::classic());
+  
   // Open the document-level element.  This will contain the rest of
   // the elements.
   os << "<VTKFile";
@@ -1706,6 +1739,7 @@ void vtkXMLWriter::WriteArrayAppended(
     offs.GetRangeMinPosition(timestep) = -1;
     offs.GetRangeMaxPosition(timestep) = -1;
     }
+
   //
   offs.GetPosition(timestep) = this->ReserveAttributeSpace("offset");
   // Write information in the recognized keys associated with this array.
@@ -1768,8 +1802,26 @@ void vtkXMLWriter::WriteArrayHeader(vtkAbstractArray* a,  vtkIndent indent,
   if(a->GetNumberOfComponents() > 1)
     {
     this->WriteScalarAttribute("NumberOfComponents",
-      a->GetNumberOfComponents());
+      a->GetNumberOfComponents()); 
     }
+  
+  //always write out component names, even if only 1 component
+  vtksys_ios::ostringstream buff;    
+  const char* compName = NULL;
+  for ( int i=0; i < a->GetNumberOfComponents(); ++i )
+    {
+    //get the component names    
+    buff << "ComponentName" << i;      
+    compName = a->GetComponentName( i );
+    if ( compName )
+      {
+      this->WriteStringAttribute( buff.str().c_str(), compName );
+      compName = NULL;
+      }
+    buff.str("");
+    buff.clear();
+    }
+    
   if(this->NumberOfTimeSteps > 1)
     {
     this->WriteScalarAttribute("TimeStep", timestep);
@@ -1864,7 +1916,7 @@ void vtkXMLWriter::WriteArrayInline(
     key->SaveState(info,eKey);
     eKey->PrintXML(os,indent);
     eKey->Delete();
-    }
+    }  
   // Write the inline data.
   this->WriteInlineData(a, indent.GetNextIndent());
   // Close tag.
@@ -2848,7 +2900,7 @@ void vtkXMLWriter::WritePrimaryElementAttributes(ostream &os, vtkIndent indent)
     this->NumberOfTimeValues = new unsigned long[this->NumberOfTimeSteps];
     os << indent << "TimeValues=\"\n";
     
-    vtkstd::string blankline = vtkstd::string(40, ' '); //enough room for precision
+    std::string blankline = std::string(40, ' '); //enough room for precision
     for(int i=0; i<this->NumberOfTimeSteps; i++)
       {
       this->NumberOfTimeValues[i] = os.tellp();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayMatricizeArray.cxx,v $
+  Module:    ArrayMatricizeArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,10 +31,10 @@
 #define test_expression(expression) \
 { \
   if(!(expression)) \
-    throw vtkstd::runtime_error("Expression failed: " #expression); \
+    throw std::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayMatricizeArray(int argc, char* argv[])
+int ArrayMatricizeArray(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -44,11 +44,11 @@ int ArrayMatricizeArray(int argc, char* argv[])
 
     double value = 0;
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(int i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(int j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(int k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           array->AddValue(vtkArrayCoordinates(i, j, k), value++);
           }
@@ -60,7 +60,7 @@ int ArrayMatricizeArray(int argc, char* argv[])
 
     // Create an array data object to hold it ...
     vtkSmartPointer<vtkArrayData> array_data = vtkSmartPointer<vtkArrayData>::New();
-    array_data->SetArray(array);
+    array_data->AddArray(array);
 
     // Matricize it ...
     vtkSmartPointer<vtkMatricizeArray> matricize = vtkSmartPointer<vtkMatricizeArray>::New();
@@ -68,7 +68,8 @@ int ArrayMatricizeArray(int argc, char* argv[])
     matricize->SetSliceDimension(0);
     matricize->Update();
 
-    vtkSparseArray<double>* const matricized_array = vtkSparseArray<double>::SafeDownCast(matricize->GetOutput()->GetArray());
+    vtkSparseArray<double>* const matricized_array = vtkSparseArray<double>::SafeDownCast(
+      matricize->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     test_expression(matricized_array);
 
     cout << "matricize output:\n";
@@ -85,7 +86,7 @@ int ArrayMatricizeArray(int argc, char* argv[])
 
     return 0;
     }
-  catch(vtkstd::exception& e)
+  catch(std::exception& e)
     {
     cout << e.what() << endl;
     return 1;

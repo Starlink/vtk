@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataCompressor.cxx,v $
+  Module:    vtkDataCompressor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkDataCompressor.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkDataCompressor, "$Revision: 1.2 $");
 
 //----------------------------------------------------------------------------
 vtkDataCompressor::vtkDataCompressor()

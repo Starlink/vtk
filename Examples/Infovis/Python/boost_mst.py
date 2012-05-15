@@ -2,11 +2,10 @@ from vtk import *
 
 source = vtkRandomGraphSource()
 source.DirectedOff()
-source.SetNumberOfVertices(50)
-source.SetEdgeProbability(0.01)
+source.SetNumberOfVertices(10)
+source.SetEdgeProbability(0.22)
 source.SetUseEdgeProbability(True)
 source.AllowParallelEdgesOn()
-source.AllowSelfLoopsOn() 
 source.SetStartWithTree(True)
 
 # Connect to the centrality filter.
@@ -27,30 +26,33 @@ view.SetVertexLabelArrayName("centrality")
 view.SetVertexLabelVisibility(True)
 view.SetVertexColorArrayName("centrality")
 view.SetColorVertices(True)
+view.SetEdgeLabelArrayName("centrality")
+view.SetEdgeLabelVisibility(True)
 view.SetEdgeColorArrayName("centrality")
 view.SetColorEdges(True)
 view.SetLayoutStrategyToSimple2D()
+view.SetVertexLabelFontSize(14)
+view.SetEdgeLabelFontSize(12)
 
-# Make sure the view is using a pedigree id selection
-view.SetSelectionType(2)
+# Make sure the representation is using a pedigree id selection
+view.GetRepresentation(0).SetSelectionType(2)
 
 # Set the selection to be the MST
-view.GetRepresentation(0).GetSelectionLink().SetSelection(mstTreeSelection.GetOutput())
+view.GetRepresentation(0).GetAnnotationLink().SetCurrentSelection(mstTreeSelection.GetOutput())
 
 # Set the theme on the view
 theme = vtkViewTheme.CreateMellowTheme()
 theme.SetLineWidth(5)
-theme.SetCellOpacity(0.99)
 theme.SetPointSize(10)
+theme.SetCellOpacity(1)
 theme.SetSelectedCellColor(1,0,1)
-theme.SetSelectedPointColor(1,0,1)
 view.ApplyViewTheme(theme)
-view.SetVertexLabelFontSize(14)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
 
-window.GetInteractor().Start()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
+
+view.GetInteractor().Start()
 

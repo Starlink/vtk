@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMapper.h,v $
+  Module:    vtkImageMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,6 +17,9 @@
 // vtkImageMapper provides 2D image display support for vtk.
 // It is a Mapper2D subclass that can be associated with an Actor2D
 // and placed within a RenderWindow or ImageWindow.
+// The vtkImageMapper is a 2D mapper, which means that it displays images
+// in display coordinates. In display coordinates, one image pixel is
+// always one screen pixel.
 
 // .SECTION See Also
 // vtkMapper2D vtkActor2D
@@ -34,7 +37,7 @@ class vtkImageData;
 class VTK_RENDERING_EXPORT vtkImageMapper : public vtkMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkImageMapper,vtkMapper2D);
+  vtkTypeMacro(vtkImageMapper,vtkMapper2D);
   static vtkImageMapper *New();
   void PrintSelf(ostream& os, vtkIndent indent);
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommunicator.cxx,v $
+  Module:    vtkCommunicator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,15 +38,16 @@
 #include "vtkStructuredPointsReader.h"
 #include "vtkStructuredPointsWriter.h"
 #include "vtkTemporalDataSet.h"
+#include "vtkTypeTraits.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedLongArray.h"
 
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-#include <vtkstd/algorithm>
+#include <algorithm>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkCommunicator, "$Revision: 1.57 $");
 
 #define EXTENT_HEADER_SIZE      128
 
@@ -108,7 +109,7 @@ vtkCommunicator::vtkCommunicator()
 {
   this->LocalProcessId = 0;
   this->NumberOfProcesses = 1;
-  this->MaximumNumberOfProcesses = vtkMultiProcessController::MAX_PROCESSES;
+  this->MaximumNumberOfProcesses = vtkTypeTraits<int>::Max();
   this->Count = 0;
 }
 
@@ -236,7 +237,7 @@ int vtkCommunicator::SendMultiBlockDataSet(vtkMultiBlockDataSet* mbds,
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
     vtkDataObject* block = mbds->GetBlock(cc);
-    int dataType = (block? block->GetDataObjectType() : 0);
+    int dataType = (block? block->GetDataObjectType() : -1);
     returnCode = returnCode && this->Send(&dataType, 1, remoteHandle, tag);
     if (block)
       {
@@ -259,12 +260,12 @@ int vtkCommunicator::SendTemporalDataSet(vtkTemporalDataSet* mbds,
   for (int cc=0; cc < numblocks && returnCode; cc++)
     {
     vtkDataObject* block = mbds->GetTimeStep(cc);
-    int dataType = (block? block->GetDataObjectType() : 0);
+    int dataType = (block? block->GetDataObjectType() : -1);
     returnCode = returnCode && this->Send(&dataType, 1, remoteHandle, tag);
     if (block)
       {
       // Now, send the actual block data.
-      remoteHandle = returnCode && this->Send(block, remoteHandle, tag);
+      returnCode = returnCode && this->Send(block, remoteHandle, tag);
       }
     }
 
@@ -481,11 +482,12 @@ int vtkCommunicator::ReceiveMultiBlockDataSet(
 
   int numblocks = 0;
   returnCode = this->Receive(&numblocks, 1, remoteHandle, tag);
+  mbds->SetNumberOfBlocks(numblocks);
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
     int dataType = 0;
     returnCode = returnCode && this->Receive(&dataType, 1, remoteHandle, tag);
-    if (dataType)
+    if (dataType != -1) // 0 is a valid data type :).
       {
       vtkDataObject* dObj = vtkDataObjectTypes::NewDataObject(dataType);
       returnCode = returnCode && this->Receive(dObj, remoteHandle, tag);
@@ -505,11 +507,12 @@ int vtkCommunicator::ReceiveTemporalDataSet(
 
   int numblocks = 0;
   returnCode = this->Receive(&numblocks, 1, remoteHandle, tag);
+  mbds->SetNumberOfTimeSteps(numblocks);
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
-    int dataType = 0;
+    int dataType = -1;
     returnCode = returnCode && this->Receive(&dataType, 1, remoteHandle, tag);
-    if (dataType)
+    if (dataType != -1) // 0 is a valid data type :).
       {
       vtkDataObject* dObj = vtkDataObjectTypes::NewDataObject(dataType);
       returnCode = returnCode && this->Receive(dObj, remoteHandle, tag);
@@ -1121,6 +1124,58 @@ int vtkCommunicator::GatherVVoidArray(const void *sendBuffer,
 }
 
 //-----------------------------------------------------------------------------
+int vtkCommunicator::GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+                             vtkIdType *recvLengths, vtkIdType *offsets,
+                             int destProcessId)
+{
+  int type = sendBuffer->GetDataType();
+  if (recvBuffer && (type != recvBuffer->GetDataType()))
+    {
+    vtkErrorMacro("Send/receive buffers do not match!");
+    return 0;
+    }
+  return this->GatherVVoidArray(sendBuffer->GetVoidPointer(0),
+                                (  recvBuffer
+                                 ? recvBuffer->GetVoidPointer(0) : NULL ),
+                                (  sendBuffer->GetNumberOfComponents()
+                                 * sendBuffer->GetNumberOfTuples() ),
+                                recvLengths, offsets, type,
+                                destProcessId);
+}
+
+//-----------------------------------------------------------------------------
+int vtkCommunicator::GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+                             int destProcessId)
+{
+  std::vector<vtkIdType> recvLengths(this->NumberOfProcesses);
+  std::vector<vtkIdType> offsets(this->NumberOfProcesses + 1);
+  int numComponents = sendBuffer->GetNumberOfComponents();
+  vtkIdType numTuples = sendBuffer->GetNumberOfTuples();
+  vtkIdType sendLength = numComponents*numTuples;
+  if (!this->Gather(&sendLength, &recvLengths.at(0), 1, destProcessId))
+    {
+    return 0;
+    }
+  if (destProcessId == this->LocalProcessId)
+    {
+    offsets[0] = 0;
+    for (int i = 0; i < this->NumberOfProcesses; i++)
+      {
+      if ((recvLengths[i] % numComponents) != 0)
+        {
+        vtkWarningMacro(<< "Not all send buffers have same tuple size.");
+        }
+      offsets[i+1] = offsets[i] + recvLengths[i];
+      }
+    recvBuffer->SetNumberOfComponents(numComponents);
+    recvBuffer->SetNumberOfTuples(
+                                offsets[this->NumberOfProcesses]/numComponents);
+    }
+  return this->GatherV(sendBuffer, recvBuffer,
+                       &recvLengths.at(0), &offsets.at(0), destProcessId);
+}
+
+//-----------------------------------------------------------------------------
 int vtkCommunicator::ScatterVoidArray(const void *sendBuffer,
                                       void *recvBuffer,
                                       vtkIdType length,
@@ -1280,6 +1335,53 @@ int vtkCommunicator::AllGatherVVoidArray(const void *sendBuffer,
 }
 
 //-----------------------------------------------------------------------------
+int vtkCommunicator::AllGatherV(vtkDataArray *sendBuffer,
+                                vtkDataArray *recvBuffer,
+                                vtkIdType *recvLengths,
+                                vtkIdType *offsets)
+{
+  int type = sendBuffer->GetDataType();
+  if (type != recvBuffer->GetDataType())
+    {
+    vtkErrorMacro("Send/receive buffers do not match!");
+    return 0;
+    }
+  return this->AllGatherVVoidArray(sendBuffer->GetVoidPointer(0),
+                                   recvBuffer->GetVoidPointer(0),
+                                   (  sendBuffer->GetNumberOfComponents()
+                                    * sendBuffer->GetNumberOfTuples() ),
+                                   recvLengths, offsets, type);
+}
+
+//-----------------------------------------------------------------------------
+int vtkCommunicator::AllGatherV(vtkDataArray *sendBuffer,
+                                vtkDataArray *recvBuffer)
+{
+  std::vector<vtkIdType> recvLengths(this->NumberOfProcesses);
+  std::vector<vtkIdType> offsets(this->NumberOfProcesses + 1);
+  int numComponents = sendBuffer->GetNumberOfComponents();
+  vtkIdType numTuples = sendBuffer->GetNumberOfTuples();
+  vtkIdType sendLength = numComponents*numTuples;
+  if (!this->AllGather(&sendLength, &recvLengths.at(0), 1))
+    {
+    return 0;
+    }
+  offsets[0] = 0;
+  for (int i = 0; i < this->NumberOfProcesses; i++)
+    {
+    if ((recvLengths[i] % numComponents) != 0)
+      {
+      vtkWarningMacro(<< "Not all send buffers have same tuple size.");
+      }
+    offsets[i+1] = offsets[i] + recvLengths[i];
+    }
+  recvBuffer->SetNumberOfComponents(numComponents);
+  recvBuffer->SetNumberOfTuples(offsets[this->NumberOfProcesses]/numComponents);
+  return this->AllGatherV(sendBuffer, recvBuffer,
+                          &recvLengths.at(0), &offsets.at(0));
+}
+
+//-----------------------------------------------------------------------------
 int vtkCommunicator::ReduceVoidArray(const void *sendBuffer,
                                      void *recvBuffer,
                                      vtkIdType length, int type,
@@ -1356,7 +1458,7 @@ int vtkCommunicator::ReduceVoidArray(const void *sendBuffer,
       switch (type)
         {
         vtkTemplateMacro
-          (vtkstd::copy(reinterpret_cast<const VTK_TT*>(sendBuffer),
+          (std::copy(reinterpret_cast<const VTK_TT*>(sendBuffer),
                         reinterpret_cast<const VTK_TT*>(sendBuffer) + length,
                         reinterpret_cast<VTK_TT*>(recvBuffer)));
         }
@@ -1486,7 +1588,7 @@ int vtkCommunicator::Broadcast(vtkMultiProcessStream& stream, int srcProcessId)
 {
   if (this->GetLocalProcessId() == srcProcessId)
     {
-    vtkstd::vector<unsigned char> data;
+    std::vector<unsigned char> data;
     stream.GetRawData(data);
     unsigned int length = static_cast<unsigned int>(data.size());
     if (!this->Broadcast(reinterpret_cast<int*>(&length), 1, srcProcessId))
@@ -1509,7 +1611,7 @@ int vtkCommunicator::Broadcast(vtkMultiProcessStream& stream, int srcProcessId)
       }
     if (length > 0)
       {
-      vtkstd::vector<unsigned char> data;
+      std::vector<unsigned char> data;
       data.resize(length);
       if (!this->Broadcast(&data[0], length, srcProcessId))
         {
@@ -1524,7 +1626,7 @@ int vtkCommunicator::Broadcast(vtkMultiProcessStream& stream, int srcProcessId)
 //----------------------------------------------------------------------------
 int vtkCommunicator::Send(const vtkMultiProcessStream& stream, int remoteId, int tag)
 {
-  vtkstd::vector<unsigned char> data;
+  std::vector<unsigned char> data;
   stream.GetRawData(data);
   unsigned int length = static_cast<unsigned int>(data.size());
   if (!this->Send(&length, 1, remoteId, tag))
@@ -1551,7 +1653,7 @@ int vtkCommunicator::Receive(vtkMultiProcessStream& stream, int remoteId, int ta
 
   if (length > 0)
     {
-    vtkstd::vector<unsigned char> data;
+    std::vector<unsigned char> data;
     data.resize(length);
     if (!this->Receive(&data[0], length, remoteId, tag))
       {

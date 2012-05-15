@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpherePuzzleArrows.cxx,v $
+  Module:    vtkSpherePuzzleArrows.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkSpherePuzzleArrows, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkSpherePuzzleArrows);
 
 //----------------------------------------------------------------------------

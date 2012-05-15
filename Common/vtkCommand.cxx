@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommand.cxx,v $
+  Module:    vtkCommand.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,92 +12,8 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-
 #include "vtkCommand.h"
 #include "vtkDebugLeaks.h"
-
-// This list should only contain the initial, contiguous
-// set of events and should not include UserEvent
-static const char *vtkCommandEventStrings[] = {
-  "NoEvent", 
-  "AnyEvent",
-  "DeleteEvent",
-  "StartEvent",
-  "EndEvent",
-  "RenderEvent",
-  "ProgressEvent",
-  "PickEvent",
-  "StartPickEvent",
-  "EndPickEvent",
-  "AbortCheckEvent",
-  "ExitEvent", 
-  "LeftButtonPressEvent",
-  "LeftButtonReleaseEvent",
-  "MiddleButtonPressEvent",
-  "MiddleButtonReleaseEvent",
-  "RightButtonPressEvent",
-  "RightButtonReleaseEvent",
-  "EnterEvent",
-  "LeaveEvent",
-  "KeyPressEvent",
-  "KeyReleaseEvent",
-  "CharEvent",
-  "ExposeEvent",
-  "ConfigureEvent",
-  "TimerEvent",
-  "MouseMoveEvent",
-  "MouseWheelForwardEvent",
-  "MouseWheelBackwardEvent",
-  "ResetCameraEvent",
-  "ResetCameraClippingRangeEvent",
-  "ModifiedEvent",
-  "WindowLevelEvent",
-  "StartWindowLevelEvent",
-  "EndWindowLevelEvent",
-  "ResetWindowLevelEvent",
-  "SetOutputEvent",
-  "ErrorEvent",
-  "WarningEvent",
-  "StartInteractionEvent",
-  "InteractionEvent",
-  "EndInteractionEvent",
-  "EnableEvent",
-  "DisableEvent",
-  "CreateTimerEvent",
-  "DestroyTimerEvent",
-  "PlacePointEvent",
-  "PlaceWidgetEvent",
-  "CursorChangedEvent",
-  "ExecuteInformationEvent",
-  "RenderWindowMessageEvent",
-  "WrongTagEvent",
-  "StartAnimationCueEvent",
-  "AnimationCueTickEvent",
-  "EndAnimationCueEvent",
-  "VolumeMapperRenderEndEvent",
-  "VolumeMapperRenderProgressEvent",
-  "VolumeMapperRenderStartEvent",
-  "VolumeMapperComputeGradientsEndEvent",
-  "VolumeMapperComputeGradientsProgressEvent",
-  "VolumeMapperComputeGradientsStartEvent",
-  "WidgetModifiedEvent",
-  "WidgetValueChangedEvent",
-  "WidgetActivateEvent",
-  "ConnectionCreatedEvent",
-  "ConnectionClosedEvent",
-  "DomainModifiedEvent",
-  "PropertyModifiedEvent",
-  "UpdateEvent",
-  "RegisterEvent",
-  "UnRegisterEvent",
-  "UpdateInformationEvent",
-  "SelectionChangedEvent",
-  "UpdatePropertyEvent",
-  "ViewProgressEvent",
-  "UpdateDataEvent",
-  "CurrentChangedEvent",
-  NULL
-};
 
 //----------------------------------------------------------------
 vtkCommand::vtkCommand():AbortFlag(0),PassiveObserver(0)
@@ -106,7 +22,6 @@ vtkCommand::vtkCommand():AbortFlag(0),PassiveObserver(0)
   vtkDebugLeaks::ConstructClass("vtkCommand or subclass");
 #endif
 }
-
 
 //----------------------------------------------------------------
 void vtkCommand::UnRegister()
@@ -125,47 +40,43 @@ void vtkCommand::UnRegister()
 //----------------------------------------------------------------
 const char *vtkCommand::GetStringFromEventId(unsigned long event)
 {
-  static unsigned long numevents = 0;
-  
-  // find length of table
-  if (!numevents)
+  switch (event)
     {
-    while (vtkCommandEventStrings[numevents] != NULL)
-      {
-      numevents++;
-      }
-    }
+#define _vtk_add_event(Enum)\
+  case Enum: return #Enum;
 
-  if (event < numevents)
-    {
-    return vtkCommandEventStrings[event];
-    }
-  else if (event == vtkCommand::UserEvent)
-    {
+  vtkAllEventsMacro()
+
+#undef _vtk_add_event
+
+  case UserEvent:
     return "UserEvent";
-    }
-  else
-    {
+
+  case NoEvent:
     return "NoEvent";
     }
+
+  // Unknown event. Original code was returning NoEvent, so I'll stick with
+  // that.
+  return "NoEvent";
 }
   
 //----------------------------------------------------------------
 unsigned long vtkCommand::GetEventIdFromString(const char *event)
 {  
-  unsigned long i;
+  if (event)
+    {
+#define _vtk_add_event(Enum)\
+    if (strcmp(event, #Enum) == 0) {return Enum;}
+    vtkAllEventsMacro()
+#undef _vtk_add_event
 
-  for (i = 0; vtkCommandEventStrings[i] != NULL; i++)
-    { 
-    if (!strcmp(vtkCommandEventStrings[i],event))
+    if (strcmp("UserEvent",event) == 0)
       {
-      return i;
+      return vtkCommand::UserEvent;
       }
     }
-  if (!strcmp("UserEvent",event))
-    {
-    return vtkCommand::UserEvent;
-    }
+
   return vtkCommand::NoEvent;
 }
 

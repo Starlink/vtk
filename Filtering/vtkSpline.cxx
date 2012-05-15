@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpline.cxx,v $
+  Module:    vtkSpline.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkPiecewiseFunction.h"
 
-vtkCxxRevisionMacro(vtkSpline, "$Revision: 1.28 $");
 
 //----------------------------------------------------------------------------
 // Construct a spline wth the folloing defaults:

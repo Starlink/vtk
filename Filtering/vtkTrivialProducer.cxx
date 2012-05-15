@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTrivialProducer.cxx,v $
+  Module:    vtkTrivialProducer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,8 +20,8 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkDataObject.h"
 
-vtkCxxRevisionMacro(vtkTrivialProducer, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkTrivialProducer);
 
 // This compile-time switch determines whether the update extent is
@@ -147,6 +147,20 @@ vtkTrivialProducer::ProcessRequest(vtkInformation* request,
       timeRange[0] = timeRange[1] = time;
       outputInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(),
                       timeRange, 2);
+      }
+
+    if (this->Output->IsA("vtkImageData"))
+      {
+      vtkImageData* img = static_cast<vtkImageData*>(this->Output);
+      vtkInformation* pinfo = img->GetPipelineInformation();
+
+      double spacing[3];
+      img->GetSpacing(spacing);
+      pinfo->Set(vtkDataObject::SPACING(), spacing[0], spacing[1], spacing[2]);
+
+      double origin[3];
+      img->GetOrigin(origin);
+      pinfo->Set(vtkDataObject::ORIGIN(), origin[0], origin[1], origin[2]);
       }
     }
 #if VTK_TRIVIAL_PRODUCER_CHECK_UPDATE_EXTENT

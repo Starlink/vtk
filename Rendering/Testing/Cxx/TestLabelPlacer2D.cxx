@@ -1,3 +1,18 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    TestLabelPlacer2D.cxx
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+
 #include "vtkActor.h"
 #include "vtkActor2D.h"
 #include "vtkCamera.h"
@@ -2603,10 +2618,7 @@ static double vtkLabelPlacer2DTestPoints[] =
 };
 
 int TestLabelPlacer2D( int argc, char* argv[] )
-{
-  vtkSmartPointer<vtkTesting> test = vtkSmartPointer<vtkTesting>::New();
-  test->AddArguments( argc, const_cast<const char **>( argv ) );
-
+{ 
   vtkIdType i;
 
   vtkRenderer* rr = vtkRenderer::New();
@@ -2695,29 +2707,30 @@ int TestLabelPlacer2D( int argc, char* argv[] )
   m1->SetLabelModeToLabelFieldData();
   //m1->GetLabelTextProperty()->SetColor(0.0, 0.8, 0.2);
 
-  labelPlacer->Update();
-
-  cout << "Set of " << pts->GetNumberOfPoints() << " labels\n";
-
   rr->AddActor( a1 );
   rr->AddActor( a2 );
   rr->AddActor( a3 );
   rw->AddRenderer( rr );
   rw->SetInteractor( ri );
-  rr->ResetCamera();
+
+  rw->Render();
+
+  //labelPlacer->Update();
+
+  cout << "Set of " << pts->GetNumberOfPoints() << " labels\n";
+
+  //rr->ResetCamera();
   vtkCamera* cam = rr->GetActiveCamera();
   cam->SetClippingRange( 0.0106829, 10.6829 );
   cam->SetFocalPoint( 5.00016, 4.99974, -1. );
   cam->SetPosition( 4.91977, 4.45127, -0.859406 );
   cam->SetViewUp( -0.0373979, 0.253276, 0.966671 );
   //cam->SetDirectionOfProjection( 0.140573, 0.959062, -0.245844 );
-  rw->Render();
 
-  test->SetRenderWindow( rw );
-  int retval = test->RegressionTest( 60. );
-  vtkIndent indent;
-  cam->PrintSelf( cout, indent );
-  if ( test->IsInteractiveModeSpecified() )
+  //rw->Render();
+
+  int retval = vtkRegressionTestImageThreshold( rw, 60.0 );
+  if ( retval == vtkRegressionTester::DO_INTERACTOR)
     {
     ri->Start();
 #ifdef GENERATE_TEST_POINTS

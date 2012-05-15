@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageLuminance.cxx,v $
+  Module:    vtkImageLuminance.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageLuminance, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkImageLuminance);
 
 //----------------------------------------------------------------------------

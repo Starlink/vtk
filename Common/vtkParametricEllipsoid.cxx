@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricEllipsoid.cxx,v $
+  Module:    vtkParametricEllipsoid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkMath.h"
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkParametricEllipsoid, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkParametricEllipsoid);
 
 //----------------------------------------------------------------------------

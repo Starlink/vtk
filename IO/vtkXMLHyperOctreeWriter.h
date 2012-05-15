@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLHyperOctreeWriter.h,v $
+  Module:    vtkXMLHyperOctreeWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkIntArray;
 class VTK_IO_EXPORT vtkXMLHyperOctreeWriter : public vtkXMLWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLHyperOctreeWriter,vtkXMLWriter);
+  vtkTypeMacro(vtkXMLHyperOctreeWriter,vtkXMLWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkXMLHyperOctreeWriter* New();
   

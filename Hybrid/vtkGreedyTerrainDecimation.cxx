@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGreedyTerrainDecimation.cxx,v $
+  Module:    vtkGreedyTerrainDecimation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,9 +27,8 @@
 #include "vtkFloatArray.h"
 #include "vtkMath.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkGreedyTerrainDecimation, "$Revision: 1.24 $");
 vtkStandardNewMacro(vtkGreedyTerrainDecimation);
 
 // Define some constants describing vertices
@@ -54,18 +53,18 @@ public:
 //PIMPL STL encapsulation
 //
 // Maps input point ids to owning mesh triangle
-class vtkGreedyTerrainDecimationTerrainInfoType : public vtkstd::vector<vtkTerrainInfo> 
+class vtkGreedyTerrainDecimationTerrainInfoType : public std::vector<vtkTerrainInfo>
 {
 public:
-  typedef vtkstd::vector<vtkTerrainInfo> Superclass;
+  typedef std::vector<vtkTerrainInfo> Superclass;
   typedef Superclass::size_type size_type;
   vtkGreedyTerrainDecimationTerrainInfoType(size_type n, const vtkTerrainInfo& value):
-    vtkstd::vector<vtkTerrainInfo>(n,value) {}
+    std::vector<vtkTerrainInfo>(n,value) {}
 };
 
 //----------------------------------------------------------------------
 // Maps mesh point id to input point id
-class vtkGreedyTerrainDecimationPointInfoType : public vtkstd::vector<vtkIdType> {};
+class vtkGreedyTerrainDecimationPointInfoType : public std::vector<vtkIdType> {};
 
 
 // Begin vtkGreedyTerrainDecimation class implementation-----------------------------------------
@@ -694,7 +693,7 @@ int vtkGreedyTerrainDecimation::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkImageData *input = vtkImageData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(

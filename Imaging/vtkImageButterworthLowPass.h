@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageButterworthLowPass.h,v $
+  Module:    vtkImageButterworthLowPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IMAGING_EXPORT vtkImageButterworthLowPass : public vtkThreadedImageAlg
 {
 public:
   static vtkImageButterworthLowPass *New();
-  vtkTypeRevisionMacro(vtkImageButterworthLowPass,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageButterworthLowPass,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

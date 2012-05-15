@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeFractalSource.cxx,v $
+  Module:    vtkHyperOctreeFractalSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkFloatArray.h"
 #include "vtkGarbageCollector.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeFractalSource, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkHyperOctreeFractalSource);
 
 //----------------------------------------------------------------------------

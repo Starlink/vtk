@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainterDeviceAdapter.cxx,v $
+  Module:    vtkPainterDeviceAdapter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkPainterDeviceAdapter);
-vtkCxxRevisionMacro(vtkPainterDeviceAdapter, "$Revision: 1.5 $");
 
 //-----------------------------------------------------------------------------
 vtkPainterDeviceAdapter::vtkPainterDeviceAdapter()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyle.h,v $
+  Module:    vtkInteractorStyle.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -118,6 +118,7 @@ class vtkOutlineSource;
 class vtkPolyDataMapper;
 class vtkProp3D;
 class vtkProp;
+class vtkTDxInteractorStyle;
 
 class VTK_RENDERING_EXPORT vtkInteractorStyle : public vtkInteractorObserver
 {
@@ -128,7 +129,7 @@ public:
   // programmers.
   static vtkInteractorStyle *New();
 
-  vtkTypeRevisionMacro(vtkInteractorStyle,vtkInteractorObserver);
+  vtkTypeMacro(vtkInteractorStyle,vtkInteractorObserver);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -186,7 +187,7 @@ public:
   vtkBooleanMacro(HandleObservers,int);
 
   // Description:                                                  
-  // Generic event bindings must be overridden in subclasses
+  // Generic event bindings can be overridden in subclasses
   virtual void OnMouseMove() {};
   virtual void OnLeftButtonDown() {};
   virtual void OnLeftButtonUp() {};
@@ -198,12 +199,28 @@ public:
   virtual void OnMouseWheelBackward() {};
 
   // Description:
-  // OnChar implements keyboard functions, but subclasses can override this 
-  // behavior
+  // OnChar is triggered when an ASCII key is pressed. Some basic key presses
+  // are handled here ('q' for Quit, 'p' for Pick, etc)
   virtual void OnChar();
+
+  // OnKeyDown is triggered by pressing any key (identical to OnKeyPress()).
+  // An empty implementation is provided. The behavior of this function should
+  // be specified in the subclass.
   virtual void OnKeyDown() {};
+
+  // OnKeyUp is triggered by releaseing any key (identical to OnKeyRelease()).
+  // An empty implementation is provided. The behavior of this function should
+  // be specified in the subclass.
   virtual void OnKeyUp() {};
+
+  // OnKeyPress is triggered by pressing any key (identical to OnKeyDown()).
+  // An empty implementation is provided. The behavior of this function should
+  // be specified in the subclass.
   virtual void OnKeyPress() {};
+
+  // OnKeyRelease is triggered by pressing any key (identical to OnKeyUp()).
+  // An empty implementation is provided. The behavior of this function should
+  // be specified in the subclass.
   virtual void OnKeyRelease() {};
 
   // Description:
@@ -276,6 +293,17 @@ public:
   vtkSetMacro(MouseWheelMotionFactor, double);
   vtkGetMacro(MouseWheelMotionFactor, double);
 
+  // Description:
+  // 3Dconnexion device interactor style. Initial value is a pointer to an
+  // object of class vtkTdxInteractorStyleCamera.
+  vtkGetObjectMacro(TDxStyle,vtkTDxInteractorStyle);
+  virtual void SetTDxStyle(vtkTDxInteractorStyle *tdxStyle);
+  
+  // Description:
+  // Called by the callback to process 3DConnexion device events.
+  void DelegateTDxEvent(unsigned long event,
+                        void *calldata);
+  
 protected:
   vtkInteractorStyle();
   ~vtkInteractorStyle();
@@ -312,9 +340,11 @@ protected:
   // Control the timer duration
   unsigned long  TimerDuration; //in milliseconds
   
-  // Forward evets to the RenderWindowInteractor
+  // Forward events to the RenderWindowInteractor
   vtkEventForwarderCommand * EventForwarder;
 
+  vtkTDxInteractorStyle *TDxStyle;
+  
 private:
   vtkInteractorStyle(const vtkInteractorStyle&);  // Not implemented.
   void operator=(const vtkInteractorStyle&);  // Not implemented.

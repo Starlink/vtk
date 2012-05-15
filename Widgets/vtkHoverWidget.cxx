@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHoverWidget.cxx,v $
+  Module:    vtkHoverWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkCallbackCommand.h"
 #include "vtkEvent.h"
 
-vtkCxxRevisionMacro(vtkHoverWidget, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkHoverWidget);
 
 //-------------------------------------------------------------------------

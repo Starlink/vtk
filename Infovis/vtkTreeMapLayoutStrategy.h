@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeMapLayoutStrategy.h,v $
+  Module:    vtkTreeMapLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class vtkDataArray;
 class VTK_INFOVIS_EXPORT vtkTreeMapLayoutStrategy : public vtkAreaLayoutStrategy
 {
 public:
-  vtkTypeRevisionMacro(vtkTreeMapLayoutStrategy, vtkAreaLayoutStrategy);
+  vtkTypeMacro(vtkTreeMapLayoutStrategy, vtkAreaLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

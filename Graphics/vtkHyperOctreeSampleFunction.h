@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeSampleFunction.h,v $
+  Module:    vtkHyperOctreeSampleFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class vtkImplicitFunction;
 class VTK_GRAPHICS_EXPORT vtkHyperOctreeSampleFunction : public vtkHyperOctreeAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkHyperOctreeSampleFunction,vtkHyperOctreeAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeSampleFunction,vtkHyperOctreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   static vtkHyperOctreeSampleFunction *New();

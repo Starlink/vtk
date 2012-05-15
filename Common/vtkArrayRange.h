@@ -1,8 +1,8 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayRange.h,v $
-  
+  Module:    vtkArrayRange.h
+
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -22,61 +22,75 @@
 // .NAME vtkArrayRange - Stores a half-open range of array coordinates.
 //
 // .SECTION Description
-// vtkArrayRange stores a half-open range of array coordinates along a single
-// dimension of a vtkArraySlice object.
+// vtkArrayRange stores a half-open range of array coordinates along a
+// single dimension of a vtkArraySlice object.
 //
 // .SECTION See Also
 // vtkArray, vtkArrayRange
 //
 // .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National
+// Laboratories.
 
 #ifndef __vtkArrayRange_h
 #define __vtkArrayRange_h
 
 #include "vtkSystemIncludes.h"
+#include "vtkArrayCoordinates.h"
 
 class VTK_COMMON_EXPORT vtkArrayRange
 {
 public:
+  typedef vtkArrayCoordinates::CoordinateT CoordinateT;
+
   // Description:
   // Creates an empty range.
   vtkArrayRange();
-  
+
   // Description:
-  // Creates a range containing a single value.
-  vtkArrayRange(vtkIdType index);
-  
-  // Description:
-  // Creates a half-open range [begin, end).  Note that begin must be <= end,
+  // Creates a half-open range [begin, end).
+  // Note that begin must be <= end,
   // if not, creates the empty range [begin, begin).
-  vtkArrayRange(vtkIdType begin, vtkIdType end);
+  vtkArrayRange(CoordinateT begin, CoordinateT end);
 
   // Description:
   // Returns the beginning of the range
-  vtkIdType GetBegin() const;
-  
+  CoordinateT GetBegin() const;
+
   // Description:
   // Returns one-past-the-end of the range
-  vtkIdType GetEnd() const;
+  CoordinateT GetEnd() const;
 
   // Description:
-  // Returns the extent of the range (the distance End - Begin).
-  vtkIdType GetExtent() const;
+  // Returns the size of the range (the distance End - Begin).
+  CoordinateT GetSize() const;
 
   // Description:
-  // Serialization  
-  friend ostream& operator<<(ostream& stream, const vtkArrayRange& rhs);
+  // Returns true iff the given range is a non-overlapping subset of this
+  // range.
+  bool Contains(const vtkArrayRange& range) const;
+
+  // Description:
+  // Returns true iff the given coordinate falls within this range.
+  bool Contains(const CoordinateT coordinate) const;
+
+  // Description:
+  // Equality comparisons.
+  VTK_COMMON_EXPORT friend bool operator==(const vtkArrayRange& lhs, const vtkArrayRange& rhs);
+  VTK_COMMON_EXPORT friend bool operator!=(const vtkArrayRange& lhs, const vtkArrayRange& rhs);
+
+  // Description:
+  // Serialization.
+  VTK_COMMON_EXPORT friend ostream& operator<<(ostream& stream, const vtkArrayRange& rhs);
 
 private:
   // Description:
   // Stores the beginning of the range.
-  vtkIdType Begin;
-  
+  CoordinateT Begin;
+
   // Description:
   // Stores one-past-the-end of the range.
-  vtkIdType End;
+  CoordinateT End;
 };
 
 #endif
-

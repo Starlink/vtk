@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFocalPlaneContourRepresentation.cxx,v $
+  Module:    vtkFocalPlaneContourRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,12 +27,11 @@
 #include "vtkPolyData.h"
 #include "vtkCellArray.h"
 
-#include <vtkstd/vector>
-#include <vtkstd/set>
-#include <vtkstd/algorithm>
-#include <vtkstd/iterator>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <iterator>
 
-vtkCxxRevisionMacro(vtkFocalPlaneContourRepresentation, "$Revision: 1.5 $");
 
 //----------------------------------------------------------------------
 vtkFocalPlaneContourRepresentation::vtkFocalPlaneContourRepresentation()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderedAreaPicker.cxx,v $
+  Module:    vtkRenderedAreaPicker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,15 +18,14 @@
 #include "vtkObjectFactory.h"
 #include "vtkMapper.h"
 #include "vtkAbstractVolumeMapper.h"
+#include "vtkImageMapper3D.h"
 #include "vtkAbstractMapper3D.h"
 #include "vtkProp.h"
 #include "vtkLODProp3D.h"
 #include "vtkActor.h"
 #include "vtkPropCollection.h"
-#include "vtkImageActor.h"
 #include "vtkProp3DCollection.h"
 #include "vtkAssemblyPath.h"
-#include "vtkImageData.h"
 #include "vtkVolume.h"
 #include "vtkRenderer.h"
 #include "vtkProperty.h"
@@ -35,7 +34,6 @@
 #include "vtkPlane.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkRenderedAreaPicker, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkRenderedAreaPicker);
 
 //--------------------------------------------------------------------------
@@ -53,9 +51,8 @@ vtkRenderedAreaPicker::~vtkRenderedAreaPicker()
 int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1, 
                                     vtkRenderer *renderer)
 {
-  int rc = 0;
+  int picked = 0;
   vtkProp *propCandidate;
-  vtkImageActor *imageActor = NULL;
   vtkAbstractMapper3D *mapper = NULL;
   int pickable;
 
@@ -64,7 +61,7 @@ int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
   this->Renderer = renderer;
 
   this->SelectionPoint[0] = (x0+x1)*0.5;
-  this->SelectionPoint[1] = (x0+x1)*0.5;
+  this->SelectionPoint[1] = (y0+y1)*0.5;
   this->SelectionPoint[2] = 0.0;
 
   // Invoke start pick method if defined
@@ -78,15 +75,13 @@ int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
   // Software pick resulted in a hit.
   if ( this->Path )
     {
-    rc = 1;
+    picked = 1;
 
     //invoke the pick event
     propCandidate = this->Path->GetLastNode()->GetViewProp();
-    propCandidate->Pick();
-    this->InvokeEvent(vtkCommand::PickEvent,NULL);
 
     //find the mapper and dataset corresponding to the picked prop        
-    pickable = this->TypeDecipher(propCandidate, &imageActor, &mapper);
+    pickable = this->TypeDecipher(propCandidate, &mapper);
     if ( pickable )
       { 
       if ( mapper )
@@ -94,6 +89,7 @@ int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
         this->Mapper = mapper; 
         vtkMapper *map1;
         vtkAbstractVolumeMapper *vmap;
+        vtkImageMapper3D *imap;
         if ( (map1=vtkMapper::SafeDownCast(mapper)) != NULL )
           {
           this->DataSet = map1->GetInput();
@@ -104,16 +100,16 @@ int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
           this->DataSet = vmap->GetDataSetInput();
           this->Mapper = vmap;
           }
+        else if ( (imap=vtkImageMapper3D::SafeDownCast(mapper)) != NULL )
+          {
+          this->DataSet = imap->GetDataSetInput();
+          this->Mapper = imap;
+          }
         else
           {
           this->DataSet = NULL;
           }              
         }//mapper
-      else if ( imageActor )
-        {
-        this->Mapper = NULL;
-        this->DataSet = imageActor->GetInput();
-        }//imageActor
       }//pickable
 
     //go through list of props the renderer got for us and put only
@@ -128,25 +124,22 @@ int vtkRenderedAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
       for ( prop->InitPathTraversal(); (path=prop->GetNextPath()); )
         {
         propCandidate = path->GetLastNode()->GetViewProp();
-        pickable = this->TypeDecipher(propCandidate, &imageActor, &mapper);
-        if ( pickable && !this->Prop3Ds->IsItemPresent(propCandidate) )
+        pickable = this->TypeDecipher(propCandidate, &mapper);
+        if ( pickable && !this->Prop3Ds->IsItemPresent(prop) )
           {
-          if (mapper)
-            {
-            this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
-            }
-          else if (imageActor)
-            {
-            this->Prop3Ds->AddItem(imageActor);
-            }
+          this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
           }
         }
       }
+
+    // Invoke pick method if one defined - prop goes first
+    this->Path->GetFirstNode()->GetViewProp()->Pick();
+    this->InvokeEvent(vtkCommand::PickEvent,NULL);
     }
 
   this->InvokeEvent(vtkCommand::EndPickEvent,NULL);
 
-  return rc;
+  return picked;
 }
 
 //----------------------------------------------------------------------------

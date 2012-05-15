@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageWeightedSum.h,v $
+  Module:    vtkImageWeightedSum.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IMAGING_EXPORT vtkImageWeightedSum : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageWeightedSum *New();
-  vtkTypeRevisionMacro(vtkImageWeightedSum,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageWeightedSum,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

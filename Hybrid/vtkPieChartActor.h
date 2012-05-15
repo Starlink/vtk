@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPieChartActor.h,v $
+  Module:    vtkPieChartActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_HYBRID_EXPORT vtkPieChartActor : public vtkActor2D
 public:
   // Description:
   // Standard methods for type information and printing.
-  vtkTypeRevisionMacro(vtkPieChartActor,vtkActor2D);
+  vtkTypeMacro(vtkPieChartActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

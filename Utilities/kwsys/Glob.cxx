@@ -1,16 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  KWSys - Kitware System Library
+  Copyright 2000-2009 Kitware, Inc., Insight Software Consortium
 
-  Program:   KWSys - Kitware System Library
-  Module:    $RCSfile: Glob.cxx,v $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Kitware, Inc., Insight Consortium.  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "kwsysPrivate.h"
 #include KWSYS_HEADER(Glob.hxx)
 
@@ -84,7 +82,8 @@ kwsys_stl::vector<kwsys_stl::string>& Glob::GetFiles()
 
 //----------------------------------------------------------------------------
 kwsys_stl::string Glob::PatternToRegex(const kwsys_stl::string& pattern,
-                                       bool require_whole_string)
+                                       bool require_whole_string,
+                                       bool preserve_case)
 {
   // Incrementally build the regular expression from the pattern.
   kwsys_stl::string regex = require_whole_string? "^" : "";
@@ -195,10 +194,13 @@ kwsys_stl::string Glob::PatternToRegex(const kwsys_stl::string& pattern,
         {
         // On case-insensitive systems file names are converted to lower
         // case before matching.
-        ch = tolower(ch);
+        if(!preserve_case)
+          {
+          ch = tolower(ch);
+          }
         }
 #endif
-
+      (void)preserve_case;
       // Store the character.
       regex.append(1, static_cast<char>(ch));
       }
@@ -213,7 +215,7 @@ kwsys_stl::string Glob::PatternToRegex(const kwsys_stl::string& pattern,
 
 //----------------------------------------------------------------------------
 void Glob::RecurseDirectory(kwsys_stl::string::size_type start,
-  const kwsys_stl::string& dir, bool dir_only)
+  const kwsys_stl::string& dir)
 {
   kwsys::Directory d;
   if ( !d.Load(dir.c_str()) )
@@ -256,25 +258,24 @@ void Glob::RecurseDirectory(kwsys_stl::string::size_type start,
       fullname = dir + "/" + fname;
       }
 
-    if ( !dir_only || !kwsys::SystemTools::FileIsDirectory(realname.c_str()) )
+    bool isDir = kwsys::SystemTools::FileIsDirectory(realname.c_str());
+    bool isSymLink = kwsys::SystemTools::FileIsSymlink(realname.c_str());
+
+    if ( isDir && (!isSymLink || this->RecurseThroughSymlinks) )
       {
-      if ( (this->Internals->Expressions.size() > 0) && 
+      if (isSymLink)
+        {
+        ++this->FollowedSymlinkCount;
+        }
+      this->RecurseDirectory(start+1, realname);
+      }
+    else
+      {
+      if ( (this->Internals->Expressions.size() > 0) &&
            this->Internals->Expressions[
              this->Internals->Expressions.size()-1].find(fname.c_str()) )
         {
         this->AddFile(this->Internals->Files, realname.c_str());
-        }
-      }
-    if ( kwsys::SystemTools::FileIsDirectory(realname.c_str()) )
-      {
-      bool isSymLink = kwsys::SystemTools::FileIsSymlink(realname.c_str());
-      if (!isSymLink || this->RecurseThroughSymlinks)
-        {
-        if (isSymLink)
-          {
-          ++this->FollowedSymlinkCount;
-          }
-        this->RecurseDirectory(start+1, realname, dir_only);
         }
       }
     }
@@ -282,13 +283,13 @@ void Glob::RecurseDirectory(kwsys_stl::string::size_type start,
 
 //----------------------------------------------------------------------------
 void Glob::ProcessDirectory(kwsys_stl::string::size_type start,
-  const kwsys_stl::string& dir, bool dir_only)
+  const kwsys_stl::string& dir)
 {
   //kwsys_ios::cout << "ProcessDirectory: " << dir << kwsys_ios::endl;
   bool last = ( start == this->Internals->Expressions.size()-1 );
   if ( last && this->Recurse )
     {
-    this->RecurseDirectory(start, dir, dir_only);
+    this->RecurseDirectory(start, dir);
     return;
     }
 
@@ -343,7 +344,7 @@ void Glob::ProcessDirectory(kwsys_stl::string::size_type start,
     // << this->Internals->TextExpressions[start].c_str() << kwsys_ios::endl;
     //kwsys_ios::cout << "Full name: " << fullname << kwsys_ios::endl;
 
-    if ( (!dir_only || !last) &&
+    if ( !last &&
       !kwsys::SystemTools::FileIsDirectory(realname.c_str()) )
       {
       continue;
@@ -357,7 +358,7 @@ void Glob::ProcessDirectory(kwsys_stl::string::size_type start,
         }
       else
         {
-        this->ProcessDirectory(start+1, realname + "/", dir_only);
+        this->ProcessDirectory(start+1, realname + "/");
         }
       }
     }
@@ -380,13 +381,13 @@ bool Glob::FindFiles(const kwsys_stl::string& inexpr)
     }
   kwsys_stl::string fexpr = expr;
 
-  int skip = 0;
-  int last_slash = 0;
+  kwsys_stl::string::size_type skip = 0;
+  kwsys_stl::string::size_type last_slash = 0;
   for ( cc = 0; cc < expr.size(); cc ++ )
     {
     if ( cc > 0 && expr[cc] == '/' && expr[cc-1] != '\\' )
       {
-      last_slash = static_cast<int>(cc);
+      last_slash = cc;
       }
     if ( cc > 0 &&
       (expr[cc] == '[' || expr[cc] == '?' || expr[cc] == '*') &&
@@ -460,12 +461,11 @@ bool Glob::FindFiles(const kwsys_stl::string& inexpr)
   // Handle network paths
   if ( skip > 0 )
     {
-    this->ProcessDirectory(0, fexpr.substr(0, skip) + "/",
-      true);
+    this->ProcessDirectory(0, fexpr.substr(0, skip) + "/");
     }
   else
     {
-    this->ProcessDirectory(0, "/", true);
+    this->ProcessDirectory(0, "/");
     }
   return true;
 }

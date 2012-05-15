@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPICommunicator.h,v $
+  Module:    vtkMPICommunicator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkCommunicator.h"
 
 class vtkMPIController;
-class vtkMPIGroup;
 class vtkProcessGroup;
 
 class vtkMPICommunicatorOpaqueComm;
@@ -63,7 +62,7 @@ public:
 
 //ETX
 
-  vtkTypeRevisionMacro( vtkMPICommunicator,vtkCommunicator);
+  vtkTypeMacro( vtkMPICommunicator,vtkCommunicator);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -82,12 +81,15 @@ public:
   int Initialize(vtkProcessGroup *group);
 
   // Description:
-  // DO NOT CALL.  Deprecated in VTK 5.2.
-  VTK_LEGACY(int Initialize(vtkMPICommunicator* mpiComm, vtkMPIGroup* group));
+  // Used to initialize the communicator (i.e. create the underlying MPI_Comm)
+  // using MPI_Comm_split on the given communicator. Return values are 1 for success
+  // and 0 otherwise.
+  int SplitInitialize(vtkCommunicator *oldcomm, int color, int key);
 
   // Description:
   // Performs the actual communication.  You will usually use the convenience
-  // Send functions defined in the superclass.
+  // Send functions defined in the superclass. Return values are 1 for success
+  // and 0 otherwise.
   virtual int SendVoidArray(const void *data, vtkIdType length, int type,
                             int remoteProcessId, int tag);
   virtual int ReceiveVoidArray(void *data, vtkIdType length, int type,
@@ -98,7 +100,8 @@ public:
   // Tag eliminates ambiguity when multiple sends or receives 
   // exist in the same process. The last argument,
   // vtkMPICommunicator::Request& req can later be used (with
-  // req.Test() ) to test the success of the message.
+  // req.Test() ) to test the success of the message. Return values are 1
+  // for success and 0 otherwise.
   int NoBlockSend(const int* data, int length, int remoteProcessId, int tag,
                   Request& req);
   int NoBlockSend(const unsigned long* data, int length, int remoteProcessId,
@@ -107,12 +110,15 @@ public:
                   int tag, Request& req);
   int NoBlockSend(const float* data, int length, int remoteProcessId, 
                   int tag, Request& req);
+  int NoBlockSend(const double* data, int length, int remoteProcessId, 
+                  int tag, Request& req);
 
   // Description:
   // This method receives data from a corresponding send (non-blocking). 
   // The last argument,
   // vtkMPICommunicator::Request& req can later be used (with
-  // req.Test() ) to test the success of the message.
+  // req.Test() ) to test the success of the message. Return values
+  // are 1 for success and 0 otherwise.
   int NoBlockReceive(int* data, int length, int remoteProcessId, 
                      int tag, Request& req);
   int NoBlockReceive(unsigned long* data, int length, 
@@ -120,6 +126,8 @@ public:
   int NoBlockReceive(char* data, int length, int remoteProcessId, 
                      int tag, Request& req);
   int NoBlockReceive(float* data, int length, int remoteProcessId, 
+                     int tag, Request& req);
+  int NoBlockReceive(double* data, int length, int remoteProcessId, 
                      int tag, Request& req);
 #ifdef VTK_USE_64BIT_IDS
   int NoBlockReceive(vtkIdType* data, int length, int remoteProcessId, 
@@ -129,7 +137,8 @@ public:
 
   // Description:
   // More efficient implementations of collective operations that use
-  // the equivalent MPI commands.
+  // the equivalent MPI commands. Return values are 1 for success
+  // and 0 otherwise.
   virtual void Barrier();
   virtual int BroadcastVoidArray(void *data, vtkIdType length, int type,
                                  int srcProcessId);
@@ -163,26 +172,24 @@ public:
                                  Operation *operation);
 
   // Description:
-  // DO NOT CALL.  Deprecated in VTK 5.2.  Use Reduce instead.
-  VTK_LEGACY(int ReduceMax(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(double* data, double* to, int size, int root));
-
-  VTK_LEGACY(int ReduceMin(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(double* data, double* to, int size, int root));
-
-  VTK_LEGACY(int ReduceSum(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(double* data, double* to, int size, int root));
-
-//BTX
-  VTK_LEGACY(int ReduceAnd(bool* data, bool* to, int size, int root));
-  VTK_LEGACY(int ReduceOr(bool* data, bool* to, int size, int root));
-//ETX
+  // Nonblocking test for a message.  Inputs are: source -- the source rank
+  // or ANY_SOURCE; tag -- the tag value.  Outputs are:
+  // flag -- True if a message matches; actualSource -- the rank
+  // sending the message (useful if ANY_SOURCE is used) if flag is True
+  // and actualSource isn't NULL; size -- the length of the message in
+  // bytes if flag is true (only set if size isn't NULL). The return
+  // value is 1 for success and 0 otherwise.
+  int Iprobe(int source, int tag, int* flag, int* actualSource);
+  int Iprobe(int source, int tag, int* flag, int* actualSource,
+             int* type, int* size);
+  int Iprobe(int source, int tag, int* flag, int* actualSource,
+             unsigned long* type, int* size);
+  int Iprobe(int source, int tag, int* flag, int* actualSource,
+             const char* type, int* size);
+  int Iprobe(int source, int tag, int* flag, int* actualSource,
+             float* type, int* size);
+  int Iprobe(int source, int tag, int* flag, int* actualSource,
+             double* type, int* size);
 
 //BTX
 
@@ -192,6 +199,9 @@ public:
     {
     return this->MPIComm;
     }
+
+  int InitializeExternal(vtkMPICommunicatorOpaqueComm *comm);
+
 //ETX
 
   static char* Allocate(size_t size);

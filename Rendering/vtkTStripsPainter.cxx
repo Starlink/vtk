@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTStripsPainter.cxx,v $
+  Module:    vtkTStripsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkTimerLog.h"
 
 vtkStandardNewMacro(vtkTStripsPainter);
-vtkCxxRevisionMacro(vtkTStripsPainter, "$Revision: 1.5 $");
 //-----------------------------------------------------------------------------
 vtkTStripsPainter::vtkTStripsPainter()
 {
@@ -188,6 +187,9 @@ int vtkTStripsPainter::RenderPrimitive(unsigned long idx, vtkDataArray* n,
   int ntype = (n)? n->GetDataType() : 0;
   int ttype = (t)? t->GetDataType() : 0;
   int tcomps = (t)? t->GetNumberOfComponents() : 0;
+
+  // Ignore edge flags.
+  idx &= (~VTK_PDM_EDGEFLAGS);
 
   // draw all the elements, use fast path if available
   switch (idx)

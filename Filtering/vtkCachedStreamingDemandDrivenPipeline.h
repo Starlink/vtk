@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCachedStreamingDemandDrivenPipeline.h,v $
+  Module:    vtkCachedStreamingDemandDrivenPipeline.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_FILTERING_EXPORT vtkCachedStreamingDemandDrivenPipeline :
 {
 public:
   static vtkCachedStreamingDemandDrivenPipeline* New();
-  vtkTypeRevisionMacro(vtkCachedStreamingDemandDrivenPipeline,
+  vtkTypeMacro(vtkCachedStreamingDemandDrivenPipeline,
                        vtkStreamingDemandDrivenPipeline);
   void PrintSelf(ostream& os, vtkIndent indent);
 

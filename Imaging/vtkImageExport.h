@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageExport.h,v $
+  Module:    vtkImageExport.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,12 +35,12 @@ class VTK_IMAGING_EXPORT vtkImageExport : public vtkImageAlgorithm
 {
 public:
   static vtkImageExport *New();
-  vtkTypeRevisionMacro(vtkImageExport,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageExport,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
   // Get the number of bytes required for the output C array.
-  int GetDataMemorySize();
+  vtkIdType GetDataMemorySize();
 
   // Description:
   // Get the (x,y,z) index dimensions of the data.  Please note

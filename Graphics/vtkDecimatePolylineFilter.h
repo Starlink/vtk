@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDecimatePolylineFilter.h,v $
+  Module:    vtkDecimatePolylineFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,16 +37,19 @@
 #ifndef __vtkDecimatePolylineFilter_h
 #define __vtkDecimatePolylineFilter_h
 
+#include "vtkSmartPointer.h" // Needed for SP ivars
+
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkPriorityQueue;
+
 
 class VTK_GRAPHICS_EXPORT vtkDecimatePolylineFilter : public vtkPolyDataAlgorithm
 {
 public:
   // Description:
   // Standard methods for type information and printing.
-  vtkTypeRevisionMacro(vtkDecimatePolylineFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkDecimatePolylineFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -66,7 +69,18 @@ protected:
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  double TargetReduction;
+  double ComputeError( vtkPolyData* input, int prev, int id, int next );
+  void UpdateError( vtkPolyData* input, int iId );
+
+  int GetPrev( int iId );
+  int GetNext( int iId );
+
+  struct    vtkDecimatePolylineVertexErrorSTLMap;
+  vtkDecimatePolylineVertexErrorSTLMap*  ErrorMap;
+
+  vtkSmartPointer< vtkPriorityQueue >   PriorityQueue;
+  bool                                  Closed;
+  double                                TargetReduction;
 
 private:
   vtkDecimatePolylineFilter(const vtkDecimatePolylineFilter&);  // Not implemented.

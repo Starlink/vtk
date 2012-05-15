@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBitArray.h,v $
+  Module:    vtkBitArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_COMMON_EXPORT vtkBitArray : public vtkDataArray
 {
 public:
   static vtkBitArray *New();
-  vtkTypeRevisionMacro(vtkBitArray,vtkDataArray);
+  vtkTypeMacro(vtkBitArray,vtkDataArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -137,11 +137,9 @@ public:
   // Insets values and checks to make sure there is enough memory
   void InsertValue(vtkIdType id, int i);
 
-  //BTX
   // Description:
-  // Insert a value into the array from a variant.
-  void InsertVariantValue(vtkIdType idx, vtkVariant value);
-  //ETX
+  // Set a value in the array from a variant.
+  void SetVariantValue(vtkIdType idx, vtkVariant value);
 
   vtkIdType InsertNextValue(int i);
 
@@ -190,12 +188,10 @@ public:
   // Returns a new vtkBitArrayIterator instance.
   vtkArrayIterator* NewIterator();
   
-  //BTX
   // Description:
   // Return the indices where a specific value appears.
   virtual vtkIdType LookupValue(vtkVariant value);
   virtual void LookupValue(vtkVariant value, vtkIdList* ids);
-  //ETX
   vtkIdType LookupValue(int value);
   void LookupValue(int value, vtkIdList* ids);
   
@@ -286,9 +282,9 @@ inline void vtkBitArray::InsertValue(vtkIdType id, int i)
   this->DataChanged();
 }
 
-inline void vtkBitArray::InsertVariantValue(vtkIdType id, vtkVariant value)
+inline void vtkBitArray::SetVariantValue(vtkIdType id, vtkVariant value)
 {
-  this->InsertValue(id, value.ToInt());
+  this->SetValue(id, value.ToInt());
 }
 
 inline vtkIdType vtkBitArray::InsertNextValue(int i)

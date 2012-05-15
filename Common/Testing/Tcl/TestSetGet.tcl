@@ -5,17 +5,21 @@ for {set i  0} {$i < [expr $argc - 1]} {incr i} {
 }
 
 package require vtk
+vtkTimerLog timer
 vtkObject a
 a GlobalWarningDisplayOff
 a Delete
 
 set exceptions {
+vtkColorTransferControlPointsItem-GetControlPointsIds
+vtkCompositeControlPointsItem-GetControlPointsIds
 vtkLODProp3D-GetPickLODID
 vtkObject-GetSuperClassName
 vtkPropAssembly-GetBounds
 vtkRenderWindow-GetEventPending
 vtkSQLiteDatabase-GetQueryInstance
 vtkMySQLDatabase-GetQueryInstance
+vtkPiecewiseControlPointsItem-GetControlPointsIds
 vtkPostgreSQLDatabase-GetQueryInstance
 vtkODBCDatabase-GetQueryInstance
 vtkUniformVariables-GetCurrentName
@@ -24,11 +28,15 @@ vtkXMesaRenderWindow-GetEventPending
 vtkMPICommunicator-GetWorldCommunicator
 vtkMPICommunicator-GetLocalProcessId
 vtkMPICommunicator-GetNumberOfProcesses
+vtkMPICommunicator-GetMPIComm
+vtkOpenGLScalarsToColorsPainter-GetTextureSizeLimit
+vtkScalarsToColorsPainter-GetTextureSizeLimit
+vtkMesaScalarsToColorsPainter-GetTextureSizeLimit
 }
 
 proc TestOne {cname} {
    global exceptions
-   $cname b 
+   $cname b
    puts "Testing Class $cname"
    set methods [b ListMethods]
    # look for a Get Set pair
@@ -38,7 +46,7 @@ proc TestOne {cname} {
          if {($i == $len - 1) || ($i < $len - 1 && [lindex $methods [expr $i + 1]] != "with")} {
             if {[lsearch $exceptions "$cname-[lindex $methods $i]"] == -1} {
                # invoke the GetMethod
-	       puts "  Invoking Get$name"
+               puts "  Invoking Get$name"
                set tmp [b Get$name]
                # find matching set method
                for {set j 0} {$j < $len} {incr j} {
@@ -77,6 +85,8 @@ proc TestOne {cname} {
       catch { b $SetMethod $tmp }
     }
   }
+
+
   # Test the PrintRevisions method.
   b PrintRevisions
   b Delete
@@ -102,15 +112,28 @@ set classExceptions {
    vtkXMLFileOutputWindow
 }
 
-proc rtSetGetTest { fileid } { 
+proc rtSetGetTest { fileid } {
    global classExceptions
+   set totalTime 0.0
    # for every class
    set all [lsort [info command vtk*]]
    foreach a $all {
       if {[lsearch $classExceptions $a] == -1} {
          # test some set get methods
-         #puts "Testing -- $a"
+         timer StartTimer
+
          TestOne $a
+
+         timer StopTimer
+             set elapsedTime [timer GetElapsedTime]
+             set totalTime [expr $totalTime + $elapsedTime]
+
+             if { $elapsedTime > 1.0 } {
+               puts "Elapsed Time: $elapsedTime and took longer than 1 second."
+             } else {
+               puts "Elapsed Time: $elapsedTime"
+             }
+         puts "Total Elapsed Time: $totalTime"
       }
    }
 }
@@ -119,5 +142,7 @@ proc rtSetGetTest { fileid } {
 
 puts "CTEST_FULL_OUTPUT (Avoid ctest truncation of output)"
 rtSetGetTest stdout
+
+timer Delete
 
 exit

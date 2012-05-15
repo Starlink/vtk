@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaObject.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.5 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAOBJECT_H
@@ -48,6 +43,7 @@ class METAIO_EXPORT MetaObject
       FieldsContainerType m_Fields;
       FieldsContainerType m_UserDefinedWriteFields;
       FieldsContainerType m_UserDefinedReadFields;
+      FieldsContainerType m_AdditionalReadFields;
 
       char  m_FileName[255];
 
@@ -71,7 +67,7 @@ class METAIO_EXPORT MetaObject
       float m_Color[4];             // "Color = "            1.0, 0.0, 0.0, 1.0
 
       char  m_AcquisitionDate[255]; // "AcquisitionDate = "  "2007.03.21"
- 
+
       int   m_ID;                   // "ID = "               0
 
       int   m_ParentID;             // "ParentID = "         -1
@@ -82,11 +78,11 @@ class METAIO_EXPORT MetaObject
 
       bool  m_BinaryDataByteOrderMSB;
 
-      unsigned int m_CompressedDataSize;
+      METAIO_STL::streamoff m_CompressedDataSize;
       // Used internally to set if the dataSize should be written
-      bool m_WriteCompressedDataSize; 
+      bool m_WriteCompressedDataSize;
       bool m_CompressedData;
-      
+
       virtual void M_Destroy(void);
 
       virtual void M_SetupReadFields(void);
@@ -96,7 +92,7 @@ class METAIO_EXPORT MetaObject
       virtual bool M_Read(void);
 
       virtual bool M_Write(void);
-    
+
       virtual void M_PrepareNewReadStream();
 
       MetaEvent*     m_Event;
@@ -217,7 +213,7 @@ class METAIO_EXPORT MetaObject
       void AnatomicalOrientation(int _dim, MET_OrientationEnumType _ao);
       void AnatomicalOrientation(int _dim, char ao);
 
-      
+
       //    ElementSpacing(...)
       //       Optional Field
       //       Physical Spacing (in same units as position)
@@ -234,11 +230,11 @@ class METAIO_EXPORT MetaObject
 
       //    Color(...)
       //       Optional Field
-      //       Color of the current metaObject   
+      //       Color of the current metaObject
       const float * Color(void) const;
       void  Color(float _r, float _g, float _b, float _a);
-      void  Color(const float * _color);    
- 
+      void  Color(const float * _color);
+
       //    ID(...)
       //       Optional Field
       //       ID number of the current metaObject
@@ -275,14 +271,33 @@ class METAIO_EXPORT MetaObject
 
       void ClearFields(void);
 
+      void ClearAdditionalFields(void);
+
       bool InitializeEssential(int m_NDims);
 
       //
       //
-      // User's field definitions 
+      // User's field definitions
       bool AddUserField(const char* _fieldName, MET_ValueEnumType _type,
                         int _length=0, bool _required=true,
                         int _dependsOn=-1);
+
+      // find a field record in a field vector
+      MET_FieldRecordType *FindFieldRecord(FieldsContainerType &container,
+                                           const char *fieldName)
+      {
+        FieldsContainerType::iterator it;
+        for(it = container.begin();
+            it != container.end();
+            it++)
+          {
+          if(strcmp((*it)->name,fieldName) == 0)
+            {
+            return (*it);
+            }
+          }
+        return 0;
+      }
 
       // Add a user's field
       template <class T>
@@ -290,14 +305,40 @@ class METAIO_EXPORT MetaObject
                         int _length, T *_v, bool _required=true,
                         int _dependsOn=-1 )
         {
-        MET_FieldRecordType* mFw = new MET_FieldRecordType;
-        MET_InitWriteField(mFw, _fieldName, _type, _length,_v);
-        m_UserDefinedWriteFields.push_back(mFw);
+        // don't add the same field twice. In the unlikely event
+        // a field of the same name gets added more than once,
+        // over-write the existing FieldRecord
+        bool duplicate(true);
+        MET_FieldRecordType* mFw =
+          this->FindFieldRecord(m_UserDefinedWriteFields,
+                                _fieldName);
+        if(mFw == 0)
+          {
+          duplicate = false;
+          mFw = new MET_FieldRecordType;
+          }
+        MET_InitWriteField(mFw, _fieldName, _type, _length, _v);
+        if(!duplicate)
+          {
+          m_UserDefinedWriteFields.push_back(mFw);
+          }
 
-        MET_FieldRecordType* mFr = new MET_FieldRecordType;
-        MET_InitReadField(mFr,_fieldName, _type, _required,_dependsOn,_length);
-        m_UserDefinedReadFields.push_back(mFr);
+        duplicate = true;
+        MET_FieldRecordType* mFr =
+          this->FindFieldRecord(m_UserDefinedReadFields,
+                                _fieldName);
+        if(mFr == 0)
+          {
+          duplicate = false;
+          mFr = new MET_FieldRecordType;
+          }
 
+        MET_InitReadField(mFr,_fieldName, _type, _required, _dependsOn,
+          _length);
+        if(!duplicate)
+          {
+          m_UserDefinedReadFields.push_back(mFr);
+          }
         return true;
         }
 
@@ -306,14 +347,21 @@ class METAIO_EXPORT MetaObject
 
       // Get the user field
       void* GetUserField(const char* _name);
+
+      int GetNumberOfAdditionalReadFields();
+      char * GetAdditionalReadFieldName( int i );
+      char * GetAdditionalReadFieldValue( int i );
+      int GetAdditionalReadFieldValueLength( int i );
+
+      //
       void SetEvent(MetaEvent* event) {m_Event = event;}
 
       // Set the double precision for writing
-      void SetDoublePrecision(unsigned int precision) 
+      void SetDoublePrecision(unsigned int precision)
         {
         m_DoublePrecision = precision;
         }
-      unsigned int GetDoublePrecision() 
+      unsigned int GetDoublePrecision()
         {
         return m_DoublePrecision;
         }

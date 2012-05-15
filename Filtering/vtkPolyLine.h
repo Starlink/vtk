@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyLine.h,v $
+  Module:    vtkPolyLine.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,14 +26,14 @@ class vtkPoints;
 class vtkCellArray;
 class vtkLine;
 class vtkDataArray;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkCellData;
 
 class VTK_FILTERING_EXPORT vtkPolyLine : public vtkCell
 {
 public:
   static vtkPolyLine *New();
-  vtkTypeRevisionMacro(vtkPolyLine,vtkCell);
+  vtkTypeMacro(vtkPolyLine,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -55,12 +55,12 @@ public:
   vtkCell *GetFace(int vtkNotUsed(faceId)) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *lines,
+            vtkIncrementalPointLocator *locator, vtkCellArray *lines,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);

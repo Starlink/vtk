@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLightKit.cxx,v $
+  Module:    vtkLightKit.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkPiecewiseFunction.h"
 #include "vtkRenderer.h"
 
-vtkCxxRevisionMacro(vtkLightKit, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkLightKit);
 
 static const char *vtkLightKitTypeStrings[] = {
@@ -42,7 +41,7 @@ static const char *vtkLightKitSubTypeStrings[] = {
 };
 
 // These are the same as vtkLightKitSubTypeStrings but shorter
-// usefull for a GUI with minimum space
+// useful for a GUI with minimum space
 static const char *vtkLightKitSubTypeShortStrings[] = {
   "War.",
   "Int. ",

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConvertSelection.h,v $
+  Module:    vtkConvertSelection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_GRAPHICS_EXPORT vtkConvertSelection : public vtkSelectionAlgorithm
 {
 public:
   static vtkConvertSelection *New();
-  vtkTypeRevisionMacro(vtkConvertSelection, vtkSelectionAlgorithm);
+  vtkTypeMacro(vtkConvertSelection, vtkSelectionAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -76,7 +76,19 @@ public:
   // The output array names for value selection.
   virtual void SetArrayNames(vtkStringArray*);
   vtkGetObjectMacro(ArrayNames, vtkStringArray);
+
+  // Description:
+  // Convenience methods used by UI
+  void AddArrayName(const char*);
+  void ClearArrayNames();
   
+  // Description:
+  // When on, creates a separate selection node for each array.
+  // Defaults to OFF.
+  vtkSetMacro(MatchAnyValues, bool);
+  vtkGetMacro(MatchAnyValues, bool);
+  vtkBooleanMacro(MatchAnyValues, bool);
+
   // Description:
   // Static methods for easily converting between selection types.
   // NOTE: The returned selection pointer IS reference counted,
@@ -139,7 +151,9 @@ public:
     vtkSelection* input, 
     vtkDataObject* data, 
     int type, 
-    vtkStringArray* arrayNames = 0);
+    vtkStringArray* arrayNames = 0,
+    int inputFieldType = -1);
+    
 protected:
   vtkConvertSelection();
   ~vtkConvertSelection();
@@ -178,6 +192,7 @@ protected:
   int OutputType;
   int InputFieldType;
   vtkStringArray* ArrayNames;
+  bool MatchAnyValues;
 
 private:
   vtkConvertSelection(const vtkConvertSelection&);  // Not implemented.

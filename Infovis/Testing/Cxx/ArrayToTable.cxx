@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayToTable.cxx,v $
+  Module:    ArrayToTable.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -33,10 +33,10 @@
 #define test_expression(expression) \
 { \
   if(!(expression)) \
-    throw vtkstd::runtime_error("Expression failed: " #expression); \
+    throw std::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayToTable(int argc, char* argv[])
+int ArrayToTable(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -46,7 +46,7 @@ int ArrayToTable(int argc, char* argv[])
     a->SetValue(1, "World!");
 
     vtkSmartPointer<vtkArrayData> b = vtkSmartPointer<vtkArrayData>::New();
-    b->SetArray(a);
+    b->AddArray(a);
 
     vtkSmartPointer<vtkArrayToTable> c = vtkSmartPointer<vtkArrayToTable>::New();
     c->SetInputConnection(0, b->GetProducerPort());
@@ -54,7 +54,7 @@ int ArrayToTable(int argc, char* argv[])
 
     test_expression(c->GetOutput()->GetNumberOfColumns() == 1);
     test_expression(c->GetOutput()->GetNumberOfRows() == 2);
-    test_expression(vtkStdString(c->GetOutput()->GetColumn(0)->GetName()) == "0");
+    test_expression(vtkStdString(c->GetOutput()->GetColumn(0)->GetName()) == "");
     test_expression(c->GetOutput()->GetValue(0, 0).ToString() == "Howdy");
     test_expression(c->GetOutput()->GetValue(1, 0).ToString() == "World!");
 
@@ -64,7 +64,7 @@ int ArrayToTable(int argc, char* argv[])
     d->SetValue(1, 1, 2.0);
 
     vtkSmartPointer<vtkArrayData> e = vtkSmartPointer<vtkArrayData>::New();
-    e->SetArray(d);
+    e->AddArray(d);
 
     vtkSmartPointer<vtkArrayToTable> f = vtkSmartPointer<vtkArrayToTable>::New();
     f->SetInputConnection(0, e->GetProducerPort());
@@ -81,7 +81,7 @@ int ArrayToTable(int argc, char* argv[])
 
     return 0;
     }
-  catch(vtkstd::exception& e)
+  catch(std::exception& e)
     {
     cerr << e.what() << endl;
     return 1;

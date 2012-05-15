@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaPolyDataMapper2D.cxx,v $
+  Module:    vtkMesaPolyDataMapper2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,5 +38,4 @@
 #include "vtkOpenGLPolyDataMapper2D.cxx"
 #undef vtkOpenGLPolyDataMapper2D
 
-vtkCxxRevisionMacro(vtkMesaPolyDataMapper2D, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkMesaPolyDataMapper2D);

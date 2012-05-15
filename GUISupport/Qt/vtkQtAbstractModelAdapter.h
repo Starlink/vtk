@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtAbstractModelAdapter.h,v $
+  Module:    vtkQtAbstractModelAdapter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,14 +33,12 @@
 #define __vtkQtAbstractModelAdapter_h
 
 #include "QVTKWin32Header.h"
-#include "vtkType.h"
-#include "vtkSelection.h"
-class vtkDataObject;
-
 #include <QAbstractItemModel>
+#include <QItemSelection>
 
-class QModelIndex;
-
+class vtkDataObject;
+class vtkSelection;
+class QItemSelection;
 class QVTK_EXPORT vtkQtAbstractModelAdapter : public QAbstractItemModel
 {
   Q_OBJECT
@@ -50,17 +48,16 @@ public:
   // The view types.
   enum {
     FULL_VIEW,
-    DATA_VIEW,
-    METADATA_VIEW
+    DATA_VIEW
   };
 
   vtkQtAbstractModelAdapter(QObject* p) : 
     QAbstractItemModel(p), 
     ViewType(FULL_VIEW),
     KeyColumn(-1),
+    ColorColumn(-1),
     DataStartColumn(-1),
-    DataEndColumn(-1),
-    ViewRows(true)
+    DataEndColumn(-1)
     { }
 
   // Description:
@@ -69,17 +66,16 @@ public:
   virtual vtkDataObject* GetVTKDataObject() const = 0;
   
   // Description:
-  // Mapping methods for converting from VTK land to Qt land
-  virtual vtkIdType IdToPedigree(vtkIdType id) const = 0;
-  virtual vtkIdType PedigreeToId(vtkIdType pedigree) const = 0;
-  virtual QModelIndex PedigreeToQModelIndex(vtkIdType id) const = 0;
-  virtual vtkIdType QModelIndexToPedigree(QModelIndex index) const = 0;
+  // Selection conversion from VTK land to Qt land
+  virtual vtkSelection* QModelIndexListToVTKIndexSelection(
+    const QModelIndexList qmil) const = 0;
+  virtual QItemSelection VTKIndexSelectionToQItemSelection(
+    vtkSelection *vtksel) const = 0;
 
   // Description:
   // Set/Get the view type.
   // FULL_VIEW gives access to all the data.
-  // DATA_VIEW gives access only to the data columns.
-  // METADATA_VIEW gives access only to the metadata (non-data) columns.
+  // DATA_VIEW gives access only to the data columns specified with SetDataColumnRange()
   // The default is FULL_VIEW.
   virtual void SetViewType(int type) { this->ViewType = type; }
   virtual int GetViewType() { return this->ViewType; }
@@ -93,6 +89,16 @@ public:
   virtual void SetKeyColumn(int col) { this->KeyColumn = col; }
   virtual int GetKeyColumn() { return this->KeyColumn; }
   virtual void SetKeyColumnName(const char* name) = 0;
+  
+  // Description:
+  // Set/Get the column storing the rgba color values for each row.
+  // The color column is used as the row headers in a table view,
+  // and as the first column in a tree view.
+  // Set to -1 for no key column.
+  // The default is no key column.
+  virtual void SetColorColumn(int col) { this->ColorColumn = col; }
+  virtual int GetColorColumn() { return this->ColorColumn; }
+  virtual void SetColorColumnName(const char* name) = 0;
 
   // Description:
   // Set the range of columns that specify the main data matrix.
@@ -101,34 +107,28 @@ public:
   virtual void SetDataColumnRange(int c1, int c2)
     { this->DataStartColumn = c1; this->DataEndColumn = c2; }
 
-  virtual bool GetViewRows()
-    { return this->ViewRows; }
-
   // We make the reset() method public because it isn't always possible for
   // an adapter to know when its input has changed, so it must be callable
   // by an outside entity.
   void reset() { QAbstractItemModel::reset(); }
 
-public slots:
-  // Description:
-  // Sets the view to either rows (standard) or columns.
-  // When viewing columns, each row in the item model will contain the name
-  // of a column in the underlying data object.
-  // This essentially flips the table on its side.
-  void SetViewRows(bool b)
-    { this->ViewRows = b; this->reset(); emit this->modelChanged(); }
 
 signals:
   void modelChanged();
   
 protected:
+
+  // Description:
+  // Map a column index in the QAbstractItemModel to a vtkTable column.
+  // If the argument is out of range or cannot be mapped then
+  // this method may return -1.
   virtual int ModelColumnToFieldDataColumn(int col) const;
 
   int ViewType;
   int KeyColumn;
+  int ColorColumn;
   int DataStartColumn;
   int DataEndColumn;
-  bool ViewRows;
 };
 
 #endif

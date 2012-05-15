@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInterpolatingSubdivisionFilter.h,v $
+  Module:    vtkInterpolatingSubdivisionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class vtkPolyData;
 class VTK_GRAPHICS_EXPORT vtkInterpolatingSubdivisionFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkInterpolatingSubdivisionFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkInterpolatingSubdivisionFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

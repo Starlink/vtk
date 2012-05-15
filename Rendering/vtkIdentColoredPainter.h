@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIdentColoredPainter.h,v $
+  Module:    vtkIdentColoredPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class vtkProp;
 class VTK_RENDERING_EXPORT vtkIdentColoredPainter : public vtkPolyDataPainter
 {
 public:
-  vtkTypeRevisionMacro(vtkIdentColoredPainter, vtkPolyDataPainter);
+  vtkTypeMacro(vtkIdentColoredPainter, vtkPolyDataPainter);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
   static vtkIdentColoredPainter *New();
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricMobius.h,v $
+  Module:    vtkParametricMobius.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -32,7 +32,7 @@
 class VTK_COMMON_EXPORT vtkParametricMobius : public vtkParametricFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkParametricMobius,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricMobius,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

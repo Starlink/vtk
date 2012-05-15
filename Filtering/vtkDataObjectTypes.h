@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectTypes.h,v $
+  Module:    vtkDataObjectTypes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_FILTERING_EXPORT vtkDataObjectTypes : public vtkObject
 public:
   static vtkDataObjectTypes *New();
 
-  vtkTypeRevisionMacro(vtkDataObjectTypes,vtkObject);
+  vtkTypeMacro(vtkDataObjectTypes,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

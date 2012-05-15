@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLProperty.h,v $
+  Module:    vtkOpenGLProperty.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,13 +26,14 @@ class vtkOpenGLRenderer;
 class vtkShader2;
 class vtkShader2Collection;
 class vtkShaderProgram2;
+class vtkShaderDeviceAdapter2;
 class vtkGLSLShaderDeviceAdapter2;
 
 class VTK_RENDERING_EXPORT vtkOpenGLProperty : public vtkProperty
 {
 public:
   static vtkOpenGLProperty *New();
-  vtkTypeRevisionMacro(vtkOpenGLProperty,vtkProperty);
+  vtkTypeMacro(vtkOpenGLProperty,vtkProperty);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -56,22 +57,33 @@ public:
   // property. The parameter window could be used to determine which graphic
   // resources to release.
   virtual void ReleaseGraphicsResources(vtkWindow *win);
-  
+
   // Description:
-  // Get the collection of property shaders. If Material is not set/or not
-  // loaded properly, this will return null.
-  vtkGetObjectMacro(Shader2Collection,vtkShader2Collection);
-  void SetShader2Collection(vtkShader2Collection *);
+  // Set/Get the shader program of the vtkProp. It can be set directly or
+  // by defining a Material.
+  vtkGetObjectMacro(PropProgram,vtkShaderProgram2);
+  void SetPropProgram(vtkShaderProgram2 *);
   
   // Description:
   // Get the object that can pass vertex attribute to a vtkShaderProgram2.
-  vtkGetObjectMacro(ShaderDeviceAdapter2,vtkGLSLShaderDeviceAdapter2);
+  virtual vtkShaderDeviceAdapter2* GetShaderDeviceAdapter2();
   
   // Description:
   // Get the vtkShaderProgram2 object in use.
   vtkGetObjectMacro(CurrentShaderProgram2,vtkShaderProgram2);
   //ETX
   
+  // Description:
+  // Provide values to initialize shader variables.
+  // Useful to initialize shader variables that change over time
+  // (animation, GUI widgets inputs, etc. )
+  // - \p name - hardware name of the uniform variable
+  // - \p numVars - number of variables being set
+  // - \p x - values
+  virtual void AddShaderVariable(const char *name,int numVars,int *x);
+  virtual void AddShaderVariable(const char *name,int numVars,float *x);
+  virtual void AddShaderVariable(const char *name,int numVars,double *x);
+
 protected:
   vtkOpenGLProperty();
   ~vtkOpenGLProperty();
@@ -84,11 +96,17 @@ protected:
   // Read this->Material from new style shaders.
   virtual void ReadFrameworkMaterial();
   
-  vtkShader2Collection *Shader2Collection;
+  // Owned. Result of merging the shader program of the renderer and the
+  // PropProgram.
+  vtkShaderProgram2 *CachedShaderProgram2;
   
-  vtkShaderProgram2 *CachedShaderProgram2; // owned
-  vtkShaderProgram2 *LastCachedShaderProgram2; // just a ref
+  vtkShaderProgram2 *LastRendererShaderProgram2; // just a ref
+  vtkShaderProgram2 *LastPropProgram; // just a ref
   vtkShaderProgram2 *PropProgram; // owned
+  
+  // Point to CachedShaderProgram2 if Shading is on and the context supports
+  // it.
+  vtkShaderProgram2 *CurrentShaderProgram2;
   
   vtkShader2 *DefaultMainVS;
   vtkShader2 *DefaultMainFS;
@@ -100,7 +118,6 @@ protected:
   bool UseDefaultPropFS;
   vtkGLSLShaderDeviceAdapter2 *ShaderDeviceAdapter2;
   
-  vtkShaderProgram2 *CurrentShaderProgram2; // point to PropProgram or CachedShaderProgram2
   
 private:
   vtkOpenGLProperty(const vtkOpenGLProperty&);  // Not implemented.

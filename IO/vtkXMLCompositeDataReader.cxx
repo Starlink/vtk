@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkXMLCompositeDataReader.cxx,v $
+  Module:    vtkXMLCompositeDataReader.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -21,6 +21,8 @@
 #include "vtkDataSet.h"
 #include "vtkHierarchicalBoxDataSet.h"
 #include "vtkInformation.h"
+#include "vtkInformationIntegerKey.h"
+#include "vtkInformationIntegerVectorKey.h"
 #include "vtkInformationVector.h"
 #include "vtkInstantiator.h"
 #include "vtkMultiBlockDataSet.h"
@@ -35,12 +37,11 @@
 #include "vtkXMLStructuredGridReader.h"
 #include "vtkXMLUnstructuredGridReader.h"
 
-#include <vtkstd/map>
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 #include <vtksys/SystemTools.hxx>
-
-vtkCxxRevisionMacro(vtkXMLCompositeDataReader, "$Revision: 1.4 $");
 
 struct vtkXMLCompositeDataReaderEntry
 {
@@ -51,7 +52,7 @@ struct vtkXMLCompositeDataReaderEntry
 struct vtkXMLCompositeDataReaderInternals
 {
   vtkSmartPointer<vtkXMLDataElement> Root;
-  typedef vtkstd::map<vtkstd::string, vtkSmartPointer<vtkXMLReader> > ReadersType;
+  typedef std::map<std::string, vtkSmartPointer<vtkXMLReader> > ReadersType;
   ReadersType Readers;
   static const vtkXMLCompositeDataReaderEntry ReaderList[];
   unsigned int MinDataset;
@@ -61,6 +62,8 @@ struct vtkXMLCompositeDataReaderInternals
     this->MinDataset = 0;
     this->MaxDataset = 0;
     }
+  std::set<int> UpdateIndices;
+  bool HasUpdateRestriction;
 };
 
 //----------------------------------------------------------------------------
@@ -232,8 +235,8 @@ void vtkXMLCompositeDataReader::ReadXMLData()
 
   // Find the path to this file in case the internal files are
   // specified as relative paths.
-  vtkstd::string filePath = this->FileName;
-  vtkstd::string::size_type pos = filePath.find_last_of("/\\");
+  std::string filePath = this->FileName;
+  std::string::size_type pos = filePath.find_last_of("/\\");
   if(pos != filePath.npos)
     {
     filePath = filePath.substr(0, pos);
@@ -270,6 +273,23 @@ void vtkXMLCompositeDataReader::ReadXMLData()
     this->Internal->MaxDataset = this->Internal->MinDataset + numDatasetsPerPiece;
     }
 
+  vtkInformation* outInfo = this->GetCurrentOutputInformation();
+  if (outInfo->Has(vtkCompositeDataPipeline::UPDATE_COMPOSITE_INDICES()))
+    {
+    this->Internal->HasUpdateRestriction = true;
+    this->Internal->UpdateIndices = std::set<int>();
+    int length = outInfo->Length(vtkCompositeDataPipeline::UPDATE_COMPOSITE_INDICES());
+    if (length > 0)
+      {
+      int* idx = outInfo->Get(vtkCompositeDataPipeline::UPDATE_COMPOSITE_INDICES());
+      this->Internal->UpdateIndices = std::set<int>(idx, idx+length);
+      }
+    }
+  else
+    {
+    this->Internal->HasUpdateRestriction = false;
+    }
+
   // All process create the  entire tree structure however, only each one only
   // reads the datasets assigned to it.
   unsigned int dataSetIndex=0;
@@ -279,8 +299,19 @@ void vtkXMLCompositeDataReader::ReadXMLData()
 //----------------------------------------------------------------------------
 int vtkXMLCompositeDataReader::ShouldReadDataSet(unsigned int dataSetIndex)
 {
-  return (dataSetIndex >= this->Internal->MinDataset && 
-    dataSetIndex < this->Internal->MaxDataset)? 1 : 0;
+  bool shouldRead =
+    (dataSetIndex >= this->Internal->MinDataset &&
+     dataSetIndex < this->Internal->MaxDataset);
+
+  if (shouldRead && this->Internal->HasUpdateRestriction)
+    {
+    if (this->Internal->UpdateIndices.find(dataSetIndex) ==
+        this->Internal->UpdateIndices.end())
+      {
+      shouldRead = false;
+      }
+    }
+  return shouldRead;
 }
 
 //----------------------------------------------------------------------------
@@ -288,8 +319,13 @@ vtkDataSet* vtkXMLCompositeDataReader::ReadDataset(vtkXMLDataElement* xmlElem,
   const char* filePath)
 {
   // Construct the name of the internal file.
-  vtkstd::string fileName;
+  std::string fileName;
   const char* file = xmlElem->GetAttribute("file");
+  if (!file)
+    {
+    return NULL;
+    }
+
   if(!(file[0] == '/' || file[1] == ':'))
     {
     fileName = filePath;
@@ -301,7 +337,7 @@ vtkDataSet* vtkXMLCompositeDataReader::ReadDataset(vtkXMLDataElement* xmlElem,
   fileName += file;
 
   // Get the file extension.
-  vtkstd::string ext = vtksys::SystemTools::GetFilenameLastExtension(fileName);
+  std::string ext = vtksys::SystemTools::GetFilenameLastExtension(fileName);
   if (ext.size() > 0)
     {
     // remote "." from the extension.

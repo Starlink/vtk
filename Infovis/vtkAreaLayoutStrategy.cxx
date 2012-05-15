@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAreaLayoutStrategy.cxx,v $
+  Module:    vtkAreaLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkAreaLayoutStrategy, "$Revision: 1.1 $");
 
 vtkAreaLayoutStrategy::vtkAreaLayoutStrategy()
 {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBarChartActor.cxx,v $
+  Module:    vtkBarChartActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,11 +29,10 @@
 #include "vtkLegendBoxActor.h"
 #include "vtkGlyphSource2D.h"
 #include "vtkProperty2D.h"
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <string>
+#include <vector>
 
 
-vtkCxxRevisionMacro(vtkBarChartActor, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkBarChartActor);
 
 vtkCxxSetObjectMacro(vtkBarChartActor,Input,vtkDataObject);
@@ -41,7 +40,7 @@ vtkCxxSetObjectMacro(vtkBarChartActor,LabelTextProperty,vtkTextProperty);
 vtkCxxSetObjectMacro(vtkBarChartActor,TitleTextProperty,vtkTextProperty);
 
 // PIMPL'd list of labels
-class vtkBarLabelArray : public vtkstd::vector<vtkstd::string> {};
+class vtkBarLabelArray : public std::vector<std::string> {};
 
 
 //----------------------------------------------------------------------------
@@ -632,7 +631,7 @@ void vtkBarChartActor::SetBarLabel(const int i, const char *label)
     {
     this->Labels->resize(i+1);
     }
-  (*this->Labels)[i] = vtkstd::string(label);
+  (*this->Labels)[i] = std::string(label);
   this->Modified();
 }
 

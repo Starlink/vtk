@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSightMasterServerReader.cxx,v $
+  Module:    vtkEnSightMasterServerReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,10 +18,9 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/string>
+#include <string>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkEnSightMasterServerReader, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkEnSightMasterServerReader);
 
 static int vtkEnSightMasterServerReaderStartsWith(const char* str1, const char* str2)
@@ -104,7 +103,7 @@ int vtkEnSightMasterServerReader::DetermineFileName(int piece)
     vtkErrorMacro("A case file name must be specified.");
     return VTK_ERROR;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;

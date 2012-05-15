@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredVisibilityConstraint.h,v $
+  Module:    vtkStructuredVisibilityConstraint.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_COMMON_EXPORT vtkStructuredVisibilityConstraint : public vtkObject
 public:
   static vtkStructuredVisibilityConstraint *New();
 
-  vtkTypeRevisionMacro(vtkStructuredVisibilityConstraint,vtkObject);
+  vtkTypeMacro(vtkStructuredVisibilityConstraint,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

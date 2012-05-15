@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataGeometryFilter.cxx,v $
+  Module:    vtkCompositeDataGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkCompositeDataSet.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCompositeDataGeometryFilter, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkCompositeDataGeometryFilter);
 
 //-----------------------------------------------------------------------------
@@ -87,10 +86,10 @@ int vtkCompositeDataGeometryFilter::RequestCompositeData(
     return 0;
     }
 
+  bool added=false;
   vtkCompositeDataIterator* iter = input->NewIterator();
-  iter->GoToFirstItem();
   vtkAppendPolyData* append = vtkAppendPolyData::New();
-  while (!iter->IsDoneWithTraversal())
+  for(iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
     {
     vtkDataSet* ds = vtkDataSet::SafeDownCast(iter->GetCurrentDataObject());
     if (ds)
@@ -100,13 +99,15 @@ int vtkCompositeDataGeometryFilter::RequestCompositeData(
       geom->Update();
       append->AddInput(geom->GetOutput());
       geom->Delete();
+      added = true;
       }
-    iter->GoToNextItem();
     }
   iter->Delete();
-  append->Update();
-
-  output->ShallowCopy(append->GetOutput());
+  if (added)
+    {
+    append->Update();
+    output->ShallowCopy(append->GetOutput());
+    }
 
   append->Delete();
 

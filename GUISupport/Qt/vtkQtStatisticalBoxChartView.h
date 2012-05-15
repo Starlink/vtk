@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStatisticalBoxChartView.h,v $
+  Module:    vtkQtStatisticalBoxChartView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,19 +17,26 @@
  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 ----------------------------------------------------------------------------*/
 
+// .NAME vtkQtStatisticalBoxChartView - Wraps a vtkQtStatisticalBoxChart into a VTK view.
+
 #ifndef __vtkQtStatisticalBoxChartView_h
 #define __vtkQtStatisticalBoxChartView_h
 
-#include "vtkQtChartViewBase.h"
+#include "QVTKWin32Header.h"
+#include "vtkQtChartView.h"
+#include <QPointer>
 
 class vtkQtStatisticalBoxChart;
 class vtkQtChartSeriesModelCollection;
+class vtkQtChartSeriesOptions;
 
-class QVTK_EXPORT vtkQtStatisticalBoxChartView : public vtkQtChartViewBase
+class QVTK_EXPORT vtkQtStatisticalBoxChartView : public vtkQtChartView
 {
+Q_OBJECT
+
 public:
   static vtkQtStatisticalBoxChartView *New();
-  vtkTypeRevisionMacro(vtkQtStatisticalBoxChartView, vtkQtChartViewBase);
+  vtkTypeMacro(vtkQtStatisticalBoxChartView, vtkQtChartView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -52,7 +59,6 @@ public:
   // Sets the box width fraction.
   void SetBoxWidthFraction(float fraction);
 
-  //BTX
   // Description:
   // Adds box chart selection handlers to the mouse selection.
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
@@ -60,7 +66,14 @@ public:
   // Description:
   // Gets the statistical box chart series model.
   virtual vtkQtChartSeriesModelCollection* GetChartSeriesModel();
-  //ETX
+
+  // Description:
+  // Gets the chart series layer
+  virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
+
+  // Description:
+  // Gets the statistical box chart series options.
+  virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
 
 protected:
   vtkQtStatisticalBoxChartView();

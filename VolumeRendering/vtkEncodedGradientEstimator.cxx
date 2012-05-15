@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEncodedGradientEstimator.cxx,v $
+  Module:    vtkEncodedGradientEstimator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkEncodedGradientEstimator, "$Revision: 1.2 $");
 
 vtkCxxSetObjectMacro(vtkEncodedGradientEstimator, Input, vtkImageData );
 
@@ -134,7 +133,7 @@ vtkEncodedGradientEstimator::SetDirectionEncoder(vtkDirectionEncoder *direnc)
   this->Modified();
 }
 
-int vtkEncodedGradientEstimator::GetEncodedNormalIndex( int xyzIndex ) 
+int vtkEncodedGradientEstimator::GetEncodedNormalIndex( vtkIdType xyzIndex ) 
 {
   this->Update();
   return *(this->EncodedNormals + xyzIndex);
@@ -144,13 +143,13 @@ int vtkEncodedGradientEstimator::GetEncodedNormalIndex( int xIndex,
                                                         int yIndex,
                                                         int zIndex )
 {
-  int ystep, zstep;
+  vtkIdType ystep, zstep;
 
   this->Update();
 
   // Compute steps through the volume in x, y, and z
   ystep = this->InputSize[0];
-  zstep = this->InputSize[0] * this->InputSize[1];
+  zstep = ystep * this->InputSize[1];
 
   return *(this->EncodedNormals + zIndex * zstep + yIndex * ystep + xIndex);
 }
@@ -216,12 +215,15 @@ void vtkEncodedGradientEstimator::Update( )
         }
       }
 
+    // Compute the number of encoded voxels
+    vtkIdType encodedSize = scalarInputSize[0];
+    encodedSize *= scalarInputSize[1];
+    encodedSize *= scalarInputSize[2];
+
     // Allocate space for the encoded normals if necessary
     if ( !this->EncodedNormals )
       {
-      this->EncodedNormals = new unsigned short[ scalarInputSize[0] *
-                                                 scalarInputSize[1] *
-                                                 scalarInputSize[2] ];
+      this->EncodedNormals = new unsigned short[ encodedSize ];
       this->EncodedNormalsSize[0] = scalarInputSize[0];
       this->EncodedNormalsSize[1] = scalarInputSize[1];
       this->EncodedNormalsSize[2] = scalarInputSize[2];
@@ -229,9 +231,7 @@ void vtkEncodedGradientEstimator::Update( )
 
     if ( !this->GradientMagnitudes && this->ComputeGradientMagnitudes )
       {
-      this->GradientMagnitudes = new unsigned char[ scalarInputSize[0] *
-                                                    scalarInputSize[1] *
-                                                    scalarInputSize[2] ];
+      this->GradientMagnitudes = new unsigned char[ encodedSize ];
       }
 
     // Copy info that multi threaded function will need into temp variables

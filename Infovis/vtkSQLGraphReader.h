@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSQLGraphReader.h,v $
+  Module:    vtkSQLGraphReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@ class VTK_INFOVIS_EXPORT vtkSQLGraphReader : public vtkGraphAlgorithm
 {
 public:
   static vtkSQLGraphReader* New();
-  vtkTypeRevisionMacro(vtkSQLGraphReader,vtkGraphAlgorithm);
+  vtkTypeMacro(vtkSQLGraphReader,vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

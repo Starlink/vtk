@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimePointUtility.cxx,v $
+  Module:    vtkTimePointUtility.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,9 +25,12 @@
 
 #include "vtksys/ios/sstream"
 
-#if defined (__BORLANDC__) && (__BORLANDC__ >= 0x0560)
+#if defined (__BORLANDC__) && (__BORLANDC__ >= 0x0550)
 #include <ctype.h> // for isdigit
 #endif
+
+#include <locale> // C++ locale
+
 
 const int vtkTimePointUtility::MILLIS_PER_SECOND  =     1000;
 const int vtkTimePointUtility::MILLIS_PER_MINUTE  =    60000;
@@ -40,7 +43,6 @@ const int vtkTimePointUtility::MINUTES_PER_HOUR   =       60;
 const int vtkTimePointUtility::MINUTES_PER_DAY    =     1440;
 const int vtkTimePointUtility::HOURS_PER_DAY      =       24;
 
-vtkCxxRevisionMacro(vtkTimePointUtility, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkTimePointUtility);
 
 void vtkTimePointUtility::PrintSelf(ostream& os, vtkIndent indent)
@@ -361,6 +363,7 @@ const char* vtkTimePointUtility::TimePointToISO8601(vtkTypeUInt64 time, int form
   GetDateTime(time, year, month, day, hour, minute, second, msec);
 
   vtksys_ios::ostringstream oss;
+  oss.imbue(std::locale::classic());
   oss.fill('0');
   if (format == ISO8601_DATETIME)
     {

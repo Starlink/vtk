@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSliderWidget.h,v $
+  Module:    vtkSliderWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -75,7 +75,7 @@ public:
 
   // Description:
   // Standard macros.
-  vtkTypeRevisionMacro(vtkSliderWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkSliderWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -85,6 +85,11 @@ public:
   void SetRepresentation(vtkSliderRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkSliderRepresentation.
+  vtkSliderRepresentation *GetSliderRepresentation()
+    {return reinterpret_cast<vtkSliderRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Control the behavior of the slider when selecting the tube or caps. If
   // Jump, then selecting the tube, left cap, or right cap causes the slider to

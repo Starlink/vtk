@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearWipeWidget.h,v $
+  Module:    vtkRectilinearWipeWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -89,7 +89,7 @@ public:
 
   // Description:
   // Standard macros.
-  vtkTypeRevisionMacro(vtkRectilinearWipeWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkRectilinearWipeWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -99,6 +99,11 @@ public:
   void SetRepresentation(vtkRectilinearWipeRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkRectilinearWipeRepresentation.
+  vtkRectilinearWipeRepresentation *GetRectilinearWipeRepresentation()
+    {return reinterpret_cast<vtkRectilinearWipeRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Create the default widget representation if one is not set. 
   virtual void CreateDefaultRepresentation();

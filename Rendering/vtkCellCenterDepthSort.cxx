@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellCenterDepthSort.cxx,v $
+  Module:    vtkCellCenterDepthSort.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,23 +33,22 @@
 #include "vtkMath.h"
 #include "vtkSortDataArray.h"
 
-#include <vtkstd/stack>
-#include <vtkstd/utility>
-#include <vtkstd/algorithm>
+#include <stack>
+#include <utility>
+#include <algorithm>
 
 //-----------------------------------------------------------------------------
 
-typedef vtkstd::pair<vtkIdType, vtkIdType> vtkIdPair;
+typedef std::pair<vtkIdType, vtkIdType> vtkIdPair;
 
 class vtkCellCenterDepthSortStack
 {
 public:
-  vtkstd::stack<vtkIdPair> Stack;
+  std::stack<vtkIdPair> Stack;
 };
 
 //-----------------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkCellCenterDepthSort, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkCellCenterDepthSort);
 
 vtkCellCenterDepthSort::vtkCellCenterDepthSort()
@@ -223,8 +222,8 @@ vtkIdTypeArray *vtkCellCenterDepthSort::GetNextCells()
 
       if (left > right) break;
 
-      vtkstd::swap(cellIds[left], cellIds[right]);
-      vtkstd::swap(cellDepths[left], cellDepths[right]);
+      std::swap(cellIds[left], cellIds[right]);
+      std::swap(cellDepths[left], cellDepths[right]);
 
       left++;  right--;
       }

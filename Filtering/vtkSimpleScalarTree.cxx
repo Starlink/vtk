@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleScalarTree.cxx,v $
+  Module:    vtkSimpleScalarTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkSimpleScalarTree, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkSimpleScalarTree);
 
 class vtkScalarNode {};

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVoidArray.cxx,v $
+  Module:    vtkVoidArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkVoidArray.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkVoidArray, "$Revision: 1.44 $");
 vtkStandardNewMacro(vtkVoidArray);
 
 typedef void *voidPtr;

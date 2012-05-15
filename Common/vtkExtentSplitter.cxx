@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtentSplitter.cxx,v $
+  Module:    vtkExtentSplitter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,11 +16,10 @@
 
 #include "vtkObjectFactory.h"
 
-#include <vtkstd/map>
-#include <vtkstd/queue>
-#include <vtkstd/vector>
+#include <map>
+#include <queue>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkExtentSplitter, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkExtentSplitter);
 
 //----------------------------------------------------------------------------
@@ -44,9 +43,9 @@ struct vtkExtentSplitterSubExtent
 class vtkExtentSplitterInternals
 {
 public:
-  typedef vtkstd::queue<vtkExtentSplitterExtent> QueueType;
-  typedef vtkstd::map<int, vtkExtentSplitterSource> SourcesType;
-  typedef vtkstd::vector<vtkExtentSplitterSubExtent> SubExtentsType;
+  typedef std::queue<vtkExtentSplitterExtent> QueueType;
+  typedef std::map<int, vtkExtentSplitterSource> SourcesType;
+  typedef std::vector<vtkExtentSplitterSubExtent> SubExtentsType;
   SourcesType Sources;
   QueueType Queue;
   SubExtentsType SubExtents;

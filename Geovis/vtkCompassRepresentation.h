@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompassRepresentation.h,v $
+  Module:    vtkCompassRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,13 +19,13 @@
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
-// .NAME vtkCompassWidgetRepresentation - provide a compass
+// .NAME vtkCompassRepresentation - provide a compass
 // .SECTION Description
 // This class is used to represent and render a compass.  
 
 
-#ifndef __vtkCompassWidgetRepresentation_h
-#define __vtkCompassWidgetRepresentation_h
+#ifndef __vtkCompassRepresentation_h
+#define __vtkCompassRepresentation_h
 
 #include "vtkContinuousValueWidgetRepresentation.h"
 #include "vtkCoordinate.h" // For vtkViewportCoordinateMacro
@@ -58,7 +58,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkCompassRepresentation,
+  vtkTypeMacro(vtkCompassRepresentation,
                        vtkContinuousValueWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
   

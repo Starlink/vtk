@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimeSourceExample.cxx,v $
+  Module:    vtkTimeSourceExample.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,39 +18,37 @@
 #include "vtkObjectFactory.h"
 #include "vtkAlgorithm.h"
 #include "vtkAlgorithmOutput.h"
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkImageData.h"
 #include "vtkCellData.h"
-#include "vtkPointData.h"
+#include "vtkCellTypes.h"
 #include "vtkDoubleArray.h"
 #include "vtkIdTypeArray.h"
-#include <vtkstd/vector>
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkMath.h"
+#include "vtkPointData.h"
+#include "vtkPoints.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkUnstructuredGrid.h"
+#include <vector>
 
-vtkCxxRevisionMacro(vtkTimeSourceExample, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkTimeSourceExample);
-
-#ifndef M_PI
-#define M_PI 3.141516
-#endif
 
 //----------------------------------------------------------------------------
 double vtkTimeSourceExample::ValueFunction(double t)
 {
-  return sin(2*M_PI*t);
+  return sin(2*vtkMath::DoublePi()*t);
 }
 
 //----------------------------------------------------------------------------
 double vtkTimeSourceExample::XFunction(double t)
 {
-  return sin(2*M_PI*t)*this->XAmplitude;
+  return sin(2*vtkMath::DoublePi()*t)*this->XAmplitude;
 }
 
 //----------------------------------------------------------------------------
 double vtkTimeSourceExample::YFunction(double t)
 {
-  return sin(2*M_PI*t)*this->YAmplitude;
+  return sin(2*vtkMath::DoublePi()*t)*this->YAmplitude;
 }
 
 //----------------------------------------------------------------------------
@@ -109,7 +107,7 @@ int vtkTimeSourceExample::NumCellsFunction(double t)
     //goes from 1 to NumSteps/2+1, adding one cell each step, and returns
     double halfSteps = this->NumSteps/2.0;
     numCells = (int)(halfSteps - (fabs(2.0*(t-0.5)*halfSteps)));
-    numCells+=1; 
+    numCells+=1;
     }
   return numCells;
 }
@@ -137,7 +135,7 @@ vtkTimeSourceExample::vtkTimeSourceExample()
   this->Values = new double[this->NumSteps];
   for (int i = 0; i < this->NumSteps; i++)
     {
-    this->Values[i] = 
+    this->Values[i] =
       this->ValueFunction((double)i/(double)(this->NumSteps-1));
     }
 }
@@ -161,9 +159,9 @@ int vtkTimeSourceExample::RequestInformation(
     {
     return 0;
     }
-  
+
   vtkInformation *info=outVector->GetInformationObject(0);
-  
+
   //tell the caller that I can provide time varying data and
   //tell it what range of times I can deal with
   double tRange[2];
@@ -173,7 +171,7 @@ int vtkTimeSourceExample::RequestInformation(
     vtkStreamingDemandDrivenPipeline::TIME_RANGE(),
     tRange,
     2);
-  
+
   //tell the caller if this filter can provide values ONLY at discrete times
   //or anywhere withing the time range
   if (!this->Analytic)
@@ -190,54 +188,6 @@ int vtkTimeSourceExample::RequestInformation(
       );
     }
 
-  double spacing[3] = {1,1,1};
-  info->Set(vtkDataObject::SPACING(),spacing,3);
-
-  //determine what time is being asked for
-  double reqTime = 0.0;
-  //int reqNTS = 0; since we are only answering the first request omit this
-  double *reqTS = NULL;
-  if (reqInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
-    {
-    //reqNTS = info->Length(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());    
-    reqTS = reqInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
-    }
-  if (reqTS != NULL)
-    {
-    //TODO: produce multiblock output when multiple time steps are asked for
-    //for now just answer the first one
-    reqTime = reqTS[0];
-    }
-
-  //because the output can move and grow over time
-  //provide information about the output shape 
-  double time = reqTime;
-  double value = 0.0;
-  this->LookupTimeAndValue(time, value);
-
-  double origin[3];
-  double x = this->XFunction(time);
-  double y = this->YFunction(time);
-  origin[0] = x;
-  origin[1] = y;
-  origin[2] = 0;
-  info->Set(vtkDataObject::ORIGIN(),origin,3);
-
-  int ext[6];
-  int numCells = this->NumCellsFunction(time);
-  ext[0] = 0;
-  ext[1] = 1;
-  ext[2] = 0;
-  ext[3] = numCells;
-  ext[4] = 0;
-  ext[5] = 1;
-  info->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), ext ,6);
-  
-  // This is a temporary hack to get around a pipeline problem.
-  // The executive (vtkStreamingDemandDrivenPipeline) expects 
-  // MAXIMUM_NUMBER_OF_PIECES() to be set when the output is a 
-  // vtkTemporalDataSet which happens if a consumer requests multiple
-  // time steps.
   info->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
 
   return 1;
@@ -249,9 +199,9 @@ int vtkTimeSourceExample::RequestData(
   vtkInformationVector** vtkNotUsed(inVector),
   vtkInformationVector* outVector
   )
-{  
+{
   vtkInformation *outInfo = outVector->GetInformationObject(0);
-  vtkImageData *output= vtkImageData::SafeDownCast(
+  vtkUnstructuredGrid *output= vtkUnstructuredGrid::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
   if (!output)
     {
@@ -264,8 +214,10 @@ int vtkTimeSourceExample::RequestData(
   double *reqTS = NULL;
   if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS()))
     {
-    //reqNTS = outInfo->Length(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());    
-    reqTS = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+    //reqNTS = outInfo->Length
+    //  (vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
+    reqTS = outInfo->Get
+      (vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS());
     }
   if (reqTS != NULL)
     {
@@ -280,22 +232,15 @@ int vtkTimeSourceExample::RequestData(
   double value = 0.0;
   this->LookupTimeAndValue(time, value);
 
-  output->Initialize(); 
+  output->Initialize();
   output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEPS(), &time, 1);
-  output->SetSpacing(1,1,1);
 
   //figure out the world space position of the output
   double x = this->XFunction(time);
   double y = this->YFunction(time);
-  output->SetOrigin(x,y,0);
 
   //figure out the number of cells in the output
   int numCells = this->NumCellsFunction(time);
-  output->SetDimensions(2,numCells+1,2);
-
-  //allocate the rest of the output data structure
-  output->SetWholeExtent(0,1,0,numCells,0,1);
-  output->AllocateScalars();
 
   //compute values for each point and cell to test with
   vtkDoubleArray *pd = vtkDoubleArray::New();
@@ -320,6 +265,8 @@ int vtkTimeSourceExample::RequestData(
   zd->SetName("Point Z");
   output->GetPointData()->AddArray(zd);
 
+
+  vtkPoints *points = vtkPoints::New();
   vtkIdType pid = 0;
   for (int i = 0; i < 2; i++)
     {
@@ -333,9 +280,12 @@ int vtkTimeSourceExample::RequestData(
         xd->InsertNextValue(x+k);
         yd->InsertNextValue(y+j);
         zd->InsertNextValue(i);
+        points->InsertNextPoint(x+k,y+j,i);
         }
       }
     }
+  output->SetPoints(points);
+  points->Delete();
   id->Delete();
   xd->Delete();
   yd->Delete();
@@ -364,7 +314,9 @@ int vtkTimeSourceExample::RequestData(
   zd->SetNumberOfComponents(1);
   zd->SetName("Cell Z");
   output->GetCellData()->AddArray(zd);
+  output->Allocate();
 
+  vtkIdType ptcells[8];
   vtkIdType cid = 0;
   for (int i = 0; i < 1; i++)
     {
@@ -373,11 +325,21 @@ int vtkTimeSourceExample::RequestData(
       for (int k = 0; k < 1; k++)
         {
         cd->InsertNextValue(value);
-        id->InsertNextValue(cid); 
+        id->InsertNextValue(cid);
         cid++;
         xd->InsertNextValue(x+k+0.5); //center of the cell
         yd->InsertNextValue(y+j+0.5);
         zd->InsertNextValue(i+0.5);
+
+        ptcells[0] = (i+0)*((numCells+1)*2) + (j+0)*2 + (k+0);
+        ptcells[1] = (i+0)*((numCells+1)*2) + (j+0)*2 + (k+1);
+        ptcells[2] = (i+0)*((numCells+1)*2) + (j+1)*2 + (k+0);
+        ptcells[3] = (i+0)*((numCells+1)*2) + (j+1)*2 + (k+1);
+        ptcells[4] = (i+1)*((numCells+1)*2) + (j+0)*2 + (k+0);
+        ptcells[5] = (i+1)*((numCells+1)*2) + (j+0)*2 + (k+1);
+        ptcells[6] = (i+1)*((numCells+1)*2) + (j+1)*2 + (k+0);
+        ptcells[7] = (i+1)*((numCells+1)*2) + (j+1)*2 + (k+1);
+        output->InsertNextCell(VTK_VOXEL, 8, ptcells);
         }
       }
     }
@@ -386,7 +348,7 @@ int vtkTimeSourceExample::RequestData(
   yd->Delete();
   zd->Delete();
   cd->Delete();
-      
+
   return 1;
 }
 
@@ -400,4 +362,3 @@ void vtkTimeSourceExample::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Growing: " << this->Growing << endl;
 
 }
-

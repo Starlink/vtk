@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadricClustering.h,v $
+  Module:    vtkQuadricClustering.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -85,7 +85,7 @@
 class vtkCellArray;
 class vtkFeatureEdges;
 class vtkPoints;
-class vtkCellSet;
+class vtkQuadricClusteringCellSet;
 
 
 class VTK_GRAPHICS_EXPORT vtkQuadricClustering : public vtkPolyDataAlgorithm
@@ -93,7 +93,7 @@ class VTK_GRAPHICS_EXPORT vtkQuadricClustering : public vtkPolyDataAlgorithm
 public:
   // Description:
   // Standard instantition, type and print methods.
-  vtkTypeRevisionMacro(vtkQuadricClustering, vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkQuadricClustering, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkQuadricClustering *New();
 
@@ -118,6 +118,7 @@ public:
   // Description:
   // Enable automatic adjustment of number of divisions. If off, the number
   // of divisions specified by the user is always used (as long as it is valid).
+  // The default is On
   vtkSetMacro(AutoAdjustNumberOfDivisions,int);
   vtkGetMacro(AutoAdjustNumberOfDivisions,int);
   vtkBooleanMacro(AutoAdjustNumberOfDivisions,int);
@@ -198,7 +199,7 @@ public:
   // This flag makes the filter copy cell data from input to output 
   // (the best it can).  It uses input cells that trigger the addition
   // of output cells (no averaging).  This is off by default, and does
-  // not work when append is being called explicitely (non-pipeline usage).
+  // not work when append is being called explicitly (non-pipeline usage).
   vtkSetMacro(CopyCellData, int); 
   vtkGetMacro(CopyCellData, int); 
   vtkBooleanMacro(CopyCellData, int); 
@@ -277,7 +278,7 @@ protected:
   int UseInputPoints;
 
   // Description:
-  // This method sets the verticies of the output.
+  // This method sets the vertices of the output.
   // It duplicates the structure of the input cells (but decimiated).
   void EndAppendVertexGeometry(vtkPolyData *input, vtkPolyData *output);
 
@@ -293,7 +294,7 @@ protected:
 
   // Set this to eliminate duplicate cells
   int PreventDuplicateCells;
-  vtkCellSet *CellSet; //PIMPLd stl set for tracking inserted cells
+  vtkQuadricClusteringCellSet *CellSet; //PIMPLd stl set for tracking inserted cells
   vtkIdType NumberOfBins;
 
   // Used internally.
@@ -313,6 +314,9 @@ protected:
   double XBinSize;
   double YBinSize;
   double ZBinSize;
+  double XBinStep;     //replace some divisions with multiplication
+  double YBinStep;
+  double ZBinStep;
   vtkIdType SliceSize; //eliminate one multiplication
 
   //BTX

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalBoxDataIterator.cxx,v $
+  Module:    vtkHierarchicalBoxDataIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkHierarchicalBoxDataIterator);
-vtkCxxRevisionMacro(vtkHierarchicalBoxDataIterator, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkHierarchicalBoxDataIterator::vtkHierarchicalBoxDataIterator()
 {

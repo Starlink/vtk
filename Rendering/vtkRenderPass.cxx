@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderPass.cxx,v $
+  Module:    vtkRenderPass.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkRenderer.h"
 #include "vtkOpenGLRenderer.h"
 
-vtkCxxRevisionMacro(vtkRenderPass, "$Revision: 1.2 $");
 
 // ----------------------------------------------------------------------------
 // Description:
@@ -87,6 +86,16 @@ void vtkRenderPass::UpdateLights(vtkRenderer *renderer)
 {
   assert("pre: renderer_exists" && renderer!=0);
   renderer->UpdateLights();
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Call UpdateGeometry() on Renderer. See note about UpdateCamera().
+// \pre renderer_exists: renderer!=0
+void vtkRenderPass::UpdateGeometry(vtkRenderer *renderer)
+{
+  assert("pre: renderer_exists" && renderer!=0);
+  renderer->UpdateGeometry();
 }
 
 // ----------------------------------------------------------------------------

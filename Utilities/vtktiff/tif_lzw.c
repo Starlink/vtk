@@ -1,4 +1,4 @@
-/* $Id: tif_lzw.c,v 1.2 2008-03-11 13:39:29 andinet Exp $ */
+/* Id */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -1021,7 +1021,7 @@ LZWCleanup(TIFF* tif)
 int
 TIFFInitLZW(TIFF* tif, int scheme)
 {
-        assert(scheme == COMPRESSION_LZW);
+        assert(scheme == COMPRESSION_LZW); (void)scheme;
         /*
          * Allocate state block so tag methods have storage to record values.
          */

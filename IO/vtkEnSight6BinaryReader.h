@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSight6BinaryReader.h,v $
+  Module:    vtkEnSight6BinaryReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ class VTK_IO_EXPORT vtkEnSight6BinaryReader : public vtkEnSightReader
 {
 public:
   static vtkEnSight6BinaryReader *New();
-  vtkTypeRevisionMacro(vtkEnSight6BinaryReader, vtkEnSightReader);
+  vtkTypeMacro(vtkEnSight6BinaryReader, vtkEnSightReader);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
   
 protected:

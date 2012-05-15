@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractArraysOverTime.cxx,v $
+  Module:    vtkExtractArraysOverTime.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,10 +38,10 @@
 #include "vtkUnsignedCharArray.h"
 
 #include "assert.h"
-#include <vtkstd/map>
-#include <vtkstd/string>
+#include <map>
+#include <string>
 #include <vtksys/ios/sstream>
-#include <vtkstd/vector>
+#include <vector>
 
 class vtkExtractArraysOverTime::vtkInternal
 {
@@ -77,20 +77,20 @@ public: // vtkValue is made public due to a bug in VS 6.0
   class vtkValue
     {
   public:
-    vtkstd::string Label;
+    std::string Label;
     vtkSmartPointer<vtkTable> Output;
     vtkSmartPointer<vtkUnsignedCharArray> ValidMaskArray;
     vtkSmartPointer<vtkDoubleArray> PointCoordinatesArray;
     };
 private:
-  typedef vtkstd::map<vtkKey, vtkValue> MapType;
+  typedef std::map<vtkKey, vtkValue> MapType;
   MapType OutputGrids;
   int NumberOfTimeSteps;
   int CurrentTimeIndex;
   int FieldType;
   int ContentType;
 
-  void AddTimeStepInternal(unsigned int cid, double time, vtkDataSet* data);
+  void AddTimeStepInternal(unsigned int cid, double time, vtkDataObject* data);
   void AddTimeStepInternalForLocations(unsigned int composite_index, 
     double time, vtkDataSet* input);
   vtkValue* GetOutput(const vtkKey& key, vtkDataSetAttributes* inDSA);
@@ -126,8 +126,8 @@ private:
   vtkSmartPointer<vtkDoubleArray> TimeArray;
 public:
   // List of ids selected for fast path.
-  vtkstd::vector<vtkIdType> FastPathIDs;
-  vtkstd::vector<unsigned int> FastPathCompositeIDs;
+  std::vector<vtkIdType> FastPathIDs;
+  std::vector<unsigned int> FastPathCompositeIDs;
   unsigned int FastPathIDIndex;
   vtkInternal()
     {
@@ -189,6 +189,11 @@ public:
         // TODO; To add information about where which cell/pt this grid came
         // from.
 
+        // Remove vtkOriginalCellIds or vtkOriginalPointIds arrays which were
+        // added by vtkExtractSelection.
+        value.Output->GetRowData()->RemoveArray("vtkOriginalCellIds");
+        value.Output->GetRowData()->RemoveArray("vtkOriginalPointIds");
+
         value.Output->GetRowData()->RemoveArray(
           value.ValidMaskArray->GetName());
         value.Output->GetRowData()->AddArray(value.ValidMaskArray);
@@ -196,6 +201,7 @@ public:
         value.Output->GetRowData()->RemoveArray(
           this->TimeArray->GetName());
         value.Output->GetRowData()->AddArray(this->TimeArray);
+
  
         if (value.PointCoordinatesArray)
           {
@@ -260,6 +266,10 @@ void vtkExtractArraysOverTime::vtkInternal::AddFastPathTimeline(
     // Mark all pts as valid.
     value->ValidMaskArray->FillComponent(0, 1);
     }
+
+  // Fast-path does not provide us with the point coordinate information, so
+  // we cannot provide that to the output.
+  value->PointCoordinatesArray = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -268,9 +278,9 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStep(
 {
   this->TimeArray->SetTuple1(this->CurrentTimeIndex, time);
 
-  if (data && data->IsA("vtkDataSet"))
+  if (data && (data->IsA("vtkDataSet") || data->IsA("vtkTable")))
     {
-    this->AddTimeStepInternal(0, time, static_cast<vtkDataSet*>(data));
+    this->AddTimeStepInternal(0, time, data);
     }
   else if (data && data->IsA("vtkCompositeDataSet"))
     {
@@ -283,6 +293,11 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStep(
         {
         this->AddTimeStepInternal(iter->GetCurrentFlatIndex(), time, ds);
         }
+      else if (
+        vtkTable* table = vtkTable::SafeDownCast(iter->GetCurrentDataObject()))
+        {
+        this->AddTimeStepInternal(iter->GetCurrentFlatIndex(), time, table);
+        }
       }
     iter->Delete();
     }
@@ -294,6 +309,12 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStep(
 void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternalForLocations(
   unsigned int vtkNotUsed(composite_index), double vtkNotUsed(time), vtkDataSet* input)
 {
+  if (!input)
+    {
+    vtkGenericWarningMacro("Ignoring since input is not a vtkDataset.");
+    return;
+    }
+
   vtkDataSetAttributes* inDSA = input->GetPointData();
   vtkCharArray* validMask = vtkCharArray::SafeDownCast(
     inDSA->GetArray("vtkValidPointMask"));
@@ -347,11 +368,12 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternalForLocations(
 
 //----------------------------------------------------------------------------
 void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternal(
-  unsigned int composite_index, double time, vtkDataSet* input)
+  unsigned int composite_index, double time, vtkDataObject* input)
 {
   if (this->ContentType == vtkSelectionNode::LOCATIONS)
     {
-    this->AddTimeStepInternalForLocations(composite_index, time, input);
+    this->AddTimeStepInternalForLocations(composite_index, time, 
+      vtkDataSet::SafeDownCast(input));
     return;
     }
 
@@ -359,15 +381,24 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternal(
   const char* idarrayname = 0;
   if (this->FieldType == vtkSelectionNode::CELL)
     {
-    inDSA = input->GetCellData();
+    inDSA = vtkDataSet::SafeDownCast(input)->GetCellData();
     idarrayname = "vtkOriginalCellIds";
+    }
+  else if (this->FieldType == vtkSelectionNode::POINT)
+    {
+    inDSA = vtkDataSet::SafeDownCast(input)->GetPointData();
+    idarrayname = "vtkOriginalPointIds";
+    }
+  else if (this->FieldType == vtkSelectionNode::ROW)
+    {
+    inDSA = vtkTable::SafeDownCast(input)->GetRowData();
+    idarrayname = "vtkOriginalRowIds";
     }
   else
     {
-    inDSA = input->GetPointData();
-    idarrayname = "vtkOriginalPointIds";
+    vtkGenericWarningMacro("Ignoring since unsupported field type.");
+    return;
     }
-
 
   vtkIdTypeArray* idsArray = 
     vtkIdTypeArray::SafeDownCast(inDSA->GetArray(idarrayname));
@@ -382,8 +413,6 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternal(
     vtkGenericWarningMacro("Missing \"" << idarrayname << "\" in extracted dataset.");
     return;
     }
-
-
 
   vtkIdType numIDs = idsArray->GetNumberOfTuples();
   if (numIDs <= 0)
@@ -407,7 +436,7 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternal(
     // Record the point coordinate if we are tracking a point.
     if (value->PointCoordinatesArray)
       {
-      double *point = input->GetPoint(cc);
+      double *point = vtkDataSet::SafeDownCast(input)->GetPoint(cc);
       value->PointCoordinatesArray->SetTuple(this->CurrentTimeIndex, point);
       }
 
@@ -432,8 +461,21 @@ void vtkExtractArraysOverTime::vtkInternal::AddTimeStepInternal(
           {
           stream << "Block: " << composite_index << " ; ";
           }
-        stream << (this->FieldType == vtkSelectionNode::CELL?
-          "Cell : " : "Point : ") << curid;
+        switch (this->FieldType)
+          {
+        case vtkSelectionNode::CELL:
+          stream << "Cell : ";
+          break;
+
+        case vtkSelectionNode::POINT:
+          stream << "Point : ";
+          break;
+
+        case vtkSelectionNode::ROW:
+          stream << "Row: " ;
+          break;
+          }
+        stream << curid;
         value->Label = stream.str();
         }
       }
@@ -494,6 +536,9 @@ vtkExtractArraysOverTime::vtkInternal::GetOutput(
         {
         coordsArray->SetName("Probe Coordinates");
         }
+      coordsArray->FillComponent(0, 0.0);
+      coordsArray->FillComponent(1, 0.0);
+      coordsArray->FillComponent(2, 0.0);
       value.PointCoordinatesArray.TakeReference(coordsArray);
       }
 
@@ -515,7 +560,6 @@ vtkExtractArraysOverTime::vtkInternal::GetOutput(
 }
 
 //****************************************************************************
-vtkCxxRevisionMacro(vtkExtractArraysOverTime, "$Revision: 1.25 $");
 vtkStandardNewMacro(vtkExtractArraysOverTime);
 //----------------------------------------------------------------------------
 vtkExtractArraysOverTime::vtkExtractArraysOverTime()
@@ -703,6 +747,12 @@ int vtkExtractArraysOverTime::RequestData(
 
     // Only GLOBALIDS based selection support fast path.
     if (this->ContentType != vtkSelectionNode::GLOBALIDS)
+      {
+      this->UseFastPath = false;
+      }
+    // Only point or cell data is supported for fast path.
+    if (this->FieldType != vtkSelectionNode::POINT &&
+      this->FieldType != vtkSelectionNode::CELL)
       {
       this->UseFastPath = false;
       }
@@ -978,8 +1028,8 @@ void vtkExtractArraysOverTime::CollectFastPathInput(vtkDataObject* input)
 // fast-path.
 static bool vtkUpdateFastPathIDsInternal(
   vtkSelection* selection, int piece,
-  vtkstd::vector<vtkIdType>& ids,
-  vtkstd::vector<unsigned int>& cids)
+  std::vector<vtkIdType>& ids,
+  std::vector<unsigned int>& cids)
 {
   if (!selection)
     {

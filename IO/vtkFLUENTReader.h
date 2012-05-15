@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFLUENTReader.h,v $
+  Module:    vtkFLUENTReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_IO_EXPORT vtkFLUENTReader : public vtkMultiBlockDataSetAlgorithm
 {
 public:
   static vtkFLUENTReader *New();
-  vtkTypeRevisionMacro(vtkFLUENTReader,vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkFLUENTReader,vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -58,7 +58,7 @@ public:
 
   // Description:
   // Get the total number of cells. The number of cells is only valid after a
-  // successful read of the data file is performed.
+  // successful read of the data file is performed. Initial value is 0.
   vtkGetMacro(NumberOfCells,int);
 
   // Description:

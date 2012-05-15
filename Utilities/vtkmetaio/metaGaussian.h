@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaGaussian.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAGAUSSIAN_H
@@ -31,9 +26,9 @@
  *    Reads and Writes MetaGaussianFiles.
  *
  * \author Mark Foskey
- * 
+ *
  * \date February 12, 2004
- * 
+ *
  * Depends on:
  *    MetaUtils.h
  *    MetaObject.h
@@ -60,9 +55,9 @@ class METAIO_EXPORT MetaGaussian : public MetaObject
     ////
     MetaGaussian();
 
-    MetaGaussian(const char *_headerName);   
+    MetaGaussian(const char *_headerName);
 
-    MetaGaussian(const MetaGaussian *_gaussian);    
+    MetaGaussian(const MetaGaussian *_gaussian);
 
     MetaGaussian(unsigned int dim);
 

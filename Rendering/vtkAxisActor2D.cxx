@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAxisActor2D.cxx,v $
+  Module:    vtkAxisActor2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,9 @@
 #include "vtkWindow.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkAxisActor2D, "$Revision: 1.51 $");
+#include <cmath>
+#include <limits>
+
 vtkStandardNewMacro(vtkAxisActor2D);
 
 vtkCxxSetObjectMacro(vtkAxisActor2D,LabelTextProperty,vtkTextProperty);
@@ -40,7 +42,7 @@ vtkAxisActor2D::vtkAxisActor2D()
   this->Position2Coordinate->SetCoordinateSystemToNormalizedViewport();
   this->Position2Coordinate->SetValue(0.75, 0.0);
   this->Position2Coordinate->SetReferenceCoordinate(NULL);
-  
+
   this->NumberOfLabels = 5;
 
   this->Title = NULL;
@@ -62,6 +64,9 @@ vtkAxisActor2D::vtkAxisActor2D()
 
   this->SizeFontRelativeToAxis = 0;
 
+  this->RulerMode = 0;
+  this->RulerDistance = 1.0;
+
   this->LabelTextProperty = vtkTextProperty::New();
   this->LabelTextProperty->SetBold(1);
   this->LabelTextProperty->SetItalic(1);
@@ -71,13 +76,13 @@ vtkAxisActor2D::vtkAxisActor2D()
   this->TitleTextProperty = vtkTextProperty::New();
   this->TitleTextProperty->ShallowCopy(this->LabelTextProperty);
 
-  this->LabelFormat = new char[8]; 
+  this->LabelFormat = new char[8];
   sprintf(this->LabelFormat,"%s","%-#6.3g");
 
   this->TitleMapper = vtkTextMapper::New();
   this->TitleActor = vtkActor2D::New();
   this->TitleActor->SetMapper(this->TitleMapper);
-  
+
   // To avoid deleting/rebuilding create once up front
   this->NumberOfLabelsBuilt = 0;
   this->LabelMappers = new vtkTextMapper * [VTK_MAX_LABELS];
@@ -94,12 +99,12 @@ vtkAxisActor2D::vtkAxisActor2D()
   this->AxisMapper->SetInput(this->Axis);
   this->AxisActor = vtkActor2D::New();
   this->AxisActor->SetMapper(this->AxisMapper);
-  
+
   this->AxisVisibility = 1;
   this->TickVisibility = 1;
   this->LabelVisibility = 1;
   this->TitleVisibility = 1;
-  
+
   this->LastPosition[0] = this->LastPosition[1] = 0;
   this->LastPosition2[0] = this->LastPosition2[1] = 0;
 
@@ -110,12 +115,12 @@ vtkAxisActor2D::vtkAxisActor2D()
 //----------------------------------------------------------------------------
 vtkAxisActor2D::~vtkAxisActor2D()
 {
-  if (this->LabelFormat) 
+  if (this->LabelFormat)
     {
     delete [] this->LabelFormat;
     this->LabelFormat = NULL;
     }
-  
+
   this->TitleMapper->Delete();
   this->TitleActor->Delete();
 
@@ -152,7 +157,7 @@ int vtkAxisActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
   int i, renderedSomething=0;
 
   this->BuildAxis(viewport);
-  
+
   // Everything is built, just have to render
   if ( this->Title != NULL && this->Title[0] != 0 && this->TitleVisibility )
     {
@@ -163,12 +168,12 @@ int vtkAxisActor2D::RenderOpaqueGeometry(vtkViewport *viewport)
     {
     renderedSomething += this->AxisActor->RenderOpaqueGeometry(viewport);
     }
-  
+
   if ( this->LabelVisibility )
     {
     for (i=0; i<this->NumberOfLabelsBuilt; i++)
       {
-      renderedSomething += 
+      renderedSomething +=
         this->LabelActors[i]->RenderOpaqueGeometry(viewport);
       }
     }
@@ -253,10 +258,13 @@ void vtkAxisActor2D::PrintSelf(ostream& os, vtkIndent indent)
     }
 
   os << indent << "Title: " << (this->Title ? this->Title : "(none)") << "\n";
+  os << indent << "Ruler Mode: "
+     << (this->RulerMode ? "On" : "Off") <<"\n";
+  os << indent << "Ruler Distance: " << this->GetRulerDistance() <<"\n";
   os << indent << "Number Of Labels: " << this->NumberOfLabels << "\n";
-  os << indent << "Number Of Labels Built: " 
+  os << indent << "Number Of Labels Built: "
      << this->NumberOfLabelsBuilt << "\n";
-  os << indent << "Range: (" << this->Range[0] 
+  os << indent << "Range: (" << this->Range[0]
      << ", " << this->Range[1] << ")\n";
 
   os << indent << "Label Format: " << this->LabelFormat << "\n";
@@ -264,20 +272,20 @@ void vtkAxisActor2D::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Label Factor: " << this->LabelFactor << "\n";
   os << indent << "Tick Length: " << this->TickLength << "\n";
   os << indent << "Tick Offset: " << this->TickOffset << "\n";
-  
-  os << indent << "Adjust Labels: " 
+
+  os << indent << "Adjust Labels: "
      << (this->AdjustLabels ? "On\n" : "Off\n");
-  
-  os << indent << "Axis Visibility: " 
+
+  os << indent << "Axis Visibility: "
      << (this->AxisVisibility ? "On\n" : "Off\n");
-  
-  os << indent << "Tick Visibility: " 
+
+  os << indent << "Tick Visibility: "
      << (this->TickVisibility ? "On\n" : "Off\n");
-  
-  os << indent << "Label Visibility: " 
+
+  os << indent << "Label Visibility: "
      << (this->LabelVisibility ? "On\n" : "Off\n");
-  
-  os << indent << "Title Visibility: " 
+
+  os << indent << "Title Visibility: "
      << (this->TitleVisibility ? "On\n" : "Off\n");
 
   os << indent << "MinorTickLength: " << this->MinorTickLength << endl;
@@ -285,7 +293,7 @@ void vtkAxisActor2D::PrintSelf(ostream& os, vtkIndent indent)
      << endl;
   os << indent << "TitlePosition: " << this->TitlePosition << endl;
 
-  os << indent << "Size Font Relative To Axis: " 
+  os << indent << "Size Font Relative To Axis: "
      << (this->SizeFontRelativeToAxis ? "On\n" : "Off\n");
 }
 
@@ -316,7 +324,7 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
   // Check to see whether we have to rebuild everything
   // Viewport change may not require rebuild
   positionsHaveChanged = 0;
-  int *lastPosition = 
+  int *lastPosition =
     this->PositionCoordinate->GetComputedViewportValue(viewport);
   int *lastPosition2 =
     this->Position2Coordinate->GetComputedViewportValue(viewport);
@@ -327,7 +335,7 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
     {
     positionsHaveChanged = 1;
     }
-  
+
   // See whether fonts have to be rebuilt (font size depends on viewport size)
   viewportSizeHasChanged = 0;
   size = viewport->GetSize();
@@ -343,14 +351,14 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
         viewport->GetMTime() < this->BuildTime &&
         viewport->GetVTKWindow()->GetMTime() < this->BuildTime &&
         this->GetMTime() < this->BuildTime &&
-        (!this->LabelVisibility || 
+        (!this->LabelVisibility ||
          this->LabelTextProperty->GetMTime() < this->BuildTime) &&
-        (!this->TitleVisibility || 
+        (!this->TitleVisibility ||
          this->TitleTextProperty->GetMTime() < this->BuildTime)) )
     {
     return;
     }
-  
+
   vtkDebugMacro(<<"Rebuilding axis");
 
   // Initialize and get important info
@@ -370,17 +378,17 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
   // We'll do our computation in viewport coordinates. First determine the
   // location of the endpoints.
   x = this->PositionCoordinate->GetComputedViewportValue(viewport);
-  p1[0] = x[0]; 
-  p1[1] = x[1]; 
+  p1[0] = x[0];
+  p1[1] = x[1];
   p1[2] = 0.0;
-  this->LastPosition[0] = x[0]; 
+  this->LastPosition[0] = x[0];
   this->LastPosition[1] = x[1];
 
   x = this->Position2Coordinate->GetComputedViewportValue(viewport);
-  p2[0] = x[0]; 
-  p2[1] = x[1]; 
+  p2[0] = x[0];
+  p2[1] = x[1];
   p2[2] = 0.0;
-  this->LastPosition2[0] = x[0]; 
+  this->LastPosition2[0] = x[0];
   this->LastPosition2[1] = x[1];
 
   double *xp1, *xp2, len=0.0;
@@ -411,15 +419,57 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
     theta = atan2(deltaY, deltaX);
     }
 
-  // First axis point
-  ptIds[0] = pts->InsertNextPoint(p1); 
+  // First axis point, where first tick is located
+  ptIds[0] = pts->InsertNextPoint(p1);
   xTick[0] = p1[0] + this->TickLength*sin(theta);
   xTick[1] = p1[1] - this->TickLength*cos(theta);
   xTick[2] = 0.0;
-
   pts->InsertNextPoint(xTick);
-  int numTicks = (this->AdjustedNumberOfLabels-1)*(
-    this->NumberOfMinorTicks+1)+1;
+
+  // Set up creation of ticks
+  double p21[3], length;
+  p21[0] = p2[0] - p1[0];
+  p21[1] = p2[1] - p1[1];
+  p21[2] = p2[2] - p1[2];
+  length = vtkMath::Normalize(p21);
+
+  // Sum of all the ticks: minor and majors. Contains the start and end ticks.
+  int numTicks;
+  // Distance between each minor tick.
+  double distance;
+  if ( this->RulerMode )
+    {
+    double wp1[3], wp2[3], wp21[3];
+    this->PositionCoordinate->GetValue(wp1);
+    this->Position2Coordinate->GetValue(wp2);
+    wp21[0] = wp2[0] - wp1[0];
+    wp21[1] = wp2[1] - wp1[1];
+    wp21[2] = wp2[2] - wp1[2];
+    const double worldLength = vtkMath::Norm(wp21);
+    const double worldDistance = this->RulerDistance / (this->NumberOfMinorTicks+1);
+    numTicks = static_cast<int>(
+      worldDistance <= 0.0 ? 0. : (worldLength / worldDistance));
+    const double precision = std::numeric_limits<double>::epsilon();
+    const bool hasRemainderInDivision = worldDistance <= 0.0 ? false:
+      std::fmod(worldLength, worldDistance) > precision;
+    // numTicks must contain the start and end ticks
+    // Don't add the end tick if it is already in numTicks:
+    //   when wLength / wDistance is an integer.
+    numTicks += hasRemainderInDivision ? 2 : 1;
+    // Tick distance was computed in world coordinates, convert to viewport
+    // coordinates.
+    const double worldToLocalRatio =
+      (worldLength < 0.0 ? 0. : length / worldLength);
+    distance = worldDistance * worldToLocalRatio;
+    }
+  else
+    {
+    numTicks = (this->AdjustedNumberOfLabels-1) *
+      (this->NumberOfMinorTicks+1) + 1;
+    distance = length / (numTicks-1);
+    }
+
+  // Only draw the inner ticks (not the start/end ticks)
   for (i = 1; i < numTicks - 1; i++)
     {
     int tickLength = 0;
@@ -431,8 +481,8 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
       {
       tickLength = this->MinorTickLength;
       }
-    xTick[0] = p1[0] + i * (p2[0] - p1[0]) / (numTicks - 1);
-    xTick[1] = p1[1] + i * (p2[1] - p1[1]) / (numTicks - 1);
+    xTick[0] = p1[0] + i * p21[0] * distance;
+    xTick[1] = p1[1] + i * p21[1] * distance;
     pts->InsertNextPoint(xTick);
     xTick[0] = xTick[0] + tickLength * sin(theta);
     xTick[1] = xTick[1] - tickLength * cos(theta);
@@ -440,19 +490,19 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
     }
 
   // Last axis point
-  ptIds[1] = pts->InsertNextPoint(p2); 
+  ptIds[1] = pts->InsertNextPoint(p2);
   xTick[0] = p2[0] + this->TickLength*sin(theta);
   xTick[1] = p2[1] - this->TickLength*cos(theta);
   pts->InsertNextPoint(xTick);
 
+  // Add the axis if requested
   if (this->AxisVisibility)
     {
     lines->InsertNextCell(2, ptIds);
     }
 
-  // Create points and lines
-
-  if (this->TickVisibility) 
+  // Create lines representing the tick marks
+  if (this->TickVisibility)
     {
     for (i = 0; i < numTicks; i++)
       {
@@ -479,9 +529,9 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
         val = this->AdjustedRange[0] + i * interval;
         sprintf(string, this->LabelFormat, val);
         this->LabelMappers[i]->SetInput(string);
-        
+
         // Check if the label text has changed
-        
+
         if (this->LabelMappers[i]->GetMTime() > labeltime)
           {
           labeltime = this->LabelMappers[i]->GetMTime();
@@ -517,8 +567,8 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
       {
       if ( ! this->SizeFontRelativeToAxis )
         {
-        vtkTextMapper::SetMultipleRelativeFontSize(viewport, 
-                                                   this->LabelMappers, 
+        vtkTextMapper::SetMultipleRelativeFontSize(viewport,
+                                                   this->LabelMappers,
                                                    this->AdjustedNumberOfLabels,
                                                    size,
                                                    this->LastMaxLabelSize,
@@ -530,8 +580,8 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
          for (i = 0; i < this->AdjustedNumberOfLabels; i++)
           {
           fontSize = this->LabelMappers[i]->
-            SetConstrainedFontSize(viewport, 
-                                   static_cast<int>((1.0/this->AdjustedNumberOfLabels)*len), 
+            SetConstrainedFontSize(viewport,
+                                   static_cast<int>((1.0/this->AdjustedNumberOfLabels)*len),
                                    static_cast<int>(0.2*len) );
           if ( fontSize < minFontSize )
             {
@@ -546,17 +596,17 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
          this->LabelMappers[minLabel]->GetSize(viewport,this->LastMaxLabelSize);
         }
       }
-    
+
     // Position the mappers
     for (i = 0; i < this->AdjustedNumberOfLabels; i++)
       {
       pts->GetPoint((this->NumberOfMinorTicks+1) * 2 * i + 1, xTick);
       this->LabelMappers[i]->GetSize(viewport, stringSize);
-      this->SetOffsetPosition(xTick, 
-                              theta, 
-                              this->LastMaxLabelSize[0], 
-                              this->LastMaxLabelSize[1], 
-                              this->TickOffset, 
+      this->SetOffsetPosition(xTick,
+                              theta,
+                              this->LastMaxLabelSize[0],
+                              this->LastMaxLabelSize[1],
+                              this->TickOffset,
                               this->LabelActors[i]);
       }
     } // If labels visible
@@ -587,8 +637,8 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
         }
       else
         {
-        this->TitleMapper->SetConstrainedFontSize(viewport, 
-                                                  static_cast<int>(0.33*len), 
+        this->TitleMapper->SetConstrainedFontSize(viewport,
+                                                  static_cast<int>(0.33*len),
                                                   static_cast<int>(0.2*len) );
         this->TitleMapper->GetSize(viewport, stringSize);
         }
@@ -602,20 +652,20 @@ void vtkAxisActor2D::BuildAxis(vtkViewport *viewport)
     xTick[1] = p1[1] + (p2[1] - p1[1]) * this->TitlePosition;
     xTick[0] = xTick[0] + (this->TickLength + this->TickOffset) * sin(theta);
     xTick[1] = xTick[1] - (this->TickLength + this->TickOffset) * cos(theta);
-    
+
     offset = 0.0;
     if (this->LabelVisibility)
       {
-      offset = this->ComputeStringOffset(this->LastMaxLabelSize[0], 
+      offset = this->ComputeStringOffset(this->LastMaxLabelSize[0],
                                          this->LastMaxLabelSize[1],
                                          theta);
       }
 
-    this->SetOffsetPosition(xTick, 
-                            theta, 
-                            stringSize[0], 
-                            stringSize[1], 
-                            static_cast<int>(offset), 
+    this->SetOffsetPosition(xTick,
+                            theta,
+                            stringSize[0],
+                            stringSize[1],
+                            static_cast<int>(offset),
                             this->TitleActor);
     } // If title visible
 
@@ -638,20 +688,20 @@ void vtkAxisActor2D::UpdateAdjustedRange()
     {
     return;
     }
-  
+
   if ( this->AdjustLabels )
     {
     double interval;
-    this->ComputeRange(this->Range, 
-                       this->AdjustedRange, 
-                       this->NumberOfLabels, 
-                       this->AdjustedNumberOfLabels, 
+    this->ComputeRange(this->Range,
+                       this->AdjustedRange,
+                       this->NumberOfLabels,
+                       this->AdjustedNumberOfLabels,
                        interval);
     }
   else
     {
     this->AdjustedNumberOfLabels = this->NumberOfLabels;
-    this->AdjustedRange[0] = this->Range[0]; 
+    this->AdjustedRange[0] = this->Range[0];
     this->AdjustedRange[1] = this->Range[1];
     }
   this->AdjustedRangeBuildTime.Modified();
@@ -661,13 +711,13 @@ void vtkAxisActor2D::UpdateAdjustedRange()
 // for an axis. It returns the number of ticks
 int vtkAxisActor2DComputeTicks(double sRange[2], double &interval,
                                double &root)
-{  
+{
   // first we try assuming the first value is reasonable
   int numTicks;
   double range    = fabs(sRange[1]-sRange[0]);
   int rootPower   = static_cast<int>(floor(log10(range)-1));
   root     = pow(10.0,rootPower);
-  // val will be between 10 and 100 inclusive of 10 but not 100 
+  // val will be between 10 and 100 inclusive of 10 but not 100
   double val      = range/root;
   // first we check for an exact match
   for (numTicks = 5; numTicks < 9; ++numTicks)
@@ -678,7 +728,7 @@ int vtkAxisActor2DComputeTicks(double sRange[2], double &interval,
       return numTicks;
       }
     }
-  
+
   // if there isn't an exact match find a reasonable value
   int newIntScale = 10;
   if (val > 10)
@@ -733,7 +783,7 @@ int vtkAxisActor2DComputeTicks(double sRange[2], double &interval,
     {
     newIntScale = 100;
     }
-  
+
   // how many ticks should we have
   switch (newIntScale)
     {
@@ -771,10 +821,10 @@ int vtkAxisActor2DComputeTicks(double sRange[2], double &interval,
 //satisfied. First the final range includes at least the initial range, and
 //second the final range divided by the number of ticks (minus one) will be a
 //reasonable interval
-void vtkAxisActor2D::ComputeRange(double inRange[2], 
+void vtkAxisActor2D::ComputeRange(double inRange[2],
                                   double outRange[2],
-                                  int vtkNotUsed(inNumTicks), 
-                                  int &numTicks, 
+                                  int vtkNotUsed(inNumTicks),
+                                  int &numTicks,
                                   double &interval)
 {
   // Handle the range
@@ -806,7 +856,7 @@ void vtkAxisActor2D::ComputeRange(double inRange[2],
 
   double root;
   numTicks = vtkAxisActor2DComputeTicks(sRange, interval, root);
-  
+
   // is the starting point reasonable?
   if (fabs(sRange[0]/root - floor(sRange[0]/root)) < 0.01)
     {
@@ -831,7 +881,7 @@ void vtkAxisActor2D::ComputeRange(double inRange[2],
       outRange[1] = outRange[0] + (numTicks-1.0)*interval;
       }
     }
-  
+
   // Adust if necessary
   if ( inRange[0] > inRange[1] )
     {
@@ -840,26 +890,26 @@ void vtkAxisActor2D::ComputeRange(double inRange[2],
     outRange[0] = sRange[0];
     interval = -interval;
     }
-  
+
 }
 
 //----------------------------------------------------------------------------
 // Position text with respect to a point (xTick) where the angle of the line
 // from the point to the center of the text is given by theta. The offset
 // is the spacing between ticks and labels.
-void vtkAxisActor2D::SetOffsetPosition(double xTick[3], double theta, 
-                                       int stringWidth, int stringHeight, 
+void vtkAxisActor2D::SetOffsetPosition(double xTick[3], double theta,
+                                       int stringWidth, int stringHeight,
                                        int offset, vtkActor2D *actor)
 {
   double x, y, center[2];
   int pos[2];
-   
+
   x = stringWidth/2.0 + offset;
   y = stringHeight/2.0 + offset;
 
   center[0] = xTick[0] + x*sin(theta);
   center[1] = xTick[1] - y*cos(theta);
-    
+
   pos[0] = static_cast<int>(center[0] - stringWidth/2.0);
   pos[1] = static_cast<int>(center[1] - stringHeight/2.0);
 

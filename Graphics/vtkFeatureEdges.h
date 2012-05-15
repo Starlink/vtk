@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFeatureEdges.h,v $
+  Module:    vtkFeatureEdges.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,12 +37,12 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkFeatureEdges : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkFeatureEdges,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkFeatureEdges,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -88,8 +88,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -113,7 +113,7 @@ protected:
   int NonManifoldEdges;
   int ManifoldEdges;
   int Coloring;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 private:
   vtkFeatureEdges(const vtkFeatureEdges&);  // Not implemented.
   void operator=(const vtkFeatureEdges&);  // Not implemented.

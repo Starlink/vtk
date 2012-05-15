@@ -305,7 +305,7 @@ xmlSplitQName2(const xmlChar *name, xmlChar **prefix) {
  * parse an XML qualified name string,i
  *
  * returns NULL if it is not a Qualified Name, otherwise, update len
- *         with the lenght in byte of the prefix and return a pointer
+ *         with the length in byte of the prefix and return a pointer
  *         to the start of the name without the prefix
  */
 
@@ -8875,7 +8875,7 @@ xmlDOMWrapCloneNode(xmlDOMWrapCtxtPtr ctxt,
                 }
                 memset(clone, 0, sizeof(xmlNode));              
                 /*
-                * Set hierachical links.
+                * Set hierarchical links.
                 */
                 if (resultClone != NULL) {          
                     clone->parent = parentClone;
@@ -8899,7 +8899,7 @@ xmlDOMWrapCloneNode(xmlDOMWrapCtxtPtr ctxt,
                 }
                 memset(clone, 0, sizeof(xmlAttr));              
                 /*
-                * Set hierachical links.
+                * Set hierarchical links.
                 * TODO: Change this to add to the end of attributes.
                 */
                 if (resultClone != NULL) {

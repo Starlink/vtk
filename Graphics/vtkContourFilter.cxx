@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContourFilter.cxx,v $
+  Module:    vtkContourFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,10 +40,10 @@
 #include "vtkTimerLog.h"
 #include "vtkUniformGrid.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkContourFilter, "$Revision: 1.131 $");
 vtkStandardNewMacro(vtkContourFilter);
 vtkCxxSetObjectMacro(vtkContourFilter,ScalarTree,vtkScalarTree);
 
@@ -298,8 +298,8 @@ int vtkContourFilter::RequestData(
       this->SynchronizedTemplates3D->SetComputeScalars(this->ComputeScalars);      
       this->SynchronizedTemplates3D->
         SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
-      return 
-        this->SynchronizedTemplates3D->ProcessRequest(request,inputVector,outputVector);
+
+      return this->SynchronizedTemplates3D->ProcessRequest(request,inputVector,outputVector);
       }
     } //if image data
   
@@ -373,6 +373,11 @@ int vtkContourFilter::RequestData(
 
     cgrid = vtkContourGrid::New();
     cgrid->SetInput(input);
+    if ( this->Locator )
+      {
+      cgrid->SetLocator( this->Locator );
+      }
+      
     for (i = 0; i < numContours; i++)
       {
       cgrid->SetValue(i, values[i]);
@@ -480,6 +485,12 @@ int vtkContourFilter::RequestData(
             }
           input->GetCell(cellId,cell);
           cellPts = cell->GetPointIds();
+          if (cellScalars->GetSize()/cellScalars->GetNumberOfComponents() <
+            cellPts->GetNumberOfIds())
+            {
+            cellScalars->Allocate(
+              cellScalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
+            }
           inScalars->GetTuples(cellPts,cellScalars);
         
           if (dimensionality == 3 &&  ! (cellId % 5000) ) 
@@ -569,7 +580,7 @@ int vtkContourFilter::RequestData(
 
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkContourFilter::SetLocator(vtkPointLocator *locator)
+void vtkContourFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {
@@ -620,53 +631,81 @@ int vtkContourFilter::ProcessRequest(vtkInformation* request,
     {
     // compute the priority for this UE
     vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-    if (!inInfo)
-      {
-      return 1;
-      }
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
     // get the range of the input if available
-    vtkInformation *fInfo = 
-      vtkDataObject::GetActiveFieldInformation
-      (inInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS, 
-       vtkDataSetAttributes::SCALARS);
+    vtkInformation *fInfo = NULL;
+    vtkDataArray *inscalars = this->GetInputArrayToProcess(0, inputVector);
+    if (inscalars)
+      {
+      vtkInformationVector *miv = inInfo->Get(vtkDataObject::POINT_DATA_VECTOR());
+      for (int index = 0; index < miv->GetNumberOfInformationObjects(); index++)
+        {
+        vtkInformation *mInfo = miv->GetInformationObject(index);
+        const char *minfo_arrayname =
+          mInfo->Get(vtkDataObject::FIELD_ARRAY_NAME());
+        if (minfo_arrayname && !strcmp(minfo_arrayname, inscalars->GetName()))
+          {
+          fInfo = mInfo;
+          break;
+          }
+        }
+      }
+    else
+      {
+      fInfo = vtkDataObject::GetActiveFieldInformation
+        (inInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS,
+         vtkDataSetAttributes::SCALARS);
+      }
+
     if (!fInfo)
       {
       return 1;
       }
-    double *range = fInfo->Get(vtkDataObject::PIECE_FIELD_RANGE());
-    if (range)
-      {
-      //cerr << "CF(" << this << ") Found " << range[0] << ".." << range[1] << endl;
-      }
-    else
-      {
-      //cerr << "CF(" << this << ") Missed " << endl;
-      }
 
+    double *range = fInfo->Get(vtkDataObject::PIECE_FIELD_RANGE());
     int numContours = this->ContourValues->GetNumberOfContours();
     if (range && numContours)
       {
       // compute the priority
       // get the incoming priority if any
-      double inPrior = 1;
+      double inPriority = 1;
       if (inInfo->Has(vtkStreamingDemandDrivenPipeline::PRIORITY()))
         {
-        inPrior = inInfo->Get(vtkStreamingDemandDrivenPipeline::PRIORITY());
+        inPriority = inInfo->Get(vtkStreamingDemandDrivenPipeline::PRIORITY());
         }
+      outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),inPriority);
+      if (!inPriority)
+        {
+        return 1;
+        }
+
       // do any contours intersect the range?
       double *values=this->ContourValues->GetValues();
-      double prior = 0;
       int i;
       for (i=0; i < numContours; i++)
         {
         if (values[i] >= range[0] && values[i] <= range[1])
           {
-          prior = inPrior;
-          break;
+          return 1;
           }
         }
-      outputVector->GetInformationObject(0)->
-        Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),prior);
+
+      double inRes = 1.0;
+      if (inInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION()))
+        {
+        inRes = inInfo->Get
+          (vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION());
+        }
+      if (inRes >= 0.99)
+        {
+        outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),0.0);
+        }
+      else
+        {
+        outInfo->Set
+          (vtkStreamingDemandDrivenPipeline::PRIORITY(),inPriority*0.1);
+        }
       }
     return 1;
     }

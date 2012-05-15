@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThreadedImageAlgorithm.cxx,v $
+  Module:    vtkThreadedImageAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkThreadedImageAlgorithm, "$Revision: 1.12 $");
 
 //----------------------------------------------------------------------------
 vtkThreadedImageAlgorithm::vtkThreadedImageAlgorithm()
@@ -238,17 +237,19 @@ int vtkThreadedImageAlgorithm::RequestData(
     for (i = 0; i < this->GetNumberOfOutputPorts(); ++i)
       {
       vtkInformation* info = outputVector->GetInformationObject(i);
-      vtkImageData *outData = static_cast<vtkImageData *>(
+      vtkImageData *outData = vtkImageData::SafeDownCast(
         info->Get(vtkDataObject::DATA_OBJECT()));
       str.Outputs[i] = outData;
-      
-      int updateExtent[6];
-      info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), 
-                updateExtent);
-      
-      // for image filters as a convenience we usually allocate the output data
-      // in the superclass
-      this->AllocateOutputData(outData, updateExtent);
+      if (outData)
+        {
+        int updateExtent[6];
+        info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),
+                  updateExtent);
+
+        // unlike geometry filters, for image filters data is pre-allocated
+        // in the superclass (which means, in this class)
+        this->AllocateOutputData(outData, updateExtent);
+        }
       }
     }
   
@@ -270,8 +271,8 @@ int vtkThreadedImageAlgorithm::RequestData(
         for (j = 0; j < portInfo->GetNumberOfInformationObjects(); ++j)
           {
           vtkInformation* info = portInfo->GetInformationObject(j);
-          str.Inputs[i][j] =
-            static_cast<vtkImageData*>(info->Get(vtkDataObject::DATA_OBJECT()));
+          str.Inputs[i][j] = vtkImageData::SafeDownCast(
+            info->Get(vtkDataObject::DATA_OBJECT()));
           }
         }
       }
@@ -307,7 +308,7 @@ int vtkThreadedImageAlgorithm::RequestData(
     }
   if (str.Outputs)
     {
-    delete [] str.Outputs;  
+    delete [] str.Outputs;
     }
 
   return 1;
@@ -319,9 +320,9 @@ void vtkThreadedImageAlgorithm::ThreadedRequestData(
   vtkInformation* vtkNotUsed( request ),
   vtkInformationVector** vtkNotUsed( inputVector ),
   vtkInformationVector* vtkNotUsed( outputVector ),
-  vtkImageData ***inData, 
+  vtkImageData ***inData,
   vtkImageData **outData,
-  int extent[6], 
+  int extent[6],
   int threadId)
 {
   this->ThreadedExecute(inData[0][0], outData[0], extent, threadId);
@@ -330,12 +331,15 @@ void vtkThreadedImageAlgorithm::ThreadedRequestData(
 //----------------------------------------------------------------------------
 // The execute method created by the subclass.
 void vtkThreadedImageAlgorithm::ThreadedExecute(
-  vtkImageData *vtkNotUsed(inData), 
-  vtkImageData *vtkNotUsed(outData),
-  int extent[6], 
-  int vtkNotUsed(threadId))
+  vtkImageData * inData,
+  vtkImageData * outData,
+  int extent[6],
+  int threadId)
 {
-  extent = extent;
+  (void)inData;
+  (void)outData;
+  (void)extent;
+  (void)threadId;
   vtkErrorMacro("Subclass should override this method!!!");
 }
 

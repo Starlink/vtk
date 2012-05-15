@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFrustumSource.cxx,v $
+  Module:    vtkFrustumSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,10 +22,10 @@
 #include "vtkInformationVector.h"
 #include "vtkCellArray.h"
 
-vtkCxxRevisionMacro(vtkFrustumSource, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkFrustumSource);
 vtkCxxSetObjectMacro(vtkFrustumSource,Planes,vtkPlanes);
 
+// ----------------------------------------------------------------------------
 vtkFrustumSource::vtkFrustumSource()
 {
   this->Planes=0;
@@ -35,6 +35,8 @@ vtkFrustumSource::vtkFrustumSource()
   // a source has no input port.
   this->SetNumberOfInputPorts(0);
 }
+
+// ----------------------------------------------------------------------------
 vtkFrustumSource::~vtkFrustumSource()
 {
   if(this->Planes!=0)
@@ -43,6 +45,7 @@ vtkFrustumSource::~vtkFrustumSource()
     }
 }
 
+// ----------------------------------------------------------------------------
 int vtkFrustumSource::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
@@ -79,8 +82,6 @@ int vtkFrustumSource::RequestData(
   double n0[3];
   double n1[3];
   double c[3];
-  double cosAngle;
-  double sinAngle;
   
   // angle between left and right planes
   this->Planes->GetPlane(0)->GetNormal(n0);
@@ -88,10 +89,10 @@ int vtkFrustumSource::RequestData(
   
   vtkMath::Normalize(n0);
   vtkMath::Normalize(n1);
-  cosAngle=vtkMath::Dot(n0,n1);
+  vtkMath::Dot(n0,n1);
   
   vtkMath::Cross(n0,n1,c);
-  sinAngle=vtkMath::Norm(c);
+  vtkMath::Norm(c);
   
    // angle between bottom and top planes
   this->Planes->GetPlane(2)->GetNormal(n0);
@@ -99,10 +100,10 @@ int vtkFrustumSource::RequestData(
   
   vtkMath::Normalize(n0);
   vtkMath::Normalize(n1);
-  cosAngle=vtkMath::Dot(n0,n1);
+  vtkMath::Dot(n0,n1);
   
   vtkMath::Cross(n0,n1,c);
-  sinAngle=vtkMath::Norm(c);
+  vtkMath::Norm(c);
   
   if(this->ShowLines)
     {
@@ -376,6 +377,25 @@ void vtkFrustumSource::ComputePoint(int planes[3],
     }
 }
 
+// ----------------------------------------------------------------------------
+// Description:
+// Modified GetMTime because of Planes.
+unsigned long vtkFrustumSource::GetMTime()
+{
+  unsigned long mTime=this->Superclass::GetMTime();
+  if(this->Planes!=0)
+    {
+    unsigned long time;
+    time = this->Planes->GetMTime();
+    if(time>mTime)
+      {
+      mTime=time;
+      }
+    }
+  return mTime;
+}
+
+// ----------------------------------------------------------------------------
 void vtkFrustumSource::PrintSelf(ostream &os,
                                  vtkIndent indent)
 {

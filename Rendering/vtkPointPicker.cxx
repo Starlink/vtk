@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointPicker.cxx,v $
+  Module:    vtkPointPicker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,11 +16,12 @@
 
 #include "vtkImageData.h"
 #include "vtkMath.h"
+#include "vtkProp3D.h"
 #include "vtkMapper.h"
 #include "vtkAbstractVolumeMapper.h"
+#include "vtkImageMapper3D.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPointPicker, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkPointPicker);
 
 vtkPointPicker::vtkPointPicker()
@@ -38,7 +39,8 @@ double vtkPointPicker::IntersectWithLine(double p1[3], double p2[3], double tol,
   double ray[3], rayFactor, tMin, x[3], t, projXYZ[3], minXYZ[3];
   vtkDataSet *input;
   vtkMapper *mapper;
-  vtkAbstractVolumeMapper *volumeMapper;
+  vtkAbstractVolumeMapper *volumeMapper = 0;
+  vtkImageMapper3D *imageMapper = 0;
 
   // Get the underlying dataset
   //
@@ -50,12 +52,19 @@ double vtkPointPicker::IntersectWithLine(double p1[3], double p2[3], double tol,
     {
     input = volumeMapper->GetDataSetInput();
     }
+  else if ( (imageMapper=vtkImageMapper3D::SafeDownCast(m)) != NULL )
+    {
+    input = imageMapper->GetInput();
+    }
   else
     {
     return 2.0;
     }
 
-  if ( (numPts = input->GetNumberOfPoints()) < 1 )
+  ptId = 0;
+  numPts = input->GetNumberOfPoints();
+
+  if ( numPts <= ptId )
     {
     return 2.0;
     }
@@ -72,11 +81,39 @@ double vtkPointPicker::IntersectWithLine(double p1[3], double p2[3], double tol,
     return 2.0;
     }
 
+  //   For image, find the single intersection point
+  //
+  if ( imageMapper != NULL )
+    {
+    // Get the slice plane for the image and intersect with ray
+    double normal[4];
+    imageMapper->GetSlicePlaneInDataCoords(p->GetMatrix(), normal);
+    double w1 = vtkMath::Dot(p1, normal) + normal[3];
+    double w2 = vtkMath::Dot(p2, normal) + normal[3];
+    if (w1*w2 >= 0)
+      {
+      w1 = 0.0;
+      w2 = 1.0;
+      }
+    double w = (w2 - w1);
+    x[0] = (p1[0]*w2 - p2[0]*w1)/w;
+    x[1] = (p1[1]*w2 - p2[1]*w1)/w;
+    x[2] = (p1[2]*w2 - p2[2]*w1)/w;
+
+    // Get the one point that will be checked
+    ptId = input->FindPoint(x);
+    numPts = ptId + 1;
+    if (ptId < 0)
+      {
+      return VTK_DOUBLE_MAX;
+      }
+    }
+
   //  Project each point onto ray.  Keep track of the one within the
   //  tolerance and closest to the eye (and within the clipping range).
   //
   double dist, maxDist, minPtDist=VTK_DOUBLE_MAX;
-  for (minPtId=(-1),tMin=VTK_DOUBLE_MAX,ptId=0; ptId<numPts; ptId++) 
+  for (minPtId=(-1),tMin=VTK_DOUBLE_MAX; ptId<numPts; ptId++) 
     {
     input->GetPoint(ptId,x);
 

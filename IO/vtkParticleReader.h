@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParticleReader.h,v $
+  Module:    vtkParticleReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_IO_EXPORT vtkParticleReader : public vtkPolyDataAlgorithm
 {
 public:
   static vtkParticleReader *New();
-  vtkTypeRevisionMacro(vtkParticleReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkParticleReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);   
 
   // Description:

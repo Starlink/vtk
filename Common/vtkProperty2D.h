@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProperty2D.h,v $
+  Module:    vtkProperty2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class vtkViewport;
 class VTK_COMMON_EXPORT vtkProperty2D : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkProperty2D,vtkObject);
+  vtkTypeMacro(vtkProperty2D,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -97,11 +97,11 @@ public:
   void SetDisplayLocationToForeground() 
     {this->DisplayLocation = VTK_FOREGROUND_LOCATION;};
 
+//BTX
   // Description:
   // Have the device specific subclass render this property.
-  //BTX
   virtual void Render (vtkViewport* vtkNotUsed(viewport))  {}
-  //ETX
+//ETX
 
 protected:
   vtkProperty2D();

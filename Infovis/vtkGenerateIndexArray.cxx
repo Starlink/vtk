@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenerateIndexArray.cxx,v $
+  Module:    vtkGenerateIndexArray.cxx
 
   Copyright 2007 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
@@ -25,15 +25,15 @@
 #include "vtkPointData.h"
 #include "vtkTable.h"
 
-#include <vtkstd/map>
+#include <map>
 
-vtkCxxRevisionMacro(vtkGenerateIndexArray, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkGenerateIndexArray);
 
 vtkGenerateIndexArray::vtkGenerateIndexArray() :
   ArrayName(0),
   FieldType(ROW_DATA),
-  ReferenceArrayName(0)
+  ReferenceArrayName(0),
+  PedigreeID(false)
 {
   this->SetArrayName("index");
 }
@@ -50,6 +50,7 @@ void vtkGenerateIndexArray::PrintSelf(ostream& os, vtkIndent indent)
   os << "ArrayName: " << (this->ArrayName ? this->ArrayName : "(none)") << endl;
   os << "FieldType: " << this->FieldType << endl;
   os << "ReferenceArrayName: " << (this->ReferenceArrayName ? this->ReferenceArrayName : "(none)") << endl;
+  os << "PedigreeID: " << this->PedigreeID << endl;
 }
 
 int vtkGenerateIndexArray::ProcessRequest(
@@ -89,8 +90,6 @@ int vtkGenerateIndexArray::RequestDataObject(
         vtkDataObject* newOutput = input->NewInstance();
         newOutput->SetPipelineInformation(info);
         newOutput->Delete();
-        this->GetOutputPortInformation(0)->Set(
-          vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
         }
       }
     return 1;
@@ -171,6 +170,9 @@ int vtkGenerateIndexArray::RequestData(
   output_attributes->AddArray(output_array);
   output_array->Delete();
 
+  if(this->PedigreeID)
+    output_attributes->SetPedigreeIds(output_array);
+
   // Generate indices based on the reference array ...
   if(this->ReferenceArrayName && strlen(this->ReferenceArrayName))
     {
@@ -182,13 +184,21 @@ int vtkGenerateIndexArray::RequestData(
       return 0;
       }
 
-    typedef vtkstd::map<vtkVariant, vtkIdType, vtkVariantLessThan> index_map_t;
+    typedef std::map<vtkVariant, vtkIdType, vtkVariantLessThan> index_map_t;
     index_map_t index_map;
 
     for(vtkIdType i = 0; i != output_count; ++i)
       {
       if(!index_map.count(reference_array->GetVariantValue(i)))
-        index_map.insert(vtkstd::make_pair(reference_array->GetVariantValue(i), 0));
+        {
+#ifdef _RWSTD_NO_MEMBER_TEMPLATES
+        // Deal with Sun Studio old libCstd.
+        // http://sahajtechstyle.blogspot.com/2007/11/whats-wrong-with-sun-studio-c.html
+        index_map.insert(std::pair<const vtkVariant,vtkIdType>(reference_array->GetVariantValue(i), 0));
+#else
+        index_map.insert(std::make_pair(reference_array->GetVariantValue(i), 0));
+#endif
+        }
       }
 
     vtkIdType index = 0;

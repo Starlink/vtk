@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEncodedGradientEstimator.h,v $
+  Module:    vtkEncodedGradientEstimator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class vtkMultiThreader;
 class VTK_VOLUMERENDERING_EXPORT vtkEncodedGradientEstimator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkEncodedGradientEstimator,vtkObject);
+  vtkTypeMacro(vtkEncodedGradientEstimator,vtkObject);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:
@@ -80,7 +80,7 @@ public:
 
   // Description:
   // Get the encoded normal at an x,y,z location in the volume
-  int   GetEncodedNormalIndex( int xyz_index );
+  int   GetEncodedNormalIndex( vtkIdType xyz_index );
   int   GetEncodedNormalIndex( int x_index, int y_index, int z_index );
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeFractalSource.h,v $
+  Module:    vtkHyperOctreeFractalSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class vtkImplicitFunction;
 class VTK_GRAPHICS_EXPORT vtkHyperOctreeFractalSource : public vtkHyperOctreeAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkHyperOctreeFractalSource,vtkHyperOctreeAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeFractalSource,vtkHyperOctreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   static vtkHyperOctreeFractalSource *New();

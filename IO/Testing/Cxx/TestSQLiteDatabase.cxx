@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestSQLiteDatabase.cxx,v $
+  Module:    TestSQLiteDatabase.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,17 +30,93 @@
 #include "vtkVariant.h"
 #include "vtkVariantArray.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 int TestSQLiteDatabase( int /*argc*/, char* /*argv*/[])
 {
+  bool status;
+
+  cerr << ">>>>> Testing bad input." << endl;
+
+  vtkSQLDatabase* db0 = vtkSQLDatabase::CreateFromURL( 0 );
+  if ( db0 )
+    {
+    cerr << "ERROR: Created a database from a NULL URL! How?" << endl;
+    db0->Delete();
+    return 1;
+    }
+
+  cerr << ">>>>> Testing creation modes." << endl;
+
+  vtkSQLiteDatabase* db1 = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( "sqlite://local.db" ) );
+  status = db1->Open("", vtkSQLiteDatabase::CREATE_OR_CLEAR);
+  vtkSQLQuery* query1 = db1->GetQueryInstance();
+  query1->SetQuery("CREATE TABLE test (id INTEGER)");
+  if (!query1->Execute())
+    {
+      cerr << "Create query failed" << endl;
+      return 1;
+    }
+  if ( ! status )
+    {
+    cerr << "Couldn't open database using CREATE_OR_CLEAR.\n";
+    return 1;
+    }
+  db1->Delete();
+  query1->Delete();
+
+  vtkSQLiteDatabase* db2 = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( "sqlite://local.db" ) );
+  status = db2->Open("", vtkSQLiteDatabase::CREATE);
+  if ( status )
+    {
+    cerr << "Using CREATE on an existing file should have failed but did not.\n";
+    return 1;
+    }
+  db2->Delete();
+
+  vtkSQLiteDatabase* db3 = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( "sqlite://local.db" ) );
+  status = db3->Open("", vtkSQLiteDatabase::USE_EXISTING_OR_CREATE);
+  if ( !status )
+    {
+    cerr << "Using USE_EXISTING_OR_CREATE did not work.\n";
+    return 1;
+    }
+  vtkSQLQuery* query3 = db3->GetQueryInstance();
+  query3->SetQuery("SELECT * from test");
+  if (!query3->Execute())
+    {
+      cerr << "Select query failed" << endl;
+      return 1;
+    }
+  db3->Delete();
+  query3->Delete();
+
+  vtkSQLiteDatabase* db4 = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( "sqlite://local.db" ) );
+  status = db4->Open("", vtkSQLiteDatabase::CREATE_OR_CLEAR);
+  if ( !status )
+    {
+    cerr << "Using CREATE_OR_CLEAR did not work.\n";
+    return 1;
+    }
+  vtkSQLQuery* query4 = db4->GetQueryInstance();
+  query4->SetQuery("SELECT * from test");
+  if (query4->Execute())
+    {
+      cerr << "Select query succeeded when it shouldn't have." << endl;
+      return 1;
+    }
+  db4->Delete();
+  query4->Delete();
+
+  cerr << ">>>>> Testing database functions" << endl;
+
   vtkSQLiteDatabase* db = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( "sqlite://:memory:" ) );
-  bool status = db->Open("");
+  status = db->Open("");
 
   if ( ! status )
     {
-      cerr << "Couldn't open database.\n";
-      return 1;
+    cerr << "Couldn't open database.\n";
+    return 1;
     }
 
   vtkSQLQuery* query = db->GetQueryInstance();
@@ -218,7 +294,7 @@ int TestSQLiteDatabase( int /*argc*/, char* /*argv*/[])
     return 1;
     }
 
-  vtkstd::vector<vtkStdString> tables;
+  std::vector<vtkStdString> tables;
   for ( tblHandle = 0; query->NextRow(); ++ tblHandle )
     {
     vtkStdString tblNameSch( schema->GetTableNameFromHandle( tblHandle ) );
@@ -302,7 +378,7 @@ int TestSQLiteDatabase( int /*argc*/, char* /*argv*/[])
   // 6. Drop tables
   cerr << "@@ Dropping these tables...";
 
-  for ( vtkstd::vector<vtkStdString>::iterator it = tables.begin();
+  for ( std::vector<vtkStdString>::iterator it = tables.begin();
         it != tables.end(); ++ it )
     {
     queryStr = "DROP TABLE ";

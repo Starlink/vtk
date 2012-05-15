@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPUnstructuredDataReader.h,v $
+  Module:    vtkXMLPUnstructuredDataReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class vtkXMLUnstructuredDataReader;
 class VTK_IO_EXPORT vtkXMLPUnstructuredDataReader : public vtkXMLPDataReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLPUnstructuredDataReader,vtkXMLPDataReader);
+  vtkTypeMacro(vtkXMLPUnstructuredDataReader,vtkXMLPDataReader);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // For the specified port, copy the information this reader sets up in

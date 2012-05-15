@@ -4,7 +4,7 @@
 ** Copyright (c) 2003, 2006   Gerald I. Evenden
 */
 static const char
-LIBPROJ_ID[] = "$Id: proj_laea.c,v 1.1 2008-11-07 16:41:14 jeff Exp $";
+LIBPROJ_ID[] = "Id";
 /*
 ** Permission is hereby granted, free of charge, to any person obtaining
 ** a copy of this software and associated documentation files (the
@@ -49,11 +49,11 @@ PROJ_HEAD(laea, "Lambert Azimuthal Equal Area") "\n\tAzi, Sph&Ell";
 #define EQUIT  2
 #define OBLIQ  3
 FORWARD(e_forward); /* ellipsoid */
-  double coslam, sinlam, sinphi, q, sinb=0., cosb=0., b=0.;
+  double coslam, sinlam, q, sinb=0., cosb=0., b=0.;
 
   coslam = cos(lp.lam);
   sinlam = sin(lp.lam);
-  sinphi = sin(lp.phi);
+
   q = proj_qsfn(lp.phi, P->apa);
   if (P->mode == OBLIQ || P->mode == EQUIT) {
     sinb = q / P->qp;
@@ -259,17 +259,7 @@ ENTRY1(laea, apa)
   }
 ENDENTRY(P)
 /*
-** $Log: proj_laea.c,v $
-** Revision 1.1  2008-11-07 16:41:14  jeff
-** ENH: Adding a 2D geoview. Adding the geographic projection library libproj4
-** to Utilities. Updating the architecture of the geospatial views. All
-** multi-resolution sources are now subclasses of vtkGeoSource. Each source
-** has its own worker thread for fetching refined images or geometry.
-** On the 3D side, vtkGeoGlobeSource is an appropriate source for vtkGeoTerrain,
-** and vtkGeoAlignedImageSource is an appropriate source for
-** vtkGeoAlignedImageRepresentation. On the 2D side, vtkGeoProjectionSource is an
-** appropriate source for vtkGeoTerrain2D, and the image source is the same.
-**
+** Log: proj_laea.c
 ** Revision 3.1  2006/01/11 01:38:18  gie
 ** Initial
 **

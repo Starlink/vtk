@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricConicSpiral.cxx,v $
+  Module:    vtkParametricConicSpiral.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkParametricConicSpiral, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkParametricConicSpiral);
 
 //----------------------------------------------------------------------------

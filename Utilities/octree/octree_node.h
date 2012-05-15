@@ -1,7 +1,7 @@
 #ifndef __octree_node
 #define __octree_node
 
-#include <vtkstd/iterator>
+#include <iterator>
 
 template< typename T_, int d_, typename A_ > class octree;
 
@@ -17,7 +17,7 @@ template< typename T_, int d_, typename A_ > class octree;
   * Octree nodes store application data, a list of pointers to child nodes (or NULL) and
   * a pointer to their direct octree node parent.
   */
-template< typename T_, int d_ = 3, typename A_ = vtkstd::allocator<T_> >
+template< typename T_, int d_ = 3, typename A_ = std::allocator<T_> >
 struct octree_node
 {
   typedef octree<T_,d_,A_>* octree_pointer;
@@ -46,7 +46,7 @@ struct octree_node
   bool remove_children();
 
   reference value() { return this->_M_data; }
-  const reference value() const { return this->_M_data; }
+  reference value() const { return this->_M_data; }
 
   const_octree_node_reference operator [] ( int child ) const;
   octree_node_reference operator [] ( int child );

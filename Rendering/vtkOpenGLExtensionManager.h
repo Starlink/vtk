@@ -3,7 +3,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLExtensionManager.h,v $
+  Module:    vtkOpenGLExtensionManager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -121,15 +121,15 @@
 #ifndef __vtkOpenGLExtensionManager_h
 #define __vtkOpenGLExtensionManager_h
 
-#include <vtkObject.h>
-#include <vtkWeakPointer.h> // needed for vtkWeakPointer.
+#include "vtkObject.h"
+#include "vtkWeakPointer.h" // needed for vtkWeakPointer.
 
 class vtkRenderWindow;
 
 //BTX
 extern "C" {
 #ifdef _WIN32
-#include <vtkOpenGL.h>  // Needed for WINAPI
+#include "vtkOpenGL.h"  // Needed for WINAPI
   typedef int (WINAPI *vtkOpenGLExtensionManagerFunctionPointer)(void);
 #else
   typedef void (*vtkOpenGLExtensionManagerFunctionPointer)(void);
@@ -140,7 +140,7 @@ extern "C" {
 class VTK_RENDERING_EXPORT vtkOpenGLExtensionManager : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkOpenGLExtensionManager, vtkObject);
+  vtkTypeMacro(vtkOpenGLExtensionManager, vtkObject);
   static vtkOpenGLExtensionManager *New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
@@ -255,6 +255,11 @@ public:
   // vtkgl::ActiveTexture(vtkgl::TEXTURE0);
   // \endcode
   virtual void LoadCorePromotedExtension(const char *name);
+
+  // Description:
+  // Similar to LoadCorePromotedExtension().
+  // It loads an EXT extension into the pointers of its ARB equivalent.
+  virtual void LoadAsARBExtension(const char *name);
 //BTX
 protected:
   vtkOpenGLExtensionManager();

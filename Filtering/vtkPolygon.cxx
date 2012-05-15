@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygon.cxx,v $
+  Module:    vtkPolygon.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,8 +27,9 @@
 #include "vtkTriangle.h"
 #include "vtkBox.h"
 #include "vtkMergePoints.h"
+#include "vtkIncrementalPointLocator.h"
+#include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkPolygon, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkPolygon);
 
 //----------------------------------------------------------------------------
@@ -45,6 +46,7 @@ vtkPolygon::vtkPolygon()
   this->Tolerance = 0.0;
   this->SuccessfulTriangulation = 0;
   this->Normal[0] = this->Normal[1] = this->Normal[2] = 0.0;
+  this->UseMVCInterpolation = false;
 }
 
 //----------------------------------------------------------------------------
@@ -55,6 +57,18 @@ vtkPolygon::~vtkPolygon()
   this->Quad->Delete();
   this->TriScalars->Delete();
   this->Line->Delete();
+}
+
+//----------------------------------------------------------------------------
+double vtkPolygon::ComputeArea()
+{
+  double normal[3]; //not used, but required for the 
+                    //following ComputeArea call
+  return vtkPolygon::ComputeArea(this->GetPoints(), 
+                                 this->GetNumberOfPoints(), 
+                                 this->GetPointIds()->GetPointer(0), 
+                                 normal);
+
 }
 
 #define VTK_POLYGON_FAILURE -1
@@ -335,9 +349,18 @@ void vtkPolygon::EvaluateLocation(int& vtkNotUsed(subId), double pcoords[3],
 }
 
 //----------------------------------------------------------------------------
-// Compute interpolation weights using 1/r**2 normalized sum.
+// Compute interpolation weights using 1/r**2 normalized sum or mean value 
+// coordinate.
 void vtkPolygon::InterpolateFunctions(double x[3], double *weights)
 {
+  // Compute interpolation weights using mean value coordinate.
+  if (this->UseMVCInterpolation)
+    {
+    this->InterpolateFunctionsUsingMVC(x, weights);
+    return;
+    }
+  
+  // Compute interpolation weights using 1/r**2 normalized sum.
   int i;
   int numPts=this->Points->GetNumberOfPoints();
   double sum, pt[3];
@@ -366,6 +389,120 @@ void vtkPolygon::InterpolateFunctions(double x[3], double *weights)
     {
     weights[i] /= sum;
     }
+}
+
+//----------------------------------------------------------------------------
+// Compute interpolation weights using mean value coordinate.
+void vtkPolygon::InterpolateFunctionsUsingMVC(double x[3], double *weights)
+{
+  int numPts=this->Points->GetNumberOfPoints();
+
+  // Begin by initializing weights. 
+  for (int i=0; i < numPts; i++)
+    {
+    weights[i] = static_cast<double>(0.0);
+    }
+
+  // create local array for storing point-to-vertex vectors and distances
+  double *dist = new double [numPts];
+  double *uVec = new double [3*numPts];
+  static const double eps = 0.00000001;
+  for (int i=0; i<numPts; i++)
+    {
+    double pt[3];
+    this->Points->GetPoint(i, pt);
+    
+    // point-to-vertex vector
+    uVec[3*i]   = pt[0] - x[0];
+    uVec[3*i+1] = pt[1] - x[1];
+    uVec[3*i+2] = pt[2] - x[2];
+    
+    // distance
+    dist[i] = vtkMath::Norm(uVec+3*i);
+
+    // handle special case when the point is really close to a vertex
+    if (dist[i] < eps)
+      {
+      weights[i] = 1.0;
+      delete [] dist;
+      delete [] uVec;
+      return;
+      }
+
+    uVec[3*i]   /= dist[i];
+    uVec[3*i+1] /= dist[i];
+    uVec[3*i+2] /= dist[i];
+    }
+  
+  // Now loop over all vertices to compute weight
+  // w_i = ( tan(theta_i/2) + tan(theta_(i+1)/2) ) / dist_i
+  // To do consider the simplification of 
+  // tan(alpha/2) = (1-cos(alpha))/sin(alpha) 
+  //              = (d0*d1 - cross(u0, u1))/(2*dot(u0,u1))
+  double *tanHalfTheta = new double [numPts];
+  for (int i = 0; i < numPts; i++)
+    {
+    int i1 = i+1;
+    if ( i1 == numPts )
+      {
+      i1 = 0;
+      }
+    
+    double *u0 = uVec + 3*i;
+    double *u1 = uVec + 3*i1;
+    
+    double l = sqrt(vtkMath::Distance2BetweenPoints(u0, u1));
+    double theta = 2.0*asin(l/2.0);
+    
+    // special case where x lies on an edge
+    if (vtkMath::Pi() - theta < 0.001)
+      {
+      weights[i] = dist[i1] / (dist[i] + dist[i1]);
+      weights[i1] = 1 - weights[i];
+      delete [] dist;
+      delete [] uVec;
+      delete [] tanHalfTheta;
+      return;
+      }
+    
+    tanHalfTheta[i] = tan(theta/2.0);
+    }
+
+    // Normal case
+  for (int i = 0; i < numPts; i++)
+    {
+    int i1 = i-1;
+    if ( i1 == -1 )
+      {
+      i1 = numPts-1;
+      }
+
+    weights[i] = (tanHalfTheta[i] + tanHalfTheta[i1]) / dist[i];
+    }    
+
+  // clear memory
+  delete [] dist;
+  delete [] uVec;
+  delete [] tanHalfTheta;
+  
+  // normalize weight
+  double sum = 0.0;
+  for (int i=0; i < numPts; i++)
+    {
+    sum += weights[i];
+    }
+  
+  if (fabs(sum) < eps)
+    {
+    return;
+    }
+  
+  for (int i=0; i < numPts; i++)
+    {
+    weights[i] /= sum;
+    }
+
+  return;
 }
 
 //----------------------------------------------------------------------------
@@ -1237,7 +1374,7 @@ int vtkPolygon::CellBoundary(int vtkNotUsed(subId), double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkPolygon::Contour(double value, vtkDataArray *cellScalars, 
-                         vtkPointLocator *locator,
+                         vtkIncrementalPointLocator *locator,
                          vtkCellArray *verts, vtkCellArray *lines, 
                          vtkCellArray *polys,
                          vtkPointData *inPd, vtkPointData *outPd,
@@ -1493,7 +1630,7 @@ void vtkPolygon::Derivatives(int vtkNotUsed(subId), double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkPolygon::Clip(double value, vtkDataArray *cellScalars,
-                      vtkPointLocator *locator, vtkCellArray *tris,
+                      vtkIncrementalPointLocator *locator, vtkCellArray *tris,
                       vtkPointData *inPD, vtkPointData *outPD,
                       vtkCellData *inCD, vtkIdType cellId, vtkCellData *outCD,
                       int insideOut)
@@ -1708,6 +1845,8 @@ void vtkPolygon::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Tolerance: " << this->Tolerance << "\n";
   os << indent << "SuccessfulTriangulation: " <<
     this->SuccessfulTriangulation << "\n";
+  os << indent << "UseMVCInterpolation: " <<
+    this->UseMVCInterpolation << "\n";
   os << indent << "Normal: (" << this->Normal[0] << ", "
      << this->Normal[1] << ", " << this->Normal[2] << ")\n";
   os << indent << "Tris:\n";

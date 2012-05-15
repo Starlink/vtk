@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataReader.cxx,v $
+  Module:    vtkPolyDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPolyDataReader, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkPolyDataReader);
 
 //----------------------------------------------------------------------------

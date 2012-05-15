@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTranslucentPass.h,v $
+  Module:    vtkTranslucentPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,13 +34,15 @@ class VTK_RENDERING_EXPORT vtkTranslucentPass : public vtkDefaultPass
 {
 public:
   static vtkTranslucentPass *New();
-  vtkTypeRevisionMacro(vtkTranslucentPass,vtkDefaultPass);
+  vtkTypeMacro(vtkTranslucentPass,vtkDefaultPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
  protected:
   // Description:

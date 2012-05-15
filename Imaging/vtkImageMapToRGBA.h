@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMapToRGBA.h,v $
+  Module:    vtkImageMapToRGBA.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IMAGING_EXPORT vtkImageMapToRGBA : public vtkImageMapToColors
 {
 public:
   static vtkImageMapToRGBA *New();
-  vtkTypeRevisionMacro(vtkImageMapToRGBA,vtkImageMapToColors);
+  vtkTypeMacro(vtkImageMapToRGBA,vtkImageMapToColors);
 
 protected:
   vtkImageMapToRGBA() {};

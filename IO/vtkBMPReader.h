@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBMPReader.h,v $
+  Module:    vtkBMPReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ class VTK_IO_EXPORT vtkBMPReader : public vtkImageReader
 {
 public:
   static vtkBMPReader *New();
-  vtkTypeRevisionMacro(vtkBMPReader,vtkImageReader);
+  vtkTypeMacro(vtkBMPReader,vtkImageReader);
 
   void PrintSelf(ostream& os, vtkIndent indent);
 

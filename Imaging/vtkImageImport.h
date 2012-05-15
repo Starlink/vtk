@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageImport.h,v $
+  Module:    vtkImageImport.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,14 +35,14 @@ class VTK_IMAGING_EXPORT vtkImageImport : public vtkImageAlgorithm
 {
 public:
   static vtkImageImport *New();
-  vtkTypeRevisionMacro(vtkImageImport,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageImport,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);   
 
   // Description:
   // Import data and make an internal copy of it.  If you do not want
   // VTK to copy the data, then use SetImportVoidPointer instead (do
   // not use both).  Give the size of the data array in bytes.
-  void CopyImportVoidPointer(void *ptr, int size);
+  void CopyImportVoidPointer(void *ptr, vtkIdType size);
   
   // Description:
   // Set the pointer from which the image data is imported.  VTK will

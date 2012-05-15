@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestAreaSelections.cxx,v $
+  Module:    TestAreaSelections.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@
 
 #include "vtkDataSetReader.h"
 
-vtkSmartPointer<vtkRenderer> renderer;
+static vtkSmartPointer<vtkRenderer> renderer;
 vtkSmartPointer<vtkSphereSource> SS1;
 vtkSmartPointer<vtkDataSetMapper> sMap;
 vtkSmartPointer<vtkPolyData> emptyPD;

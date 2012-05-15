@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPMultiCorrelativeStatistics.cxx,v $
+  Module:    vtkPMultiCorrelativeStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+/*-------------------------------------------------------------------------
+  Copyright 2011 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+  -------------------------------------------------------------------------*/
 #include "vtkToolkits.h"
 
 #include "vtkPMultiCorrelativeStatistics.h"
@@ -25,10 +30,9 @@
 #include "vtkTable.h"
 #include "vtkVariant.h"
 
-#include <vtkstd/map>
+#include <map>
 
 vtkStandardNewMacro(vtkPMultiCorrelativeStatistics);
-vtkCxxRevisionMacro(vtkPMultiCorrelativeStatistics, "$Revision: 1.6 $");
 vtkCxxSetObjectMacro(vtkPMultiCorrelativeStatistics, Controller, vtkMultiProcessController);
 //-----------------------------------------------------------------------------
 vtkPMultiCorrelativeStatistics::vtkPMultiCorrelativeStatistics()
@@ -51,18 +55,17 @@ void vtkPMultiCorrelativeStatistics::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------
-
-void vtkPMultiCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
-                                                   vtkDataObject* outMetaDO )
+void vtkPMultiCorrelativeStatistics::Learn( vtkTable* inData,
+                                            vtkTable* inParameters,
+                                            vtkMultiBlockDataSet* outMeta )
 {
-  vtkMultiBlockDataSet* outMeta = vtkMultiBlockDataSet::SafeDownCast( outMetaDO );
   if ( ! outMeta )
     {
     return;
     }
 
   // First calculate correlative statistics on local data set
-  this->Superclass::ExecuteLearn( inData, outMeta );
+  this->Superclass::Learn( inData, inParameters, outMeta );
 
   // Get a hold of the (sparse) covariance matrix
   vtkTable* sparseCov = vtkTable::SafeDownCast( outMeta->GetBlock( 0 ) );
@@ -79,7 +82,7 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
                                                        vtkTable* sparseCov )
 {
   vtkIdType nRow = sparseCov->GetNumberOfRows();
-  if ( ! nRow )
+  if ( nRow <= 0 )
     {
     // No statistics were calculated.
     return;
@@ -94,7 +97,13 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
 
   // Now get ready for parallel calculations
   vtkCommunicator* com = curController->GetCommunicator();
-  
+  if ( ! com )
+    {
+    vtkGenericWarningMacro("No parallel communicator.");
+
+    return;
+    }
+
   // (All) gather all sample sizes
   int n_l = sparseCov->GetValueByName( 0, "Entries" ).ToInt(); // Cardinality
   int* n_g = new int[np];
@@ -107,7 +116,7 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
   double* M_l = new double[nM];
 
   // First, load all means and create a name-to-index lookup table
-  vtkstd::map<vtkStdString, vtkIdType> meanIndex;
+  std::map<vtkStdString, vtkIdType> meanIndex;
   for ( vtkIdType r = 1; r < nRow; ++ r )
     {
     if ( sparseCov->GetValueByName( r, "Column2" ).ToString() == "" )
@@ -120,13 +129,13 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
   vtkIdType nMeans = meanIndex.size();
 
   // Second, load all MXYs and create an index-to-index-pair lookup table
-  vtkstd::map<vtkIdType, vtkstd::pair<vtkIdType, vtkIdType> > covToMeans;
+  std::map<vtkIdType, std::pair<vtkIdType, vtkIdType> > covToMeans;
   for ( vtkIdType r = 1; r < nRow; ++ r )
     {
     vtkStdString col2 = sparseCov->GetValueByName( r, "Column2" ).ToString();
     if ( col2  != "" )
       {
-      covToMeans[r - 1] = vtkstd::pair<vtkIdType, vtkIdType> 
+      covToMeans[r - 1] = std::pair<vtkIdType, vtkIdType>
         ( meanIndex[sparseCov->GetValueByName( r, "Column1" ).ToString()], 
           meanIndex[col2] );          
 
@@ -148,12 +157,14 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
   for ( int i = 1; i < np; ++ i )
     {
     int ns_l = n_g[i];
-    ns += ns_l;
+    int N = ns + ns_l; 
     int prod_ns = ns * ns_l;
     
+    double invN = 1. / static_cast<double>( N );
+
     double* M_part = new double[nM];
     double* delta  = new double[nMeans];
-    double* delta_sur_n  = new double[nMeans];
+    double* delta_sur_N  = new double[nMeans];
     int o = nM * i;
 
     // First, calculate deltas for all means
@@ -162,7 +173,7 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
       M_part[j] = M_g[o + j];
 
       delta[j] = M_part[j] - M_l[j];
-      delta_sur_n[j] = delta[j] / static_cast<double>( ns );
+      delta_sur_N[j] = delta[j] * invN;
       }
 
     // Then, update covariances
@@ -171,19 +182,22 @@ void vtkPMultiCorrelativeStatistics::GatherStatistics( vtkMultiProcessController
       M_part[j] = M_g[o + j];
     
       M_l[j] += M_part[j]
-        + prod_ns * delta[covToMeans[j].first] * delta_sur_n[covToMeans[j].second];
+        + prod_ns * delta[covToMeans[j].first] * delta_sur_N[covToMeans[j].second];
       }
 
-    // Last, update means
+    // Then, update means
     for ( int j = 0; j < nMeans; ++ j )
       {
-      M_l[j] += ns_l * delta_sur_n[j];
+      M_l[j] += ns_l * delta_sur_N[j];
       }
+
+    // Last, update cardinality
+    ns = N;
 
     // Clean-up
     delete [] M_part;
     delete [] delta;
-    delete [] delta_sur_n;
+    delete [] delta_sur_N;
     }
 
   for ( int i = 0; i < nM; ++ i )

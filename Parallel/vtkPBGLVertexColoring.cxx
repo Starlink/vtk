@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLVertexColoring.cxx,v $
+  Module:    vtkPBGLVertexColoring.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,15 +45,16 @@
 #include "vtkUndirectedGraph.h"
 #include "vtkVertexListIterator.h"
 
+#include <boost/graph/use_mpi.hpp>
+
 #include <boost/graph/distributed/boman_et_al_graph_coloring.hpp>
-#include <boost/parallel/algorithm.hpp>
-#include <boost/property_map.hpp>
+#include <boost/graph/parallel/algorithm.hpp>
+#include <boost/property_map/property_map.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLVertexColoring, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkPBGLVertexColoring);
 
 // Constructor/Destructor
@@ -80,7 +81,7 @@ int vtkPBGLVertexColoring::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

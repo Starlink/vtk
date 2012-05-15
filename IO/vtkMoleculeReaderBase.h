@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMoleculeReaderBase.h,v $
+  Module:    vtkMoleculeReaderBase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkPoints;
 class VTK_IO_EXPORT vtkMoleculeReaderBase : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkMoleculeReaderBase,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkMoleculeReaderBase,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkSetStringMacro(FileName);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVectorText.h,v $
+  Module:    vtkVectorText.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_HYBRID_EXPORT vtkVectorText : public vtkPolyDataAlgorithm
 {
 public:
   static vtkVectorText *New();
-  vtkTypeRevisionMacro(vtkVectorText,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkVectorText,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

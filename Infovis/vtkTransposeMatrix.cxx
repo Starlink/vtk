@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransposeMatrix.cxx,v $
+  Module:    vtkTransposeMatrix.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,7 +31,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // vtkTransposeMatrix
 
-vtkCxxRevisionMacro(vtkTransposeMatrix, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkTransposeMatrix);
 
 vtkTransposeMatrix::vtkTransposeMatrix()
@@ -53,9 +52,14 @@ int vtkTransposeMatrix::RequestData(
   vtkInformationVector* outputVector)
 {
   vtkArrayData* const input = vtkArrayData::GetData(inputVector[0]);
-  vtkArrayData* const output = vtkArrayData::GetData(outputVector);
+  if(input->GetNumberOfArrays() != 1)
+    {
+    vtkErrorMacro(<< "vtkTransposeMatrix requires vtkArrayData containing exactly one array as input.");
+    return 0;
+    }
 
-  if(vtkSparseArray<double>* const input_array = vtkSparseArray<double>::SafeDownCast(input->GetArray()))
+  if(vtkSparseArray<double>* const input_array = vtkSparseArray<double>::SafeDownCast(
+      input->GetArray(static_cast<vtkIdType>(0))))
     {
     if(input_array->GetDimensions() != 2)
       {
@@ -66,9 +70,6 @@ int vtkTransposeMatrix::RequestData(
     const vtkArrayExtents input_extents = input_array->GetExtents();
 
     vtkSparseArray<double>* const output_array = vtkSparseArray<double>::New();
-    output->SetArray(output_array);
-    output_array->Delete();
-
     output_array->Resize(vtkArrayExtents(input_extents[1], input_extents[0]));
     output_array->SetDimensionLabel(0, input_array->GetDimensionLabel(1));
     output_array->SetDimensionLabel(1, input_array->GetDimensionLabel(0));
@@ -80,37 +81,52 @@ int vtkTransposeMatrix::RequestData(
       input_array->GetCoordinatesN(n, coordinates);
       output_array->AddValue(vtkArrayCoordinates(coordinates[1], coordinates[0]), input_array->GetValueN(n));
       }
-    }
-  else if(vtkDenseArray<double>* const input_array = vtkDenseArray<double>::SafeDownCast(input->GetArray()))
-    {
-    if(input_array->GetDimensions() != 2)
-      {
-      vtkErrorMacro(<< "vtkTransposeMatrix requires a matrix as input.");
-      return 0;
-      }
 
-    const vtkArrayExtents input_extents = input_array->GetExtents();
-
-    vtkDenseArray<double>* const output_array = vtkDenseArray<double>::New();
-    output->SetArray(output_array);
+    vtkArrayData* const output = vtkArrayData::GetData(outputVector);
+    output->ClearArrays();
+    output->AddArray(output_array);
     output_array->Delete();
-
-    output_array->Resize(vtkArrayExtents(input_extents[1], input_extents[0]));
-    output_array->SetDimensionLabel(0, input_array->GetDimensionLabel(1));
-    output_array->SetDimensionLabel(1, input_array->GetDimensionLabel(0));
-
-    for(vtkIdType i = 0; i != input_extents[0]; ++i)
-      {
-      for(vtkIdType j = 0; j != input_extents[1]; ++j)
-        {
-        output_array->SetValue(vtkArrayCoordinates(j, i), input_array->GetValue(vtkArrayCoordinates(i, j)));
-        }
-      }
     }
   else
     {
-    vtkErrorMacro(<< "Unsupported input array type.");
-    return 0;
+    vtkDenseArray<double>* const input_array2=vtkDenseArray<double>::SafeDownCast(
+      input->GetArray(static_cast<vtkIdType>(0)));
+    if(input_array2!=0)
+      {
+      if(input_array2->GetDimensions() != 2)
+        {
+        vtkErrorMacro(<< "vtkTransposeMatrix requires a matrix as input.");
+        return 0;
+        }
+      
+      const vtkArrayExtents input_extents = input_array2->GetExtents();
+      
+      vtkDenseArray<double>* const output_array = vtkDenseArray<double>::New();
+      
+      output_array->Resize(vtkArrayExtents(input_extents[1],input_extents[0]));
+      output_array->SetDimensionLabel(0, input_array2->GetDimensionLabel(1));
+      output_array->SetDimensionLabel(1, input_array2->GetDimensionLabel(0));
+      
+      for(vtkIdType i = input_extents[0].GetBegin(); i != input_extents[0].GetEnd(); ++i)
+        {
+        for(vtkIdType j = input_extents[1].GetBegin(); j != input_extents[1].GetEnd(); ++j)
+          {
+          output_array->SetValue(
+            vtkArrayCoordinates(j, i),
+            input_array2->GetValue(vtkArrayCoordinates(i, j)));
+          }
+        }
+      
+      vtkArrayData* const output = vtkArrayData::GetData(outputVector);
+      output->ClearArrays();
+      output->AddArray(output_array);
+      output_array->Delete();
+      }
+    else
+      {
+      vtkErrorMacro(<< "Unsupported input array type.");
+      return 0;
+      }
     }
 
   return 1;

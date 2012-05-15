@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageToImageFilter.cxx,v $
+  Module:    vtkImageToImageFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkImageToImageFilter, "$Revision: 1.64 $");
 
 //----------------------------------------------------------------------------
 vtkImageToImageFilter::vtkImageToImageFilter()
@@ -430,11 +429,11 @@ void vtkImageToImageFilter::MultiThread(vtkImageData *inData,
 
 //----------------------------------------------------------------------------
 // The execute method created by the subclass.
-void vtkImageToImageFilter::ThreadedExecute(vtkImageData *vtkNotUsed(inData), 
+void vtkImageToImageFilter::ThreadedExecute(vtkImageData *vtkNotUsed(inData),
                                             vtkImageData *vtkNotUsed(outData),
                                             int extent[6], int threadId)
 {
-  extent = extent;
+  (void)extent;
   if (threadId == 0)
     {
     vtkErrorMacro("subclass should override ThreadedExecute!!!");

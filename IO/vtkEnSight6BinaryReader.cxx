@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSight6BinaryReader.cxx,v $
+  Module:    vtkEnSight6BinaryReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,9 +31,8 @@
 
 #include <sys/stat.h>
 #include <ctype.h>
-#include <vtkstd/string>
+#include <string>
 
-vtkCxxRevisionMacro(vtkEnSight6BinaryReader, "$Revision: 1.58 $");
 vtkStandardNewMacro(vtkEnSight6BinaryReader);
 
 //----------------------------------------------------------------------------
@@ -135,7 +134,7 @@ int vtkEnSight6BinaryReader::ReadGeometryFile(const char* fileName,
     vtkErrorMacro("A GeometryFileName must be specified in the case file.");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -746,7 +745,7 @@ int vtkEnSight6BinaryReader::ReadMeasuredGeometryFile(
     pd->Delete();
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -859,10 +858,12 @@ int vtkEnSight6BinaryReader::ReadMeasuredGeometryFile(
    }
   else
     {
+    vtkIdType id;
     for (i = 0; i < this->NumberOfMeasuredPoints; i++)
       {
+      id = pointIds[i];
       points->InsertNextPoint(coords[3*i], coords[3*i+1], coords[3*i+2]);
-      pd->InsertNextCell(VTK_VERTEX, 1, (vtkIdType*)&pointIds[i]);
+      pd->InsertNextCell(VTK_VERTEX, 1, &id);
       }
     }
 
@@ -904,7 +905,7 @@ int vtkEnSight6BinaryReader::ReadScalarsPerNode(
     vtkErrorMacro("NULL ScalarPerNode variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -1162,7 +1163,7 @@ int vtkEnSight6BinaryReader::ReadVectorsPerNode(
     vtkErrorMacro("NULL VectorPerNode variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -1367,7 +1368,7 @@ int vtkEnSight6BinaryReader::ReadTensorsPerNode(
     vtkErrorMacro("NULL TensorSymmPerNode variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -1537,7 +1538,7 @@ int vtkEnSight6BinaryReader::ReadScalarsPerElement(
     vtkErrorMacro("NULL ScalarPerElement variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -1739,7 +1740,7 @@ int vtkEnSight6BinaryReader::ReadVectorsPerElement(
     vtkErrorMacro("NULL VectorPerElement variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;
@@ -1926,7 +1927,7 @@ int vtkEnSight6BinaryReader::ReadTensorsPerElement(
     vtkErrorMacro("NULL TensorPerElement variable file name");
     return 0;
     }
-  vtkstd::string sfilename;
+  std::string sfilename;
   if (this->FilePath)
     {
     sfilename = this->FilePath;

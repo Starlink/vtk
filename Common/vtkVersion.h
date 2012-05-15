@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVersion.h,v $
+  Module:    vtkVersion.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,6 +21,7 @@
 // This file will change frequently to update the VTKSourceVersion which
 // timestamps a particular source release.
 
+
 #ifndef __vtkVersion_h
 #define __vtkVersion_h
 
@@ -39,7 +40,7 @@ class VTK_COMMON_EXPORT vtkVersion : public vtkObject
 {
 public:
   static vtkVersion *New();
-  vtkTypeRevisionMacro(vtkVersion,vtkObject);
+  vtkTypeMacro(vtkVersion,vtkObject);
 
   // Description: 
   // Return the version of vtk this object is a part of.
@@ -60,3 +61,4 @@ private:
 };
 
 #endif 
+

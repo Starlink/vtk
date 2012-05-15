@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLHierarchicalBoxDataWriter.h,v $
+  Module:    vtkXMLHierarchicalBoxDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkXMLHierarchicalBoxDataWriter  - writer for
+// .NAME vtkXMLHierarchicalBoxDataWriter - writer for
 // vtkHierarchicalBoxDataSet.
 // .SECTION Description
 // vtkXMLHierarchicalBoxDataWriter is a vtkXMLCompositeDataWriter subclass to
@@ -27,7 +27,7 @@ class VTK_IO_EXPORT vtkXMLHierarchicalBoxDataWriter : public vtkXMLCompositeData
 {
 public:
   static vtkXMLHierarchicalBoxDataWriter* New();
-  vtkTypeRevisionMacro(vtkXMLHierarchicalBoxDataWriter, vtkXMLCompositeDataWriter);
+  vtkTypeMacro(vtkXMLHierarchicalBoxDataWriter, vtkXMLCompositeDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -42,11 +42,16 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation* info);
 
+  // Fills up this->AMRBoxes, this->AMRBoxDims with boxes for the dataset.
+  virtual void FillDataTypes(vtkCompositeDataSet*);
+
   // Internal method called recursively to create the xml tree for the children
   // of compositeData.
   virtual int WriteComposite(vtkCompositeDataSet* compositeData, 
     vtkXMLDataElement* parent, int &writerIdx);
 
+  int *AMRBoxes;
+  int *AMRBoxDims;
 private:
   vtkXMLHierarchicalBoxDataWriter(const vtkXMLHierarchicalBoxDataWriter&); // Not implemented.
   void operator=(const vtkXMLHierarchicalBoxDataWriter&); // Not implemented.

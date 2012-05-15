@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageAttributes.h,v $
+  Module:    vtkMINCImageAttributes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -79,7 +79,7 @@ class vtkMINCImageAttributeMap;
 class VTK_IO_EXPORT vtkMINCImageAttributes : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkMINCImageAttributes,vtkObject);
+  vtkTypeMacro(vtkMINCImageAttributes,vtkObject);
 
   static vtkMINCImageAttributes *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);
@@ -213,6 +213,13 @@ public:
                                 vtkDataArray *array);
 
   // Description:
+  // Set this to Off if you do not want to automatically validate
+  // every attribute that is set.
+  vtkSetMacro(ValidateAttributes, int);
+  vtkBooleanMacro(ValidateAttributes, int);
+  vtkGetMacro(ValidateAttributes, int);
+
+  // Description:
   // Do a shallow copy.  This will copy all the attributes
   // from the source.  It is much more efficient than a DeepCopy
   // would be, since it only copies pointers to the attribute values
@@ -282,6 +289,8 @@ protected:
 
   int DataType;
   char *Name;
+
+  int ValidateAttributes;
 
 private:
   vtkMINCImageAttributes(const vtkMINCImageAttributes&); // Not implemented

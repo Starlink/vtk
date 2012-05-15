@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectToTable.cxx,v $
+  Module:    vtkDataObjectToTable.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkPointData.h"
 #include "vtkTable.h"
 
-vtkCxxRevisionMacro(vtkDataObjectToTable, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkDataObjectToTable);
 //---------------------------------------------------------------------------
 vtkDataObjectToTable::vtkDataObjectToTable()
@@ -48,7 +47,10 @@ vtkDataObjectToTable::~vtkDataObjectToTable()
 int vtkDataObjectToTable::FillInputPortInformation(
   int vtkNotUsed(port), vtkInformation* info)
 {
-  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataObject");
+  info->Remove(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkGraph");
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkTable");
   return 1;
 }
 

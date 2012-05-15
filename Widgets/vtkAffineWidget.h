@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAffineWidget.h,v $
+  Module:    vtkAffineWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ public:
 
   // Description:
   // Standard VTK class macros.
-  vtkTypeRevisionMacro(vtkAffineWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkAffineWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -78,11 +78,16 @@ public:
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
   // Description:
+  // Return the representation as a vtkAffineRepresentation.
+  vtkAffineRepresentation *GetAffineRepresentation()
+    {return reinterpret_cast<vtkAffineRepresentation*>(this->WidgetRep);}
+
+  // Description:
   // Create the default widget representation if one is not set. 
   void CreateDefaultRepresentation();
 
   // Description:
-  // Methods for activiating this widget. This implementation extends the
+  // Methods for activating this widget. This implementation extends the
   // superclasses' in order to resize the widget handles due to a render
   // start event.
   virtual void SetEnabled(int);

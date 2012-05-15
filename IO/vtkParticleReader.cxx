@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParticleReader.cxx,v $
+  Module:    vtkParticleReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,12 +28,11 @@
 #include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 
-#include <vtkstd/algorithm>
-#include <vtkstd/vector>
-#include <vtkstd/string>
+#include <algorithm>
+#include <vector>
+#include <string>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkParticleReader, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkParticleReader);
 
 namespace {
@@ -49,12 +48,12 @@ namespace {
   {
   public:
     ParseLine (): LookForEndString(false) {};
-    int operator () (vtkstd::string &s, T val[4])
+    int operator () (std::string &s, T val[4])
     {
       // Skip over comment lines.
-      vtkstd::string::iterator itr;
-      vtkstd::string tgt("/*");
-      itr = vtkstd::search(s.begin(),s.end(),tgt.begin(),tgt.end());
+      std::string::iterator itr;
+      std::string tgt("/*");
+      itr = std::search(s.begin(),s.end(),tgt.begin(),tgt.end());
       if ( itr != s.end() )
         {
         LookForEndString = true;
@@ -63,7 +62,7 @@ namespace {
       if ( LookForEndString )
         {
         tgt = "*/";
-        itr = vtkstd::search(s.begin(),s.end(),tgt.begin(),tgt.end());
+        itr = std::search(s.begin(),s.end(),tgt.begin(),tgt.end());
         if ( itr != s.end() )
           {
           LookForEndString = false;
@@ -73,25 +72,25 @@ namespace {
         }
 
       tgt = "//";
-      itr = vtkstd::search(s.begin(),s.end(),tgt.begin(),tgt.end());
+      itr = std::search(s.begin(),s.end(),tgt.begin(),tgt.end());
       if ( itr != s.end() )
         {
         return 0;
         }
       tgt = "%";
-      itr = vtkstd::search(s.begin(),s.end(),tgt.begin(),tgt.end());
+      itr = std::search(s.begin(),s.end(),tgt.begin(),tgt.end());
       if ( itr != s.end() )
         {
         return 0;
         }
       tgt = "#";
-      itr = vtkstd::search(s.begin(),s.end(),tgt.begin(),tgt.end());
+      itr = std::search(s.begin(),s.end(),tgt.begin(),tgt.end());
       if ( itr != s.end() )
         {
         return 0;
         }
       // If comma delimited, replace with tab
-      vtkstd::replace(s.begin(),s.end(),',','\t');
+      std::replace(s.begin(),s.end(),',','\t');
 
       // We have data.
       vtksys_ios::stringstream is;
@@ -282,7 +281,7 @@ int vtkParticleReader::DetermineFileType()
 
   size_t sampleSize = fileLength < 5000 ? fileLength: 5000;
   // cout << "File length: " << fileLength << " Sample size: " << sampleSize << endl;
-  vtkstd::vector <unsigned char> s;
+  std::vector <unsigned char> s;
   for ( size_t i = 0; i < sampleSize; ++i )
     {
     char c;
@@ -358,7 +357,7 @@ int vtkParticleReader::ProduceOutputFromTextFileDouble(vtkInformationVector *out
   size_t fileLength = (unsigned long)this->File->tellg();
   size_t bytesRead = 0;
 
-  vtkstd::string s;
+  std::string s;
   
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   points->SetDataTypeToDouble();
@@ -435,7 +434,7 @@ int vtkParticleReader::ProduceOutputFromTextFileFloat(vtkInformationVector *outp
   size_t fileLength = (unsigned long)this->File->tellg();
   size_t bytesRead = 0;
 
-  vtkstd::string s;
+  std::string s;
   
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   points->SetDataTypeToFloat();
@@ -639,15 +638,16 @@ int vtkParticleReader::ProduceOutputFromBinaryFileDouble(vtkInformationVector *o
   ptr = data;
 
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();  
+  points->SetDataTypeToDouble();
   points->SetNumberOfPoints(length);
-  vtkSmartPointer<vtkFloatArray> array = vtkSmartPointer<vtkFloatArray>::New();  
+  vtkSmartPointer<vtkDoubleArray> array = vtkSmartPointer<vtkDoubleArray>::New();
   array->SetName("Scalar");
   vtkSmartPointer<vtkCellArray> verts = vtkSmartPointer<vtkCellArray>::New();  
   
   // Each cell will have 1000 points.  Leave a little extra space just in case.
   // We break up the cell this way so that the render will check for aborts
   // at a reasonable rate.
-  verts->Allocate((int)((float)length * 1.002));
+  verts->Allocate((int)((double)length * 1.002));
   // Keep adding cells until we run out of points.
   ptIdx = 0;
   int cnt = 1;

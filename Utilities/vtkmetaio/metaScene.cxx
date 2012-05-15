@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-Program:   MetaIO
-Module:    $RCSfile: metaScene.cxx,v $
-Language:  C++
-Date:      $Date: 2008-04-25 13:31:38 $
-Version:   $Revision: 1.12 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-Copyright (c) Insight Software Consortium. All rights reserved.
-See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-This software is distributed WITHOUT ANY WARRANTY; without even 
-the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #if defined(_MSC_VER)
 #pragma warning ( disable : 4786 )
 #pragma warning ( disable : 4702 )
@@ -39,6 +34,7 @@ PURPOSE.  See the above copyright notices for more information.
 #include "metaArrow.h"
 #include "metaTransform.h"
 #include "metaTubeGraph.h"
+#include "metaFEMObject.h"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -118,13 +114,13 @@ NObjects(int nobjects)
   m_NObjects = nobjects;
 }
 
-int MetaScene:: 
+int MetaScene::
 NObjects(void) const
 {
   return m_NObjects;
 }
 
-void MetaScene:: 
+void MetaScene::
 AddObject(MetaObject* object)
 {
   m_ObjectList.push_back(object);
@@ -164,7 +160,7 @@ Read(const char *_headerName)
 #ifdef __sgi
   m_ReadStream->open(m_FileName, METAIO_STREAM::ios::in);
 #else
-  m_ReadStream->open(m_FileName, METAIO_STREAM::ios::binary 
+  m_ReadStream->open(m_FileName, METAIO_STREAM::ios::binary
                                  | METAIO_STREAM::ios::in);
 #endif
 
@@ -194,9 +190,9 @@ Read(const char *_headerName)
   /** Objects should be added here */
   for(i=0;i<m_NObjects;i++)
     {
-    if(META_DEBUG) 
+    if(META_DEBUG)
       {
-      METAIO_STREAM::cout << MET_ReadType(*m_ReadStream).c_str() 
+      METAIO_STREAM::cout << MET_ReadType(*m_ReadStream).c_str()
         << METAIO_STREAM::endl;
       }
 
@@ -205,7 +201,7 @@ Read(const char *_headerName)
       m_Event->SetCurrentIteration(i+1);
       }
 
-    if(!strncmp(MET_ReadType(*m_ReadStream).c_str(),"Tube",4) || 
+    if(!strncmp(MET_ReadType(*m_ReadStream).c_str(),"Tube",4) ||
       ((MET_ReadType(*m_ReadStream).size()==0) && !strcmp(suf, "tre")))
       {
       char* subtype = MET_ReadSubType(*m_ReadStream);
@@ -285,7 +281,7 @@ Read(const char *_headerName)
       }
 
     else if(!strncmp(MET_ReadType(*m_ReadStream).c_str(),"Image",5) ||
-      ((MET_ReadType(*m_ReadStream).size()==0) && 
+      ((MET_ReadType(*m_ReadStream).size()==0) &&
        (!strcmp(suf, "mhd") || !strcmp(suf, "mha"))))
       {
       MetaImage* image = new MetaImage();
@@ -334,7 +330,7 @@ Read(const char *_headerName)
     else if(!strncmp(MET_ReadType(*m_ReadStream).c_str(),"Group",5) ||
       ((MET_ReadType(*m_ReadStream).size()==0) && !strcmp(suf, "grp")))
       {
-      MetaGroup* group = new MetaGroup();      
+      MetaGroup* group = new MetaGroup();
       group->SetEvent(m_Event);
       group->ReadStream(m_NDims,m_ReadStream);
       m_ObjectList.push_back(group);
@@ -355,6 +351,14 @@ Read(const char *_headerName)
       mesh->SetEvent(m_Event);
       mesh->ReadStream(m_NDims,m_ReadStream);
       m_ObjectList.push_back(mesh);
+      }
+    else if(!strncmp(MET_ReadType(*m_ReadStream).c_str(),"FEMObject",9) ||
+            ((MET_ReadType(*m_ReadStream).size()==0) && !strcmp(suf, "fem")))
+      {
+      MetaFEMObject* femobject = new MetaFEMObject();
+      femobject->SetEvent(m_Event);
+      femobject->ReadStream(m_NDims,m_ReadStream);
+      m_ObjectList.push_back(femobject);
       }
     }
 
@@ -392,7 +396,7 @@ Write(const char *_headName)
   M_SetupWriteFields();
 
   if(!m_WriteStream)
-    { 
+    {
     m_WriteStream = new METAIO_STREAM::ofstream;
     }
 
@@ -400,11 +404,11 @@ Write(const char *_headName)
   // Create the file. This is required on some older sgi's
     {
     METAIO_STREAM::ofstream tFile(m_FileName, METAIO_STREAM::ios::out);
-    tFile.close();                    
+    tFile.close();
     }
   m_WriteStream->open(m_FileName, METAIO_STREAM::ios::out);
 #else
-  m_WriteStream->open(m_FileName, METAIO_STREAM::ios::binary 
+  m_WriteStream->open(m_FileName, METAIO_STREAM::ios::binary
     | METAIO_STREAM::ios::out);
 #endif
 

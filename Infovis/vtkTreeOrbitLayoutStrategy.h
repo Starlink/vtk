@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeOrbitLayoutStrategy.h,v $
+  Module:    vtkTreeOrbitLayoutStrategy.h
   
 =========================================================================*/
 /*----------------------------------------------------------------------------
@@ -31,7 +31,7 @@ class VTK_INFOVIS_EXPORT vtkTreeOrbitLayoutStrategy : public vtkGraphLayoutStrat
 public:
   static vtkTreeOrbitLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkTreeOrbitLayoutStrategy, vtkGraphLayoutStrategy);
+  vtkTypeMacro(vtkTreeOrbitLayoutStrategy, vtkGraphLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

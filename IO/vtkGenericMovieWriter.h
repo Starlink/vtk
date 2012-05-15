@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericMovieWriter.h,v $
+  Module:    vtkGenericMovieWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class vtkImageData;
 class VTK_IO_EXPORT vtkGenericMovieWriter : public vtkProcessObject
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericMovieWriter,vtkProcessObject);
+  vtkTypeMacro(vtkGenericMovieWriter,vtkProcessObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaEllipse.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAELLIPSE_H
@@ -31,9 +26,9 @@
  *    Reads and Writes MetaEllipseFiles.
  *
  * \author Julien Jomier
- * 
+ *
  * \date May 22, 2002
- * 
+ *
  * Depends on:
  *    MetaUtils.h
  *    MetaObject.h
@@ -61,9 +56,9 @@ class METAIO_EXPORT MetaEllipse : public MetaObject
     ////
     MetaEllipse(void);
 
-    MetaEllipse(const char *_headerName);   
+    MetaEllipse(const char *_headerName);
 
-    MetaEllipse(const MetaEllipse *_ellipse);    
+    MetaEllipse(const MetaEllipse *_ellipse);
 
     MetaEllipse(unsigned int dim);
 
@@ -74,7 +69,7 @@ class METAIO_EXPORT MetaEllipse : public MetaObject
     void CopyInfo(const MetaObject * _object);
 
     void  Clear(void);
-    
+
     void  Radius(const float* radius);
     void  Radius(float radius);
     void  Radius(float r1,float r2);

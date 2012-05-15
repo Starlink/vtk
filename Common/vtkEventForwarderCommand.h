@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEventForwarderCommand.h,v $
+  Module:    vtkEventForwarderCommand.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,6 +30,8 @@
 class VTK_COMMON_EXPORT vtkEventForwarderCommand : public vtkCommand
 {
 public:
+  vtkTypeMacro(vtkEventForwarderCommand,vtkCommand);
+
   static vtkEventForwarderCommand *New() 
     {return new vtkEventForwarderCommand;};
 

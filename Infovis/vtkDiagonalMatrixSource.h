@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDiagonalMatrixSource.h,v $
+  Module:    vtkDiagonalMatrixSource.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,22 +19,22 @@
 
 =========================================================================*/
 
+// .NAME vtkDiagonalMatrixSource - generates a sparse or dense square matrix
+// with user-specified values for the diagonal, superdiagonal, and subdiagonal.
+//
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
 #ifndef __vtkDiagonalMatrixSource_h
 #define __vtkDiagonalMatrixSource_h
 
 #include "vtkArrayDataAlgorithm.h"
 
-// .NAME vtkDiagonalMatrixSource - generates a sparse or dense square matrix
-// with user-specified values for the diagonal, superdiagonal, and subdiagonal.
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
 class VTK_INFOVIS_EXPORT vtkDiagonalMatrixSource : public vtkArrayDataAlgorithm
 {
 public:
   static vtkDiagonalMatrixSource* New();
-  vtkTypeRevisionMacro(vtkDiagonalMatrixSource, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkDiagonalMatrixSource, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX

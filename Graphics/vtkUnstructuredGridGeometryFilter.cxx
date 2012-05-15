@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridGeometryFilter.cxx,v $
+  Module:    vtkUnstructuredGridGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,6 +27,7 @@
 #include "vtkPolyData.h"
 #include "vtkPyramid.h"
 #include "vtkPentagonalPrism.h"
+#include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStructuredGrid.h"
 #include "vtkTetra.h"
@@ -43,12 +44,13 @@
 #include "vtkQuadraticLinearWedge.h"
 #include "vtkBiQuadraticQuadraticWedge.h"
 #include "vtkBiQuadraticQuadraticHexahedron.h"
+#include "vtkBiQuadraticTriangle.h"
+#include "vtkIncrementalPointLocator.h"
 
 
-#include <vtkstd/vector>
+#include <vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkUnstructuredGridGeometryFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkUnstructuredGridGeometryFilter);
 
 #if 0
@@ -209,7 +211,7 @@ public:
     {
       if(this->Chunks==0)
         {
-        this->Chunks=new vtkstd::vector<vtkstd::vector<G> *>();
+        this->Chunks=new std::vector<std::vector<G> *>();
         this->Chunks->reserve(VTK_DEFAULT_NUMBER_OF_CHUNKS);
         }
     }
@@ -230,7 +232,7 @@ public:
       if(c==0) // first Allocate()
         {
         this->Chunks->resize(1);
-        (*this->Chunks)[0]=new vtkstd::vector<G>();
+        (*this->Chunks)[0]=new std::vector<G>();
         // Allocate the first chunk
         (*this->Chunks)[0]->reserve(this->ChunkSize);
         (*this->Chunks)[0]->resize(1);
@@ -250,7 +252,7 @@ public:
           // Allocate the next chunk.
           size_t chunkIdx=this->Chunks->size();
           this->Chunks->resize(chunkIdx+1);
-          (*this->Chunks)[chunkIdx]=new vtkstd::vector<G>();
+          (*this->Chunks)[chunkIdx]=new std::vector<G>();
           (*this->Chunks)[chunkIdx]->reserve(this->ChunkSize);
           // Return the first element of this new chunk.
           (*this->Chunks)[chunkIdx]->resize(1);
@@ -305,7 +307,7 @@ public:
       assert("post: is_set" && size==this->GetChunkSize());
     }
 protected:
-  vtkstd::vector<vtkstd::vector<G> *> *Chunks;
+  std::vector<std::vector<G> *> *Chunks;
   unsigned int ChunkSize;
 };
 
@@ -326,6 +328,7 @@ public:
   // VTK_QUADRATIC_TRIANGLE,
   // VTK_QUADRATIC_QUAD,
   // VTK_BIQUADRATIC_QUAD,
+  // VTK_BIQUADRATIC_TRIANGLE
   // VTK_QUADRATIC_LINEAR_QUAD
   vtkIdType Type;
   
@@ -380,7 +383,7 @@ public:
         ++i;
         }
     }
-  vtkstd::vector<vtkSurfel *> HashTable;
+  std::vector<vtkSurfel *> HashTable;
   
   // Add a face defined by its cell type `faceType', its number of points,
   // its list of points and the cellId of the 3D cell it belongs to.
@@ -402,6 +405,7 @@ public:
       switch(faceType)
         {
         case VTK_QUADRATIC_TRIANGLE:
+        case VTK_BIQUADRATIC_TRIANGLE:
           numberOfCornerPoints=3;
           break;
         case VTK_QUADRATIC_QUAD:
@@ -509,6 +513,22 @@ public:
               switch(faceType)
                 {
                 case VTK_QUADRATIC_TRIANGLE:
+                  // the mid-edge points
+                  i=0;
+                  while(found && i<3) 
+                    {
+                    // we add numberOfPoints before modulo. Modulo does not work
+                    // with negative values.
+                    // -1: start at the end in reverse order.
+                    found=current->Points[numberOfCornerPoints+((current->SmallestIdx-i+3-1)%3)]
+                      ==points[numberOfCornerPoints+((smallestIdx+i)%3)];
+                    ++i;
+                    }
+                  break;
+                case VTK_BIQUADRATIC_TRIANGLE:
+                  // the center point
+                  found=current->Points[6]==points[6];
+                  
                   // the mid-edge points
                   i=0;
                   while(found && i<3) 
@@ -698,6 +718,11 @@ vtkUnstructuredGridGeometryFilter::vtkUnstructuredGridGeometryFilter()
   this->CellClipping = 0;
   this->ExtentClipping = 0;
 
+  this->PassThroughCellIds = 0;
+  this->PassThroughPointIds = 0;
+  this->OriginalCellIdsName = NULL;
+  this->OriginalPointIdsName = NULL;
+
   this->Merging = 1;
   this->Locator = NULL;
   
@@ -712,6 +737,9 @@ vtkUnstructuredGridGeometryFilter::~vtkUnstructuredGridGeometryFilter()
     this->Locator->UnRegister(this);
     this->Locator = NULL;
     }
+
+  this->SetOriginalCellIdsName(NULL);
+  this->SetOriginalPointIdsName(NULL);
 }
 
 //-----------------------------------------------------------------------------
@@ -768,7 +796,7 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkUnstructuredGrid *input = vtkUnstructuredGrid::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -885,8 +913,24 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
   newPts->Allocate(numPts);
   output->Allocate(numCells);
   outputPD->CopyAllocate(pd,numPts,numPts/2);
+  vtkSmartPointer<vtkIdTypeArray> originalPointIds;
+  if (this->PassThroughPointIds)
+    {
+    originalPointIds = vtkSmartPointer<vtkIdTypeArray>::New();
+    originalPointIds->SetName(this->GetOriginalPointIdsName());
+    originalPointIds->SetNumberOfComponents(1);
+    originalPointIds->Allocate(numPts, numPts/2);
+    }
  
   outputCD->CopyAllocate(cd,numCells,numCells/2);
+  vtkSmartPointer<vtkIdTypeArray> originalCellIds;
+  if (this->PassThroughCellIds)
+    {
+    originalCellIds = vtkSmartPointer<vtkIdTypeArray>::New();
+    originalCellIds->SetName(this->GetOriginalCellIdsName());
+    originalCellIds->SetNumberOfComponents(1);
+    originalCellIds->Allocate(numCells, numCells/2);
+    }
 
   vtkIdType *pointMap=0;
   
@@ -944,7 +988,8 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
       if((cellType>=VTK_EMPTY_CELL && cellType<=VTK_QUAD)
          ||(cellType>=VTK_QUADRATIC_EDGE && cellType<=VTK_QUADRATIC_QUAD)
          ||(cellType==VTK_BIQUADRATIC_QUAD)
-         ||(cellType==VTK_QUADRATIC_LINEAR_QUAD))
+         ||(cellType==VTK_QUADRATIC_LINEAR_QUAD)
+         ||(cellType==VTK_BIQUADRATIC_TRIANGLE))
         {
         vtkDebugMacro(<<"not 3D cell. type="<<cellType);
         // not 3D: just copy it
@@ -958,6 +1003,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
             if ( this->Locator->InsertUniquePoint(x, newPtId) )
               {
               outputPD->CopyData(pd,ptId,newPtId);
+              if (this->PassThroughPointIds)
+                {
+                originalPointIds->InsertValue(newPtId, ptId);
+                }
               }
             cellIds->InsertNextId(newPtId);
             }
@@ -972,6 +1021,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
               newPtId=newPts->InsertNextPoint(inPts->GetPoint(ptId));
               pointMap[ptId]=newPtId;
               outputPD->CopyData(pd, ptId, newPtId);
+              if (this->PassThroughPointIds)
+                {
+                originalPointIds->InsertValue(newPtId, ptId);
+                }
               }
             cellIds->InsertNextId(pointMap[ptId]);
             }
@@ -979,6 +1032,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
         
         newCellId = output->InsertNextCell(cellType,cellIds);
         outputCD->CopyData(cd, cellId, newCellId);
+        if (this->PassThroughCellIds)
+          {
+          originalCellIds->InsertValue(newCellId, cellId);
+          }
         }
       else // added the faces to the hashtable
         {
@@ -1357,6 +1414,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
           if ( this->Locator->InsertUniquePoint(x, newPtId) )
             {
             outputPD->CopyData(pd,ptId,newPtId);
+            if (this->PassThroughPointIds)
+              {
+              originalPointIds->InsertValue(newPtId, ptId);
+              }
             }
           cellIds->InsertNextId(newPtId);
           }
@@ -1371,6 +1432,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
             newPtId=newPts->InsertNextPoint(inPts->GetPoint(ptId));
             pointMap[ptId]=newPtId;
             outputPD->CopyData(pd, ptId, newPtId);
+            if (this->PassThroughPointIds)
+              {
+              originalPointIds->InsertValue(newPtId, ptId);
+              }
             }
           cellIds->InsertNextId(pointMap[ptId]);
           }
@@ -1378,6 +1443,10 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
       
       newCellId = output->InsertNextCell(cellType,cellIds);
       outputCD->CopyData(cd, cellId, newCellId);
+      if (this->PassThroughCellIds)
+        {
+        originalCellIds->InsertValue(newCellId, cellId);
+        }
       }
     cursor.Next();
     }
@@ -1395,6 +1464,15 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
   newPts->Delete();
   
 //  output->SetCells(types,locs,conn);
+
+  if (this->PassThroughPointIds)
+    {
+    outputPD->AddArray(originalPointIds);
+    }
+  if (this->PassThroughCellIds)
+    {
+    outputCD->AddArray(originalCellIds);
+    }
   
   if(!this->Merging && this->Locator)
     {
@@ -1412,7 +1490,7 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
 //-----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkUnstructuredGridGeometryFilter::SetLocator(vtkPointLocator *locator)
+void vtkUnstructuredGridGeometryFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {
@@ -1469,6 +1547,12 @@ void vtkUnstructuredGridGeometryFilter::PrintSelf(ostream& os,
   os << indent << "PointClipping: " << (this->PointClipping ? "On\n" : "Off\n");
   os << indent << "CellClipping: " << (this->CellClipping ? "On\n" : "Off\n");
   os << indent << "ExtentClipping: " << (this->ExtentClipping ? "On\n" : "Off\n");
+
+  os << indent << "PassThroughCellIds: " << this->PassThroughCellIds << endl;
+  os << indent << "PassThroughPointIds: " << this->PassThroughPointIds << endl;
+
+  os << indent << "OriginalCellIdsName: " << this->GetOriginalCellIdsName() << endl;
+  os << indent << "OriginalPointIdsName: " << this->GetOriginalPointIdsName() << endl;
 
   os << indent << "Merging: " << (this->Merging ? "On\n" : "Off\n");
   if ( this->Locator )

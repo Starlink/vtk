@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBridgeCellIteratorOnDataSet.cxx,v $
+  Module:    vtkBridgeCellIteratorOnDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkDataSet.h"
 #include "vtkCell.h"
 
-vtkCxxRevisionMacro(vtkBridgeCellIteratorOnDataSet, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkBridgeCellIteratorOnDataSet);
 
 //-----------------------------------------------------------------------------

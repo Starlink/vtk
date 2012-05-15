@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarBarActor.h,v $
+  Module:    vtkScalarBarActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,6 +57,7 @@
 
 class vtkPolyData;
 class vtkPolyDataMapper2D;
+class vtkProperty2D;
 class vtkScalarsToColors;
 class vtkTextMapper;
 class vtkTextProperty;
@@ -68,7 +69,7 @@ class vtkTexture;
 class VTK_RENDERING_EXPORT vtkScalarBarActor : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkScalarBarActor,vtkActor2D);
+  vtkTypeMacro(vtkScalarBarActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -152,6 +153,11 @@ public:
   vtkGetStringMacro(Title);
 
   // Description:
+  // Set/Get the title for the component that is selected,
+  vtkSetStringMacro(ComponentTitle);
+  vtkGetStringMacro(ComponentTitle);
+
+  // Description:
   // Shallow copy of a scalar bar actor. Overloads the virtual vtkProp method.
   void ShallowCopy(vtkProp *prop);
 
@@ -180,6 +186,41 @@ public:
   virtual void SetTextPositionToSucceedScalarBar()
     { this->SetTextPosition( vtkScalarBarActor::SucceedScalarBar ); }
 
+  // Description:
+  // Set/Get the maximum width and height in pixels. Specifying the size as
+  // a relative fraction of the viewport can sometimes undersirably strech 
+  // the size of the actor too much. These methods allow the user to set 
+  // bounds on the maximum size of the scalar bar in pixels along any 
+  // direction. Defaults to unbounded.
+  vtkSetMacro( MaximumWidthInPixels, int );
+  vtkGetMacro( MaximumWidthInPixels, int );
+  vtkSetMacro( MaximumHeightInPixels, int );
+  vtkGetMacro( MaximumHeightInPixels, int );
+
+  // Description:
+  // Set/Get whether a background should be drawn around the scalar bar.
+  // Default is off.
+  vtkSetMacro( DrawBackground, int );
+  vtkGetMacro( DrawBackground, int );
+  vtkBooleanMacro( DrawBackground, int );
+
+  // Description:
+  // Set/Get whether a frame should be drawn around the scalar bar.
+  // Default is off.
+  vtkSetMacro( DrawFrame, int );
+  vtkGetMacro( DrawFrame, int );
+  vtkBooleanMacro( DrawFrame, int );
+
+  // Description:
+  // Set/Get the background property.
+  virtual void SetBackgroundProperty(vtkProperty2D *p);
+  vtkGetObjectMacro(BackgroundProperty,vtkProperty2D);
+    
+  // Description:
+  // Set/Get the frame property.
+  virtual void SetFrameProperty(vtkProperty2D *p);
+  vtkGetObjectMacro(FrameProperty,vtkProperty2D);
+    
 protected:
   vtkScalarBarActor();
   ~vtkScalarBarActor();
@@ -193,6 +234,7 @@ protected:
   int   NumberOfLabelsBuilt;
   int   Orientation;
   char  *Title;
+  char* ComponentTitle;
   char  *LabelFormat;
   int   UseOpacity; // off by default
   double TextureGridWidth;
@@ -219,6 +261,21 @@ protected:
   int LastSize[2];
   int LastOrigin[2];
 
+  int MaximumWidthInPixels;
+  int MaximumHeightInPixels;
+
+  vtkProperty2D *BackgroundProperty;
+  vtkProperty2D *FrameProperty;
+
+  int DrawBackground; // off by default
+  int DrawFrame; // off by default
+
+  vtkPolyData         *Background;
+  vtkPolyDataMapper2D *BackgroundMapper;
+  vtkActor2D          *BackgroundActor;
+  vtkPolyData         *Frame;
+  vtkPolyDataMapper2D *FrameMapper;
+  vtkActor2D          *FrameActor;
 
 private:
   vtkScalarBarActor(const vtkScalarBarActor&);  // Not implemented.

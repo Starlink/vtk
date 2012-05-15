@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractCellLocator.h,v $
+  Module:    vtkAbstractCellLocator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class vtkPoints;
 class VTK_FILTERING_EXPORT vtkAbstractCellLocator : public vtkLocator
 {
 public:
-  vtkTypeRevisionMacro(vtkAbstractCellLocator,vtkLocator);
+  vtkTypeMacro(vtkAbstractCellLocator,vtkLocator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -98,26 +98,22 @@ public:
   // Return intersection point (if any) of finite line with cells contained
   // in cell locator.
   virtual int IntersectWithLine(
-    double a0[3], double a1[3], double tol,
-    double& t, double x[3], double pcoords[3],
-    int &subId);
+    double p1[3], double p2[3], double tol, double& t, double x[3],
+    double pcoords[3], int &subId);
 
   // Description:
   // Return intersection point (if any) AND the cell which was intersected by
   // the finite line.
   virtual int IntersectWithLine(
-    double a0[3], double a1[3], double tol,
-    double& t, double x[3], double pcoords[3],
-    int &subId, vtkIdType &cellId);
+    double p1[3], double p2[3], double tol, double& t, double x[3],
+    double pcoords[3], int &subId, vtkIdType &cellId);
 
   // Description:
   // Return intersection point (if any) AND the cell which was intersected by
   // the finite line. The cell is returned as a cell id and as a generic cell.
   virtual int IntersectWithLine(
-    double a0[3], double a1[3], double tol,
-    double& t, double x[3], double pcoords[3],
-    int &subId, vtkIdType &cellId,
-    vtkGenericCell *cell);
+    double p1[3], double p2[3], double tol, double& t, double x[3], 
+    double pcoords[3], int &subId, vtkIdType &cellId, vtkGenericCell *cell);
 
   // Description:
   // Take the passed line segment and intersect it with the data set.
@@ -131,7 +127,7 @@ public:
   // to receive that information. This method is currently only implemented
   // in vtkOBBTree
   virtual int IntersectWithLine(
-    const double a0[3], const double a1[3],
+    const double p1[3], const double p2[3],
     vtkPoints *points, vtkIdList *cellIds);
 
   // Description:
@@ -242,7 +238,7 @@ public:
   // Some locators cache cell bounds and this function can make use
   // of fast access to the data.
   virtual bool InsideCellBounds(double x[3], vtkIdType cell_ID);
-
+ 
 protected:
    vtkAbstractCellLocator();
   ~vtkAbstractCellLocator();

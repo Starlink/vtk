@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLPainterDeviceAdapter.cxx,v $
+  Module:    vtkOpenGLPainterDeviceAdapter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,14 +30,13 @@
 #include "vtkRenderer.h"
 #include "vtkgl.h"
 
-#include <vtkstd/algorithm>
+#include <algorithm>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 #  include "vtkOpenGL.h"
 #endif
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPainterDeviceAdapter, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkOpenGLPainterDeviceAdapter);
 #endif
 //-----------------------------------------------------------------------------
@@ -259,6 +258,7 @@ int vtkOpenGLPainterDeviceAdapter::IsAttributesSupported(int attribute)
   case vtkDataSetAttributes::NORMALS:
   case vtkDataSetAttributes::SCALARS:
   case vtkDataSetAttributes::TCOORDS:
+  case vtkDataSetAttributes::EDGEFLAG:
     return 1;
     }
   return 0;
@@ -534,6 +534,18 @@ void vtkOpenGLPainterDeviceAdapter::SendAttribute(int index, int numcomp,
           return;
         }
       break;
+    case vtkDataSetAttributes::EDGEFLAG:        // Edge Flag
+      if (numcomp != 1)
+        {
+        vtkErrorMacro("Bad number of components.");
+        return;
+        }
+       switch (type)
+        {
+        vtkTemplateMacro(glEdgeFlag(static_cast<GLboolean>(
+                          reinterpret_cast<const VTK_TT*>(attribute)[offset])));
+        }
+      break;
     default:
       vtkErrorMacro("Unsupported attribute index: " << index);
       return;
@@ -715,6 +727,33 @@ void vtkOpenGLPainterDeviceAdapter::SetAttributePointer(int index,
         }
       glTexCoordPointer(numcomponents, gltype, stride, pointer);
       break;
+    case vtkDataSetAttributes::EDGEFLAG:        // Edge flag
+      if (numcomponents != 1)
+        {
+        vtkErrorMacro("Edge flag must have one component.");
+        return;
+        }
+      // Flag must be conformant to GLboolean
+      if ((type == VTK_FLOAT) || (type == GL_DOUBLE))
+        {
+        vtkErrorMacro("Unsupported type for edge flag: " << type);
+        return;
+        }
+      // Thus is an unfriendly way to force the array to be conformant to
+      // a GLboolean array.  At the very least there should be some indication
+      // in VTK outside of OpenGL to determine which VTK type to use.
+      switch (type)
+        {
+        vtkTemplateMacro(if (sizeof(VTK_TT) != sizeof(GLboolean))
+                           {
+                           vtkErrorMacro(<< "Unsupported tyep for edge flag: "
+                                         << type);
+                           return;
+                           }
+                         );
+        }
+      glEdgeFlagPointer(stride, pointer);
+      break;
     default:
       vtkErrorMacro("Unsupported attribute index: " << index);
       return;
@@ -735,6 +774,8 @@ void vtkOpenGLPainterDeviceAdapter::EnableAttributeArray(int index)
       glEnableClientState(GL_COLOR_ARRAY);  break;
   case vtkDataSetAttributes::TCOORDS:
       glEnableClientState(GL_TEXTURE_COORD_ARRAY);  break;
+  case vtkDataSetAttributes::EDGEFLAG:
+      glEnableClientState(GL_EDGE_FLAG_ARRAY);  break;
     default:
       vtkErrorMacro("Unsupported attribute index: " << index);
       return;
@@ -753,6 +794,8 @@ void vtkOpenGLPainterDeviceAdapter::DisableAttributeArray(int index)
       glDisableClientState(GL_COLOR_ARRAY);  break;
   case vtkDataSetAttributes::TCOORDS:
       glDisableClientState(GL_TEXTURE_COORD_ARRAY);  break;
+  case vtkDataSetAttributes::EDGEFLAG:
+      glDisableClientState(GL_EDGE_FLAG_ARRAY);  break;
     default:
       vtkErrorMacro("Unsupported attribute index: " << index);
       return;
@@ -786,7 +829,7 @@ void vtkOpenGLPainterDeviceAdapter::DrawElements(int mode, vtkIdType count,
         // else can I do?
         vtkIdType *oldarray = static_cast<vtkIdType *>(indices);
         GLuint *newarray = new GLuint[count];
-        vtkstd::copy(oldarray, oldarray + count, newarray);
+        std::copy(oldarray, oldarray + count, newarray);
         glDrawElements(VTK2OpenGLPrimitive[mode], static_cast<GLsizei>(count),
                        GL_UNSIGNED_INT, newarray);
         delete[] newarray;
@@ -901,7 +944,7 @@ void vtkOpenGLPainterDeviceAdapter::MakeVertexEmphasis(bool mode)
     glGetFloatv(GL_DEPTH_RANGE, nf);
     this->RangeNear = nf[0];
     this->RangeFar = nf[1];
-    glDepthRange(0.0, nf[1]*0.98);
+    glDepthRange(0.0, nf[1]*0.999999);
     glDepthMask(GL_FALSE); //prevent verts from interfering with each other
     }
   else

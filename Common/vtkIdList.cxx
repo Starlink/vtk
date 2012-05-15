@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIdList.cxx,v $
+  Module:    vtkIdList.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkIdList.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkIdList, "$Revision: 1.45 $");
 vtkStandardNewMacro(vtkIdList);
 
 vtkIdList::vtkIdList()
@@ -186,7 +185,7 @@ vtkIdType *vtkIdList::Resize(const vtkIdType sz)
 #define VTK_TMP_ARRAY_SIZE 500
 // Intersect this list with another vtkIdList. Updates current list according
 // to result of intersection operation.
-void vtkIdList::IntersectWith(vtkIdList& otherIds)
+void vtkIdList::IntersectWith(vtkIdList* otherIds)
 {
   // Fast method due to Dr. Andreas Mueller of ISE Integrated Systems 
   // Engineering (CH).
@@ -204,7 +203,7 @@ void vtkIdList::IntersectWith(vtkIdList& otherIds)
     for (this->Reset(), i=0; i < thisNumIds; i++) 
       {
       vtkid = thisIds[i];
-      if ( otherIds.IsId(vtkid) != (-1) )
+      if ( otherIds->IsId(vtkid) != (-1) )
         {
         this->InsertNextId(vtkid);
         }
@@ -222,7 +221,7 @@ void vtkIdList::IntersectWith(vtkIdList& otherIds)
     for (this->Reset(), i=0; i < thisNumIds; i++) 
       {
       vtkid = *(thisIds + i);
-      if ( otherIds.IsId(vtkid) != (-1) )
+      if ( otherIds->IsId(vtkid) != (-1) )
         {
         this->InsertNextId(vtkid);
         }

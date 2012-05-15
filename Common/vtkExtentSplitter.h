@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtentSplitter.h,v $
+  Module:    vtkExtentSplitter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class vtkExtentSplitterInternals;
 class VTK_COMMON_EXPORT vtkExtentSplitter : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkExtentSplitter,vtkObject);
+  vtkTypeMacro(vtkExtentSplitter,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);  
   static vtkExtentSplitter *New();
   

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToGraph.h,v $
+  Module:    vtkTableToGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,7 @@
 // .NAME vtkTableToGraph - convert a vtkTable into a vtkGraph
 //
 // .SECTION Description
-// vtkTableToGraph converts a table to a graph using an auxilliary 
+// vtkTableToGraph converts a table to a graph using an auxiliary 
 // link graph.  The link graph specifies how each row in the table
 // should be converted to an edge, or a collection of edges.  It also
 // specifies which columns of the table should be considered part of
@@ -74,7 +74,7 @@ class VTK_INFOVIS_EXPORT vtkTableToGraph : public vtkGraphAlgorithm
 {
 public:
   static vtkTableToGraph* New();
-  vtkTypeRevisionMacro(vtkTableToGraph,vtkGraphAlgorithm);
+  vtkTypeMacro(vtkTableToGraph,vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

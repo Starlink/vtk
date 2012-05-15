@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterXMLWriter.h,v $
+  Module:    vtkX3DExporterXMLWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+// .NAME vtkX3DExporterXMLWriter - X3D Exporter XML Writer
+// .SECTION Description
+// vtkX3DExporterXMLWriter
+
 #ifndef __vtkX3DExporterXMLWriter_h
 #define __vtkX3DExporterXMLWriter_h
 
@@ -24,13 +28,14 @@ class VTK_HYBRID_EXPORT vtkX3DExporterXMLWriter : public vtkX3DExporterWriter
 
 public:
   static vtkX3DExporterXMLWriter *New();
-  vtkTypeRevisionMacro(vtkX3DExporterXMLWriter, vtkX3DExporterWriter);
+  vtkTypeMacro(vtkX3DExporterXMLWriter, vtkX3DExporterWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   virtual void CloseFile();
   virtual int OpenFile(const char* file);
   virtual void Flush();
 
+  virtual int OpenStream();
 
   void StartDocument();
   void EndDocument();
@@ -68,9 +73,9 @@ private:
   void AddDepth();
   void SubDepth();
 
-  vtkstd::string ActTab;
+  std::string ActTab;
   int Depth;
-  ofstream OutputStream;
+  ostream *OutputStream;
   vtkX3DExporterXMLNodeInfoStack* InfoStack;
 
   vtkX3DExporterXMLWriter(const vtkX3DExporterXMLWriter&); // Not implemented.

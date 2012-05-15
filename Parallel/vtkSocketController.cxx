@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSocketController.cxx,v $
+  Module:    vtkSocketController.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 int vtkSocketController::Initialized = 0;
 
-vtkCxxRevisionMacro(vtkSocketController, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkSocketController);
 
 //----------------------------------------------------------------------------
@@ -104,7 +103,7 @@ void vtkSocketController::CloseConnection()
 }
 
 //----------------------------------------------------------------------------
-int vtkSocketController::ConnectTo( char* hostName, int port )
+int vtkSocketController::ConnectTo(const char* hostName, int port )
 { 
   return vtkSocketCommunicator::SafeDownCast(this->Communicator)->
     ConnectTo(hostName, port); 

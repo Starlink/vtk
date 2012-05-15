@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPPCAStatistics.h,v $
+  Module:    vtkPPCAStatistics.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+/*-------------------------------------------------------------------------
+  Copyright 2011 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+  -------------------------------------------------------------------------*/
 // .NAME vtkPPCAStatistics - A class for parallel principal component analysis
 // .SECTION Description
 // vtkPPCAStatistics is vtkPCAStatistics subclass for parallel datasets.
@@ -32,7 +37,7 @@ class vtkMultiProcessController;
 class VTK_INFOVIS_EXPORT vtkPPCAStatistics : public vtkPCAStatistics
 {
 public:
-  vtkTypeRevisionMacro(vtkPPCAStatistics, vtkPCAStatistics);
+  vtkTypeMacro(vtkPPCAStatistics, vtkPCAStatistics);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkPPCAStatistics* New();
 
@@ -51,8 +56,9 @@ protected:
   vtkMultiProcessController* Controller;
 
   // Execute the parallel calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
-                             vtkDataObject* outMeta );
+  virtual void Learn( vtkTable* inData,
+                      vtkTable* inParameters,
+                      vtkMultiBlockDataSet* outMeta );
 private:
   vtkPPCAStatistics(const vtkPPCAStatistics&); // Not implemented.
   void operator=(const vtkPPCAStatistics&); // Not implemented.

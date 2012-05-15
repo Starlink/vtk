@@ -3,7 +3,7 @@ SET(UKIT IMAGING)
 SET(KIT_TCL_LIBS vtkFilteringTCL)
 SET(KIT_PYTHON_LIBS vtkFilteringPythonD)
 SET(KIT_JAVA_LIBS vtkFilteringJava)
-SET(KIT_LIBS vtkFiltering)
+SET(KIT_INTERFACE_LIBRARIES vtkFiltering)
 
 SET( Kit_SRCS
 vtkBooleanTexture.cxx
@@ -16,6 +16,7 @@ vtkImageAnisotropicDiffusion3D.cxx
 vtkImageAppend.cxx
 vtkImageAppendComponents.cxx
 vtkImageBlend.cxx
+vtkImageBSplineCoefficients.cxx
 vtkImageButterworthHighPass.cxx
 vtkImageButterworthLowPass.cxx
 vtkImageCacheFilter.cxx
@@ -52,6 +53,8 @@ vtkImageGaussianSource.cxx
 vtkImageGradient.cxx
 vtkImageGradientMagnitude.cxx
 vtkImageGridSource.cxx
+vtkImageHistogram.cxx
+vtkImageHistogramStatistics.cxx
 vtkImageHSIToRGB.cxx
 vtkImageHSVToRGB.cxx
 vtkImageHybridMedian2D.cxx
@@ -82,6 +85,7 @@ vtkImageNormalize.cxx
 vtkImageOpenClose3D.cxx
 vtkImagePadFilter.cxx
 vtkImagePermute.cxx
+vtkImageSlab.cxx
 vtkImageQuantizeRGBToIndex.cxx
 vtkImageRFFT.cxx
 vtkImageRGBToHSI.cxx
@@ -89,7 +93,9 @@ vtkImageRGBToHSV.cxx
 vtkImageRange3D.cxx
 vtkImageRectilinearWipe.cxx
 vtkImageResample.cxx
+vtkImageResize.cxx
 vtkImageReslice.cxx
+vtkImageResliceToColors.cxx
 vtkImageSeedConnectivity.cxx
 vtkImageSeparableConvolution.cxx
 vtkImageShiftScale.cxx
@@ -100,16 +106,23 @@ vtkImageSobel2D.cxx
 vtkImageSobel3D.cxx
 vtkImageSpatialAlgorithm.cxx
 vtkImageStencil.cxx
+vtkImageStencilIterator.cxx
+vtkImageStencilToImage.cxx
+vtkImageStencilAlgorithm.cxx
 vtkImageStencilData.cxx
 vtkImageStencilSource.cxx
+vtkImageSlabReslice.cxx
 vtkImageThreshold.cxx
+vtkImageThresholdConnectivity.cxx
 vtkImageToImageStencil.cxx
 vtkImageTranslateExtent.cxx
 vtkImageVariance3D.cxx
 vtkImageWrapPad.cxx
 vtkImageWeightedSum.cxx
 vtkImplicitFunctionToImageStencil.cxx
+vtkLassoStencilSource.cxx
 vtkPointLoad.cxx
+vtkROIStencilSource.cxx
 vtkRTAnalyticSource.cxx
 vtkSampleFunction.cxx
 vtkShepardMethod.cxx
@@ -125,7 +138,13 @@ vtkImageFourierFilter
 vtkImageIterateFilter
 vtkImagePadFilter
 vtkImageSpatialAlgorithm
+vtkImageStencilIterator
   ABSTRACT
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+vtkImageStencilIterator
+  WRAP_EXCLUDE
 )
 
 IF(CMAKE_COMPILER_IS_GNUCXX AND VTK_GNUCXX_VERSION)
@@ -164,3 +183,11 @@ SET(KIT_JAVA_DEPS)
 # Include CMake code common to all kits.
 INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
 #-----------------------------------------------------------------------------
+
+IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+  INSTALL(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkImageStencilIterator.txx
+    DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
+    COMPONENT Development
+    )
+ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)

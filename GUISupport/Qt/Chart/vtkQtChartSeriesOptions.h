@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesOptions.h,v $
+  Module:    vtkQtChartSeriesOptions.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,12 +25,17 @@
 #define _vtkQtChartSeriesOptions_h
 
 #include "vtkQtChartExport.h"
+#include "vtkQtChartLayer.h"  // needed for enum
+#include "vtkQtPointMarker.h" // needed for enum
+
 #include <QObject>
+#include <QVariant>
+#include <QMap>
+#include <QBrush>
+#include <QPen>
+#include <QSizeF>
 
-class vtkQtChartStyleGenerator;
-class QBrush;
-class QPen;
-
+class vtkQtChartSeriesColors;
 
 /// \class vtkQtChartSeriesOptions
 /// \brief
@@ -39,6 +44,20 @@ class QPen;
 class VTKQTCHART_EXPORT vtkQtChartSeriesOptions : public QObject
 {
   Q_OBJECT
+
+public:
+  enum OptionType
+    {
+    VISIBLE,
+    PEN,
+    BRUSH,
+    COLORS,
+    AXES_CORNER,
+    MARKER_STYLE,
+    MARKER_SIZE,
+    LABEL,
+    NUMBER_OF_OPTION_TYPES
+    };
 
 public:
   /// \brief
@@ -51,75 +70,142 @@ public:
   vtkQtChartSeriesOptions &operator=(const vtkQtChartSeriesOptions &other);
 
   /// \brief
-  ///   Gets the style generator index for the series.
-  /// \return
-  ///   The style generator index for the series.
-  int getStyle() const {return this->Style;}
-
-  /// \brief
-  ///   Sets the style generator index for the series.
-  ///
-  /// This method only sets the style index. It can be overridden to
-  /// use the generator to set other series options.
-  ///
-  /// \param style The style index for the generator.
-  /// \param generator The style generator to use.
-  virtual void setStyle(int style, vtkQtChartStyleGenerator *generator);
-
-  /// \brief
   ///   Gets whether or not the series should be visible.
   /// \return
   ///   True if the series should be visible.
-  bool isVisible() const {return this->Visible;}
+  bool isVisible() const
+    { return this->getGenericOption(VISIBLE).toBool(); }
 
   /// \brief
   ///   Sets whether or not the series should be visible.
   /// \param visible True if the series should be visible.
-  void setVisible(bool visible);
+  void setVisible(bool visible)
+    { this->setGenericOption(VISIBLE, visible); }
 
   /// \brief
   ///   Gets the series pen.
   /// \return
   ///   A reference to the series pen.
-  const QPen &getPen() const;
+  QPen getPen() const
+    { return this->getGenericOption(PEN).value<QPen>(); }
 
   /// \brief
   ///   Sets the series pen.
   /// \param pen The new series pen.
-  void setPen(const QPen &pen);
+  void setPen(const QPen &pen)
+    { return this->setGenericOption(PEN, pen); }
 
   /// \brief
   ///   Gets the series brush.
   /// \return
   ///   A reference to the series brush.
-  const QBrush &getBrush() const;
+  QBrush getBrush() const
+    { return this->getGenericOption(BRUSH).value<QBrush>(); }
 
   /// \brief
   ///   Sets the series brush.
   /// \param brush The new series brush.
-  void setBrush(const QBrush &brush);
+  void setBrush(const QBrush &brush)
+    { this->setGenericOption(BRUSH, brush); }
+
+  /// \brief
+  ///   Gets the series colors object.
+  /// \return
+  ///   A pointer to the series colors object.
+  vtkQtChartSeriesColors *getSeriesColors() const;
+
+  /// \brief
+  ///   Sets the series colors object.
+  ///
+  /// If the series colors object is not null, the series should be
+  /// drawn in multiple colors.
+  ///
+  /// \param colors The new series colors object.
+  void setSeriesColors(vtkQtChartSeriesColors *colors);
+
+  /// \brief
+  ///   Gets the axes corner for the series.
+  /// \return
+  ///   The axes corner for the series.
+  vtkQtChartLayer::AxesCorner getAxesCorner() const
+    { 
+    return static_cast<vtkQtChartLayer::AxesCorner>(
+      this->getGenericOption(AXES_CORNER).value<int>());
+    }
+
+  /// \brief
+  ///   Sets the axes corner for the series.
+  /// \param axes The new axes corner for the series.
+  void setAxesCorner(vtkQtChartLayer::AxesCorner axes)
+    { this->setGenericOption(AXES_CORNER, axes); }
+
+  /// \brief
+  ///   Gets the series marker style.
+  /// \return
+  ///   The series marker style.
+  vtkQtPointMarker::MarkerStyle getMarkerStyle() const
+    {
+    return
+      static_cast<vtkQtPointMarker::MarkerStyle>(
+      this->getGenericOption(MARKER_STYLE).value<int>());
+    }
+
+  /// \brief
+  ///   Sets the series marker style.
+  /// \param style The new series marker style.
+  void setMarkerStyle(vtkQtPointMarker::MarkerStyle style)
+    { 
+    this->setGenericOption(MARKER_STYLE, style);
+    }
+
+  /// \brief
+  ///   Gets the marker size for the series.
+  /// \return
+  ///   A reference to the series marker size.
+  QSizeF getMarkerSize() const
+    { return this->getGenericOption(MARKER_SIZE).value<QSizeF>(); }
+
+  /// \brief
+  ///   Sets the marker size for the series.
+  /// \param size The new series marker size.
+  void setMarkerSize(const QSizeF &size)
+    { this->setGenericOption(MARKER_SIZE, size); }
+
+  /// \brief
+  ///   Gets the label for this series, if any. If an empty string is returned,
+  ///   the default, then the name of the series is used as the label.
+  QString getLabel() const
+    { return this->getGenericOption(LABEL).toString(); }
+
+  void setLabel(const QString& label)
+    { this->setGenericOption(LABEL, label); }
+
+  /// \brief
+  ///   Sets the option using generic API.
+  void setGenericOption(OptionType type, const QVariant& value);
+
+  /// \brief
+  ///   Gets the option using generic API.
+  QVariant getGenericOption(OptionType type) const;
+
+  /// \brief
+  ///   Set the default value.
+  void setDefaultOption(OptionType type, const QVariant& value);
 
 signals:
   /// \brief
-  ///   Emitted when the series visibility option has changed.
-  /// \param visible True if the series should be displayed.
-  void visibilityChanged(bool visible);
-
-  /// \brief
-  ///   Emitted when the series pen option has changed.
-  /// \param pen The new series pen.
-  void penChanged(const QPen &pen);
-
-  /// \brief
-  ///   Emitted when the series brush option has changed.
-  /// \param brush The new series brush.
-  void brushChanged(const QBrush &brush);
+  ///   Emitted whenever any of the options change.
+  /// \param type Type of the option that was changed.
+  /// \param newValue The new value for the option.
+  /// \param oldValue The previous value for the option, if any.
+  void dataChanged(int type,
+    const QVariant& newValue, const QVariant& oldValue);
 
 private:
-  QPen *Pen;     ///< Stores the series pen.
-  QBrush *Brush; ///< Stores the series brush.
-  int Style;     ///< Stores the style generator index.
-  bool Visible;  ///< True if the series should be displayed.
+  QMap<OptionType, QVariant> Data;
+  QMap<OptionType, QVariant> Defaults;
+
+  void InitializeDefaults();
 };
 
 #endif

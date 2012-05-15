@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaProperty.cxx,v $
+  Module:    vtkMesaProperty.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,5 +39,4 @@
 #include "vtkOpenGLProperty.cxx"
 #undef vtkOpenGLProperty
 
-vtkCxxRevisionMacro(vtkMesaProperty, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkMesaProperty);

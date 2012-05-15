@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProcessIdScalars.h,v $
+  Module:    vtkProcessIdScalars.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_PARALLEL_EXPORT vtkProcessIdScalars : public vtkDataSetAlgorithm
 public:
   static vtkProcessIdScalars *New();
 
-  vtkTypeRevisionMacro(vtkProcessIdScalars,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkProcessIdScalars,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

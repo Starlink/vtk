@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPICommunicator.cxx,v $
+  Module:    vtkMPICommunicator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,7 @@
 
 #include "vtkImageData.h"
 #include "vtkMPIController.h"
-#include "vtkMPIGroup.h"
+//#include "vtkMPIGroup.h"
 #include "vtkProcessGroup.h"
 #include "vtkObjectFactory.h"
 #include "vtkRectilinearGrid.h"
@@ -28,17 +28,27 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-#include <vtkstd/vector>
+#include <vector>
+#include <assert.h>
 
-vtkCxxRevisionMacro(vtkMPICommunicator, "$Revision: 1.50 $");
+static inline void  vtkMPICommunicatorDebugBarrier(MPI_Comm* handle)
+{
+  // If NDEBUG is defined, do nothing.
+#ifdef NDEBUG
+  (void)handle; // to avoid warning about unused parameter
+#else
+  MPI_Barrier(*handle);
+#endif
+}
+
 vtkStandardNewMacro(vtkMPICommunicator);
 
 vtkMPICommunicator* vtkMPICommunicator::WorldCommunicator = 0;
 
 
-vtkMPICommunicatorOpaqueComm::vtkMPICommunicatorOpaqueComm()
+vtkMPICommunicatorOpaqueComm::vtkMPICommunicatorOpaqueComm(MPI_Comm* handle)
 {
-  this->Handle = 0;
+  this->Handle = handle;
 }
 
 MPI_Comm* vtkMPICommunicatorOpaqueComm::GetHandle()
@@ -50,7 +60,8 @@ MPI_Comm* vtkMPICommunicatorOpaqueComm::GetHandle()
 // This MPI error handler basically does the same thing as the default error
 // handler, but also provides a convenient place to attache a debugger
 // breakpoint.
-void vtkMPICommunicatorMPIErrorHandler(MPI_Comm *comm, int *errorcode, ...)
+extern "C" void vtkMPICommunicatorMPIErrorHandler(MPI_Comm *comm,
+                                                  int *errorcode, ...)
 {
   char ErrorMessage[MPI_MAX_ERROR_STRING];
   int len;
@@ -315,12 +326,45 @@ int vtkMPICommunicatorAllReduceData(const void *sendBuffer, void *recvBuffer,
                        length, mpiType, operation, *comm);
 }
 
+//----------------------------------------------------------------------------
+int vtkMPICommunicatorIprobe(int source, int tag, int* flag,
+                             int* actualSource, MPI_Datatype datatype,
+                             int* size, MPI_Comm * handle)
+{
+  if (source == vtkMultiProcessController::ANY_SOURCE)
+    {
+    source = MPI_ANY_SOURCE;
+    }
+  MPI_Status status;
+  int retVal = MPI_Iprobe(source, tag, *handle,
+                          flag, &status);
+  if(retVal == MPI_SUCCESS && *flag == 1)
+    {
+    if(actualSource)
+      {
+      *actualSource = status.MPI_SOURCE;
+      }
+    if(size)
+      {
+      return MPI_Get_count(&status, datatype, size);
+      }
+    }
+  return retVal;
+}
+
 //-----------------------------------------------------------------------------
 // Method for converting an MPI operation to a
 // vtkMultiProcessController::Operation.
+// MPIAPI is defined in the microsoft mpi.h which decorates
+// with the __stdcall decoration.
 static vtkCommunicator::Operation *CurrentOperation;
+#ifdef MPIAPI
+extern "C" void MPIAPI vtkMPICommunicatorUserFunction(void *invec, void *inoutvec,
+                                               int *len, MPI_Datatype *datatype)
+#else
 extern "C" void vtkMPICommunicatorUserFunction(void *invec, void *inoutvec,
                                                int *len, MPI_Datatype *datatype)
+#endif
 {
   int vtkType = vtkMPICommunicatorGetVTKType(*datatype);
   CurrentOperation->Function(invec, inoutvec, *len, vtkType);
@@ -424,19 +468,19 @@ vtkMPICommunicator::~vtkMPICommunicator()
 }
 
 //-----------------------------------------------------------------------------
-#ifndef VTK_LEGACY_REMOVE
-int vtkMPICommunicator::Initialize(vtkMPICommunicator  *mpiComm,
-                                   vtkMPIGroup *deprecatedGroup)
-{
-  VTK_LEGACY_REPLACED_BODY(Initialize(vtkMPICommunicator *, vtkMPIGroup *),
-                           "5.2", Initialize(vtkProcessGroup *));
-
-  VTK_CREATE(vtkProcessGroup, group);
-  deprecatedGroup->CopyInto(group, mpiComm);
-
-  return this->Initialize(group);
-}
-#endif
+//#ifndef VTK_LEGACY_REMOVE
+//int vtkMPICommunicator::Initialize(vtkMPICommunicator  *mpiComm,
+//                                   vtkMPIGroup *deprecatedGroup)
+//{
+//  VTK_LEGACY_REPLACED_BODY(Initialize(vtkMPICommunicator *, vtkMPIGroup *),
+//                           "5.2", Initialize(vtkProcessGroup *));
+//
+//  VTK_CREATE(vtkProcessGroup, group);
+//  deprecatedGroup->CopyInto(group, mpiComm);
+//
+//  return this->Initialize(group);
+//}
+//#endif
 
 //-----------------------------------------------------------------------------
 int vtkMPICommunicator::Initialize(vtkProcessGroup *group)
@@ -544,6 +588,70 @@ int vtkMPICommunicator::Initialize(vtkProcessGroup *group)
   return 1;
 }
 
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::SplitInitialize(vtkCommunicator *oldcomm,
+                                        int color, int key)
+{
+  if (this->Initialized) return 0;
+
+  vtkMPICommunicator *mpiComm = vtkMPICommunicator::SafeDownCast(oldcomm);
+  if (!mpiComm)
+    {
+    vtkErrorMacro("Split communicator must be an MPI communicator.");
+    return 0;
+    }
+
+  // If mpiComm has been initialized, it is guaranteed (unless the MPI calls
+  // return an error somewhere) to have valid Communicator.
+  if (!mpiComm->Initialized)
+    {
+    vtkWarningMacro("The communicator passed has not been initialized!");
+    return 0;
+    }
+
+  this->KeepHandleOff();
+
+  this->MPIComm->Handle = new MPI_Comm;
+  int err;
+  if (   (err = MPI_Comm_split(*(mpiComm->MPIComm->Handle), color, key,
+                               this->MPIComm->Handle))
+      != MPI_SUCCESS )
+    {
+    delete this->MPIComm->Handle;
+    this->MPIComm->Handle = 0;
+
+    char *msg = vtkMPIController::ErrorString(err);
+    vtkErrorMacro("MPI error occured: " << msg);
+    delete[] msg;
+
+    return 0;
+    }
+
+  this->InitializeNumberOfProcesses();
+  this->Initialized = 1;
+
+  this->Modified();
+
+  return 1;
+}
+
+int vtkMPICommunicator::InitializeExternal (vtkMPICommunicatorOpaqueComm* comm)
+{
+  this->KeepHandleOn();
+
+  if (this->MPIComm->Handle) 
+    {
+    delete this->MPIComm->Handle;
+    }
+  this->MPIComm->Handle = new MPI_Comm (*(comm->GetHandle()));
+  this->InitializeNumberOfProcesses();
+  this->Initialized = 1;
+
+  this->Modified();
+
+  return 1;
+}
+
 //----------------------------------------------------------------------------
 // Start the copying process  
 void vtkMPICommunicator::InitializeCopy(vtkMPICommunicator* source)
@@ -584,12 +692,6 @@ int vtkMPICommunicator::InitializeNumberOfProcesses()
     vtkErrorMacro("MPI error occured: " << msg);
     delete[] msg;
     return 0;
-    }
-
-  if (this->MaximumNumberOfProcesses > vtkMultiProcessController::MAX_PROCESSES)
-    {
-    vtkWarningMacro("Maximum of " << vtkMultiProcessController::MAX_PROCESSES);
-    this->MaximumNumberOfProcesses = vtkMultiProcessController::MAX_PROCESSES;
     }
   
   this->NumberOfProcesses = this->MaximumNumberOfProcesses;
@@ -830,6 +932,17 @@ int vtkMPICommunicator::NoBlockSend(const float* data, int length,
                                       tag, MPI_FLOAT, req, 
                                       this->MPIComm->Handle));
 }
+//----------------------------------------------------------------------------
+int vtkMPICommunicator::NoBlockSend(const double* data, int length, 
+                                    int remoteProcessId, int tag, Request& req)
+{
+
+  return CheckForMPIError(
+    vtkMPICommunicatorNoBlockSendData(data, 
+                                      length, remoteProcessId, 
+                                      tag, MPI_DOUBLE, req, 
+                                      this->MPIComm->Handle));
+}
 
 //----------------------------------------------------------------------------
 int vtkMPICommunicator::NoBlockReceive(int* data, int length, 
@@ -880,6 +993,19 @@ int vtkMPICommunicator::NoBlockReceive(float* data, int length,
     vtkMPICommunicatorNoBlockReceiveData(data, 
                                          length, remoteProcessId, 
                                          tag, MPI_FLOAT, req, 
+                                         this->MPIComm->Handle));
+
+}
+//----------------------------------------------------------------------------
+int vtkMPICommunicator::NoBlockReceive(double* data, int length, 
+                                       int remoteProcessId, int tag,
+                                       Request& req)
+{
+
+  return CheckForMPIError(
+    vtkMPICommunicatorNoBlockReceiveData(data, 
+                                         length, remoteProcessId, 
+                                         tag, MPI_DOUBLE, req, 
                                          this->MPIComm->Handle));
 
 }
@@ -999,6 +1125,7 @@ void vtkMPICommunicator::Barrier()
 int vtkMPICommunicator::BroadcastVoidArray(void *data, vtkIdType length,
                                            int type, int root)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   if (!vtkMPICommunicatorCheckSize(type, length)) return 0;
   return CheckForMPIError(MPI_Bcast(data, length,
                                     vtkMPICommunicatorGetMPIType(type),
@@ -1011,6 +1138,7 @@ int vtkMPICommunicator::GatherVoidArray(const void *sendBuffer,
                                         vtkIdType length, int type,
                                         int destProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   int numProc;
   MPI_Comm_size(*this->MPIComm->Handle, &numProc);
   if (!vtkMPICommunicatorCheckSize(type, length*numProc)) return 0;
@@ -1029,6 +1157,7 @@ int vtkMPICommunicator::GatherVVoidArray(const void *sendBuffer,
                                          vtkIdType *offsets, int type,
                                          int destProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   if (!vtkMPICommunicatorCheckSize(type, sendLength)) return 0;
   MPI_Datatype mpiType = vtkMPICommunicatorGetMPIType(type);
   // We have to jump through several hoops to make sure vtkIdType arrays
@@ -1047,7 +1176,7 @@ int vtkMPICommunicator::GatherVVoidArray(const void *sendBuffer,
       {
       switch(type)
         {
-        vtkTemplateMacro(vtkstd::copy(
+        vtkTemplateMacro(std::copy(
                        reinterpret_cast<const VTK_TT*>(sendBuffer),
                        reinterpret_cast<const VTK_TT*>(sendBuffer) + sendLength,
                        reinterpret_cast<VTK_TT*>(recvBuffer) + offsets[0]));
@@ -1055,7 +1184,7 @@ int vtkMPICommunicator::GatherVVoidArray(const void *sendBuffer,
       return 1;
       }
 #endif //OPEN_MPI
-    vtkstd::vector<int> mpiRecvLengths, mpiOffsets;
+    std::vector<int> mpiRecvLengths, mpiOffsets;
     mpiRecvLengths.resize(numProc);  mpiOffsets.resize(numProc);
     for (int i = 0; i < numProc; i++)
       {
@@ -1087,6 +1216,7 @@ int vtkMPICommunicator::ScatterVoidArray(const void *sendBuffer,
                                          vtkIdType length, int type,
                                          int srcProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   if (!vtkMPICommunicatorCheckSize(type, length)) return 0;
   MPI_Datatype mpiType = vtkMPICommunicatorGetMPIType(type);
   return CheckForMPIError(MPI_Scatter(const_cast<void *>(sendBuffer),
@@ -1103,6 +1233,7 @@ int vtkMPICommunicator::ScatterVVoidArray(const void *sendBuffer,
                                           vtkIdType recvLength, int type,
                                           int srcProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   if (!vtkMPICommunicatorCheckSize(type, recvLength)) return 0;
   MPI_Datatype mpiType = vtkMPICommunicatorGetMPIType(type);
   // We have to jump through several hoops to make sure vtkIdType arrays
@@ -1121,7 +1252,7 @@ int vtkMPICommunicator::ScatterVVoidArray(const void *sendBuffer,
       {
       switch(type)
         {
-        vtkTemplateMacro(vtkstd::copy(
+        vtkTemplateMacro(std::copy(
                    reinterpret_cast<const VTK_TT*>(sendBuffer) + offsets[0],
                    reinterpret_cast<const VTK_TT*>(sendBuffer) + offsets[0]
                                                                + sendLengths[0],
@@ -1130,7 +1261,7 @@ int vtkMPICommunicator::ScatterVVoidArray(const void *sendBuffer,
       return 1;
       }
 #endif //OPEN_MPI
-    vtkstd::vector<int> mpiSendLengths, mpiOffsets;
+    std::vector<int> mpiSendLengths, mpiOffsets;
     mpiSendLengths.resize(numProc);  mpiOffsets.resize(numProc);
     for (int i = 0; i < numProc; i++)
       {
@@ -1160,6 +1291,7 @@ int vtkMPICommunicator::AllGatherVoidArray(const void *sendBuffer,
                                            void *recvBuffer,
                                            vtkIdType length, int type)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   int numProc;
   MPI_Comm_size(*this->MPIComm->Handle, &numProc);
   if (!vtkMPICommunicatorCheckSize(type, length*numProc)) return 0;
@@ -1177,6 +1309,7 @@ int vtkMPICommunicator::AllGatherVVoidArray(const void *sendBuffer,
                                             vtkIdType *recvLengths,
                                             vtkIdType *offsets, int type)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   if (!vtkMPICommunicatorCheckSize(type, sendLength)) return 0;
   MPI_Datatype mpiType = vtkMPICommunicatorGetMPIType(type);
   // We have to jump through several hoops to make sure vtkIdType arrays
@@ -1191,7 +1324,7 @@ int vtkMPICommunicator::AllGatherVVoidArray(const void *sendBuffer,
     {
     switch(type)
       {
-      vtkTemplateMacro(vtkstd::copy(
+      vtkTemplateMacro(std::copy(
                        reinterpret_cast<const VTK_TT*>(sendBuffer),
                        reinterpret_cast<const VTK_TT*>(sendBuffer) + sendLength,
                        reinterpret_cast<VTK_TT*>(recvBuffer) + offsets[0]));
@@ -1214,7 +1347,7 @@ int vtkMPICommunicator::AllGatherVVoidArray(const void *sendBuffer,
       }
     }
 #endif //OPEN_MPI
-  vtkstd::vector<int> mpiRecvLengths, mpiOffsets;
+  std::vector<int> mpiRecvLengths, mpiOffsets;
   mpiRecvLengths.resize(numProc);  mpiOffsets.resize(numProc);
   for (int i = 0; i < numProc; i++)
     {
@@ -1238,6 +1371,7 @@ int vtkMPICommunicator::ReduceVoidArray(const void *sendBuffer,
                                         vtkIdType length, int type,
                                         int operation, int destProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   MPI_Op mpiOp;
   switch (operation)
     {
@@ -1267,6 +1401,7 @@ int vtkMPICommunicator::ReduceVoidArray(
                                 vtkIdType length, int type,
                                 Operation *operation, int destProcessId)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   MPI_Op mpiOp;
   MPI_Op_create(vtkMPICommunicatorUserFunction, operation->Commutative(),
                 &mpiOp);
@@ -1291,6 +1426,7 @@ int vtkMPICommunicator::AllReduceVoidArray(const void *sendBuffer,
                                            vtkIdType length, int type,
                                            int operation)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   MPI_Op mpiOp;
   switch (operation)
     {
@@ -1322,6 +1458,7 @@ int vtkMPICommunicator::AllReduceVoidArray(
                                 vtkIdType length, int type,
                                 Operation *operation)
 {
+  vtkMPICommunicatorDebugBarrier(this->MPIComm->Handle);
   MPI_Op mpiOp;
   MPI_Op_create(vtkMPICommunicatorUserFunction, operation->Commutative(),
                 &mpiOp);
@@ -1340,109 +1477,61 @@ int vtkMPICommunicator::AllReduceVoidArray(
 
   return res;
 }
-
-//=============================================================================
-// Deprecated reduce methods.
-#ifndef VTK_LEGACY_REMOVE
-
-int vtkMPICommunicator::ReduceMax(int *data, int *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMax, "5.2", Reduce);
-  return this->Reduce(data, to, size, MAX_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_INT, NULL, this->MPIComm->Handle));
 }
 
-int vtkMPICommunicator::ReduceMax(unsigned long *data, unsigned long *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource,
+  int* vtkNotUsed(type), int* size)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMax, "5.2", Reduce);
-  return this->Reduce(data, to, size, MAX_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_INT, size, this->MPIComm->Handle));
 }
 
-int vtkMPICommunicator::ReduceMax(float *data, float *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource,
+  unsigned long* vtkNotUsed(type), int* size)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMax, "5.2", Reduce);
-  return this->Reduce(data, to, size, MAX_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_UNSIGNED_LONG, size, this->MPIComm->Handle));
 }
 
-int vtkMPICommunicator::ReduceMax(double *data, double *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource,
+  const char* vtkNotUsed(type), int* size)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMax, "5.2", Reduce);
-  return this->Reduce(data, to, size, MAX_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_CHAR, size, this->MPIComm->Handle));
 }
 
-int vtkMPICommunicator::ReduceMin(int *data, int *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource,
+  float* vtkNotUsed(type), int* size)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMin, "5.2", Reduce);
-  return this->Reduce(data, to, size, MIN_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_FLOAT, size, this->MPIComm->Handle));
 }
 
-int vtkMPICommunicator::ReduceMin(unsigned long *data, unsigned long *to,
-                                  int size, int root)
+//-----------------------------------------------------------------------------
+int vtkMPICommunicator::Iprobe(
+  int source, int tag, int* flag, int* actualSource,
+  double* vtkNotUsed(type), int* size)
 {
-  VTK_LEGACY_REPLACED_BODY(ReduceMin, "5.2", Reduce);
-  return this->Reduce(data, to, size, MIN_OP, root);
+  return CheckForMPIError(
+    vtkMPICommunicatorIprobe(source, tag, flag, actualSource,
+                             MPI_DOUBLE, size, this->MPIComm->Handle));
 }
-
-int vtkMPICommunicator::ReduceMin(float *data, float *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceMin, "5.2", Reduce);
-  return this->Reduce(data, to, size, MIN_OP, root);
-}
-
-int vtkMPICommunicator::ReduceMin(double *data, double *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceMin, "5.2", Reduce);
-  return this->Reduce(data, to, size, MIN_OP, root);
-}
-
-int vtkMPICommunicator::ReduceSum(int *data, int *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceSum, "5.2", Reduce);
-  return this->Reduce(data, to, size, SUM_OP, root);
-}
-
-int vtkMPICommunicator::ReduceSum(unsigned long *data, unsigned long *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceSum, "5.2", Reduce);
-  return this->Reduce(data, to, size, SUM_OP, root);
-}
-
-int vtkMPICommunicator::ReduceSum(float *data, float *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceSum, "5.2", Reduce);
-  return this->Reduce(data, to, size, SUM_OP, root);
-}
-
-int vtkMPICommunicator::ReduceSum(double *data, double *to,
-                                  int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceSum, "5.2", Reduce);
-  return this->Reduce(data, to, size, SUM_OP, root);
-}
-
-int vtkMPICommunicator::ReduceAnd(bool *data, bool *to, int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceAnd, "5.2", Reduce);
-  return this->Reduce(reinterpret_cast<char *>(data),
-                      reinterpret_cast<char *>(to), size,
-                      LOGICAL_AND_OP, root);
-}
-
-int vtkMPICommunicator::ReduceOr(bool *data, bool *to, int size, int root)
-{
-  VTK_LEGACY_REPLACED_BODY(ReduceOr, "5.2", Reduce);
-  return this->Reduce(reinterpret_cast<char *>(data),
-                      reinterpret_cast<char *>(to), size,
-                      LOGICAL_OR_OP, root);
-}
-
-#endif // VTK_LEGACY_REMOVE

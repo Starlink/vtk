@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEdgeLayoutStrategy.h,v $
+  Module:    vtkEdgeLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class vtkGraph;
 class VTK_INFOVIS_EXPORT vtkEdgeLayoutStrategy : public vtkObject 
 {
 public:
-  vtkTypeRevisionMacro(vtkEdgeLayoutStrategy,vtkObject);
+  vtkTypeMacro(vtkEdgeLayoutStrategy,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

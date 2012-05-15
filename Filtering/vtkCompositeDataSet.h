@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataSet.h,v $
+  Module:    vtkCompositeDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,16 +12,17 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkCompositeDataSet - abstact superclass for composite 
+// .NAME vtkCompositeDataSet - abstract superclass for composite 
 // (multi-block or AMR) datasets
 // .SECTION Description
 // vtkCompositeDataSet is an abstract class that represents a collection
 // of datasets (including other composite datasets). It
 // provides an interface to access the datasets through iterators.
-// vtkCompositeDataSet provides methods are used by subclasses to store the datasets.
+// vtkCompositeDataSet provides methods that are used by subclasses to store the
+// datasets.
 // vtkCompositeDataSet provides the datastructure for a full tree 
 // representation. Subclasses provide the semantics for it and control how
-// this tree is buit.
+// this tree is built.
 
 // .SECTION See Also
 // vtkCompositeDataIterator
@@ -39,7 +40,7 @@ class vtkInformationStringKey;
 class VTK_FILTERING_EXPORT vtkCompositeDataSet : public vtkDataObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCompositeDataSet, vtkDataObject);
+  vtkTypeMacro(vtkCompositeDataSet, vtkDataObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -90,6 +91,11 @@ public:
   // be an iterator for composite dataset with similar structure (achieved by
   // using CopyStructure).
   virtual int HasMetaData(vtkCompositeDataIterator* iter);
+
+  // Description:
+  // Return the actual size of the data in kilobytes. This number
+  // is valid only after the pipeline has updated.
+  virtual unsigned long GetActualMemorySize();
 
   //BTX
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFoo.cxx,v $
+  Module:    vtkImageFoo.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkImageFoo, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkImageFoo);
 
 //----------------------------------------------------------------------------

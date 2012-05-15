@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoView2D.cxx,v $
+  Module:    vtkGeoView2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,25 +23,21 @@
 #include "vtkCamera.h"
 #include "vtkCollection.h"
 #include "vtkGeoAlignedImageRepresentation.h"
-#include "vtkGeoGraphRepresentation2D.h"
 #include "vtkGeoTerrain2D.h"
 #include "vtkInteractorStyleRubberBand2D.h"
 #include "vtkObjectFactory.h"
 #include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
 #include "vtkSmartPointer.h"
 #include "vtkViewTheme.h"
 
-vtkCxxRevisionMacro(vtkGeoView2D, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkGeoView2D);
 vtkCxxSetObjectMacro(vtkGeoView2D, Surface, vtkGeoTerrain2D);
 
 vtkGeoView2D::vtkGeoView2D()
 {
   this->Surface = 0;
-  vtkSmartPointer<vtkInteractorStyleRubberBand2D> style =
-    vtkSmartPointer<vtkInteractorStyleRubberBand2D>::New();
-  this->SetInteractorStyle(style);
-  this->Renderer->GetActiveCamera()->ParallelProjectionOn();
+  this->SetInteractionModeTo2D();
   this->Assembly = vtkAssembly::New();
   this->Renderer->AddActor(this->Assembly);
   this->SetSelectionModeToFrustum();
@@ -56,6 +52,15 @@ vtkGeoView2D::~vtkGeoView2D()
     }
 }
 
+vtkAbstractTransform* vtkGeoView2D::GetTransform()
+{
+  if (this->Surface)
+    {
+    return this->Surface->GetTransform();
+    }
+  return 0;
+}
+
 void vtkGeoView2D::PrintSelf( ostream& os, vtkIndent indent )
 {
   this->Superclass::PrintSelf( os, indent );
@@ -65,6 +70,8 @@ void vtkGeoView2D::PrintSelf( ostream& os, vtkIndent indent )
 
 void vtkGeoView2D::ApplyViewTheme(vtkViewTheme* theme)
 {
+  this->Superclass::ApplyViewTheme(theme);
+
   this->Renderer->SetBackground(theme->GetBackgroundColor());
   this->Renderer->SetBackground2(theme->GetBackgroundColor2());
   this->Renderer->GradientBackgroundOn();
@@ -72,6 +79,8 @@ void vtkGeoView2D::ApplyViewTheme(vtkViewTheme* theme)
 
 void vtkGeoView2D::PrepareForRendering()
 {
+  this->Superclass::PrepareForRendering();
+
   if (!this->Surface)
     {
     return;
@@ -93,13 +102,16 @@ void vtkGeoView2D::PrepareForRendering()
     }
 }
 
-void vtkGeoView2D::AddRepresentationInternal(vtkDataRepresentation* rep)
+void vtkGeoView2D::Render()
 {
-  vtkGeoGraphRepresentation2D* graphRep = vtkGeoGraphRepresentation2D::SafeDownCast(rep);
-  // Make sure the transform of the graph representation matches that of the view.
-  if (graphRep && this->Surface && this->Surface->GetTransform())
+  // If this is the first time, render an extra time to get things
+  // initialized for the first PrepareForRendering pass.
+  this->RenderWindow->MakeCurrent();
+  if (!this->RenderWindow->IsCurrent())
     {
-    graphRep->SetTransform(this->Surface->GetTransform());
+    this->Update();
+    this->PrepareForRendering();
+    this->RenderWindow->Render();
     }
+  this->Superclass::Render();
 }
-

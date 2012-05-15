@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShader2Collection.cxx,v $
+  Module:    vtkShader2Collection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkShader2.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkShader2Collection, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkShader2Collection);
 
 // ----------------------------------------------------------------------------
@@ -39,7 +38,25 @@ vtkShader2Collection::vtkShader2Collection()
 vtkShader2Collection::~vtkShader2Collection()
 {
 }
-  
+
+// ----------------------------------------------------------------------------
+unsigned long vtkShader2Collection::GetMTime()
+{
+  unsigned long result=this->Superclass::GetMTime();
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(s!=0)
+    {
+    unsigned long time=s->GetMTime();
+    if(time>result)
+      {
+      result=time;
+      }
+    s=this->GetNextShader();
+    }
+  return result;
+}
+
 // ----------------------------------------------------------------------------
 // hide the standard AddItem from the user and the compiler.
 void vtkShader2Collection::AddItem(vtkObject *o)
@@ -147,11 +164,8 @@ bool vtkShader2Collection::HasVertexShaders()
 
 // ----------------------------------------------------------------------------
 // Description:
-// Tells if at least one of the shaders is a fragment shader.
-// If yes, it means the fragment processing of the fixed-pipeline is
-// bypassed.
-// If no, it means the fragment processing of the fixed-pipeline is used.
-bool vtkShader2Collection::HasFragmentShaders()
+// Tells if at least one of the shaders is a tessellation control shader.
+bool vtkShader2Collection::HasTessellationControlShaders()
 {
   bool result=false;
   
@@ -159,7 +173,25 @@ bool vtkShader2Collection::HasFragmentShaders()
   vtkShader2 *s=this->GetNextShader();
   while(!result && s!=0)
     {
-    result=s->GetType()==VTK_SHADER_TYPE_FRAGMENT;
+    result=s->GetType()==VTK_SHADER_TYPE_TESSELLATION_CONTROL;
+    s=this->GetNextShader();
+    }
+  
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Tells if at least one of the shaders is a tessellation evaluation shader.
+bool vtkShader2Collection::HasTessellationEvaluationShaders()
+{
+  bool result=false;
+  
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(!result && s!=0)
+    {
+    result=s->GetType()==VTK_SHADER_TYPE_TESSELLATION_EVALUATION;
     s=this->GetNextShader();
     }
   
@@ -186,6 +218,27 @@ bool vtkShader2Collection::HasGeometryShaders()
 
 // ----------------------------------------------------------------------------
 // Description:
+// Tells if at least one of the shaders is a fragment shader.
+// If yes, it means the fragment processing of the fixed-pipeline is
+// bypassed.
+// If no, it means the fragment processing of the fixed-pipeline is used.
+bool vtkShader2Collection::HasFragmentShaders()
+{
+  bool result=false;
+  
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(!result && s!=0)
+    {
+    result=s->GetType()==VTK_SHADER_TYPE_FRAGMENT;
+    s=this->GetNextShader();
+    }
+  
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
 // Release OpenGL resources (shader id of each item).
 void vtkShader2Collection::ReleaseGraphicsResources()
 {
@@ -202,4 +255,16 @@ void vtkShader2Collection::ReleaseGraphicsResources()
 void vtkShader2Collection::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+
+  size_t i=0;
+  size_t c=static_cast<size_t>(this->GetNumberOfItems());
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(s!=0)
+    {
+    os << indent << "shader #" << i << "/"<<c<<endl;
+    s->PrintSelf(os,indent.GetNextIndent());
+    s=this->GetNextShader();
+    ++i;
+    }
 }

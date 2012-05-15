@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContourRepresentation.h,v $
+  Module:    vtkContourRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,11 +54,13 @@
 #define __vtkContourRepresentation_h
 
 #include "vtkWidgetRepresentation.h"
-#include <vtkstd/vector> // Required for vector
+#include <vector> // STL Header; Required for vector
 
 class vtkContourLineInterpolator;
+class vtkIncrementalOctreePointLocator;
 class vtkPointPlacer;
 class vtkPolyData;
+class vtkIdList;
 
 //----------------------------------------------------------------------
 //BTX
@@ -67,6 +69,10 @@ class vtkContourRepresentationPoint
 public:
   double        WorldPosition[3];
   double        NormalizedDisplayPosition[2];
+
+  // The point id. This is blank except in the case of
+  // vtkPolygonalSurfaceContourLineInterpolator
+  vtkIdType     PointId;
 };
 
 class vtkContourRepresentationNode
@@ -75,13 +81,31 @@ public:
   double        WorldPosition[3];
   double        WorldOrientation[9];
   double        NormalizedDisplayPosition[2];
-  vtkstd::vector<vtkContourRepresentationPoint*> Points;
+  int           Selected;
+  std::vector<vtkContourRepresentationPoint*> Points;
+
+  // The point id. This is blank except in the case of
+  // vtkPolygonalSurfaceContourLineInterpolator
+  vtkIdType     PointId;
 };
 
 class vtkContourRepresentationInternals
 {
 public:
-  vtkstd::vector<vtkContourRepresentationNode*> Nodes;
+  std::vector<vtkContourRepresentationNode*> Nodes;
+  void ClearNodes()
+  {
+    for(unsigned int i=0;i<this->Nodes.size();i++)
+      {
+      for (unsigned int j=0;j<this->Nodes[i]->Points.size();j++)
+        {
+        delete this->Nodes[i]->Points[j];
+        }
+      this->Nodes[i]->Points.clear();
+      delete this->Nodes[i];
+      }
+    this->Nodes.clear(); 
+  }   
 };
 //ETX
 
@@ -93,12 +117,13 @@ class VTK_WIDGETS_EXPORT vtkContourRepresentation : public vtkWidgetRepresentati
 public:
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkContourRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkContourRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Add a node at a specific world position. Returns 0 if the
   // node could not be added, 1 otherwise.
+  virtual int AddNodeAtWorldPosition( double x, double y, double z);
   virtual int AddNodeAtWorldPosition( double worldPos[3] );
   virtual int AddNodeAtWorldPosition( double worldPos[3],
                                       double worldOrient[9] );
@@ -141,6 +166,13 @@ public:
   virtual int SetActiveNodeToDisplayPosition( int X, int Y );
   
   // Description:
+  // Set/Get whether the active or nth node is selected. 
+  virtual int ToggleActiveNodeSelected();
+  virtual int GetActiveNodeSelected();
+  virtual int GetNthNodeSelected(int);
+  virtual int SetNthNodeSelected(int);
+
+  // Description:
   // Get the world position of the active node. Will return
   // 0 if there is no active node, or 1 otherwise.
   virtual int GetActiveNodeWorldPosition( double pos[3] );
@@ -170,6 +202,12 @@ public:
   // 1 on success, or 0 if there are not at least 
   // (n+1) nodes (0 based counting).
   virtual int GetNthNodeWorldPosition( int n, double pos[3] );
+
+  //BTX
+  // Description:
+  // Get the nth node.
+  virtual vtkContourRepresentationNode *GetNthNode(int n);
+  //ETX
   
   // Description:
   // Get the nth node's world orientation. Will return
@@ -229,6 +267,14 @@ public:
                                                  double point[3] );
 
   // Description:
+  // Add an intermediate point between node n and n+1
+  // (or n and 0 if n is the last node and the loop is closed).
+  // Returns 1 on success or 0 if n is out of range. The added point is
+  // assigned a ptId as supplied.
+  virtual int AddIntermediatePointWorldPosition( int n,
+                               double point[3], vtkIdType ptId );
+
+  // Description:
   // Delete the last node. Returns 1 on success or 0 if 
   // there were not any nodes.
   virtual int DeleteLastNode();
@@ -242,7 +288,11 @@ public:
   // Delete the nth node. Return 1 on success or 0 if n
   // is out of range.
   virtual int DeleteNthNode( int n );
-
+  
+  // Description:
+  // Delete all nodes. 
+  virtual void ClearAllNodes();
+  
   // Description:
   // Given a specific X, Y pixel location, add a new node 
   // on the contour at this location. 
@@ -328,15 +378,24 @@ public:
   vtkBooleanMacro( ClosedLoop, int );
   
   // Description:
+  // A flag to indicate whether to show the Selected nodes
+  // Default is to set it to false.
+  virtual void SetShowSelectedNodes(int);
+  vtkGetMacro( ShowSelectedNodes, int );
+  vtkBooleanMacro( ShowSelectedNodes, int );
+
+//BTX
+  // Description:
   // Get the points in this contour as a vtkPolyData. 
-  //BTX
   virtual vtkPolyData* GetContourRepresentationAsPolyData() = 0;
-  //ETX
+//ETX
 
   // Description:
   // Get the nodes and not the intermediate points in this 
   // contour as a vtkPolyData.
   void GetNodePolyData( vtkPolyData* poly );
+
+  vtkSetMacro(RebuildLocator,bool);
 
 protected:
   vtkContourRepresentation();
@@ -353,6 +412,9 @@ protected:
   
   int CurrentOperation;
   int ClosedLoop;
+
+  // A flag to indicate whether to show the Selected nodes
+  int                   ShowSelectedNodes;
   
   vtkContourRepresentationInternals *Internal;
 
@@ -371,7 +433,7 @@ protected:
   void GetRendererComputedDisplayPositionFromWorldPosition( double worldPos[3],
                                     double worldOrient[9], double displayPos[2] );
   
-  void UpdateLines( int index );
+  virtual void UpdateLines( int index );
   void UpdateLine( int idx1, int idx2 );
 
   virtual int FindClosestPointOnContour( int X, int Y, 
@@ -400,9 +462,32 @@ protected:
   // is very useful when you use an external program to compute a set of
   // contour nodes, let's say based on image features. Subsequently, you want
   // to build and display a contour that runs through those points.
-  // This method is protected and accessible only from 
-  // vtkContourWidget::Initialize( vtkPolyData * )
-  virtual void Initialize( vtkPolyData * );
+  // This method is protected and accessible only from
+  // vtkContourWidget::Initialize. The idlist here may be used to initialize
+  // a contour widget that uses a vtkPolygonalSurfacePointPlacer. This stores
+  // the point id's of the nodes, since the contour is drawn on the vertices
+  // of a surface mesh.
+  void Initialize( vtkPolyData *, vtkIdList *);
+
+  // Description:
+  // Overloaded initialize method, that calls the above with a NULL idList
+  // argument.
+  virtual void Initialize( vtkPolyData *);
+
+  //Description:
+  // Adding a point locator to the representation to speed
+  // up lookup of the active node when dealing with large datasets (100k+)
+  vtkIncrementalOctreePointLocator *Locator;
+
+  //Description:
+  // Deletes the previous locator if it exists and creates
+  // a new locator. Also deletes / recreates the attached data set.
+  void ResetLocator();
+
+  void BuildLocator();
+
+  bool RebuildLocator;
+
 
 private:
   vtkContourRepresentation(const vtkContourRepresentation&);  //Not implemented

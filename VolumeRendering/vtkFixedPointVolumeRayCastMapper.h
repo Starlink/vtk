@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointVolumeRayCastMapper.h,v $
+  Module:    vtkFixedPointVolumeRayCastMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -75,6 +75,7 @@ class vtkFixedPointVolumeRayCastCompositeHelper;
 class vtkFixedPointVolumeRayCastCompositeGOHelper;
 class vtkFixedPointVolumeRayCastCompositeGOShadeHelper;
 class vtkFixedPointVolumeRayCastCompositeShadeHelper;
+class vtkVolumeRayCastSpaceLeapingImageFilter;
 class vtkDirectionEncoder;
 class vtkEncodedGradientShader;
 class vtkFiniteDifferenceGradientEstimator;
@@ -92,7 +93,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkFixedPointVolumeRayCastMapper : public vtkVo
 {
 public:
   static vtkFixedPointVolumeRayCastMapper *New();
-  vtkTypeRevisionMacro(vtkFixedPointVolumeRayCastMapper,vtkVolumeMapper);
+  vtkTypeMacro(vtkFixedPointVolumeRayCastMapper,vtkVolumeMapper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:
@@ -477,13 +478,12 @@ protected:
   double SavedSpacing[3];
   
   
-  // Min Max structured used to do space leaping
+  // Min Max structure used to do space leaping
   unsigned short *MinMaxVolume;
   int             MinMaxVolumeSize[4];
   vtkImageData   *SavedMinMaxInput;
-  vtkTimeStamp    SavedMinMaxBuildTime;
-  vtkTimeStamp    SavedMinMaxGradientTime;
-  vtkTimeStamp    SavedMinMaxFlagTime;
+  vtkImageData   *MinMaxVolumeCache;
+  vtkVolumeRayCastSpaceLeapingImageFilter * SpaceLeapFilter;
 
   void            UpdateMinMaxVolume( vtkVolume *vol );
   void            FillInMaxGradientMagnitudes( int fullDim[3],
@@ -495,7 +495,6 @@ protected:
   int FlipMIPComparison;
   
   void ApplyFinalColorWindowLevel();
-  
 
 private:
   vtkFixedPointVolumeRayCastMapper(const vtkFixedPointVolumeRayCastMapper&);  // Not implemented.
@@ -587,28 +586,30 @@ inline void vtkFixedPointVolumeRayCastMapper::ShiftVectorDown( unsigned int in[3
   out[0] = in[0] >> VTKKW_FP_SHIFT;
   out[1] = in[1] >> VTKKW_FP_SHIFT;
   out[2] = in[2] >> VTKKW_FP_SHIFT;
-} 
+}
 
 inline int vtkFixedPointVolumeRayCastMapper::CheckMinMaxVolumeFlag( unsigned int mmpos[3], int c )
 {
-  unsigned int offset = 
-    this->MinMaxVolumeSize[3] * 
-    ( mmpos[2]*this->MinMaxVolumeSize[0]*this->MinMaxVolumeSize[1] +
-      mmpos[1]*this->MinMaxVolumeSize[0] +
-      mmpos[0] ) + c;
-  
+  vtkIdType offset =
+    static_cast<vtkIdType>(this->MinMaxVolumeSize[3]) *
+    ( mmpos[2]*static_cast<vtkIdType>(
+        this->MinMaxVolumeSize[0]*this->MinMaxVolumeSize[1]) +
+      mmpos[1]*static_cast<vtkIdType>(this->MinMaxVolumeSize[0]) +
+      mmpos[0] ) + static_cast<vtkIdType>(c);
+
   return ((*(this->MinMaxVolume + 3*offset + 2))&0x00ff);
 }
 
-inline int vtkFixedPointVolumeRayCastMapper::CheckMIPMinMaxVolumeFlag( unsigned int mmpos[3], int c, 
+inline int vtkFixedPointVolumeRayCastMapper::CheckMIPMinMaxVolumeFlag( unsigned int mmpos[3], int c,
                                                                        unsigned short maxIdx, int flip )
 {
-  unsigned int offset = 
-    this->MinMaxVolumeSize[3] * 
-    ( mmpos[2]*this->MinMaxVolumeSize[0]*this->MinMaxVolumeSize[1] +
-      mmpos[1]*this->MinMaxVolumeSize[0] +
-      mmpos[0] ) + c;
-  
+  vtkIdType offset =
+    static_cast<vtkIdType>(this->MinMaxVolumeSize[3]) *
+    ( mmpos[2]*static_cast<vtkIdType>(
+        this->MinMaxVolumeSize[0]*this->MinMaxVolumeSize[1]) +
+      mmpos[1]*static_cast<vtkIdType>(this->MinMaxVolumeSize[0]) +
+      mmpos[0] ) + static_cast<vtkIdType>(c);
+
   if ( (*(this->MinMaxVolume + 3*offset + 2)&0x00ff) )
     {
     if (flip)
@@ -621,7 +622,7 @@ inline int vtkFixedPointVolumeRayCastMapper::CheckMIPMinMaxVolumeFlag( unsigned 
       }
     }
   else
-    { 
+    {
     return 0;
     }
 }
@@ -737,7 +738,8 @@ inline int vtkFixedPointVolumeRayCastMapper::CheckIfCropped( unsigned int pos[3]
       }
     }
   
-  return !(this->CroppingRegionFlags&this->CroppingRegionMask[idx]);
+  return !(static_cast<unsigned int>(this->CroppingRegionFlags)
+           &this->CroppingRegionMask[idx]);
 }
 
 #endif

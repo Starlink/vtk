@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoundingBox.h,v $
+Module:    vtkBoundingBox.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -24,7 +24,7 @@ PURPOSE.  See the above copyright notice for more information.
 #ifndef __vtkBoundingBox_h
 #define __vtkBoundingBox_h
 #include "vtkSystemIncludes.h"
-
+ 
 class VTK_COMMON_EXPORT vtkBoundingBox 
 {
 public:
@@ -95,6 +95,14 @@ public:
   // Returns 1 if the boxes intersect else returns 0
   int Intersects(const vtkBoundingBox &bbox) const;
 
+
+  // Desciption:
+  // Intersect this box with the half space defined by plane. 
+   //Returns true if there is intersection---which implies that the box has been modified
+  // Returns false otherwise
+  bool IntersectPlane(double origin[3],double normal[3]);
+
+
   // Description:
   // Returns 1 if the min and max points of bbox are contained 
   // within the bounds of this box, else returns 0.
@@ -148,9 +156,15 @@ public:
   double GetDiagonalLength() const;
 
   // Description:
+  // Expand the Box by delta on each side, the box will grow by
+  // 2*delta in x,y and z
+  void Inflate(double delta);
+
+  // Description:
   // Returns 1 if the bounds have been set and 0 if the box is in its
   // initialized state which is an inverted state
   int IsValid() const;
+  static int IsValid(double bounds[6]);
   
   // Description:
   // Returns the box to its initialized state
@@ -193,7 +207,7 @@ inline double vtkBoundingBox::GetBound(int i) const
   // If i is odd then when are returning a part of the max bounds
   // else part of the min bounds is requested.  The exact component
   // needed is i /2 (or i right shifted by 1
-  return ((i | 0x1) ? this->MaxPnt[i>>1] : this->MinPnt[i>>1]);
+  return ((i & 0x1) ? this->MaxPnt[i>>1] : this->MinPnt[i>>1]);
 }
 
 inline const double *vtkBoundingBox::GetMinPoint() const
@@ -212,6 +226,13 @@ inline int vtkBoundingBox::IsValid() const
           (this->MinPnt[1] <= this->MaxPnt[1]) && 
           (this->MinPnt[2] <= this->MaxPnt[2]));
 } 
+
+inline int vtkBoundingBox::IsValid(double bounds[6])
+{
+  return (bounds[0] <= bounds[1] &&
+    bounds[2] <= bounds[3] &&
+    bounds[4] <= bounds[5]);
+}
 
 inline double vtkBoundingBox::GetLength(int i) const
 {

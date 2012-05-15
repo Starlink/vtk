@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLightCollection.cxx,v $
+  Module:    vtkLightCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkLightCollection, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkLightCollection);
 
 // Add a light to the list.

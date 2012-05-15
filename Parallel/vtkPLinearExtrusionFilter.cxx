@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPLinearExtrusionFilter.cxx,v $
+  Module:    vtkPLinearExtrusionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPLinearExtrusionFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPLinearExtrusionFilter);
 
 //----------------------------------------------------------------------------

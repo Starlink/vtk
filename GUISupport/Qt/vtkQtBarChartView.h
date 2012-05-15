@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtBarChartView.h,v $
+  Module:    vtkQtBarChartView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,16 +27,20 @@
 #ifndef __vtkQtBarChartView_h
 #define __vtkQtBarChartView_h
 
-#include "vtkQtChartViewBase.h"
+#include "QVTKWin32Header.h"
+#include "vtkQtChartView.h"
 
 class vtkQtBarChart;
 class vtkQtChartSeriesModelCollection;
+class vtkQtChartSeriesOptions;
 
-class QVTK_EXPORT vtkQtBarChartView : public vtkQtChartViewBase
+class QVTK_EXPORT vtkQtBarChartView : public vtkQtChartView
 {
+Q_OBJECT
+
 public:
   static vtkQtBarChartView *New();
-  vtkTypeRevisionMacro(vtkQtBarChartView, vtkQtChartViewBase);
+  vtkTypeMacro(vtkQtBarChartView, vtkQtChartView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -59,7 +63,6 @@ public:
   // Sets the bar width fraction.
   void SetBarWidthFraction(float fraction);
 
-  //BTX
   // Description:
   // Adds bar chart selection handlers to the mouse selection.
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
@@ -67,13 +70,19 @@ public:
   // Description:
   // Gets the bar chart series model.
   virtual vtkQtChartSeriesModelCollection* GetChartSeriesModel();
-  //ETX
+
+  // Description:
+  // Gets the chart series layer
+  virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
+
+  // Description:
+  // Gets the series options.
+  virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
 
 protected:
   vtkQtBarChartView();
   ~vtkQtBarChartView();
 
-protected:
   vtkQtBarChart *BarChart;
   vtkQtChartSeriesModelCollection *BarModel;
 

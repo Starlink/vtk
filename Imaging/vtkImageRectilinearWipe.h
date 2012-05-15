@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageRectilinearWipe.h,v $
+  Module:    vtkImageRectilinearWipe.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,7 +58,7 @@ class VTK_IMAGING_EXPORT vtkImageRectilinearWipe : public vtkThreadedImageAlgori
 {
 public:
   static vtkImageRectilinearWipe *New();
-  vtkTypeRevisionMacro(vtkImageRectilinearWipe,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageRectilinearWipe,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -66,6 +66,12 @@ public:
   // specified in pixels.
   vtkSetVector2Macro(Position,int);
   vtkGetVectorMacro(Position,int,2);
+
+  // Description:
+  // Set/Get the location of the wipe axes. The default is X,Y (ie vector
+  // values of 0 and 1).
+  vtkSetVector2Macro(Axis,int);
+  vtkGetVectorMacro(Axis,int,2);
 
   // Description:
   // Set the two inputs to this filter.
@@ -119,6 +125,7 @@ protected:
 
   int Position[2];
   int Wipe;
+  int Axis[2];
 
 private:
   vtkImageRectilinearWipe(const vtkImageRectilinearWipe&);  // Not implemented.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassInputTypeAlgorithm.h,v $
+  Module:    vtkPassInputTypeAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_FILTERING_EXPORT vtkPassInputTypeAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkPassInputTypeAlgorithm *New();
-  vtkTypeRevisionMacro(vtkPassInputTypeAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkPassInputTypeAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

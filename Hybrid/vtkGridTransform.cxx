@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGridTransform.cxx,v $
+  Module:    vtkGridTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,60 +16,15 @@
 
 #include "vtkImageData.h"
 #include "vtkMath.h"
+#include "vtkImageInterpolatorInternals.h"
 #include "vtkObjectFactory.h"
 
 #include "math.h"
 
-vtkCxxRevisionMacro(vtkGridTransform, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkGridTransform);
 
 vtkCxxSetObjectMacro(vtkGridTransform,DisplacementGrid,vtkImageData);
 
-
-//--------------------------------------------------------------------------
-// The 'floor' function on x86 and mips is many times slower than these
-// and is used a lot in this code, optimize for different CPU architectures
-template<class F>
-inline int vtkGridFloor(double x, F &f)
-{
-#if defined mips || defined sparc || defined __ppc__
-  x += 2147483648.0;
-  unsigned int i = (unsigned int)(x);
-  f = x - i;
-  return (int)(i - 2147483648U);
-#elif defined i386 || defined _M_IX86
-  union { double d; unsigned short s[4]; unsigned int i[2]; } dual;
-  dual.d = x + 103079215104.0;  // (2**(52-16))*1.5
-  f = dual.s[0]*0.0000152587890625; // 2**(-16)
-  return (int)((dual.i[1]<<16)|((dual.i[0])>>16));
-#elif defined ia64 || defined __ia64__ || defined IA64
-  x += 103079215104.0;
-  long long i = (long long)(x);
-  f = x - i;
-  return (int)(i - 103079215104LL);
-#else
-  double y = floor(x);
-  f = x - y;
-  return (int)(y);
-#endif
-}
-
-inline int vtkGridRound(double x)
-{
-#if defined mips || defined sparc || defined __ppc__
-  return (int)((unsigned int)(x + 2147483648.5) - 2147483648U);
-#elif defined i386 || defined _M_IX86
-  union { double d; unsigned int i[2]; } dual;
-  dual.d = x + 103079215104.5;  // (2**(52-16))*1.5
-  return (int)((dual.i[1]<<16)|((dual.i[0])>>16));
-#elif defined ia64 || defined __ia64__ || defined IA64
-  x += 103079215104.5;
-  long long i = (long long)(x);
-  return (int)(i - 103079215104LL);
-#else
-  return (int)(floor(x+0.5));
-#endif
-}
 
 //----------------------------------------------------------------------------
 // Nearest-neighbor interpolation of a displacement grid.
@@ -93,9 +48,9 @@ inline void vtkNearestNeighborInterpolation(double point[3],
                                             vtkIdType gridInc[3])
 {
   int gridId[3];
-  gridId[0] = vtkGridRound(point[0])-gridExt[0];
-  gridId[1] = vtkGridRound(point[1])-gridExt[2];
-  gridId[2] = vtkGridRound(point[2])-gridExt[4];
+  gridId[0] = vtkInterpolationMath::Round(point[0])-gridExt[0];
+  gridId[1] = vtkInterpolationMath::Round(point[1])-gridExt[2];
+  gridId[2] = vtkInterpolationMath::Round(point[2])-gridExt[4];
   
   int ext[3];
   ext[0] = gridExt[1]-gridExt[0];
@@ -192,9 +147,9 @@ void vtkNearestNeighborInterpolation(double point[3], double displacement[3],
 
   double f[3];
   int gridId0[3];
-  gridId0[0] = vtkGridFloor(point[0],f[0])-gridExt[0];
-  gridId0[1] = vtkGridFloor(point[1],f[1])-gridExt[2];
-  gridId0[2] = vtkGridFloor(point[2],f[2])-gridExt[4];
+  gridId0[0] = vtkInterpolationMath::Floor(point[0],f[0])-gridExt[0];
+  gridId0[1] = vtkInterpolationMath::Floor(point[1],f[1])-gridExt[2];
+  gridId0[2] = vtkInterpolationMath::Floor(point[2],f[2])-gridExt[4];
 
   int gridId[3], gridId1[3];
   gridId[0] = gridId1[0] = gridId0[0] + 1;
@@ -340,9 +295,9 @@ void vtkTrilinearInterpolation(double point[3], double displacement[3],
 {
   // change point into integer plus fraction
   double f[3];
-  int floorX = vtkGridFloor(point[0],f[0]);
-  int floorY = vtkGridFloor(point[1],f[1]);
-  int floorZ = vtkGridFloor(point[2],f[2]);
+  int floorX = vtkInterpolationMath::Floor(point[0],f[0]);
+  int floorY = vtkInterpolationMath::Floor(point[1],f[1]);
+  int floorZ = vtkInterpolationMath::Floor(point[2],f[2]);
 
   int gridId0[3];
   gridId0[0] = floorX - gridExt[0];
@@ -651,9 +606,9 @@ void vtkTricubicInterpolation(double point[3], double displacement[3],
 
   // change point into integer plus fraction
   double f[3];
-  int floorX = vtkGridFloor(point[0],f[0]);
-  int floorY = vtkGridFloor(point[1],f[1]);
-  int floorZ = vtkGridFloor(point[2],f[2]);
+  int floorX = vtkInterpolationMath::Floor(point[0],f[0]);
+  int floorY = vtkInterpolationMath::Floor(point[1],f[1]);
+  int floorZ = vtkInterpolationMath::Floor(point[2],f[2]);
 
   int gridId0[3];
   gridId0[0] = floorX - gridExt[0];
@@ -737,7 +692,7 @@ void vtkTricubicInterpolation(double point[3], double displacement[3],
 //----------------------------------------------------------------------------
 vtkGridTransform::vtkGridTransform()
 {
-  this->InterpolationMode = VTK_GRID_LINEAR;
+  this->InterpolationMode = VTK_LINEAR_INTERPOLATION;
   this->InterpolationFunction = &vtkTrilinearInterpolation;
   this->DisplacementGrid = NULL;
   this->DisplacementScale = 1.0;
@@ -798,13 +753,13 @@ void vtkGridTransform::SetInterpolationMode(int mode)
   this->InterpolationMode = mode;
   switch(mode)
     {
-    case VTK_GRID_NEAREST:
+    case VTK_NEAREST_INTERPOLATION:
       this->InterpolationFunction = &vtkNearestNeighborInterpolation;
       break;
-    case VTK_GRID_LINEAR:
+    case VTK_LINEAR_INTERPOLATION:
       this->InterpolationFunction = &vtkTrilinearInterpolation;
       break;
-    case VTK_GRID_CUBIC:
+    case VTK_CUBIC_INTERPOLATION:
       this->InterpolationFunction = &vtkTricubicInterpolation;
       break;
     default:
@@ -1218,7 +1173,7 @@ void vtkGridTransform::InternalUpdate()
     vtkErrorMacro(<< "TransformPoint: displacement grid is of unsupported numerical type");
     return;
     }
- 
+
   grid->SetUpdateExtent(grid->GetWholeExtent());
   grid->Update();
 

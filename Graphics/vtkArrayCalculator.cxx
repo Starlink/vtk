@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayCalculator.cxx,v $
+  Module:    vtkArrayCalculator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,13 +28,11 @@
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkArrayCalculator, "$Revision: 1.43 $");
 vtkStandardNewMacro(vtkArrayCalculator);
 
 vtkArrayCalculator::vtkArrayCalculator()
 {
   this->FunctionParser = vtkFunctionParser::New();
-  
   this->Function = NULL;
   this->ResultArrayName = NULL;
   this->SetResultArrayName("resultArray");
@@ -54,7 +52,6 @@ vtkArrayCalculator::vtkArrayCalculator()
   this->SelectedCoordinateScalarComponents = NULL;
   this->SelectedCoordinateVectorComponents = NULL;
   this->CoordinateResults = 0;
-
   this->ReplaceInvalidValues = 0;
   this->ReplacementValue = 0.0;
 
@@ -193,6 +190,7 @@ void vtkArrayCalculator::SetResultArrayName(const char* name)
     return;
     }
   this->Modified();
+  
   if (this->ResultArrayName)
     {
     delete [] this->ResultArrayName;
@@ -211,7 +209,7 @@ int vtkArrayCalculator::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataObject *input = inInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkDataObject *output = outInfo->Get(vtkDataObject::DATA_OBJECT());
 
@@ -279,10 +277,11 @@ int vtkArrayCalculator::RequestData(
     vtkDebugMacro("Empty data.");
     return 1;
     }
-  
+    
   for (i = 0; i < this->NumberOfScalarArrays; i++)
-    {
+    {   
     currentArray = inFD->GetArray(this->ScalarArrayNames[i]);
+    
     if (currentArray)
       {
       if (currentArray->GetNumberOfComponents() >
@@ -380,7 +379,13 @@ int vtkArrayCalculator::RequestData(
       }
     }
 
-  if (this->FunctionParser->IsScalarResult())
+  if ( !this->Function || strlen(this->Function) == 0)
+    {
+    dsOutput->CopyStructure(dsInput);
+    dsOutput->CopyAttributes(dsInput);
+    return 1;
+    }
+  else if (this->FunctionParser->IsScalarResult())
     {
     resultType = 0;
     }
@@ -390,10 +395,13 @@ int vtkArrayCalculator::RequestData(
     }
   else
     {
+    dsOutput->CopyStructure(dsInput);
+    dsOutput->CopyAttributes(dsInput);
     // Error occurred in vtkFunctionParser.
+    vtkWarningMacro("An error occured when parsing the calculator's function.  See previous errors.");
     return 1;
     }
-
+  
   if(resultType == 1 && CoordinateResults != 0 && (psOutput || graphOutput))
     {
     resultPoints = vtkPoints::New();
@@ -431,7 +439,7 @@ int vtkArrayCalculator::RequestData(
     {
     resultArray->Allocate(numTuples * 3);
     resultArray->SetNumberOfComponents(3);
-    resultArray->SetNumberOfTuples(numTuples);
+    resultArray->SetNumberOfTuples(numTuples);    
     resultArray->SetTuple(0, this->FunctionParser->GetVectorResult());
     }
   
@@ -524,12 +532,13 @@ int vtkArrayCalculator::RequestData(
           }
         }
       psOutput->SetPoints(resultPoints);
+      psOutput->CopyAttributes(dsInput);
       }
     else
       {
       graphOutput->CopyStructure(graphInput);
+      outFD->PassData(inFD);
       }
-    outFD->PassData(inFD);
     resultPoints->Delete();
     }
   else

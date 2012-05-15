@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarBarWidget.h,v $
+  Module:    vtkScalarBarWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_WIDGETS_EXPORT vtkScalarBarWidget : public vtkBorderWidget
 {
 public:
   static vtkScalarBarWidget *New();
-  vtkTypeRevisionMacro(vtkScalarBarWidget, vtkBorderWidget);
+  vtkTypeMacro(vtkScalarBarWidget, vtkBorderWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -51,6 +51,8 @@ public:
   // so it can be added to the renderer independent of the widget.
   virtual void SetRepresentation(vtkScalarBarRepresentation *rep);
 
+  // Description:
+  // Return the representation as a vtkScalarBarRepresentation.
   vtkScalarBarRepresentation *GetScalarBarRepresentation()
     { return reinterpret_cast<vtkScalarBarRepresentation *>(this->GetRepresentation()); }
 

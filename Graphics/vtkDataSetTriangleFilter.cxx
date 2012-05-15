@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetTriangleFilter.cxx,v $
+  Module:    vtkDataSetTriangleFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,6 @@
 #include "vtkRectilinearGrid.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkDataSetTriangleFilter, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkDataSetTriangleFilter);
 
 vtkDataSetTriangleFilter::vtkDataSetTriangleFilter()
@@ -56,7 +55,7 @@ int vtkDataSetTriangleFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -260,7 +259,11 @@ void vtkDataSetTriangleFilter::UnstructuredExecute(vtkDataSet *dataSetInput,
   cellPtIds = vtkIdList::New();
 
   // Create an array of points
-  outCD->CopyAllocate(inCD,input->GetNumberOfCells()*5);
+  vtkCellData *tempCD = vtkCellData::New();
+  tempCD->ShallowCopy(inCD);
+  tempCD->SetActiveGlobalIds(NULL);
+
+  outCD->CopyAllocate(tempCD, input->GetNumberOfCells()*5);
   output->Allocate(input->GetNumberOfCells()*5);
   
   // Points are passed through
@@ -280,7 +283,28 @@ void vtkDataSetTriangleFilter::UnstructuredExecute(vtkDataSet *dataSetInput,
     input->GetCell(cellId, cell);
     dim = cell->GetCellDimension();
 
-    if ( dim == 3 ) //use ordered triangulation
+    if (cell->GetCellType() == VTK_POLYHEDRON) //polyhedron
+      {
+      dim = 4;
+      cell->Triangulate(0, cellPtIds, cellPts);
+      numPts = cellPtIds->GetNumberOfIds();
+    
+      numSimplices = numPts / dim;
+      type = VTK_TETRA;
+
+      for ( j=0; j < numSimplices; j++ )
+        {
+        for (k=0; k<dim; k++)
+          {
+          pts[k] = cellPtIds->GetId(dim*j+k);
+          }
+        // copy cell data
+        newCellId = output->InsertNextCell(type, dim, pts);
+        outCD->CopyData(tempCD, cellId, newCellId);
+        }
+      }
+
+    else if ( dim == 3 ) //use ordered triangulation
       {
       numPts = cell->GetNumberOfPoints();
       double *p, *pPtr=cell->GetParametricCoords();
@@ -307,7 +331,7 @@ void vtkDataSetTriangleFilter::UnstructuredExecute(vtkDataSet *dataSetInput,
         
       for (j=0; j < numTets; j++)
         {
-        outCD->CopyData(inCD, cellId, ncells+j);
+        outCD->CopyData(tempCD, cellId, ncells+j);
         }
       }
 
@@ -337,7 +361,7 @@ void vtkDataSetTriangleFilter::UnstructuredExecute(vtkDataSet *dataSetInput,
           }
         // copy cell data
         newCellId = output->InsertNextCell(type, dim, pts);
-        outCD->CopyData(inCD, cellId, newCellId);
+        outCD->CopyData(tempCD, cellId, newCellId);
         }
       } //if 2D or less cell
     } //for all cells
@@ -345,6 +369,8 @@ void vtkDataSetTriangleFilter::UnstructuredExecute(vtkDataSet *dataSetInput,
   // Update output
   output->Squeeze();
   
+  tempCD->Delete();
+
   cellPts->Delete();
   cellPtIds->Delete();
   cell->Delete();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKdTreePointLocator.cxx,v $
+  Module:    vtkKdTreePointLocator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointSet.h"
 
-vtkCxxRevisionMacro(vtkKdTreePointLocator, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkKdTreePointLocator);
 
 vtkKdTreePointLocator::vtkKdTreePointLocator()

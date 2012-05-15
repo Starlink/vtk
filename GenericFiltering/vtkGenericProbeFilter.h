@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericProbeFilter.h,v $
+  Module:    vtkGenericProbeFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ class VTK_GENERIC_FILTERING_EXPORT vtkGenericProbeFilter : public vtkDataSetAlgo
 {
 public:
   static vtkGenericProbeFilter *New();
-  vtkTypeRevisionMacro(vtkGenericProbeFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkGenericProbeFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

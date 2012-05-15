@@ -65,6 +65,8 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestButtonSource
       TestCameraInterpolator
       TestCellDerivs
+      TestClipClosedSurface
+      TestClipOutline
       TestCurvatures
       TestDiscreteMarchingCubes
       TestFillHolesFilter
@@ -95,7 +97,11 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestTriangleFilter
       TransformConcatenation
       TransformCoverage
+      TransformImageData
       TransformPolyData
+      WarpScalarImage
+      WarpToImage
+      WarpVectorImage
       blankGrid
       capCow
       capSphere

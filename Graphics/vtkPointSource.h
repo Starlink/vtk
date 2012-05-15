@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointSource.h,v $
+  Module:    vtkPointSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,8 @@
 // of points within a specified radius about a specified center point. 
 // By default location of the points is random within the sphere. It is
 // also possible to generate random points only on the surface of the
-// sphere.
+// sphere. The output PolyData has the specified number of points and
+// 1 cell - a vtkPolyVertex containing all of the points.
 
 #ifndef __vtkPointSource_h
 #define __vtkPointSource_h
@@ -32,7 +33,7 @@ class VTK_GRAPHICS_EXPORT vtkPointSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPointSource *New();
-  vtkTypeRevisionMacro(vtkPointSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkPointSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFieldData.cxx,v $
+  Module:    vtkFieldData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkFieldData, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkFieldData);
 
 //----------------------------------------------------------------------------
@@ -422,7 +421,7 @@ vtkAbstractArray *vtkFieldData::GetAbstractArray(int i)
 }
 
 //----------------------------------------------------------------------------
-// Copy a field by reference counting the data arrays.
+// Copy a field by creating new data arrays
 void vtkFieldData::DeepCopy(vtkFieldData *f)
 {
   vtkAbstractArray *data, *newData;

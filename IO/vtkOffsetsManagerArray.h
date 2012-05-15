@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOffsetsManagerArray.h,v $
+  Module:    vtkOffsetsManagerArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,7 @@
 // .SECTION Description
 // This class is deisgned to work within vtkXMLWriter. It store a position
 // in a file (unsigned long) and associate a offset in the file. This is
-// usefull when writing TimeStep XML file when you want to forward the 
+// useful when writing TimeStep XML file when you want to forward the 
 // same offset from the AppendData section on every entry in let say
 // \<Points\> definition
 // Example:
@@ -44,7 +44,7 @@
 #define __vtkOffsetsManagerArray_h
 
 #include "vtkSystemIncludes.h"
-#include <vtkstd/vector>
+#include <vector>
 #include <assert.h>
 
 //----------------------------------------------------------------------------
@@ -104,11 +104,11 @@ private:
   // and slow, but if another couple offsets are added then we should
   // consider doing it
   // Position in the stream to write the offset
-  vtkstd::vector<OffsetType> Positions; 
-  vtkstd::vector<OffsetType> RangeMinPositions; // Where is this
-  vtkstd::vector<OffsetType> RangeMaxPositions; // Whee is this
+  std::vector<OffsetType> Positions;
+  std::vector<OffsetType> RangeMinPositions; // Where is this
+  std::vector<OffsetType> RangeMaxPositions; // Whee is this
 
-  vtkstd::vector<OffsetType> OffsetValues;    // Value of offset
+  std::vector<OffsetType> OffsetValues;    // Value of offset
 };
 
 //----------------------------------------------------------------------------
@@ -157,7 +157,7 @@ public:
       }
     }
 private:
-  vtkstd::vector<OffsetsManager> Internals;
+  std::vector<OffsetsManager> Internals;
 };
 
 //----------------------------------------------------------------------------
@@ -191,7 +191,7 @@ public:
       }
     }
 private:
-  vtkstd::vector<OffsetsManagerGroup> Internals;
+  std::vector<OffsetsManagerGroup> Internals;
 };
 
 #endif

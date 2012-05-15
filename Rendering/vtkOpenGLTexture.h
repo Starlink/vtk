@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLTexture.h,v $
+  Module:    vtkOpenGLTexture.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,18 +28,23 @@
 class vtkWindow;
 class vtkOpenGLRenderer;
 class vtkRenderWindow;
+class vtkPixelBufferObject;
 
 class VTK_RENDERING_EXPORT vtkOpenGLTexture : public vtkTexture
 {
 public:
   static vtkOpenGLTexture *New();
-  vtkTypeRevisionMacro(vtkOpenGLTexture,vtkTexture);
+  vtkTypeMacro(vtkOpenGLTexture,vtkTexture);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Implement base class method.
   void Load(vtkRenderer *ren);
   
+  // Descsription:
+  // Clean up after the rendering is complete.
+  virtual void PostRender(vtkRenderer *ren);
+
   // Description:
   // Release any graphics resources that are being consumed by this texture.
   // The parameter window could be used to determine which graphic
@@ -61,8 +66,13 @@ protected:
                                       unsigned char *dptr, int bpp);
 
   vtkTimeStamp   LoadTime;
-  long          Index;
+  unsigned int Index; // actually GLuint
   vtkWeakPointer<vtkRenderWindow> RenderWindow;   // RenderWindow used for previous render
+  bool CheckedHardwareSupport;
+  bool SupportsNonPowerOfTwoTextures;
+  bool SupportsPBO;
+  vtkPixelBufferObject *PBO;
+  
 private:
   vtkOpenGLTexture(const vtkOpenGLTexture&);  // Not implemented.
   void operator=(const vtkOpenGLTexture&);  // Not implemented.

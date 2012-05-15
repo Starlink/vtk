@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkType.h,v $
+  Module:    vtkType.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -90,6 +90,8 @@
 #define VTK_UNDIRECTED_GRAPH               24
 #define VTK_MULTIPIECE_DATA_SET            25
 #define VTK_DIRECTED_ACYCLIC_GRAPH         26
+#define VTK_ARRAY_DATA                     27
+#define VTK_REEB_GRAPH                     28
 
 /*--------------------------------------------------------------------------*/
 /* Define a casting macro for use by the constants below.  */

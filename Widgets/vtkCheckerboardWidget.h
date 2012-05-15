@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCheckerboardWidget.h,v $
+  Module:    vtkCheckerboardWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -59,11 +59,11 @@ public:
 
   // Description:
   // Standard methods for a VTK class.
-  vtkTypeRevisionMacro(vtkCheckerboardWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkCheckerboardWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // The method for activiating and deactiviating this widget. This method
+  // The method for activating and deactivating this widget. This method
   // must be overridden because it is a composite widget and does more than
   // its superclasses' vtkAbstractWidget::SetEnabled() method.
   virtual void SetEnabled(int);
@@ -75,6 +75,11 @@ public:
   void SetRepresentation(vtkCheckerboardRepresentation *r)
     {this->Superclass::SetWidgetRepresentation(reinterpret_cast<vtkWidgetRepresentation*>(r));}
   
+  // Description:
+  // Return the representation as a vtkCheckerboardRepresentation.
+  vtkCheckerboardRepresentation *GetCheckerboardRepresentation()
+    {return reinterpret_cast<vtkCheckerboardRepresentation*>(this->WidgetRep);}
+
   // Description:
   // Create the default widget representation if one is not set. 
   void CreateDefaultRepresentation();

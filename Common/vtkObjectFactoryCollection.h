@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkObjectFactoryCollection.h,v $
+  Module:    vtkObjectFactoryCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@
 class VTK_COMMON_EXPORT vtkObjectFactoryCollection : public vtkCollection
 {
 public:
-  vtkTypeRevisionMacro(vtkObjectFactoryCollection,vtkCollection);
+  vtkTypeMacro(vtkObjectFactoryCollection,vtkCollection);
   static vtkObjectFactoryCollection *New();
 
   // Description:

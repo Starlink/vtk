@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStandardPolyDataPainter.cxx,v $
+  Module:    vtkStandardPolyDataPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,17 +36,16 @@
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkProperty.h"
-#include "vtkOpenGLProperty.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkShaderDeviceAdapter.h"
-#include "vtkGLSLShaderDeviceAdapter2.h"
+#include "vtkShaderDeviceAdapter2.h"
 #include "vtkShaderProgram.h"
 #include "vtkSmartPointer.h"
 #include "vtkTimerLog.h"
 #include "vtkTriangle.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 class vtkStandardPolyDataPainter::vtkInternal
 {
@@ -56,8 +55,8 @@ public:
     unsigned int MappingsIndex;
     vtkDataArray* Array;
     };
-  typedef vtkstd::vector<vtkInfo> InfoVector;
-  typedef vtkstd::vector<vtkDataArray *> DataArrayVector;
+  typedef std::vector<vtkInfo> InfoVector;
+  typedef std::vector<vtkDataArray *> DataArrayVector;
   InfoVector CellAttributesCache;
   InfoVector PointAttributesCache;
   DataArrayVector MultiTextureCoords;
@@ -65,7 +64,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkStandardPolyDataPainter, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkStandardPolyDataPainter);
 //-----------------------------------------------------------------------------
 static inline int vtkStandardPolyDataPainterGetTotalCells(vtkPolyData* pd,
@@ -122,7 +120,7 @@ void vtkStandardPolyDataPainter::ProcessInformation(vtkInformation* info)
 //-----------------------------------------------------------------------------
 void vtkStandardPolyDataPainter::UpdateGenericAttributesCache(
   vtkShaderDeviceAdapter* shaderDevice,
-  vtkGLSLShaderDeviceAdapter2* shaderDevice2)
+  vtkShaderDeviceAdapter2* shaderDevice2)
 {
   if (this->Internal->Mappings)
     {
@@ -206,7 +204,7 @@ void vtkStandardPolyDataPainter::RenderInternal(vtkRenderer* renderer,
   vtkIdType startCell = 0;
   int interpolation = property->GetInterpolation();
   vtkShaderDeviceAdapter* shaderDevice=0;
-  vtkGLSLShaderDeviceAdapter2* shaderDevice2=0;
+  vtkShaderDeviceAdapter2* shaderDevice2=0;
   this->Internal->PointAttributesCache.clear();
   this->Internal->CellAttributesCache.clear();
   if(property->GetShading())
@@ -223,19 +221,12 @@ void vtkStandardPolyDataPainter::RenderInternal(vtkRenderer* renderer,
       }
     else
       {
-      vtkOpenGLProperty *oglProperty=vtkOpenGLProperty::SafeDownCast(property);
-      if(oglProperty!=0)
+      // Preprocess the generic vertex attributes that we need to pass to the
+      // shader.
+      shaderDevice2 = property->GetShaderDeviceAdapter2();
+      if(shaderDevice2!=0)
         {
-        if(oglProperty->GetCurrentShaderProgram2()!=0)
-          {
-          // Preprocess the generic vertex attributes that we need to pass to the
-          // shader.
-          shaderDevice2 = oglProperty->GetShaderDeviceAdapter2();
-          if(shaderDevice2!=0)
-            {
-            shaderDevice2->PrepareForRender();
-            }
-          }
+        shaderDevice2->PrepareForRender();
         }
       }
     }
@@ -301,7 +292,7 @@ void vtkStandardPolyDataPainter::DrawCells(
   vtkCellArray *connectivity,
   vtkIdType startCellId,
   vtkShaderDeviceAdapter *shaderDevice,
-  vtkGLSLShaderDeviceAdapter2 *shaderDevice2,
+  vtkShaderDeviceAdapter2 *shaderDevice2,
   vtkRenderer *renderer,
   int buildnormals,
   int interpolation)
@@ -349,6 +340,29 @@ void vtkStandardPolyDataPainter::DrawCells(
 
   // skip scalars if disable_scalar_color is true.
   int start_attribute = (disable_scalar_color? 1 : 0);
+
+  // get attribute mask
+  int cell_attribute_mask = 0;
+  for(int attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES;
+      attribii++)
+    {
+      if(device->IsAttributesSupported(attribii))
+        {
+          cell_attribute_mask = cell_attribute_mask | (1 << attribii);
+        }
+    }
+
+  int point_attribute_mask = 0;
+  for(int attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES;
+      attribii++)
+    {
+      if(device->IsAttributesSupported(attribii))
+        {
+          point_attribute_mask = point_attribute_mask | (1 << attribii);
+        }
+    }
+
+
   // Note that cell attributes are overridden by point attributes.
   for (connectivity->InitTraversal(); connectivity->GetNextCell(npts, pts); count++)
     {
@@ -357,9 +371,10 @@ void vtkStandardPolyDataPainter::DrawCells(
     device->BeginPrimitive(mode);
 
     // SEND CELL ATTRIBUTES
-    for (attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES; attribii++)
+    for (attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES; 
+         attribii++)
       {
-      if (!device->IsAttributesSupported(attribii))
+        if (!((cell_attribute_mask >> attribii) & 1))
         {
         // skip non-renderable attributes.
         continue;
@@ -448,9 +463,10 @@ void vtkStandardPolyDataPainter::DrawCells(
       
       // SEND POINT ATTRIBUTES.
       // Send point centered attributes.
-      for (attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES; attribii++)
+      for (attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES; 
+           attribii++)
         {
-        if (!device->IsAttributesSupported(attribii))
+        if (!((point_attribute_mask >> attribii) & 1))
           {
           // skip non-renderable attributes.
           continue;

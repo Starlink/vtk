@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataMapper2D.h,v $
+  Module:    vtkPolyDataMapper2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class vtkUnsignedCharArray;
 class VTK_RENDERING_EXPORT vtkPolyDataMapper2D : public vtkMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkPolyDataMapper2D,vtkMapper2D);
+  vtkTypeMacro(vtkPolyDataMapper2D,vtkMapper2D);
   static vtkPolyDataMapper2D *New();
   void PrintSelf(ostream& os, vtkIndent indent);
   
@@ -150,6 +150,13 @@ public:
   vtkGetObjectMacro(TransformCoordinate, vtkCoordinate);
 
   // Description:
+  // Specify whether or not rounding to integers the transformed points when
+  // TransformCoordinate is set. By default, it does not use double precision.
+  vtkGetMacro(TransformCoordinateUseDouble,bool);
+  vtkSetMacro(TransformCoordinateUseDouble,bool);
+  vtkBooleanMacro(TransformCoordinateUseDouble,bool);
+
+  // Description:
   // Map the scalars (if there are any scalars and ScalarVisibility is on)
   // through the lookup table, returning an unsigned char RGBA array. This is
   // typically done as part of the rendering process. The alpha parameter 
@@ -176,6 +183,7 @@ protected:
   int ScalarMode;
   
   vtkCoordinate *TransformCoordinate;
+  bool TransformCoordinateUseDouble;
 
   virtual int FillInputPortInformation(int, vtkInformation*);
 

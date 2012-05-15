@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImagePlaneWidget.cxx,v $
+  Module:    vtkImagePlaneWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,6 @@
 #include "vtkTexture.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkImagePlaneWidget, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkImagePlaneWidget);
 
 vtkCxxSetObjectMacro(vtkImagePlaneWidget, PlaneProperty, vtkProperty);
@@ -559,6 +558,26 @@ void vtkImagePlaneWidget::PrintSelf(ostream& os, vtkIndent indent)
   else
     {
     os << indent << "ColorMap: (none)\n";
+    }
+
+  if ( this->Reslice )
+    {
+    os << indent << "Reslice:\n";
+    this->Reslice->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << indent << "Reslice: (none)\n";
+    }
+
+  if ( this->ResliceAxes )
+    {
+    os << indent << "ResliceAxes:\n";
+    this->ResliceAxes->PrintSelf(os,indent.GetNextIndent());
+    }
+  else
+    {
+    os << indent << "ResliceAxes: (none)\n";
     }
 
   double *o = this->PlaneSource->GetOrigin();

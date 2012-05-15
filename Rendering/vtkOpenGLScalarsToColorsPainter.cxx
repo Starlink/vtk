@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLScalarsToColorsPainter.cxx,v $
+  Module:    vtkOpenGLScalarsToColorsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLScalarsToColorsPainter);
-vtkCxxRevisionMacro(vtkOpenGLScalarsToColorsPainter, "$Revision: 1.8 $");
 #endif
 //-----------------------------------------------------------------------------
 vtkOpenGLScalarsToColorsPainter::vtkOpenGLScalarsToColorsPainter()
@@ -78,6 +77,14 @@ int vtkOpenGLScalarsToColorsPainter::GetPremultiplyColorsWithAlpha(
   
   return vtkgl::BlendFuncSeparate==0 && alphaBits>0 &&
     this->Superclass::GetPremultiplyColorsWithAlpha(actor);
+}
+
+//-----------------------------------------------------------------------------
+vtkIdType vtkOpenGLScalarsToColorsPainter::GetTextureSizeLimit()
+{
+  GLint textureSize = 0;
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
+  return static_cast<vtkIdType>(textureSize);
 }
 
 //-----------------------------------------------------------------------------

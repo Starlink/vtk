@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkActor2DCollection.h,v $
+  Module:    vtkActor2DCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ class VTK_FILTERING_EXPORT vtkActor2DCollection : public vtkPropCollection
   // objects from the collection.
   static vtkActor2DCollection *New();
 
-  vtkTypeRevisionMacro(vtkActor2DCollection,vtkPropCollection);
+  vtkTypeMacro(vtkActor2DCollection,vtkPropCollection);
 
   // Description:
   // Sorts the vtkActor2DCollection by layer number.  Smaller layer

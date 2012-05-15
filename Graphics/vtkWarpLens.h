@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpLens.h,v $
+  Module:    vtkWarpLens.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_GRAPHICS_EXPORT vtkWarpLens : public vtkPointSetAlgorithm
 {
 public:
   static vtkWarpLens *New();
-  vtkTypeRevisionMacro(vtkWarpLens,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkWarpLens,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -74,11 +74,18 @@ public:
   vtkSetMacro(ImageHeight,int);
   vtkGetMacro(ImageHeight,int);
 
+  int FillInputPortInformation(int port, vtkInformation *info);
+
 protected:
   vtkWarpLens();
   ~vtkWarpLens() {};
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int RequestDataObject(vtkInformation *request,
+                        vtkInformationVector **inputVector,
+                        vtkInformationVector *outputVector);
+  int RequestData(vtkInformation *,
+                  vtkInformationVector **,
+                  vtkInformationVector *);
 
   double PrincipalPoint[2];      // The calibrated principal point of camera/lens in mm
   double K1;                     // Symmetric radial distortion parameters

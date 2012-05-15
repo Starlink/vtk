@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBridgeCell.cxx,v $
+  Module:    vtkBridgeCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,6 +60,7 @@
 #include "vtkQuadraticQuad.h"
 #include "vtkQuadraticTetra.h"
 #include "vtkQuadraticHexahedron.h"
+#include "vtkBiQuadraticTriangle.h"
 #include "vtkConvexPointSet.h"
 # include "vtkPentagonalPrism.h"
 # include "vtkHexagonalPrism.h"
@@ -67,7 +68,6 @@
 # include "vtkQuadraticPyramid.h"
 
 
-vtkCxxRevisionMacro(vtkBridgeCell, "$Revision: 1.19 $");
 
 vtkStandardNewMacro(vtkBridgeCell);
 
@@ -107,6 +107,7 @@ int vtkBridgeCell::GetType()
     {
     case VTK_TRIANGLE:
     case VTK_QUADRATIC_TRIANGLE:
+    case VTK_BIQUADRATIC_TRIANGLE:
       result=VTK_HIGHER_ORDER_TRIANGLE;
       break;
     case VTK_QUAD:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkSQLDatabaseSchema.cxx,v $
+Module:    vtkSQLDatabaseSchema.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -26,10 +26,9 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <stdarg.h> // va_list
 
-#include <vtkstd/vector>
+#include <vector>
 
 // ----------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSQLDatabaseSchema, "$Revision: 1.23 $");
 vtkStandardNewMacro(vtkSQLDatabaseSchema);
 
 // ----------------------------------------------------------------------
@@ -37,45 +36,52 @@ class vtkSQLDatabaseSchemaInternals
 {
 public:  // NB: use of string instead of char* here to avoid leaks on destruction.
   struct Statement
-  {
+    {
     vtkStdString Name;
     vtkStdString Action; // may have backend-specific stuff
     vtkStdString Backend;  // only active for this backend, if != ""
-  };
+    };
 
   struct Column
-  {
+    {
     vtkSQLDatabaseSchema::DatabaseColumnType Type;
     int Size; // used when required, ignored otherwise (e.g. varchar)
     vtkStdString Name;
     vtkStdString Attributes; // may have backend-specific stuff
-  };
+    };
 
   struct Index
-  {
+    {
     vtkSQLDatabaseSchema::DatabaseIndexType Type;
     vtkStdString Name;
-    vtkstd::vector<vtkStdString> ColumnNames;
-  };
+    std::vector<vtkStdString> ColumnNames;
+    };
 
   struct Trigger
-  {
+    {
     vtkSQLDatabaseSchema::DatabaseTriggerType Type;
     vtkStdString Name;
     vtkStdString Action; // may have backend-specific stuff
     vtkStdString Backend; // only active for this backend, if != ""
-  };
+    };
+
+  struct Option
+    {
+    vtkStdString Text;
+    vtkStdString Backend;
+    };
 
   struct Table
   {
     vtkStdString Name;
-    vtkstd::vector<Column> Columns;
-    vtkstd::vector<Index> Indices;
-    vtkstd::vector<Trigger> Triggers;
+    std::vector<Column> Columns;
+    std::vector<Index> Indices;
+    std::vector<Trigger> Triggers;
+    std::vector<Option> Options;
   };
 
-  vtkstd::vector<Statement> Preambles;
-  vtkstd::vector<Table> Tables;
+  std::vector<Statement> Preambles;
+  std::vector<Table> Tables;
 };
 
 // ----------------------------------------------------------------------
@@ -91,7 +97,7 @@ vtkSQLDatabaseSchema::~vtkSQLDatabaseSchema()
   this->SetName( 0 );
   delete this->Internals;
 }
-  
+
 // ----------------------------------------------------------------------
 void vtkSQLDatabaseSchema::PrintSelf( ostream& os, vtkIndent indent )
 {
@@ -109,9 +115,8 @@ void vtkSQLDatabaseSchema::PrintSelf( ostream& os, vtkIndent indent )
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::AddPreamble( const char* preName, 
-                                       const char* preAction,
-                                       const char* preBackend )
+int vtkSQLDatabaseSchema::AddPreamble(
+  const char* preName, const char* preAction, const char* preBackend )
 {
   if ( ! preName )
     {
@@ -145,9 +150,8 @@ int vtkSQLDatabaseSchema::AddTable( const char* tblName )
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::AddColumnToIndex( int tblHandle, 
-                                            int idxHandle, 
-                                            int colHandle )
+int vtkSQLDatabaseSchema::AddColumnToIndex(
+  int tblHandle, int idxHandle, int colHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
@@ -173,11 +177,9 @@ int vtkSQLDatabaseSchema::AddColumnToIndex( int tblHandle,
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::AddColumnToTable( int tblHandle,
-                                            int colType, 
-                                            const char* colName, 
-                                            int colSize, 
-                                            const char* colOpts )
+int vtkSQLDatabaseSchema::AddColumnToTable(
+  int tblHandle, int colType, const char* colName,
+  int colSize, const char* colOpts )
 {
   if ( ! colName )
     {
@@ -203,9 +205,8 @@ int vtkSQLDatabaseSchema::AddColumnToTable( int tblHandle,
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::AddIndexToTable( int tblHandle, 
-                                           int idxType, 
-                                           const char* idxName )
+int vtkSQLDatabaseSchema::AddIndexToTable(
+  int tblHandle, int idxType, const char* idxName )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
@@ -222,11 +223,9 @@ int vtkSQLDatabaseSchema::AddIndexToTable( int tblHandle,
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::AddTriggerToTable( int tblHandle,
-                                             int trgType, 
-                                             const char* trgName, 
-                                             const char* trgAction,
-                                             const char* trgBackend )
+int vtkSQLDatabaseSchema::AddTriggerToTable(
+  int tblHandle, int trgType, const char* trgName,
+  const char* trgAction, const char* trgBackend )
 {
   if ( ! trgName )
     {
@@ -248,6 +247,30 @@ int vtkSQLDatabaseSchema::AddTriggerToTable( int tblHandle,
   trigger->Action = trgAction;
   trigger->Backend = trgBackend;
   return trgHandle;
+}
+
+// ----------------------------------------------------------------------
+int vtkSQLDatabaseSchema::AddOptionToTable(
+  int tblHandle, const char* optText, const char* optBackend )
+{
+  if ( ! optText )
+    {
+    vtkErrorMacro( "Cannot add NULL option to table " << tblHandle );
+    return -1;
+    }
+
+  if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
+    {
+    vtkErrorMacro( "Cannot add option to non-existent table " << tblHandle );
+    return -1;
+    }
+
+  int optHandle = static_cast<int>( this->Internals->Tables[tblHandle].Options.size() );
+  this->Internals->Tables[tblHandle].Options.resize( optHandle + 1 );
+  vtkSQLDatabaseSchemaInternals::Option* optn = &this->Internals->Tables[tblHandle].Options[optHandle];
+  optn->Text = optText;
+  optn->Backend = optBackend ? optBackend : VTK_SQL_ALLBACKENDS;
+  return optHandle;
 }
 
 // ----------------------------------------------------------------------
@@ -274,7 +297,7 @@ const char* vtkSQLDatabaseSchema::GetPreambleNameFromHandle( int preHandle )
     vtkErrorMacro( "Cannot get name of non-existent preamble " << preHandle );
     return 0;
     }
-  
+
   return this->Internals->Preambles[preHandle].Name;
 }
 
@@ -286,7 +309,7 @@ const char* vtkSQLDatabaseSchema::GetPreambleActionFromHandle( int preHandle )
     vtkErrorMacro( "Cannot get action of non-existent preamble " << preHandle );
     return 0;
     }
-  
+
   return this->Internals->Preambles[preHandle].Action;
 }
 
@@ -298,7 +321,7 @@ const char* vtkSQLDatabaseSchema::GetPreambleBackendFromHandle( int preHandle )
     vtkErrorMacro( "Cannot get backend of non-existent preamble " << preHandle );
     return 0;
     }
-  
+
   return this->Internals->Preambles[preHandle].Backend;
 }
 
@@ -326,13 +349,13 @@ const char* vtkSQLDatabaseSchema::GetTableNameFromHandle( int tblHandle )
     vtkErrorMacro( "Cannot get name of non-existent table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Name;
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetIndexHandleFromName( const char* tblName, 
-                                                  const char* idxName )
+int vtkSQLDatabaseSchema::GetIndexHandleFromName(
+  const char* tblName, const char* idxName )
 {
   int tblHandle = this->GetTableHandleFromName( tblName );
   if ( tblHandle < 0 )
@@ -354,60 +377,59 @@ int vtkSQLDatabaseSchema::GetIndexHandleFromName( const char* tblName,
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetIndexNameFromHandle( int tblHandle, 
-                                                          int idxHandle )
+const char* vtkSQLDatabaseSchema::GetIndexNameFromHandle(
+  int tblHandle, int idxHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get name of an index in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( idxHandle < 0 || idxHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Indices.size() ) )
     {
     vtkErrorMacro( "Cannot get name of non-existent index " << idxHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Indices[idxHandle].Name;
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetIndexTypeFromHandle( int tblHandle, 
-                                                  int idxHandle )
+int vtkSQLDatabaseSchema::GetIndexTypeFromHandle(
+  int tblHandle, int idxHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get type of an index in non-existent table " << tblHandle );
     return -1;
     }
-  
+
   if ( idxHandle < 0 || idxHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Indices.size() ) )
     {
     vtkErrorMacro( "Cannot get type of non-existent index " << idxHandle << " in table " << tblHandle );
     return -1;
     }
-  
+
   return static_cast<int>( this->Internals->Tables[tblHandle].Indices[idxHandle].Type );
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetIndexColumnNameFromHandle( int tblHandle, 
-                                                                int idxHandle,
-                                                                int cnmHandle )
+const char* vtkSQLDatabaseSchema::GetIndexColumnNameFromHandle(
+  int tblHandle, int idxHandle, int cnmHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get column name of an index in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( idxHandle < 0 || idxHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Indices.size() ) )
     {
     vtkErrorMacro( "Cannot get column name of non-existent index " << idxHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   if ( cnmHandle < 0 || cnmHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Indices[idxHandle].ColumnNames.size() ) )
     {
     vtkErrorMacro( "Cannot get column name of non-existent column " << cnmHandle << " of index " << idxHandle << " in table " << tblHandle );
@@ -418,8 +440,8 @@ const char* vtkSQLDatabaseSchema::GetIndexColumnNameFromHandle( int tblHandle,
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetColumnHandleFromName( const char* tblName, 
-                                                   const char* colName )
+int vtkSQLDatabaseSchema::GetColumnHandleFromName(
+  const char* tblName, const char* colName )
 {
   int tblHandle = this->GetTableHandleFromName( tblName );
   if ( tblHandle < 0 )
@@ -441,84 +463,84 @@ int vtkSQLDatabaseSchema::GetColumnHandleFromName( const char* tblName,
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetColumnNameFromHandle( int tblHandle, 
-                                                           int colHandle )
+const char* vtkSQLDatabaseSchema::GetColumnNameFromHandle(
+  int tblHandle, int colHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get name of a column in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( colHandle < 0 || colHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Columns.size() ) )
     {
     vtkErrorMacro( "Cannot get name of non-existent column " << colHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Columns[colHandle].Name;
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetColumnTypeFromHandle( int tblHandle, 
-                                                   int colHandle )
+int vtkSQLDatabaseSchema::GetColumnTypeFromHandle(
+  int tblHandle, int colHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get type of a column in non-existent table " << tblHandle );
     return -1;
     }
-  
+
   if ( colHandle < 0 || colHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Columns.size() ) )
     {
     vtkErrorMacro( "Cannot get type of non-existent column " << colHandle << " in table " << tblHandle );
     return -1;
     }
-  
+
   return static_cast<int>( this->Internals->Tables[tblHandle].Columns[colHandle].Type );
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetColumnSizeFromHandle( int tblHandle, 
-                                                   int colHandle )
+int vtkSQLDatabaseSchema::GetColumnSizeFromHandle(
+  int tblHandle, int colHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get size of a column in non-existent table " << tblHandle );
     return -1;
     }
-  
+
   if ( colHandle < 0 || colHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Columns.size() ) )
     {
     vtkErrorMacro( "Cannot get size of non-existent column " << colHandle << " in table " << tblHandle );
     return -1;
     }
-  
+
   return static_cast<int>( this->Internals->Tables[tblHandle].Columns[colHandle].Size );
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetColumnAttributesFromHandle( int tblHandle,  
-                                                                 int colHandle )
+const char* vtkSQLDatabaseSchema::GetColumnAttributesFromHandle(
+  int tblHandle,  int colHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get attributes of a column in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( colHandle < 0 || colHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Columns.size() ) )
     {
     vtkErrorMacro( "Cannot get attributes of non-existent column " << colHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Columns[colHandle].Attributes;
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetTriggerHandleFromName( const char* tblName, 
-                                                    const char* trgName )
+int vtkSQLDatabaseSchema::GetTriggerHandleFromName(
+  const char* tblName, const char* trgName )
 {
   int tblHandle = this->GetTableHandleFromName( tblName );
   if ( tblHandle < 0 )
@@ -540,79 +562,117 @@ int vtkSQLDatabaseSchema::GetTriggerHandleFromName( const char* tblName,
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetTriggerNameFromHandle( int tblHandle, 
-                                                            int trgHandle )
+const char* vtkSQLDatabaseSchema::GetTriggerNameFromHandle(
+  int tblHandle, int trgHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get name of a trigger in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( trgHandle < 0 || trgHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Triggers.size() ) )
     {
     vtkErrorMacro( "Cannot get name of non-existent trigger " << trgHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Triggers[trgHandle].Name;
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema::GetTriggerTypeFromHandle( int tblHandle, 
-                                                    int trgHandle )
+int vtkSQLDatabaseSchema::GetTriggerTypeFromHandle(
+  int tblHandle, int trgHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get type of a trigger in non-existent table " << tblHandle );
     return -1;
     }
-  
+
   if ( trgHandle < 0 || trgHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Triggers.size() ) )
     {
     vtkErrorMacro( "Cannot get type of non-existent trigger " << trgHandle << " in table " << tblHandle );
     return -1;
     }
-  
+
   return this->Internals->Tables[tblHandle].Triggers[trgHandle].Type;
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetTriggerActionFromHandle( int tblHandle, 
-                                                              int trgHandle )
+const char* vtkSQLDatabaseSchema::GetTriggerActionFromHandle(
+  int tblHandle, int trgHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get action of a trigger in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( trgHandle < 0 || trgHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Triggers.size() ) )
     {
     vtkErrorMacro( "Cannot get action of non-existent trigger " << trgHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Triggers[trgHandle].Action;
 }
 
 // ----------------------------------------------------------------------
-const char* vtkSQLDatabaseSchema::GetTriggerBackendFromHandle( int tblHandle, 
-                                                              int trgHandle )
+const char* vtkSQLDatabaseSchema::GetTriggerBackendFromHandle(
+  int tblHandle, int trgHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
     vtkErrorMacro( "Cannot get backend of a trigger in non-existent table " << tblHandle );
     return 0;
     }
-  
+
   if ( trgHandle < 0 || trgHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Triggers.size() ) )
     {
     vtkErrorMacro( "Cannot get backend of non-existent trigger " << trgHandle << " in table " << tblHandle );
     return 0;
     }
-  
+
   return this->Internals->Tables[tblHandle].Triggers[trgHandle].Backend;
+}
+
+// ----------------------------------------------------------------------
+const char* vtkSQLDatabaseSchema::GetOptionTextFromHandle(
+  int tblHandle, int optHandle )
+{
+  if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
+    {
+    vtkErrorMacro( "Cannot get text of an option in non-existent table " << tblHandle );
+    return 0;
+    }
+
+  if ( optHandle < 0 || optHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Options.size() ) )
+    {
+    vtkErrorMacro( "Cannot get text of non-existent option " << optHandle << " in table " << tblHandle );
+    return 0;
+    }
+
+  return this->Internals->Tables[tblHandle].Options[optHandle].Text.c_str();
+}
+
+// ----------------------------------------------------------------------
+const char* vtkSQLDatabaseSchema::GetOptionBackendFromHandle(
+  int tblHandle, int optHandle )
+{
+  if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
+    {
+    vtkErrorMacro( "Cannot get backend of an option in non-existent table " << tblHandle );
+    return 0;
+    }
+
+  if ( optHandle < 0 || optHandle >= static_cast<int>( this->Internals->Tables[tblHandle].Options.size() ) )
+    {
+    vtkErrorMacro( "Cannot get backend of non-existent option " << optHandle << " in table " << tblHandle );
+    return 0;
+    }
+
+  return this->Internals->Tables[tblHandle].Options[optHandle].Backend.c_str();
 }
 
 // ----------------------------------------------------------------------
@@ -630,7 +690,7 @@ int vtkSQLDatabaseSchema::AddTableMultipleArguments( const char* tblName, ... )
 #if !defined(__sgi) || defined(__GNUC__)
   va_list args;
 #else // SGI CC
-  vtkstd::va_list args;
+  std::va_list args;
 #endif // SGI CC
   va_start( args, tblName );
   while ( ( token = va_arg( args, int ) ) != END_TABLE_TOKEN )
@@ -662,6 +722,11 @@ int vtkSQLDatabaseSchema::AddTableMultipleArguments( const char* tblName, ... )
         attr = va_arg( args, const char* );
         bcke = va_arg( args, const char* );
         this->AddTriggerToTable( tblHandle, dtyp, name, attr, bcke );
+        break;
+      case OPTION_TOKEN:
+        attr = va_arg( args, const char* );
+        bcke = va_arg( args, const char* );
+        this->AddOptionToTable( tblHandle, attr, bcke );
         break;
       default:
         {
@@ -717,7 +782,7 @@ int vtkSQLDatabaseSchema::GetNumberOfIndicesInTable( int tblHandle )
 }
 
 // ----------------------------------------------------------------------
-int vtkSQLDatabaseSchema:: GetNumberOfColumnNamesInIndex( int tblHandle, int idxHandle )
+int vtkSQLDatabaseSchema::GetNumberOfColumnNamesInIndex( int tblHandle, int idxHandle )
 {
   if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
     {
@@ -744,4 +809,16 @@ int vtkSQLDatabaseSchema::GetNumberOfTriggersInTable( int tblHandle )
     }
 
   return static_cast<int>(this->Internals->Tables[tblHandle].Triggers.size());
+}
+
+// ----------------------------------------------------------------------
+int vtkSQLDatabaseSchema::GetNumberOfOptionsInTable( int tblHandle )
+{
+  if ( tblHandle < 0 || tblHandle >= this->GetNumberOfTables() )
+    {
+    vtkErrorMacro( "Cannot get the number of options of non-existent table " << tblHandle );
+    return -1;
+    }
+
+  return static_cast<int>(this->Internals->Tables[tblHandle].Options.size());
 }

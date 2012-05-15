@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOrientedGlyphFocalPlaneContourRepresentation.h,v $
+  Module:    vtkOrientedGlyphFocalPlaneContourRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkOrientedGlyphFocalPlaneContourRepresentation,
+  vtkTypeMacro(vtkOrientedGlyphFocalPlaneContourRepresentation,
                                     vtkFocalPlaneContourRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 

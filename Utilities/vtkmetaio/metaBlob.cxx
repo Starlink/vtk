@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaBlob.cxx,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.11 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
 #pragma warning(disable:4284)
@@ -31,24 +26,24 @@ namespace METAIO_NAMESPACE {
 
 BlobPnt::
 BlobPnt(int dim)
-{ 
+{
   m_Dim = dim;
   m_X = new float[m_Dim];
   for(unsigned int i=0;i<m_Dim;i++)
     {
     m_X[i] = 0;
     }
-    
+
   //Color is red by default
-  m_Color[0]=1.0;
-  m_Color[1]=0.0;
-  m_Color[2]=0.0;
-  m_Color[3]=1.0;
+  m_Color[0]=1.0f;
+  m_Color[1]=0.0f;
+  m_Color[2]=0.0f;
+  m_Color[3]=1.0f;
 }
 
 BlobPnt::
 ~BlobPnt()
-{ 
+{
   delete []m_X;
 };
 
@@ -124,14 +119,14 @@ CopyInfo(const MetaObject * _object)
   MetaObject::CopyInfo(_object);
 }
 
-    
+
 
 void MetaBlob::
 PointDim(const char* pointDim)
 {
   strcpy(m_PointDim,pointDim);
 }
-    
+
 const char* MetaBlob::
 PointDim(void) const
 {
@@ -165,13 +160,13 @@ Clear(void)
     BlobPnt* pnt = *it;
     it++;
     delete pnt;
-  }  
+  }
   m_PointList.clear();
   m_NPoints = 0;
   strcpy(m_PointDim, "x y z red green blue alpha");
   m_ElementType = MET_FLOAT;
 }
-        
+
 /** Destroy blob information */
 void MetaBlob::
 M_Destroy(void)
@@ -196,7 +191,7 @@ M_SetupReadFields(void)
   mF = new MET_FieldRecordType;
   MET_InitReadField(mF, "NPoints", MET_INT, true);
   m_Fields.push_back(mF);
- 
+
   mF = new MET_FieldRecordType;
   MET_InitReadField(mF, "ElementType", MET_STRING, true);
   mF->required = true;
@@ -269,9 +264,9 @@ M_Read(void)
   }
 
   if(META_DEBUG) METAIO_STREAM::cout << "MetaBlob: M_Read: Parsing Header" << METAIO_STREAM::endl;
- 
+
   MET_FieldRecordType * mF;
- 
+
   mF = MET_GetFieldRecord("NPoints", &m_Fields);
   if(mF->defined)
   {
@@ -300,11 +295,11 @@ M_Read(void)
 
   int pntDim;
   char** pntVal = NULL;
-  MET_StringToWordArray(m_PointDim, &pntDim, &pntVal); 
- 
-    
+  MET_StringToWordArray(m_PointDim, &pntDim, &pntVal);
+
+
   int j;
-  for(j = 0; j < pntDim; j++) 
+  for(j = 0; j < pntDim; j++)
   {
     if(!strcmp(pntVal[j], "x") || !strcmp(pntVal[j], "X"))
     {
@@ -324,61 +319,65 @@ M_Read(void)
     {
     delete [] pntVal[i];
     }
- 
+
   delete [] pntVal;
-   
+
   float v[16];
-  
+
   if(m_BinaryData)
   {
     int elementSize;
     MET_SizeOfType(m_ElementType, &elementSize);
     int readSize = m_NPoints*(m_NDims+4)*elementSize;
-    
+
     char* _data = new char[readSize];
     m_ReadStream->read((char *)_data, readSize);
 
     int gc = m_ReadStream->gcount();
     if(gc != readSize)
     {
-      METAIO_STREAM::cout << "MetaBlob: m_Read: data not read completely" 
+      METAIO_STREAM::cout << "MetaBlob: m_Read: data not read completely"
                 << METAIO_STREAM::endl;
       METAIO_STREAM::cout << "   ideal = " << readSize << " : actual = " << gc << METAIO_STREAM::endl;
+      delete [] _data;
+      delete [] posDim;
       return false;
     }
 
     i=0;
     int d;
     unsigned int k;
-    for(j=0; j<m_NPoints; j++) 
+    for(j=0; j<m_NPoints; j++)
     {
       BlobPnt* pnt = new BlobPnt(m_NDims);
 
       for(d=0; d<m_NDims; d++)
       {
-        char* num = new char[sizeof(float)];
+        float* num = new float[1];
+        char* numAlias = reinterpret_cast<char*>(num);
         for(k=0;k<sizeof(float);k++)
           {
-          num[k] = _data[i+k];
+          numAlias[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
+        float td = num[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-        i+=sizeof(float); 
-        pnt->m_X[d] = (float)td;
+        i+=sizeof(float);
+        pnt->m_X[d] = td;
         delete [] num;
       }
 
       for(d=0; d<4; d++)
       {
-        char* num = new char[sizeof(float)];
+        float* num = new float[1];
+        char* numAlias = reinterpret_cast<char*>(num);
         for(k=0;k<sizeof(float);k++)
           {
-          num[k] = _data[i+k];
+          numAlias[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
+        float td = num[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
         i+=sizeof(float);
-        pnt->m_Color[d] = (float)td;
+        pnt->m_Color[d] = td;
         delete [] num;
       }
 
@@ -388,14 +387,14 @@ M_Read(void)
   }
   else
   {
-    for(j=0; j<m_NPoints; j++) 
+    for(j=0; j<m_NPoints; j++)
     {
       BlobPnt* pnt = new BlobPnt(m_NDims);
-      
+
       for(int k=0; k<pntDim; k++)
       {
         *m_ReadStream >> v[k];
-        m_ReadStream->get(); 
+        m_ReadStream->get();
       }
 
       int d;
@@ -408,7 +407,7 @@ M_Read(void)
       {
         pnt->m_Color[d] = v[d+m_NDims];
       }
-     
+
       m_PointList.push_back(pnt);
     }
 
@@ -421,7 +420,7 @@ M_Read(void)
         }
       }
   }
-  
+
   delete [] posDim;
   return true;
 }
@@ -433,7 +432,7 @@ M_Write(void)
 
   if(!MetaObject::M_Write())
     {
-    METAIO_STREAM::cout << "MetaBlob: M_Read: Error parsing file" 
+    METAIO_STREAM::cout << "MetaBlob: M_Read: Error parsing file"
                         << METAIO_STREAM::endl;
     return false;
     }
@@ -454,18 +453,18 @@ M_Write(void)
       for(d = 0; d < m_NDims; d++)
         {
         float pntX = (*it)->m_X[d];
-        MET_SwapByteIfSystemMSB(&pntX,MET_FLOAT);    
+        MET_SwapByteIfSystemMSB(&pntX,MET_FLOAT);
         MET_DoubleToValue((double)pntX,m_ElementType,data,i++);
         }
 
       for(d = 0; d < 4; d++)
         {
         float c = (*it)->m_Color[d];
-        MET_SwapByteIfSystemMSB(&c,MET_FLOAT);    
+        MET_SwapByteIfSystemMSB(&c,MET_FLOAT);
         MET_DoubleToValue((double)c,m_ElementType,data,i++);
         }
       it++;
-      }  
+      }
     m_WriteStream->write((char *)data,(m_NDims+4)*m_NPoints*elementSize);
     m_WriteStream->write("\n",1);
     delete [] data;
@@ -474,7 +473,7 @@ M_Write(void)
     {
     PointListType::const_iterator it = m_PointList.begin();
     PointListType::const_iterator itEnd = m_PointList.end();
-  
+
     int d;
     while(it != itEnd)
       {
@@ -500,4 +499,3 @@ M_Write(void)
 #if (METAIO_USE_NAMESPACE)
 };
 #endif
-

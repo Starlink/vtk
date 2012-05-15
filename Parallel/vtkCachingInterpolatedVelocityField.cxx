@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCachingInterpolatedVelocityField.cxx,v $
+  Module:    vtkCachingInterpolatedVelocityField.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,14 +28,13 @@
 #include "vtkCellLocator.h"
 #define Custom_TreeType vtkCellLocator
 
-#include <vtkstd/vector>
+#include <vector>
 #ifdef JB_BSP_TREE 
  #include "vtkModifiedBSPTree.h"
  #undef  Custom_TreeType
  #define Custom_TreeType vtkModifiedBSPTree
 #endif
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCachingInterpolatedVelocityField, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkCachingInterpolatedVelocityField);
 //---------------------------------------------------------------------------
 const double IVFDataSetInfo::TOLERANCE_SCALE = 1.0E-8;

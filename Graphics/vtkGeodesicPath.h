@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeodesicPath.h,v $
+  Module:    vtkGeodesicPath.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ public:
 
   // Description:
   // Standard methids for printing and determining type information.
-  vtkTypeRevisionMacro(vtkGeodesicPath,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGeodesicPath,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual double GetGeodesicLength() = 0;

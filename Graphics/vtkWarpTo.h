@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpTo.h,v $
+  Module:    vtkWarpTo.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_GRAPHICS_EXPORT vtkWarpTo : public vtkPointSetAlgorithm
 {
 public:
   static vtkWarpTo *New();
-  vtkTypeRevisionMacro(vtkWarpTo,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkWarpTo,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -45,12 +45,19 @@ public:
   vtkSetMacro(Absolute,int);
   vtkGetMacro(Absolute,int);
   vtkBooleanMacro(Absolute,int);
-  
+
+  int FillInputPortInformation(int port, vtkInformation *info);
+
 protected:
-  vtkWarpTo(); 
+  vtkWarpTo();
   ~vtkWarpTo() {};
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int RequestDataObject(vtkInformation *request,
+                        vtkInformationVector **inputVector,
+                        vtkInformationVector *outputVector);
+  int RequestData(vtkInformation *,
+                  vtkInformationVector **,
+                  vtkInformationVector *);
   double ScaleFactor;
   double Position[3];
   int   Absolute;

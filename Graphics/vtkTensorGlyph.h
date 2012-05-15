@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTensorGlyph.h,v $
+  Module:    vtkTensorGlyph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -81,7 +81,7 @@
 class VTK_GRAPHICS_EXPORT vtkTensorGlyph : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkTensorGlyph,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkTensorGlyph,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description
@@ -194,6 +194,7 @@ protected:
   vtkTensorGlyph();
   ~vtkTensorGlyph();
 
+  virtual int RequestUpdateExtent(vtkInformation *,  vtkInformationVector **, vtkInformationVector *);
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 

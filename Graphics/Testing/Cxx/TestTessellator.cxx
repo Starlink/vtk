@@ -39,7 +39,7 @@
 #include "vtkStreamingTessellator.h"
 #include "vtkEdgeSubdivisionCriterion.h"
 
-#include <vtkstd/algorithm>
+#include <algorithm>
 
 #include "vtkObjectFactory.h"
 #include "vtkIdList.h"
@@ -49,7 +49,7 @@
 #include "vtkCell.h"
 #include "vtkDataSet.h"
 
-using vtkstd::copy;
+using std::copy;
 
 #undef ONLY_WIRE
 #undef FOR_PAPER
@@ -2508,7 +2508,7 @@ class vtkTestTessellatorSubdivision
   : public vtkEdgeSubdivisionCriterion
 {
   public:
-    vtkTypeRevisionMacro(vtkTestTessellatorSubdivision,vtkEdgeSubdivisionCriterion);
+    vtkTypeMacro(vtkTestTessellatorSubdivision,vtkEdgeSubdivisionCriterion);
     static vtkTestTessellatorSubdivision* New();
     virtual void PrintSelf( ostream& os, vtkIndent indent );
 
@@ -2562,7 +2562,6 @@ class vtkTestTessellatorSubdivision
 
 };
 
-vtkCxxRevisionMacro(vtkTestTessellatorSubdivision,"$Revision: 1.7 $");
 vtkStandardNewMacro(vtkTestTessellatorSubdivision);
 
 static int test_list[] =

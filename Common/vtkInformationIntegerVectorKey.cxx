@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationIntegerVectorKey.cxx,v $
+  Module:    vtkInformationIntegerVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,10 +16,9 @@
 
 #include "vtkInformation.h" // For vtkErrorWithObjectMacro
 
-#include <vtkstd/algorithm>
-#include <vtkstd/vector>
+#include <algorithm>
+#include <vector>
 
-vtkCxxRevisionMacro(vtkInformationIntegerVectorKey, "$Revision: 1.9 $");
 
 //----------------------------------------------------------------------------
 vtkInformationIntegerVectorKey
@@ -46,7 +45,7 @@ class vtkInformationIntegerVectorValue: public vtkObjectBase
 {
 public:
   vtkTypeMacro(vtkInformationIntegerVectorValue, vtkObjectBase);
-  vtkstd::vector<int> Value;
+  std::vector<int> Value;
 };
 
 //----------------------------------------------------------------------------
@@ -63,6 +62,13 @@ void vtkInformationIntegerVectorKey::Append(vtkInformation* info, int value)
     {
     this->Set(info, &value, 1);
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkInformationIntegerVectorKey::Set(vtkInformation* info)
+{
+  int someVal;
+  this->Set(info, &someVal, 0);
 }
 
 //----------------------------------------------------------------------------
@@ -89,7 +95,7 @@ void vtkInformationIntegerVectorKey::Set(vtkInformation* info, int* value,
     if(oldv && static_cast<int>(oldv->Value.size()) == length)
       {
       // Replace the existing value.
-      vtkstd::copy(value, value+length, oldv->Value.begin());
+      std::copy(value, value+length, oldv->Value.begin());
       // Since this sets a value without call SetAsObjectBase(),
       // the info has to be modified here (instead of 
       // vtkInformation::SetAsObjectBase()
@@ -144,7 +150,7 @@ void vtkInformationIntegerVectorKey::Get(vtkInformation* info,
     (this->GetAsObjectBase(info));
   if(v && value)
     {
-    for(vtkstd::vector<int>::size_type i = 0;
+    for(std::vector<int>::size_type i = 0;
         i < v->Value.size(); ++i)
       {
       value[i] = v->Value[i];

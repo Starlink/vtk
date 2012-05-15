@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollectGraph.cxx,v $
+  Module:    vtkCollectGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,6 @@ using vtksys_stl::map;
 using vtksys_stl::pair;
 using vtksys_stl::vector;
 
-vtkCxxRevisionMacro(vtkCollectGraph, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkCollectGraph);
 
 vtkCxxSetObjectMacro(vtkCollectGraph,Controller, vtkMultiProcessController);
@@ -136,8 +135,6 @@ int vtkCollectGraph::RequestDataObject(
   vtkInformation *info = outputVector->GetInformationObject(0);
   output->SetPipelineInformation(info);
   output->Delete();
-  this->GetOutputPortInformation(0)->Set(
-    vtkDataObject::DATA_EXTENT_TYPE(), output->GetExtentType());
 
   return 1;
 }
@@ -152,7 +149,7 @@ int vtkCollectGraph::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestGenericCell.cxx,v $
+  Module:    TestGenericCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,8 @@ int TestGenericCell(int , char *[])
      && cell->GetCellType() != VTK_POLY_LINE // FIXME
      && cell->GetCellType() != VTK_TRIANGLE_STRIP // FIXME
      && cell->GetCellType() != VTK_POLYGON // FIXME
-     && cell->GetCellType() != VTK_CONVEX_POINT_SET) // FIXME
+     && cell->GetCellType() != VTK_CONVEX_POINT_SET // FIXME
+     && cell->GetCellType() != VTK_POLYHEDRON) // FIXME
       {
       double m[3] = {0., 0., 0.};
       // We add all the points since

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformCoordinateSystems.h,v $
+  Module:    vtkTransformCoordinateSystems.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_GRAPHICS_EXPORT vtkTransformCoordinateSystems : public vtkPointSetAlgo
 public:
   // Description:
   // Standard methods for type information and printing.
-  vtkTypeRevisionMacro(vtkTransformCoordinateSystems,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkTransformCoordinateSystems,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

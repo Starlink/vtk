@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositePolyDataMapper.h,v $
+  Module:    vtkCompositePolyDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_RENDERING_EXPORT vtkCompositePolyDataMapper : public vtkMapper
 
 public:
   static vtkCompositePolyDataMapper *New();
-  vtkTypeRevisionMacro(vtkCompositePolyDataMapper, vtkMapper);
+  vtkTypeMacro(vtkCompositePolyDataMapper, vtkMapper);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -54,7 +54,6 @@ public:
   // Description:
   // Release the underlying resources associated with this mapper  
   void ReleaseGraphicsResources(vtkWindow *);
-
 
 protected:
   vtkCompositePolyDataMapper();
@@ -74,7 +73,11 @@ protected:
   // This is the build method for creating the internal polydata
   // mapper that do the actual work
   void BuildPolyDataMapper();
-  
+
+  // Description:
+  // BuildPolyDataMapper uses this for each mapper. It is broken out so we can change types.
+  virtual vtkPolyDataMapper *MakeAMapper();
+
   // Description:
   // Need to loop over the hierarchy to compute bounds
   void ComputeBounds();

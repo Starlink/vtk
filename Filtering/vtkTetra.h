@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTetra.h,v $
+  Module:    vtkTetra.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,12 +32,13 @@
 class vtkLine;
 class vtkTriangle;
 class vtkUnstructuredGrid;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkTetra : public vtkCell3D
 {
 public:
   static vtkTetra *New();
-  vtkTypeRevisionMacro(vtkTetra,vtkCell3D);
+  vtkTypeMacro(vtkTetra,vtkCell3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -53,12 +54,12 @@ public:
   vtkCell *GetEdge(int edgeId);
   vtkCell *GetFace(int faceId);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *connectivity,
+            vtkIncrementalPointLocator *locator, vtkCellArray *connectivity,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);

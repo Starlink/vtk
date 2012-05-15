@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOBJReader.h,v $
+  Module:    vtkOBJReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_IO_EXPORT vtkOBJReader : public vtkPolyDataAlgorithm
 {
 public:
   static vtkOBJReader *New();
-  vtkTypeRevisionMacro(vtkOBJReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkOBJReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

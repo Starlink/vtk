@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCardinalSpline.h,v $
+  Module:    vtkCardinalSpline.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_FILTERING_EXPORT vtkCardinalSpline : public vtkSpline
 public:
   static vtkCardinalSpline *New();
 
-  vtkTypeRevisionMacro(vtkCardinalSpline,vtkSpline);
+  vtkTypeMacro(vtkCardinalSpline,vtkSpline);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

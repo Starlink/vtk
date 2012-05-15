@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBreadthFirstSearch.h,v $
+  Module:    vtkBoostBreadthFirstSearch.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_INFOVIS_EXPORT vtkBoostBreadthFirstSearch : public vtkGraphAlgorithm
 {
 public:
   static vtkBoostBreadthFirstSearch *New();
-  vtkTypeRevisionMacro(vtkBoostBreadthFirstSearch, vtkGraphAlgorithm);
+  vtkTypeMacro(vtkBoostBreadthFirstSearch, vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -58,8 +58,6 @@ public:
   // breadth first search 'origin' vertex.
   void SetOriginVertex(vtkIdType index);
 
-  //BTX
-  
   // Description:
   // Set the breadth first search 'origin' vertex.
   // This method is basically the same as above
@@ -67,7 +65,6 @@ public:
   // an array name and value, instead of having to
   // know the specific index of the vertex.
   void SetOriginVertex(vtkStdString arrayName, vtkVariant value);
-  //ETX
 
   // Description:
   // Convenience method for setting the origin vertex
@@ -125,9 +122,7 @@ private:
   vtkIdType OriginVertexIndex;
   char* InputArrayName;
   char* OutputArrayName;
-  //BTX
   vtkVariant OriginValue;
-  //ETX
   bool OutputSelection;
   bool OriginFromSelection;
   char* OutputSelectionType;
@@ -136,14 +131,11 @@ private:
   // Using the convenience function internally
   vtkSetStringMacro(InputArrayName);
 
-  //BTX
-  
   // Description:
   // This method is basically a helper function to find
   // the index of a specific value within a specific array
   vtkIdType GetVertexIndex(
     vtkAbstractArray *abstract,vtkVariant value);
-  //ETX
 
   vtkBoostBreadthFirstSearch(const vtkBoostBreadthFirstSearch&);  // Not implemented.
   void operator=(const vtkBoostBreadthFirstSearch&);  // Not implemented.

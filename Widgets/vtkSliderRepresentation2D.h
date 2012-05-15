@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSliderRepresentation2D.h,v $
+  Module:    vtkSliderRepresentation2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -56,7 +56,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkSliderRepresentation2D,vtkSliderRepresentation);
+  vtkTypeMacro(vtkSliderRepresentation2D,vtkSliderRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

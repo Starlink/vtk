@@ -2,7 +2,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalStatistics.h,v $
+  Module:    vtkTemporalStatistics.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,7 +60,7 @@ class vtkGraph;
 class VTK_GRAPHICS_EXPORT vtkTemporalStatistics : public vtkPassInputTypeAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkTemporalStatistics, vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkTemporalStatistics, vtkPassInputTypeAlgorithm);
   static vtkTemporalStatistics *New();
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 

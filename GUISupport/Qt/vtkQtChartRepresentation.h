@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartRepresentation.h,v $
+  Module:    vtkQtChartRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,81 +16,54 @@
  Copyright (c) Sandia Corporation
  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
 ----------------------------------------------------------------------------*/
-// .NAME vtkQtChartRepresentation - Put a vtkTable into a QChartLayer
+// .NAME vtkQtChartRepresentation - A representation for displaying a
+// vtkTable in a vtkQtChartView
 //
 // .SECTION Description
 //
-// This is a specialization of vtkQtTableDataRepresentation to put the
-// data into a QChartLayer.  The user must supply the QChartLayer to be
-// used either through SetChartLayer() or via a subclass.
+// This is a specialization of vtkQtTableRepresentation to put the
+// data into a vtkQtChartView.
 
 #ifndef __vtkQtChartRepresentation_h
 #define __vtkQtChartRepresentation_h
 
-#include "QVTKWin32Header.h"
-#include "vtkQtTableDataRepresentation.h"
-
-#include <QObject>
-#include <QList>
-#include "vtkQtChartSeriesSelection.h"
-
-class vtkQtChartSeriesLayer;
-class QItemSelection;
-class vtkQtAbstractModelAdapter;
-class vtkAlgorithmOutput;
-class vtkDataArray;
-class vtkIdTypeArray;
+#include "vtkQtTableRepresentation.h"
 class vtkIntArray;
-class vtkLookupTable;
-class vtkQtChartRepresentation;
-class vtkQtItemView;
-class vtkSelection;
-class vtkSelectionLink;
-class vtkView;
+class vtkQtChartSeriesOptionsModel;
+class vtkQtChartTableSeriesModel;
 
-class QVTK_EXPORT vtkQtChartRepresentationSignalHandler : public QObject
-{
-Q_OBJECT
-public:
-  void setTarget(vtkQtChartRepresentation* t) { this->Target = t; }
-public slots:
-  void selectedSeriesChanged(const vtkQtChartSeriesSelection&);
-  void modelChanged();
-private:
-  vtkQtChartRepresentation* Target;
-};
-
-class QVTK_EXPORT vtkQtChartRepresentation : public vtkQtTableDataRepresentation
+class QVTK_EXPORT vtkQtChartRepresentation : public vtkQtTableRepresentation
 {
 public:
   static vtkQtChartRepresentation *New();
-  vtkTypeRevisionMacro(vtkQtChartRepresentation, vtkQtTableDataRepresentation);
+  vtkTypeMacro(vtkQtChartRepresentation, vtkQtTableRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
-  // Sets the input pipeline connection to this representation.
-  virtual void SetInputConnection(vtkAlgorithmOutput* conn);
-  
-  // Description:
-  // Set/Get the underlying chart layer for this representation.
-  virtual void SetChartLayer(vtkQtChartSeriesLayer* layer);
-  virtual vtkQtChartSeriesLayer* GetChartLayer() { return this->ChartLayer; }
+  // Return the series model for this table representation
+  vtkQtChartTableSeriesModel* GetSeriesModel();
+
 
   // Description:
-  // Called by the handler when the layer selection changes.
-  virtual void QtSelectedSeriesChanged(const vtkQtChartSeriesSelection &list);
-  
-  // Description:
-  // Called by the handler whent the data model changes.
-  virtual void QtModelChanged();
+  // Get/Set the series options model. By default,
+  // vtkQtChartBasicSeriesOptionsModel will be used. The series options model
+  // must be changed before the representation is added to a view.
+  void SetOptionsModel(vtkQtChartSeriesOptionsModel*);
+  vtkQtChartSeriesOptionsModel* GetOptionsModel();
 
   // Description:
-  // Update the current selection.
-  virtual void Update();
+  // Return the number of series.
+  // This is equivalent to this->GetSeriesModel()->getNumberOfSeries().
+  int GetNumberOfSeries();
 
   // Description:
-  // Orients the table as being either columns-as-series or
-  // rows-as-series oriented.
+  // Return the name of the series.  The returned const char may be null
+  // if the series index is out of range.  The returned const char is only
+  // valid until the next call to GetSeriesName.
+  const char* GetSeriesName(int series);
+
+  // Description:
+  // Orients the table as being either columns-as-series or rows-as-series oriented.
   void SetColumnsAsSeries(bool);
   vtkGetMacro(ColumnsAsSeries,int);
 
@@ -98,37 +71,23 @@ protected:
   vtkQtChartRepresentation();
   ~vtkQtChartRepresentation();
   
-  // Decription:
-  // Adds the representation to the view.  This is called from
-  // vtkView::AddRepresentation().
+  // Description:
+  // Adds the representation to the view.
+  // This is called from vtkView::AddRepresentation().
   bool AddToView(vtkView* view);
   
-  // Decription:
-  // Removes the representation to the view.  This is called from
-  // vtkView::RemoveRepresentation().
+  // Description:
+  // Removes the representation to the view.
+  // This is called from vtkView::RemoveRepresentation().
   bool RemoveFromView(vtkView* view);
-  
-  virtual void CreateSeriesColors();
-
-  // Description:
-  // The underlying chart layer.
-  vtkQtChartSeriesLayer* ChartLayer;
-
-  // Description:
-  // Listens for selection changed events from the chart layer.
-  vtkQtChartRepresentationSignalHandler* Handler;
-
-  // Description:
-  // A map from chart series id to VTK id.
-  vtkIdTypeArray* SeriesToVTKMap;
-
-  // Description:
-  // A map from VTK id to chart series id.
-  vtkIntArray* VTKToSeriesMap;
 
   bool ColumnsAsSeries;
 
 private:
+
+  class vtkInternal;
+  vtkInternal* Internal;
+
   vtkQtChartRepresentation(const vtkQtChartRepresentation&);  // Not implemented.
   void operator=(const vtkQtChartRepresentation&);  // Not implemented.
 };

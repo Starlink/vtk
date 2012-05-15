@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalStreamTracer.h,v $
+  Module:    vtkTemporalStreamTracer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,8 +28,8 @@
 #include "vtkStreamTracer.h"
 
 //BTX
-#include <vtkstd/vector> // Because they are good
-#include <vtkstd/list>   // Because they are good
+#include <vector> // STL Header
+#include <list>   // STL Header
 //ETX
 
 class vtkMultiProcessController;
@@ -75,9 +75,9 @@ namespace vtkTemporalStreamTracerNamespace
     float         speed;
   } ParticleInformation;
 
-  typedef vtkstd::vector<ParticleInformation>  ParticleVector;
+  typedef std::vector<ParticleInformation>  ParticleVector;
   typedef ParticleVector::iterator             ParticleIterator;
-  typedef vtkstd::list<ParticleInformation>    ParticleDataList;
+  typedef std::list<ParticleInformation>    ParticleDataList;
   typedef ParticleDataList::iterator           ParticleListIterator;
 };
 //ETX
@@ -86,7 +86,7 @@ class VTK_PARALLEL_EXPORT vtkTemporalStreamTracer : public vtkStreamTracer
 {
 public:
 
-    vtkTypeRevisionMacro(vtkTemporalStreamTracer,vtkStreamTracer);
+    vtkTypeMacro(vtkTemporalStreamTracer,vtkStreamTracer);
     void PrintSelf(ostream& os, vtkIndent indent);
 
     // Description:
@@ -131,7 +131,7 @@ public:
   enum Units
   {
     TERMINATION_TIME_UNIT,
-    TERMINATION_STEP_UNIT,
+    TERMINATION_STEP_UNIT
   };
 //ETX
 
@@ -348,8 +348,8 @@ public:
     int           IgnorePipelineTime;
     unsigned int  NumberOfInputTimeSteps;
 //BTX
-    vtkstd::vector<double>  InputTimeValues;
-    vtkstd::vector<double>  OutputTimeValues;
+    std::vector<double>  InputTimeValues;
+    std::vector<double>  OutputTimeValues;
 //ETX
 
     // more time management
@@ -414,7 +414,7 @@ public:
     typedef struct {
       double b[6];
     } bounds;
-    vtkstd::vector<bounds> CachedBounds[2];
+    std::vector<bounds> CachedBounds[2];
 
     // utility funtion we use to test if a point is inside any of our local datasets
     bool InsideBounds(double point[]);
@@ -433,7 +433,7 @@ public:
 private:
   // Description:
   // Hide this because we require a new interpolator type 
-  void SetInterpolatorPrototype(vtkInterpolatedVelocityField*) {};
+  void SetInterpolatorPrototype(vtkAbstractInterpolatedVelocityField*) {};
 
 private:
   vtkTemporalStreamTracer(const vtkTemporalStreamTracer&);  // Not implemented.

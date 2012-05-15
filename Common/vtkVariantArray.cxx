@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantArray.cxx,v $
+  Module:    vtkVariantArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,13 +35,13 @@
 #include "vtkArrayIteratorTemplate.txx"
 VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(vtkVariant);
 
-#include <vtkstd/utility>
-#include <vtkstd/algorithm>
-#include <vtkstd/map>
+#include <utility>
+#include <algorithm>
+#include <map>
 
 // Map containing updates to a vtkVariantArray that have occurred
 // since we last build the vtkVariantArrayLookup.
-typedef vtkstd::multimap<vtkVariant, vtkIdType, vtkVariantLessThan> 
+typedef std::multimap<vtkVariant, vtkIdType, vtkVariantLessThan>
   vtkVariantCachedUpdates;
 
 //----------------------------------------------------------------------------
@@ -76,7 +76,6 @@ public:
 // Standard functions
 //
 
-vtkCxxRevisionMacro(vtkVariantArray, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkVariantArray);
 //----------------------------------------------------------------------------
 void vtkVariantArray::PrintSelf(ostream& os, vtkIndent indent)
@@ -558,9 +557,9 @@ void vtkVariantArray::InsertValue(vtkIdType id, vtkVariant value)
 }
 
 //----------------------------------------------------------------------------
-void vtkVariantArray::InsertVariantValue(vtkIdType id, vtkVariant value)
+void vtkVariantArray::SetVariantValue(vtkIdType id, vtkVariant value)
 {
-  this->InsertValue(id, value);
+  this->SetValue(id, value);
 }
 
 //----------------------------------------------------------------------------
@@ -735,7 +734,7 @@ vtkIdType vtkVariantArray::LookupValue(vtkVariant value)
   vtkIdType numTuples = this->Lookup->SortedArray->GetNumberOfTuples();
   vtkVariant* ptr = this->Lookup->SortedArray->GetPointer(0);
   vtkVariant* ptrEnd = ptr + numComps*numTuples;
-  vtkVariant* found = vtkstd::lower_bound(
+  vtkVariant* found = std::lower_bound(
     ptr, ptrEnd, value, vtkVariantLessThan());
 
   // Find an index with a matching value. Non-matching values might
@@ -780,7 +779,7 @@ void vtkVariantArray::LookupValue(vtkVariant value, vtkIdList* ids)
   // values since the cache was built, so we need to do this equality
   // check.
   typedef vtkVariantCachedUpdates::iterator CacheIterator;
-  vtkstd::pair<CacheIterator, CacheIterator> cached    
+  std::pair<CacheIterator, CacheIterator> cached
     = this->Lookup->CachedUpdates.equal_range(value);
   while (cached.first != cached.second) 
     {
@@ -799,8 +798,8 @@ void vtkVariantArray::LookupValue(vtkVariant value, vtkIdList* ids)
   vtkIdType numTuples = this->GetNumberOfTuples();
   vtkVariant* ptr = this->Lookup->SortedArray->GetPointer(0);
   vtkVariant* ptrEnd = ptr + numComps*numTuples;
-  vtkstd::pair<vtkVariant*, vtkVariant*> found = 
-    vtkstd::equal_range(ptr, ptrEnd, value, vtkVariantLessThan());
+  std::pair<vtkVariant*, vtkVariant*> found =
+    std::equal_range(ptr, ptrEnd, value, vtkVariantLessThan());
   
   // Add the indices of the found items to the ID list.
   vtkIdType offset = static_cast<vtkIdType>(found.first - ptr);
@@ -848,7 +847,7 @@ void vtkVariantArray::DataElementChanged(vtkIdType id)
       else
         {
         // Insert this change into the set of cached updates
-        vtkstd::pair<const vtkVariant, vtkIdType> 
+        std::pair<const vtkVariant, vtkIdType>
           value(this->GetValue(id), id);
         this->Lookup->CachedUpdates.insert(value);
         }

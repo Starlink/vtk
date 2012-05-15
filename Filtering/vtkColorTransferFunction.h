@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkColorTransferFunction.h,v $
+  Module:    vtkColorTransferFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,6 +23,8 @@
 // the specification of the midpoint (the place where the function
 // reaches the average of the two bounding nodes) as a normalize distance
 // between nodes.
+// See the description of class vtkPiecewiseFunction for an explanation of
+// midpoint and sharpness.
 
 // .SECTION see also
 // vtkPiecewiseFunction
@@ -46,8 +48,8 @@ class VTK_FILTERING_EXPORT vtkColorTransferFunction : public vtkScalarsToColors
 {
 public:
   static vtkColorTransferFunction *New();
-  vtkTypeRevisionMacro(vtkColorTransferFunction,vtkScalarsToColors);
-  void DeepCopy( vtkColorTransferFunction *f );
+  vtkTypeMacro(vtkColorTransferFunction,vtkScalarsToColors);
+  void DeepCopy( vtkScalarsToColors *f );
   void ShallowCopy( vtkColorTransferFunction *f );
 
   // Description:
@@ -61,6 +63,8 @@ public:
   // Description:
   // Add/Remove a point to/from the function defined in RGB or HSV
   // Return the index of the point (0 based), or -1 on error.
+  // See the description of class vtkPiecewiseFunction for an explanation of
+  // midpoint and sharpness.
   int AddRGBPoint( double x, double r, double g, double b );
   int AddRGBPoint( double x, double r, double g, double b, 
                    double midpoint, double sharpness );
@@ -159,6 +163,12 @@ public:
   void SetScaleToLinear() { this->SetScale(VTK_CTF_LINEAR); };
   void SetScaleToLog10() { this->SetScale(VTK_CTF_LOG10); };
   vtkGetMacro(Scale,int);
+
+  // Description:
+  // Set the color to use when a NaN (not a number) is encountered.  This is an
+  // RGB 3-tuple color of doubles in the range [0,1].
+  vtkSetVector3Macro(NanColor, double);
+  vtkGetVector3Macro(NanColor, double);
     
   // Description:
   // Returns a list of all nodes
@@ -178,6 +188,10 @@ public:
   vtkSetMacro(AllowDuplicateScalars, int);
   vtkGetMacro(AllowDuplicateScalars, int);
   vtkBooleanMacro(AllowDuplicateScalars, int);
+
+  // Description:
+  // Get the number of available colors for mapping to.
+  virtual vtkIdType GetNumberOfAvailableColors();
 
 protected:
   vtkColorTransferFunction();
@@ -199,6 +213,9 @@ protected:
 
   // The color interpolation scale (linear or logarithmic).
   int Scale;
+
+  // The color to use for not-a-number.
+  double NanColor[3];
   
   double     *Function;
   
@@ -221,8 +238,11 @@ protected:
   void SetRange(double rng[2]) {this->SetRange(rng[0],rng[1]);};
 
   // Internal method to sort the vector and update the
-  // Range whenever a node is added or removed
+  // Range whenever a node is added, edited or removed
+  // It always calls Modified().
   void SortAndUpdateRange();
+  // Returns true if the range has been updated and Modified() has been called
+  bool UpdateRange();
  
   // Description:
   // Moves point from oldX to newX. It removed the point from oldX. If any point

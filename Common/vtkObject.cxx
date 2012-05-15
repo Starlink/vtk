@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkObject.cxx,v $
+  Module:    vtkObject.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,10 +18,10 @@
 #include "vtkDebugLeaks.h"
 #include "vtkGarbageCollector.h"
 #include "vtkTimeStamp.h"
+#include "vtkWeakPointer.h"
 
-#include <vtkstd/map>
+#include <map>
 
-vtkCxxRevisionMacro(vtkObject, "$Revision: 1.102 $");
 
 // Initialize static member that controls warning display
 static int vtkObjectGlobalWarningDisplay = 1;
@@ -481,12 +481,12 @@ int vtkSubjectHelper::InvokeEvent(unsigned long event, void *callData,
   // get overridden in the event invocation).  Also make sure that we do not
   // invoke any new observers that were added during another observer's
   // invocation.
-  typedef vtkstd::map<unsigned long, bool> VisitedMapType;
+  typedef std::map<unsigned long, bool> VisitedMapType;
   VisitedMapType visited;
   vtkObserver *elem = this->Start;
   while (elem)
     {
-    visited.insert(vtkstd::make_pair(elem->Tag, false));
+    visited.insert(std::make_pair(elem->Tag, false));
     elem = elem->Next;
     }
 
@@ -883,4 +883,58 @@ void vtkObject::UnRegisterInternal(vtkObjectBase* o, int check)
 
   // Decrement the reference count.
   this->Superclass::UnRegisterInternal(o, check);
+}
+
+//----------------------------------------------------------------------------
+// Internal observer used by vtkObject::AddTemplatedObserver to add a
+// vtkClassMemberCallbackBase instance as an observer to an event.
+class vtkObjectCommandInternal : public vtkCommand
+{
+  vtkObject::vtkClassMemberCallbackBase* Callable;
+public:
+  static vtkObjectCommandInternal* New()
+    { return new vtkObjectCommandInternal(); }
+
+  vtkTypeMacro(vtkObjectCommandInternal, vtkCommand);
+  virtual void Execute(
+    vtkObject *caller, unsigned long eventId, void *callData)
+    {
+    if (this->Callable)
+      {
+      this->AbortFlagOff();
+      if((*this->Callable)(caller, eventId, callData))
+        {
+        this->AbortFlagOn();
+        }
+      }
+    }
+
+  // Takes over the ownership of \c callable.
+  void SetCallable(vtkObject::vtkClassMemberCallbackBase* callable)
+    {
+    delete this->Callable;
+    this->Callable = callable;
+    }
+
+protected:
+  vtkObjectCommandInternal()
+    {
+    this->Callable = NULL;
+    }
+  ~vtkObjectCommandInternal()
+    {
+    delete this->Callable;
+    }
+};
+
+//----------------------------------------------------------------------------
+unsigned long vtkObject::AddTemplatedObserver(
+  unsigned long event, vtkObject::vtkClassMemberCallbackBase* callable, float priority)
+{
+  vtkObjectCommandInternal* command = vtkObjectCommandInternal::New();
+  // Takes over the ownership of \c callable.
+  command->SetCallable(callable);
+  unsigned long id = this->AddObserver(event, command, priority);
+  command->Delete();
+  return id;
 }

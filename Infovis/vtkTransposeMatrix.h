@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransposeMatrix.h,v $
+  Module:    vtkTransposeMatrix.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -19,21 +19,21 @@
 
 =========================================================================*/
 
+// .NAME vtkTransposeMatrix - Computes the transpose of an input matrix.
+//
+// .SECTION Thanks
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+
 #ifndef __vtkTransposeMatrix_h
 #define __vtkTransposeMatrix_h
 
 #include "vtkArrayDataAlgorithm.h"
 
-// .NAME vtkTransposeMatrix - Computes the transpose of an input matrix.
-
-// .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
-
 class VTK_INFOVIS_EXPORT vtkTransposeMatrix : public vtkArrayDataAlgorithm
 {
 public:
   static vtkTransposeMatrix* New();
-  vtkTypeRevisionMacro(vtkTransposeMatrix, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkTransposeMatrix, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCullerCollection.cxx,v $
+  Module:    vtkCullerCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkCullerCollection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCullerCollection, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkCullerCollection);
 
 //----------------------------------------------------------------------------

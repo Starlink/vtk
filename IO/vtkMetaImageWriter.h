@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMetaImageWriter.h,v $
+  Module:    vtkMetaImageWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -69,7 +69,7 @@ namespace vtkmetaio { class MetaImage; } // forward declaration
 class VTK_IO_EXPORT vtkMetaImageWriter : public vtkImageWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkMetaImageWriter,vtkImageWriter);
+  vtkTypeMacro(vtkMetaImageWriter,vtkImageWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

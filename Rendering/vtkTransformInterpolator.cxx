@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformInterpolator.cxx,v $
+  Module:    vtkTransformInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,9 +19,8 @@
 #include "vtkProp3D.h"
 #include "vtkTupleInterpolator.h"
 #include "vtkQuaternionInterpolator.h"
-#include <vtkstd/list>
+#include <list>
 
-vtkCxxRevisionMacro(vtkTransformInterpolator, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTransformInterpolator);
 
 // PIMPL STL encapsulation for list of transforms, and list of
@@ -60,7 +59,7 @@ struct vtkQTransform
 };
 
 // The list is arranged in increasing order in T
-class vtkTransformList : public vtkstd::list<vtkQTransform> {};
+class vtkTransformList : public std::list<vtkQTransform> {};
 typedef vtkTransformList::iterator TransformListIterator;
 
 

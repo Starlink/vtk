@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPOVExporter.cxx,v $
+  Module:    vtkPOVExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    $RCSfile: vtkPOVExporter.cxx,v $
+  Module:    vtkPOVExporter.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -62,28 +62,31 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vtkPOVExporter.h"
 
 #include "vtkAssemblyPath.h"
-#include "vtkRenderer.h"
 #include "vtkCamera.h"
-#include "vtkLight.h"
-#include "vtkLightCollection.h"
 #include "vtkCellArray.h"
+#include "vtkCompositeDataGeometryFilter.h"
+#include "vtkCompositeDataSet.h"
 #include "vtkFloatArray.h"
-#include "vtkUnsignedCharArray.h"
-#include "vtkPointData.h"
-#include "vtkPolyData.h"
 #include "vtkGeometryFilter.h"
-#include "vtkProperty.h"
-#include "vtkTexture.h"
+#include "vtkLightCollection.h"
+#include "vtkLight.h"
 #include "vtkMapper.h"
 #include "vtkMatrix4x4.h"
-#include "vtkRenderWindow.h"
+#include "vtkPointData.h"
+#include "vtkPolyData.h"
+#include "vtkProperty.h"
 #include "vtkRendererCollection.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkSmartPointer.h"
+#include "vtkTexture.h"
 #include "vtkTypeTraits.h"
+#include "vtkUnsignedCharArray.h"
+
 #include <vtksys/ios/sstream>
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPOVExporter, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkPOVExporter);
 
 //Can't use printf("%d", a_vtkIdType) because vtkIdType is not always int.
@@ -284,7 +287,7 @@ void vtkPOVExporter::WriteLight(vtkLight *light)
   fprintf(this->FilePtr, "\t<%f, %f, %f>\n", 
           position[0], position[1], position[2]);
   
-  double *color = light->GetColor();
+  double *color = light->GetDiffuseColor();
   fprintf(this->FilePtr, "\tcolor <%f, %f, %f>*%f\n", 
           color[0], color[1], color[2],
           light->GetIntensity());
@@ -314,7 +317,26 @@ void vtkPOVExporter::WriteActor(vtkActor *actor)
     }
   
   // write geometry, first ask the pipeline to update data
-  vtkDataSet *dataset = actor->GetMapper()->GetInput(); 
+  vtkDataSet *dataset = NULL;
+  vtkSmartPointer<vtkDataSet> tempDS;
+
+  vtkDataObject* dObj = actor->GetMapper()->GetInputDataObject(0, 0);
+  vtkCompositeDataSet* cd = vtkCompositeDataSet::SafeDownCast(dObj);
+  if (cd)
+    {
+    vtkCompositeDataGeometryFilter* gf = vtkCompositeDataGeometryFilter::New();
+    gf->SetInput(cd);
+    gf->Update();
+    tempDS = gf->GetOutput();
+    gf->Delete();
+
+    dataset = tempDS;
+    }
+  else
+    {
+    dataset = actor->GetMapper()->GetInput(); 
+    }
+
   if (dataset == NULL) 
     {
     return;

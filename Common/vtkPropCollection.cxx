@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPropCollection.cxx,v $
+  Module:    vtkPropCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkPropCollection.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPropCollection, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkPropCollection);
 
 int vtkPropCollection::GetNumberOfPaths()

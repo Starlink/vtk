@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataSet.cxx,v $
+  Module:    vtkCompositeDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkCompositeDataSet, "$Revision: 1.17 $");
 vtkInformationKeyMacro(vtkCompositeDataSet, NAME, String);
 //----------------------------------------------------------------------------
 vtkCompositeDataSet::vtkCompositeDataSet()
@@ -202,7 +201,7 @@ void vtkCompositeDataSet::CopyStructure(vtkCompositeDataSet* source)
       vtkInformation* info = vtkInformation::New();
       info->Copy(srcIter->MetaData, /*deep=*/0);
       myIter->MetaData = info;
-      info->Delete();
+      info->FastDelete();
       }
     }
   this->Modified();
@@ -402,10 +401,17 @@ void vtkCompositeDataSet::ShallowCopy(vtkDataObject* src)
       vtkDataObject* child = from->GetChild(cc);
       if (child)
         {
-        vtkDataObject* clone = child->NewInstance();
-        clone->ShallowCopy(child);
-        this->SetChild(cc, clone);
-        clone->Delete();
+        if (child->IsA("vtkCompositeDataSet"))
+          {
+          vtkDataObject* clone = child->NewInstance();
+          clone->ShallowCopy(child);
+          this->SetChild(cc, clone);
+          clone->FastDelete();
+          }
+        else
+          {
+          this->SetChild(cc, child);
+          }
         }
       if (from->HasChildMetaData(cc))
         {
@@ -441,7 +447,7 @@ void vtkCompositeDataSet::DeepCopy(vtkDataObject* src)
         vtkDataObject* toChild = fromChild->NewInstance();
         toChild->DeepCopy(fromChild);
         this->SetChild(cc, toChild);
-        toChild->Delete();
+        toChild->FastDelete();
         if (from->HasChildMetaData(cc))
           {
           vtkInformation* toInfo = this->GetChildMetaData(cc);
@@ -477,6 +483,20 @@ vtkIdType vtkCompositeDataSet::GetNumberOfPoints()
   return numPts;
 }
 
+
+//----------------------------------------------------------------------------
+unsigned long vtkCompositeDataSet::GetActualMemorySize()
+{
+  unsigned long memSize = 0;
+  vtkCompositeDataIterator* iter = this->NewIterator();
+  for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
+    {
+    vtkDataObject* dobj = iter->GetCurrentDataObject();
+    memSize += dobj->GetActualMemorySize();
+    }
+  iter->Delete();
+  return memSize;
+}
 
 //----------------------------------------------------------------------------
 void vtkCompositeDataSet::PrintSelf(ostream& os, vtkIndent indent)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredPoints.cxx,v $
+  Module:    vtkStructuredPoints.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkStructuredPoints, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkStructuredPoints);
 
 vtkStructuredPoints::vtkStructuredPoints()

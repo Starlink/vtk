@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipPlanesPainter.cxx,v $
+  Module:    vtkClipPlanesPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,8 +20,8 @@
 #include "vtkGraphicsFactory.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlaneCollection.h"
+#include "vtkBoundingBox.h"
 
-vtkCxxRevisionMacro(vtkClipPlanesPainter, "$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkClipPlanesPainter, ClippingPlanes, vtkPlaneCollection);
 
 // Needed when we don't use the vtkStandardNewMacro.
@@ -71,4 +71,33 @@ void vtkClipPlanesPainter::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << " (none)" << endl;
     }  
+}
+//----------------------------------------------------------------------------- 
+void vtkClipPlanesPainter::UpdateBounds(double bounds[6])
+{
+  if(!vtkBoundingBox::IsValid(bounds))
+    {
+    return;
+    }
+  vtkPlaneCollection* planes =this->ClippingPlanes;
+  if(planes)
+    {
+    int numPlanes = planes->GetNumberOfItems();
+    for(int i=0; i<numPlanes; i++)
+      {
+      vtkPlane *plane = planes->GetItem(i);
+      if(plane)
+        {
+        double n[3],p[3];
+        plane->GetNormal(n);
+        plane->GetOrigin(p);
+        vtkBoundingBox bb(bounds);
+        if(bb.IntersectPlane(p,n))
+          {
+          bb.GetBounds(bounds);
+          }
+        }
+      }
+    }
+
 }

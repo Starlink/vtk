@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoSampleArcs.h,v $
+  Module:    vtkGeoSampleArcs.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_GEOVIS_EXPORT vtkGeoSampleArcs : public vtkPolyDataAlgorithm
 public:
   static vtkGeoSampleArcs *New();
 
-  vtkTypeRevisionMacro(vtkGeoSampleArcs,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGeoSampleArcs,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -50,6 +50,36 @@ public:
   // The maximum distance, in meters, between adjacent points.
   vtkSetMacro(MaximumDistanceMeters, double);
   vtkGetMacro(MaximumDistanceMeters, double);
+
+  //BTX
+  enum
+    {
+    RECTANGULAR,
+    SPHERICAL
+    };
+  //ETX
+
+  // Description:
+  // The input coordinate system.
+  // RECTANGULAR is x,y,z meters relative the the earth center.
+  // SPHERICAL is longitude,latitude,altitude.
+  vtkSetMacro(InputCoordinateSystem, int);
+  vtkGetMacro(InputCoordinateSystem, int);
+  virtual void SetInputCoordinateSystemToRectangular()
+    { this->SetInputCoordinateSystem(RECTANGULAR); }
+  virtual void SetInputCoordinateSystemToSpherical()
+    { this->SetInputCoordinateSystem(SPHERICAL); }
+
+  // Description:
+  // The desired output coordinate system.
+  // RECTANGULAR is x,y,z meters relative the the earth center.
+  // SPHERICAL is longitude,latitude,altitude.
+  vtkSetMacro(OutputCoordinateSystem, int);
+  vtkGetMacro(OutputCoordinateSystem, int);
+  virtual void SetOutputCoordinateSystemToRectangular()
+    { this->SetOutputCoordinateSystem(RECTANGULAR); }
+  virtual void SetOutputCoordinateSystemToSpherical()
+    { this->SetOutputCoordinateSystem(SPHERICAL); }
   
 protected:
   vtkGeoSampleArcs();
@@ -61,6 +91,8 @@ protected:
   
   double GlobeRadius;
   double MaximumDistanceMeters;
+  int InputCoordinateSystem;
+  int OutputCoordinateSystem;
   
 private:
   vtkGeoSampleArcs(const vtkGeoSampleArcs&);  // Not implemented.

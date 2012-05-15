@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBase64Utilities.h,v $
+  Module:    vtkBase64Utilities.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@ class VTK_IO_EXPORT vtkBase64Utilities : public vtkObject
 {
 public:
   static vtkBase64Utilities *New();
-  vtkTypeRevisionMacro(vtkBase64Utilities,vtkObject);
+  vtkTypeMacro(vtkBase64Utilities,vtkObject);
 
   // Description:  
   // Encode 3 bytes into 4 bytes

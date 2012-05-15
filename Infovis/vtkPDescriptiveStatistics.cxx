@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDescriptiveStatistics.cxx,v $
+  Module:    vtkPDescriptiveStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+/*-------------------------------------------------------------------------
+  Copyright 2011 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+  -------------------------------------------------------------------------*/
 #include "vtkToolkits.h"
 
 #include "vtkPDescriptiveStatistics.h"
@@ -20,12 +25,12 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkMultiProcessController.h"
 #include "vtkTable.h"
 #include "vtkVariant.h"
 
 vtkStandardNewMacro(vtkPDescriptiveStatistics);
-vtkCxxRevisionMacro(vtkPDescriptiveStatistics, "$Revision: 1.4 $");
 vtkCxxSetObjectMacro(vtkPDescriptiveStatistics, Controller, vtkMultiProcessController);
 //-----------------------------------------------------------------------------
 vtkPDescriptiveStatistics::vtkPDescriptiveStatistics()
@@ -48,19 +53,25 @@ void vtkPDescriptiveStatistics::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------
-void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
-                                              vtkDataObject* outMetaDO )
+void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
+                                       vtkTable* inParameters,
+                                       vtkMultiBlockDataSet* outMeta )
 {
-  vtkTable* outMeta = vtkTable::SafeDownCast( outMetaDO );
-  if ( ! outMeta ) 
-    { 
-    return; 
-    } 
+  if ( ! outMeta )
+    {
+    return;
+    }
 
   // First calculate descriptive statistics on local data set
-  this->Superclass::ExecuteLearn( inData, outMeta );
+  this->Superclass::Learn( inData, inParameters, outMeta );
 
-  vtkIdType nRow = outMeta->GetNumberOfRows();
+  vtkTable* primaryTab = vtkTable::SafeDownCast( outMeta->GetBlock( 0 ) );
+  if ( ! primaryTab ) 
+    {
+    return;
+    }
+
+  vtkIdType nRow = primaryTab->GetNumberOfRows();
   if ( ! nRow )
     {
     // No statistics were calculated.
@@ -76,9 +87,13 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
 
   // Now get ready for parallel calculations
   vtkCommunicator* com = this->Controller->GetCommunicator();
-  
+  if ( ! com )
+    {
+    vtkErrorMacro("No parallel communicator.");
+    }
+
   // (All) gather all sample sizes
-  int n_l = this->SampleSize;
+  int n_l = primaryTab->GetValueByName( 0, "Cardinality" ).ToInt(); // Cardinality
   int* n_g = new int[np];
   com->AllGather( &n_l, n_g, 1 ); 
   
@@ -87,24 +102,25 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     {
     // Reduce to global extrema
     double extrema_l[2];
-    extrema_l[0] = outMeta->GetValueByName( r, "Minimum" ).ToDouble();
-    // Collect -max instead of max so a single reduce op. (minimum) can process both extrema at a time
-    extrema_l[1] = - outMeta->GetValueByName( r, "Maximum" ).ToDouble();
+    extrema_l[0] = primaryTab->GetValueByName( r, "Minimum" ).ToDouble();
+    // Collect - max instead of max so a single reduce op. (minimum) can process both extrema at a time
+    extrema_l[1] = - primaryTab->GetValueByName( r, "Maximum" ).ToDouble();
 
     double extrema_g[2];
     com->AllReduce( extrema_l, 
                     extrema_g, 
                     2, 
                     vtkCommunicator::MIN_OP );
-    outMeta->SetValueByName( r, "Minimum", extrema_g[0] );
-    outMeta->SetValueByName( r, "Maximum", - extrema_g[1] );
+    primaryTab->SetValueByName( r, "Minimum", extrema_g[0] );
+    // max = - min ( - max )
+    primaryTab->SetValueByName( r, "Maximum", - extrema_g[1] );
 
     // (All) gather all local M statistics
     double M_l[4];
-    M_l[0] = outMeta->GetValueByName( r, "Mean" ).ToDouble();
-    M_l[1] = outMeta->GetValueByName( r, "M2" ).ToDouble();
-    M_l[2] = outMeta->GetValueByName( r, "M3" ).ToDouble();
-    M_l[3] = outMeta->GetValueByName( r, "M4" ).ToDouble();
+    M_l[0] = primaryTab->GetValueByName( r, "Mean" ).ToDouble();
+    M_l[1] = primaryTab->GetValueByName( r, "M2" ).ToDouble();
+    M_l[2] = primaryTab->GetValueByName( r, "M3" ).ToDouble();
+    M_l[3] = primaryTab->GetValueByName( r, "M4" ).ToDouble();
     double* M_g = new double[4 * np];
     com->AllGather( M_l, M_g, 4 );
 
@@ -118,7 +134,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     for ( int i = 1; i < np; ++ i )
       {
       int ns_l = n_g[i];
-      ns += ns_l;
+      int N = ns + ns_l; 
 
       int o = 4 * i;
       double mean_part = M_g[o];
@@ -127,35 +143,37 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
       double mom4_part = M_g[o + 3];
       
       double delta = mean_part - mean;
-      double delta_sur_n = delta / static_cast<double>( ns );
-      double delta_sur_n2 = delta_sur_n * delta_sur_n;
+      double delta_sur_N = delta / static_cast<double>( N );
+      double delta2_sur_N2 = delta_sur_N * delta_sur_N;
 
       int ns2 = ns * ns;
       int ns_l2 = ns_l * ns_l;
       int prod_ns = ns * ns_l;
  
       mom4 += mom4_part 
-        + prod_ns * ( ns2 - prod_ns + ns_l2 ) * delta * delta_sur_n * delta_sur_n2
-        + 6. * ( ns2 * mom2_part + ns_l2 * mom2 ) * delta_sur_n2
-        + 4. * ( ns * mom3_part - ns_l * mom3 ) * delta_sur_n;
+        + prod_ns * ( ns2 - prod_ns + ns_l2 ) * delta * delta_sur_N * delta2_sur_N2
+        + 6. * ( ns2 * mom2_part + ns_l2 * mom2 ) * delta2_sur_N2
+        + 4. * ( ns * mom3_part - ns_l * mom3 ) * delta_sur_N;
 
       mom3 += mom3_part 
-        + prod_ns * ( ns - ns_l ) * delta * delta_sur_n2
-        + 3. * ( ns * mom2_part - ns_l * mom2 ) * delta_sur_n;
+        + prod_ns * ( ns - ns_l ) * delta * delta2_sur_N2
+        + 3. * ( ns * mom2_part - ns_l * mom2 ) * delta_sur_N;
 
       mom2 += mom2_part 
-        + prod_ns * delta * delta_sur_n;
+        + prod_ns * delta * delta_sur_N;
 
-      mean += ns_l * delta_sur_n;
+      mean += ns_l * delta_sur_N;
+
+      ns = N;
       }
 
-    outMeta->SetValueByName( r, "Mean", mean );
-    outMeta->SetValueByName( r, "M2", mom2 );
-    outMeta->SetValueByName( r, "M3", mom3 );
-    outMeta->SetValueByName( r, "M4", mom4 );
+    primaryTab->SetValueByName( r, "Mean", mean );
+    primaryTab->SetValueByName( r, "M2", mom2 );
+    primaryTab->SetValueByName( r, "M3", mom3 );
+    primaryTab->SetValueByName( r, "M4", mom4 );
 
     // Set global statistics
-    this->SampleSize = ns;
+    primaryTab->SetValueByName( r, "Cardinality", ns );
 
     // Clean-up
     delete [] M_g;

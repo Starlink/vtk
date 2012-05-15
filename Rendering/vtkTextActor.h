@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTextActor.h,v $
+  Module:    vtkTextActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class vtkTexture;
 class VTK_RENDERING_EXPORT vtkTextActor : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkTextActor,vtkActor2D);
+  vtkTypeMacro(vtkTextActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -66,8 +66,8 @@ public:
 
   // Description:
   // Set the text string to be displayed. "\n" is recognized
-  // as a carriage return/linefeed (line separator). Only 7-bit ASCII is
-  // allowed (anything else, such as Latin1 or UTF8, is not acceptable).
+  // as a carriage return/linefeed (line separator).
+  // The characters must be in the ISO-8859-1 encoding.
   // Convenience method to the underlying mapper
   void SetInput(const char *inputString);
   char *GetInput();

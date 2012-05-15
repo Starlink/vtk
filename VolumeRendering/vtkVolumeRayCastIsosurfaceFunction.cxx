@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastIsosurfaceFunction.cxx,v $
+  Module:    vtkVolumeRayCastIsosurfaceFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,6 +17,7 @@
 #include "vtkCamera.h"
 #include "vtkColorTransferFunction.h"
 #include "vtkMath.h"
+#include "vtkPolynomialSolversUnivariate.h"
 #include "vtkObjectFactory.h"
 #include "vtkPiecewiseFunction.h"
 #include "vtkRenderWindow.h"
@@ -26,7 +27,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolumeRayCastIsosurfaceFunction, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkVolumeRayCastIsosurfaceFunction);
 
 /*    Is x between y and z?                                     */
@@ -185,7 +185,7 @@ void trilin_line_intersection( float start[3], float vec[3],
     return;
     }
   
-  vtkMath::SolveCubic( c0, c1, c2, c3, &r1, &r2, &r3, &num_roots );
+  vtkPolynomialSolversUnivariate::SolveCubic( c0, c1, c2, c3, &r1, &r2, &r3, &num_roots );
   
   /* Remove Negative Solutions And Store In Distance Array */
   pos_dist_num = 0;
@@ -269,13 +269,13 @@ void vtkCastRay_NN ( vtkVolumeRayCastIsosurfaceFunction *cast_function,
 {
 
   unsigned short  *encoded_normals;
-  int       xinc, yinc, zinc;
+  vtkIdType xinc, yinc, zinc;
   int       voxel_x, voxel_y, voxel_z;
   int       end_voxel_x, end_voxel_y, end_voxel_z;
   int       x_voxels, y_voxels, z_voxels;
   int       found_intersection;
   int       tstep_x, tstep_y, tstep_z;
-  int       offset;
+  vtkIdType offset;
   int       steps_this_ray = 0;
   T         A;
   T         *dptr;
@@ -538,14 +538,14 @@ void vtkCastRay_Trilin ( vtkVolumeRayCastIsosurfaceFunction *cast_function,
   LineIntersectInfo  line_info;
   unsigned short  *encoded_normals, *nptr;
   int       loop;
-  int       xinc, yinc, zinc;
+  vtkIdType xinc, yinc, zinc;
   int       voxel_x, voxel_y, voxel_z;
   int       end_voxel_x, end_voxel_y, end_voxel_z;
   int       x_voxels, y_voxels, z_voxels;
   int       Binc, Cinc, Dinc, Einc, Finc, Ginc, Hinc;
   int       found_intersection;
   int       tstep_x, tstep_y, tstep_z;
-  int       offset;
+  vtkIdType offset;
   int       steps_this_ray = 0;
   T         A, B, C, D, E, F, G, H;
   T         *dptr;

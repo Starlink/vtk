@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMergePoints.cxx,v $
+  Module:    vtkMergePoints.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkPoints.h"
 #include "vtkFloatArray.h"
 
-vtkCxxRevisionMacro(vtkMergePoints, "$Revision: 1.41 $");
 vtkStandardNewMacro(vtkMergePoints);
 
 // Determine whether point given by x[3] has been inserted into points list.

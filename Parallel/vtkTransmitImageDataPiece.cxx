@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransmitImageDataPiece.cxx,v $
+  Module:    vtkTransmitImageDataPiece.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkImageData.h"
 #include "vtkDoubleArray.h"
 
-vtkCxxRevisionMacro(vtkTransmitImageDataPiece, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTransmitImageDataPiece);
 
 vtkCxxSetObjectMacro(vtkTransmitImageDataPiece,Controller,

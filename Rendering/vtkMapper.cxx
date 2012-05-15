@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMapper.cxx,v $
+  Module:    vtkMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPointData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkMapper, "$Revision: 1.127 $");
 
 // Initialize static member that controls global immediate mode rendering
 static int vtkMapperGlobalImmediateModeRendering = 0;
@@ -234,6 +233,9 @@ void vtkMapper::ShallowCopy(vtkAbstractMapper *mapper)
     this->SetScalarMaterialMode(m->GetScalarMaterialMode());
     this->SetImmediateModeRendering(m->GetImmediateModeRendering());
     this->SetUseLookupTableScalarRange(m->GetUseLookupTableScalarRange());
+    this->SetInterpolateScalarsBeforeMapping(
+      m->GetInterpolateScalarsBeforeMapping());
+
     if ( m->GetArrayAccessMode() == VTK_GET_ARRAY_BY_ID )
       {
       this->ColorByArrayComponent(m->GetArrayId(),m->GetArrayComponent());

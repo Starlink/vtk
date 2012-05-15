@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWindowToImageFilter.h,v $
+  Module:    vtkWindowToImageFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -65,7 +65,7 @@ class VTK_RENDERING_EXPORT vtkWindowToImageFilter : public vtkAlgorithm
 public:
   static vtkWindowToImageFilter *New();
 
-  vtkTypeRevisionMacro(vtkWindowToImageFilter,vtkAlgorithm);
+  vtkTypeMacro(vtkWindowToImageFilter,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);   
 
   // Description:
@@ -81,6 +81,14 @@ public:
   // The magnification of the current render window. Initial value is 1.
   vtkSetClampMacro(Magnification,int,1,2048);
   vtkGetMacro(Magnification,int);
+
+  // Description:
+  // When this->Magnification > 1, this class render the full image in tiles.
+  // Sometimes that results in artificial artifacts at internal tile seams.
+  // To overcome this issue, set this flag to true.
+  vtkSetMacro(FixBoundary, bool);
+  vtkGetMacro(FixBoundary, bool);
+  vtkBooleanMacro(FixBoundary, bool);
 
   // Description:
   // Set/Get the flag that determines which buffer to read from.
@@ -135,6 +143,7 @@ protected:
   int ShouldRerender;
   double Viewport[4];
   int InputBufferType;
+  bool FixBoundary;
 
   void RequestData(vtkInformation *, 
                    vtkInformationVector **, vtkInformationVector *);

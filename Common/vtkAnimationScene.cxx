@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAnimationScene.cxx,v $
+  Module:    vtkAnimationScene.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkTimerLog.h"
 
-vtkCxxRevisionMacro(vtkAnimationScene, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkAnimationScene);
 
 //----------------------------------------------------------------------------

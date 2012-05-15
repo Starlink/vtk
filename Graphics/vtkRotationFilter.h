@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRotationFilter.h,v $
+  Module:    vtkRotationFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_GRAPHICS_EXPORT vtkRotationFilter : public vtkUnstructuredGridAlgorith
 {
 public:
   static vtkRotationFilter *New(); 
-  vtkTypeRevisionMacro(vtkRotationFilter, vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkRotationFilter, vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream &os, vtkIndent indent);
   
 //BTX

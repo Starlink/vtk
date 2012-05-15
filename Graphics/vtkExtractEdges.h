@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractEdges.h,v $
+  Module:    vtkExtractEdges.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,20 +25,20 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkExtractEdges : public vtkPolyDataAlgorithm
 {
 public:
   static vtkExtractEdges *New();
-  vtkTypeRevisionMacro(vtkExtractEdges,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkExtractEdges,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -57,7 +57,7 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 private:
   vtkExtractEdges(const vtkExtractEdges&);  // Not implemented.
   void operator=(const vtkExtractEdges&);  // Not implemented.

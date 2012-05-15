@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLDataElement.cxx,v $
+  Module:    vtkXMLDataElement.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,17 +15,16 @@
 #include "vtkXMLDataElement.h"
 
 #include "vtkObjectFactory.h"
-#include "vtkXMLDataParser.h"
-#include "vtkXMLUtilities.h"
 
 #include <ctype.h>
 #include <vtksys/ios/sstream>
 using vtksys_ios::ostringstream;
 using vtksys_ios::istringstream;
-#include <vtkstd/string>
-using vtkstd::string;
+#include <vtksys/SystemTools.hxx>
+#include <string>
+using std::string;
+#include <locale> // C++ locale
 
-vtkCxxRevisionMacro(vtkXMLDataElement, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkXMLDataElement);
 
 //----------------------------------------------------------------------------
@@ -34,18 +33,18 @@ vtkXMLDataElement::vtkXMLDataElement()
   this->Name = 0;
   this->Id = 0;
   this->Parent = 0;
-  
+
   this->NumberOfAttributes = 0;
   this->AttributesSize = 5;
   this->AttributeNames = new char*[this->AttributesSize];
   this->AttributeValues = new char*[this->AttributesSize];
-  
+
   this->NumberOfNestedElements = 0;
   this->NestedElementsSize = 10;
   this->NestedElements = new vtkXMLDataElement*[this->NestedElementsSize];
-  
+
   this->InlineDataPosition = 0;
-  this->XMLByteIndex = 0; 
+  this->XMLByteIndex = 0;
   this->AttributeEncoding = VTK_ENCODING_UTF_8;
 
   this->CharacterDataWidth = -1;
@@ -85,7 +84,7 @@ void vtkXMLDataElement::RemoveAttribute(const char *name)
     }
 
   // Find the attribute
-  
+
   int i, j;
   for (i = 0; i < this->NumberOfAttributes; ++i)
     {
@@ -236,7 +235,7 @@ void vtkXMLDataElement::SetAttribute(const char *name, const char *value)
     this->AttributeValues = newAttributeValues;
     this->AttributesSize = newSize;
     }
-  
+
   i = this->NumberOfAttributes++;
   this->AttributeNames[i] = new char [strlen(name) + 1];
   strcpy(this->AttributeNames[i], name);
@@ -251,7 +250,7 @@ void vtkXMLDataElement::AddNestedElement(vtkXMLDataElement* element)
     {
     return;
     }
-  
+
   if(this->NumberOfNestedElements == this->NestedElementsSize)
     {
     int i;
@@ -265,7 +264,7 @@ void vtkXMLDataElement::AddNestedElement(vtkXMLDataElement* element)
     this->NestedElements = newNestedElements;
     this->NestedElementsSize = newSize;
     }
-  
+
   int index = this->NumberOfNestedElements++;
   this->NestedElements[index] = element;
   element->Register(this);
@@ -279,7 +278,7 @@ void vtkXMLDataElement::RemoveNestedElement(vtkXMLDataElement* element)
     {
     return;
     }
-  
+
   int i, j;
   for(i = 0; i < this->NumberOfNestedElements; ++i)
     {
@@ -338,7 +337,7 @@ const char* vtkXMLDataElement::GetAttributeValue(int idx)
 
 
 //-----------------------------------------------------------------------------
-// Limits the width of a stream of character data, 
+// Limits the width of a stream of character data,
 // by inserting new lines and indenting properly.
 void vtkXMLDataElement::PrintCharacterData(ostream &os, vtkIndent indent)
 {
@@ -350,9 +349,11 @@ void vtkXMLDataElement::PrintCharacterData(ostream &os, vtkIndent indent)
   // No special format just dump what we have.
   if (this->CharacterDataWidth<1)
     {
-    os << indent << this->CharacterData << endl;
+    os << indent;
+    this->PrintWithEscapedData(os, this->CharacterData);
+    os << endl;
     }
-  // Treat as space/line delimitted fields limiting 
+  // Treat as space/line delimitted fields limiting
   // the number of field per line.
   else
     {
@@ -360,7 +361,8 @@ void vtkXMLDataElement::PrintCharacterData(ostream &os, vtkIndent indent)
 
     string characterDataToken;
     issCharacterData >> characterDataToken;
-    os << indent << characterDataToken;
+    os << indent;
+    this->PrintWithEscapedData(os, characterDataToken.c_str());
 
     int it=0;
     while (issCharacterData.good())
@@ -375,8 +377,7 @@ void vtkXMLDataElement::PrintCharacterData(ostream &os, vtkIndent indent)
         }
 
       issCharacterData >> characterDataToken;
-      os << characterDataToken;
-
+      this->PrintWithEscapedData(os, characterDataToken.c_str());
       ++it;
       }
 
@@ -385,9 +386,52 @@ void vtkXMLDataElement::PrintCharacterData(ostream &os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
+// print out data while replacing XML special characters <, >, &, ", ' with
+// &lt;, &gt;, &amp;, &quot;, &apos;, respectively.
+void vtkXMLDataElement::PrintWithEscapedData(ostream& os, const char* data)
+{
+  for(size_t i=0;i<strlen(data);i++)
+    {
+    switch(data[i])
+      {
+      case '&':
+      {
+      os << "&amp;";
+      break;
+      }
+      case '<':
+      {
+      os << "&lt;";
+      break;
+      }
+      case '>':
+      {
+      os << "&gt;";
+      break;
+      }
+      case '"':
+      {
+      os << "&quot;";
+      break;
+      }
+      case '\'':
+      {
+      os << "&apos;";
+      break;
+      }
+      default:
+      {
+      os << data[i];
+      }
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkXMLDataElement::PrintXML(const char* fname)
 {
   ofstream of(fname);
+  of.imbue(std::locale::classic());
   this->PrintXML(of, vtkIndent());
 }
 
@@ -400,10 +444,11 @@ void vtkXMLDataElement::PrintXML(ostream& os, vtkIndent indent)
   int i;
   for(i=0;i < this->NumberOfAttributes;++i)
     {
-    os << " " << this->AttributeNames[i]
-       << "=\"" << this->AttributeValues[i] << "\"";
+    os << " " << this->AttributeNames[i] << "=\"";
+    this->PrintWithEscapedData(os, this->AttributeValues[i]);
+    os << "\"";
     }
-  // Long format tag is needed if either or both 
+  // Long format tag is needed if either or both
   // nested elements or inline data are present.
   if (this->NumberOfNestedElements>0
       || this->CharacterData!=NULL)
@@ -453,7 +498,7 @@ int vtkXMLDataElement::GetNumberOfNestedElements()
 {
   return this->NumberOfNestedElements;
 }
-  
+
 //----------------------------------------------------------------------------
 vtkXMLDataElement* vtkXMLDataElement::GetNestedElement(int index)
 {
@@ -572,15 +617,15 @@ vtkXMLDataElement* vtkXMLDataElement::LookupElementInScope(const char* id)
   char* name = new char[len+1];
   strncpy(name, id, len);
   name[len] = '\0';
-  
+
   // Find the qualifier in this scope.
-  vtkXMLDataElement* next = this->FindNestedElement(name);  
+  vtkXMLDataElement* next = this->FindNestedElement(name);
   if(next && (*end == '.'))
     {
     // Lookup rest of qualifiers in nested scope.
     next = next->LookupElementInScope(end+1);
     }
-  
+
   delete [] name;
   return next;
 }
@@ -600,7 +645,7 @@ vtkXMLDataElement* vtkXMLDataElement::LookupElementUpScope(const char* id)
   char* name = new char[len+1];
   strncpy(name, id, len);
   name[len] = '\0';
-  
+
   // Find most closely nested occurrence of first qualifier.
   vtkXMLDataElement* curScope = this;
   vtkXMLDataElement* start = 0;
@@ -613,7 +658,7 @@ vtkXMLDataElement* vtkXMLDataElement::LookupElementUpScope(const char* id)
     {
     start = start->LookupElementInScope(end+1);
     }
-  
+
   delete [] name;
   return start;
 }
@@ -634,7 +679,7 @@ vtkXMLDataElement* vtkXMLDataElement::LookupElementWithName(const char* name)
       {
       return this->NestedElements[i];
       }
-    vtkXMLDataElement *found = 
+    vtkXMLDataElement *found =
       this->NestedElements[i]->LookupElementWithName(name);
     if (found)
       {
@@ -683,7 +728,8 @@ int vtkXMLDataElementVectorAttributeParse(const char* str, int length, T* data)
 {
   if(!str || !length || !data) { return 0; }
   vtksys_ios::stringstream vstr;
-  vstr << str;  
+  vstr.imbue(std::locale::classic());
+  vstr << str;
   int i;
   for(i=0;i < length;++i)
     {
@@ -800,7 +846,7 @@ int vtkXMLDataElement::GetWordTypeAttribute(const char* name, int& value)
 #else
     vtkErrorMacro("Int16 support not compiled in VTK.");
     return 0;
-#endif    
+#endif
     }
   else if(strcmp(v, "UInt16") == 0)
     {
@@ -816,7 +862,7 @@ int vtkXMLDataElement::GetWordTypeAttribute(const char* name, int& value)
 #else
     vtkErrorMacro("UInt16 support not compiled in VTK.");
     return 0;
-#endif    
+#endif
     }
   else if(strcmp(v, "Int32") == 0)
     {
@@ -832,7 +878,7 @@ int vtkXMLDataElement::GetWordTypeAttribute(const char* name, int& value)
 #else
     vtkErrorMacro("Int32 support not compiled in VTK.");
     return 0;
-#endif    
+#endif
     }
   else if(strcmp(v, "UInt32") == 0)
     {
@@ -848,7 +894,7 @@ int vtkXMLDataElement::GetWordTypeAttribute(const char* name, int& value)
 #else
     vtkErrorMacro("UInt32 support not compiled in VTK.");
     return 0;
-#endif    
+#endif
     }
   else if(strcmp(v, "Int64") == 0)
     {
@@ -870,7 +916,7 @@ int vtkXMLDataElement::GetWordTypeAttribute(const char* name, int& value)
 #else
     vtkErrorMacro("Int64 support not compiled in VTK.");
     return 0;
-#endif    
+#endif
     }
   else if(strcmp(v, "UInt64") == 0)
     {
@@ -936,7 +982,7 @@ void vtkXMLDataElement::SetUnsignedLongAttribute(const char* name,
 
 //----------------------------------------------------------------------------
 #ifdef VTK_USE_64BIT_IDS
-void vtkXMLDataElement::SetIdTypeAttribute(const char* name, 
+void vtkXMLDataElement::SetIdTypeAttribute(const char* name,
                                            vtkIdType value)
 {
   this->SetVectorAttribute(name, 1, &value);
@@ -947,11 +993,12 @@ void vtkXMLDataElement::SetIdTypeAttribute(const char* name,
 template <class T>
 void vtkXMLDataElementVectorAttributeSet(vtkXMLDataElement *elem, const char* name, int length, const T* data)
 {
-  if (!elem || !name || !length) 
-    { 
-    return; 
+  if (!elem || !name || !length)
+    {
+    return;
     }
   vtksys_ios::stringstream vstr;
+  vstr.imbue(std::locale::classic());
   vstr << data[0];
   for(int i = 1; i < length; ++i)
     {
@@ -1020,11 +1067,11 @@ int vtkXMLDataElement::IsEqualTo(vtkXMLDataElement *elem)
 
   if (this->GetNumberOfAttributes() != elem->GetNumberOfAttributes() ||
       this->GetNumberOfNestedElements() != elem->GetNumberOfNestedElements() ||
-      (this->GetName() != elem->GetName() && 
-       (!this->GetName() || !elem->GetName() || 
+      (this->GetName() != elem->GetName() &&
+       (!this->GetName() || !elem->GetName() ||
         strcmp(this->GetName(), elem->GetName()))) ||
-      (this->GetCharacterData() != elem->GetCharacterData() && 
-       (!this->GetCharacterData() || !elem->GetCharacterData() || 
+      (this->GetCharacterData() != elem->GetCharacterData() &&
+       (!this->GetCharacterData() || !elem->GetCharacterData() ||
         strcmp(this->GetCharacterData(), elem->GetCharacterData()))))
     {
     return 0;
@@ -1082,7 +1129,7 @@ void vtkXMLDataElement::DeepCopy(vtkXMLDataElement *elem)
     const char *att_name = elem->GetAttributeName(i);
     this->SetAttribute(att_name, elem->GetAttribute(att_name));
     }
-  
+
   // Copy nested elements
 
   this->RemoveAllNestedElements();
@@ -1105,7 +1152,7 @@ void vtkXMLDataElement::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Id: " << (this->Id? this->Id : "(none)") << "\n";
   os << indent << "NumberOfAttributes: " << this->NumberOfAttributes << "\n";
   os << indent << "AttributeEncoding: " << this->AttributeEncoding << "\n";
-  os << indent << "CharacterData: " << 
+  os << indent << "CharacterData: " <<
     (this->CharacterData? this->CharacterData : "(null)") << endl;
   os << indent << "CharacterDataWidth: " << this->CharacterDataWidth << endl;
 }

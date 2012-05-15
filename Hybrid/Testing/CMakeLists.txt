@@ -1,13 +1,13 @@
 # Commented out to avoid problems with Borland dashboards
 # until new tests are added to Cxx/CMakeLists.txt.
-SUBDIRS(Cxx)
+ADD_SUBDIRECTORY(Cxx)
 
 IF (VTK_WRAP_TCL)
-  SUBDIRS(Tcl)
+  ADD_SUBDIRECTORY(Tcl)
 ENDIF (VTK_WRAP_TCL)
 
 IF (VTK_WRAP_PYTHON)
-  SUBDIRS(Python)
+  ADD_SUBDIRECTORY(Python)
 ENDIF (VTK_WRAP_PYTHON)
 
 IF(PYTHON_EXECUTABLE)
@@ -18,6 +18,7 @@ IF(PYTHON_EXECUTABLE)
     vtk3DS.h
     vtkExodusIIReaderParser.h
     vtkExodusIIReaderPrivate.h
+    vtkExodusIIReaderVariableCheck.h
     vtkVRML.h
     vtkX3D.h
     vtkX3DExporterFIWriterHelper.h

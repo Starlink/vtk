@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeMapView.cxx,v $
+  Module:    vtkTreeMapView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkTextProperty.h"
 #include "vtkTreeMapToPolyData.h"
 
-vtkCxxRevisionMacro(vtkTreeMapView, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkTreeMapView);
 //----------------------------------------------------------------------------
 vtkTreeMapView::vtkTreeMapView()

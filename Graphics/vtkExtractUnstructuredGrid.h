@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractUnstructuredGrid.h,v $
+  Module:    vtkExtractUnstructuredGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,12 +38,12 @@
 
 #include "vtkUnstructuredGridAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkExtractUnstructuredGrid : public vtkUnstructuredGridAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkExtractUnstructuredGrid,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkExtractUnstructuredGrid,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -109,8 +109,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -136,7 +136,7 @@ protected:
   int ExtentClipping;
 
   int Merging;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 private:
   vtkExtractUnstructuredGrid(const vtkExtractUnstructuredGrid&);  // Not implemented.
   void operator=(const vtkExtractUnstructuredGrid&);  // Not implemented.

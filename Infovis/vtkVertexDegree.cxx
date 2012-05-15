@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVertexDegree.cxx,v $
+  Module:    vtkVertexDegree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkVertexDegree, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkVertexDegree);
 
 vtkVertexDegree::vtkVertexDegree()
@@ -73,7 +72,7 @@ int vtkVertexDegree::RequestData(vtkInformation *vtkNotUsed(request),
     }
   DegreeArray->SetNumberOfTuples(output->GetNumberOfVertices());
   
-  // Now loop through the verticies and set their degree in the array
+  // Now loop through the vertices and set their degree in the array
   for(int i=0;i< DegreeArray->GetNumberOfTuples(); ++i)
     {
     DegreeArray->SetValue(i,output->GetDegree(i));

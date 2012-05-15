@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestHigherOrderCell.cxx,v $
+  Module:    TestHigherOrderCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,7 @@ static const unsigned int depth = 5;
 static unsigned char HigherOrderCell[][depth] = {
     { VTK_LINE, VTK_QUADRATIC_EDGE, VTK_NUMBER_OF_CELL_TYPES,
       VTK_NUMBER_OF_CELL_TYPES, VTK_NUMBER_OF_CELL_TYPES },
-    { VTK_TRIANGLE, VTK_QUADRATIC_TRIANGLE, VTK_NUMBER_OF_CELL_TYPES,
+    { VTK_TRIANGLE, VTK_QUADRATIC_TRIANGLE, VTK_BIQUADRATIC_TRIANGLE,
       VTK_NUMBER_OF_CELL_TYPES, VTK_NUMBER_OF_CELL_TYPES },
     { VTK_QUAD, VTK_QUADRATIC_QUAD, VTK_QUADRATIC_LINEAR_QUAD,
       VTK_BIQUADRATIC_QUAD, VTK_NUMBER_OF_CELL_TYPES},

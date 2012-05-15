@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWidgetCallbackMapper.cxx,v $
+  Module:    vtkWidgetCallbackMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,9 +17,8 @@
 #include "vtkAbstractWidget.h"
 #include "vtkCommand.h"
 #include "vtkObjectFactory.h"
-#include <vtkstd/map>
+#include <map>
 
-vtkCxxRevisionMacro(vtkWidgetCallbackMapper, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkWidgetCallbackMapper);
 
 
@@ -36,11 +35,11 @@ struct vtkCallbackPair
 
 
 // The map tracks the correspondance between widget events and callbacks
-class vtkCallbackMap : public vtkstd::map<unsigned long, vtkCallbackPair>
+class vtkCallbackMap : public std::map<unsigned long, vtkCallbackPair>
 {
 public:
   typedef vtkCallbackMap CallbackMapType;
-  typedef vtkstd::map<unsigned long, vtkCallbackPair >::iterator CallbackMapIterator;
+  typedef std::map<unsigned long, vtkCallbackPair >::iterator CallbackMapIterator;
 };    
 
 

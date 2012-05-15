@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridToTetrahedra.cxx,v $
+  Module:    vtkRectilinearGridToTetrahedra.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkRectilinearGridToTetrahedra, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkRectilinearGridToTetrahedra);
 
 // ways to convert to a voxel to tetrahedra.
@@ -524,7 +523,7 @@ int vtkRectilinearGridToTetrahedra::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkRectilinearGrid *RectGrid = vtkRectilinearGrid::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -541,7 +540,7 @@ int vtkRectilinearGridToTetrahedra::RequestData(
   if (this->TetraPerCell == VTK_VOXEL_TO_5_AND_12_TET)
     {
     vtkDataArray *TempVoxelSubdivisionType = RectGrid->GetCellData()->GetScalars();
-    if((TempVoxelSubdivisionType == NULL))
+    if(TempVoxelSubdivisionType == NULL)
       {
       vtkErrorMacro(<< "Scalars to input Should be set!");
       return 1;

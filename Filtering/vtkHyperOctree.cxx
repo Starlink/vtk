@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctree.cxx,v $
+  Module:    vtkHyperOctree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,9 +36,9 @@
 #include "vtkTimerLog.h"
 #include "vtkVoxel.h"
 
-#include <vtkstd/deque>
-//#include <vtkstd/set>
-#include <vtkstd/vector>
+#include <deque>
+//#include <set>
+#include <vector>
 
 #include <assert.h>
 
@@ -50,7 +50,7 @@ class vtkHyperOctreeInternal
   : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkHyperOctreeInternal,vtkObject);
+  vtkTypeMacro(vtkHyperOctreeInternal,vtkObject);
   virtual void Initialize()=0;
   virtual vtkHyperOctreeCursor *NewCursor()=0;
   virtual vtkIdType GetNumberOfLeaves()=0;
@@ -114,7 +114,6 @@ void vtkHyperOctree::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 
-vtkCxxRevisionMacro(vtkHyperOctreeInternal, "$Revision: 1.23 $");
 
 template<unsigned int D> class vtkCompactHyperOctree;
 template<unsigned int D> class vtkCompactHyperOctreeNode;
@@ -139,7 +138,7 @@ public:
         }
     }
   
-  vtkTypeRevisionMacro(vtkCompactHyperOctreeCursor<D>,vtkHyperOctreeCursor);
+  vtkTypeMacro(vtkCompactHyperOctreeCursor<D>,vtkHyperOctreeCursor);
   
   //---------------------------------------------------------------------------
   // Initialization
@@ -509,23 +508,13 @@ protected:
   int IsFound;
   int IsLeaf;
   
-  vtkstd::deque<int> ChildHistory; // a stack, but stack does not have clear()
+  std::deque<int> ChildHistory; // a stack, but stack does not have clear()
   int Index[D]; // index in each dimension of the current node, as if the
   // tree at the current level was a uniform grid.
 private:
   vtkCompactHyperOctreeCursor(const vtkCompactHyperOctreeCursor<D> &);  // Not implemented.
   void operator=(const vtkCompactHyperOctreeCursor<D> &);    // Not implemented.
 };
-
-// vtkCxxRevisionMacro(vtkCompactHyperOctreeCursor, "$Revision: 1.23 $");
-template<unsigned int D>
-void vtkCompactHyperOctreeCursor<D>::CollectRevisions(ostream& sos)
-{
-  vtkOStreamWrapper os(sos);
-  this->Superclass::CollectRevisions(os);
-  os << "vtkCompactHyperOctreeCursor<" << D <<"> " << "$Revision: 1.23 $" << '\n';
-}
-  
 
 // D is the dimension of the space
 // D>=1 && D<=3
@@ -625,7 +614,7 @@ public:
     { 
       os << indent << "Parent=" << this->Parent<<endl;
       
-//      vtkstd::bitset<8> b=this->LeafFlags;
+//      std::bitset<8> b=this->LeafFlags;
       
       os << indent << "LeafFlags="<<static_cast<int>(this->LeafFlags)<<" ";
      
@@ -655,8 +644,6 @@ protected:
   int Children[1<<D]; // indices
 };
 
-//vtkCxxRevisionMacro(vtkCompactHyperOctree, "$Revision: 1.23 $");
-
 template<unsigned int D> class vtkCompactHyperOctree
   : public vtkHyperOctreeInternal
 {
@@ -677,7 +664,7 @@ public:
         }
     }
   
-  vtkTypeRevisionMacro(vtkCompactHyperOctree<D>,vtkHyperOctreeInternal);
+  vtkTypeMacro(vtkCompactHyperOctree<D>,vtkHyperOctreeInternal);
   
   //---------------------------------------------------------------------------
   // Description:
@@ -948,33 +935,22 @@ protected:
       this->NumberOfLeavesPerLevel[0]=1;
     }
   
-  vtkstd::vector<int> NumberOfLeavesPerLevel; // number of leaves in each level
+  std::vector<int> NumberOfLeavesPerLevel; // number of leaves in each level
   // its size is NumberOfLevels;  
   
   vtkIdType NumberOfLevels;
-  vtkstd::vector<vtkCompactHyperOctreeNode<D> > Nodes;
-  vtkstd::vector<int> LeafParent; // record the parent of each leaf
+  std::vector<vtkCompactHyperOctreeNode<D> > Nodes;
+  std::vector<int> LeafParent; // record the parent of each leaf
   vtkDataSetAttributes *Attributes; // cell data or point data.
 private:
   vtkCompactHyperOctree(const vtkCompactHyperOctree<D> &);  // Not implemented.
   void operator=(const vtkCompactHyperOctree<D> &);    // Not implemented.
 };
 
-// vtkCxxRevisionMacro(vtkCompactHyperOctree, "$Revision: 1.23 $");
-template<unsigned int D>
-void vtkCompactHyperOctree<D>::CollectRevisions(ostream& sos)
-{
-  vtkOStreamWrapper os(sos);
-  this->Superclass::CollectRevisions(os);
-  os << "vtkCompactHyperOctree<" << D <<"> " << "$Revision: 1.23 $" << '\n';
-}
-  
-
 // octree: vtkHyperOctreeInternal<3>
 // quadtree: vtkHyperOctreeInternal<2>
 // bittree: vtkHyperOctreeInternal<1>
 
-vtkCxxRevisionMacro(vtkHyperOctree, "$Revision: 1.23 $");
 vtkStandardNewMacro(vtkHyperOctree);
 
 //-----------------------------------------------------------------------------

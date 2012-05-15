@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLegendScaleActor.h,v $
+  Module:    vtkLegendScaleActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,7 +55,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkLegendScaleActor,vtkProp);
+  vtkTypeMacro(vtkLegendScaleActor,vtkProp);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX
@@ -94,6 +94,7 @@ public:
 
   // Description:
   // Indicate whether the legend scale should be displayed or not.
+  // The default is On.
   vtkSetMacro(LegendVisibility,int);
   vtkGetMacro(LegendVisibility,int);
   vtkBooleanMacro(LegendVisibility,int);
@@ -109,17 +110,38 @@ public:
   void AllAnnotationsOff();
 
   // Description:
-  // Set/Get the offset of the axes from the borders. This number is expressed in
+  // Set/Get the offset of the right axis from the border. This number is expressed in
   // pixels, and represents the approximate distance of the axes from the sides
-  // of the renderer.
+  // of the renderer. The default is 50.
   vtkSetClampMacro(RightBorderOffset,int,5,VTK_LARGE_INTEGER);
   vtkGetMacro(RightBorderOffset,int);
+
+  // Description:
+  // Set/Get the offset of the top axis from the border. This number is expressed in
+  // pixels, and represents the approximate distance of the axes from the sides
+  // of the renderer. The default is 30.
   vtkSetClampMacro(TopBorderOffset,int,5,VTK_LARGE_INTEGER);
   vtkGetMacro(TopBorderOffset,int);
+
+  // Description:
+  // Set/Get the offset of the left axis from the border. This number is expressed in
+  // pixels, and represents the approximate distance of the axes from the sides
+  // of the renderer. The default is 50.
   vtkSetClampMacro(LeftBorderOffset,int,5,VTK_LARGE_INTEGER);
   vtkGetMacro(LeftBorderOffset,int);
+
+  // Description:
+  // Set/Get the offset of the bottom axis from the border. This number is expressed in
+  // pixels, and represents the approximate distance of the axes from the sides
+  // of the renderer. The default is 30.
   vtkSetClampMacro(BottomBorderOffset,int,5,VTK_LARGE_INTEGER);
   vtkGetMacro(BottomBorderOffset,int);
+
+  // Description:
+  // Get/Set the corner offset. This is the offset factor used to offset the
+  // axes at the corners. Default value is 2.0.
+  vtkSetClampMacro(CornerOffsetFactor, double, 1.0, 10.0);
+  vtkGetMacro(CornerOffsetFactor, double);
 
   // Description:
   // Set/Get the labels text properties for the legend title and labels.
@@ -152,6 +174,7 @@ protected:
   int    TopBorderOffset;
   int    LeftBorderOffset;
   int    BottomBorderOffset;
+  double CornerOffsetFactor;
   
   // The four axes around the borders of the renderer
   vtkAxisActor2D *RightAxis;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPlaneSource.cxx,v $
+  Module:    vtkPlaneSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPolyData.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkPlaneSource, "$Revision: 1.65 $");
 vtkStandardNewMacro(vtkPlaneSource);
 
 // Construct plane perpendicular to z-axis, resolution 1x1, width and height
@@ -97,8 +96,10 @@ int vtkPlaneSource::RequestData(
     v1[i] = this->Point1[i] - this->Origin[i];
     v2[i] = this->Point2[i] - this->Origin[i];
     }
+
   if ( !this->UpdatePlane(v1,v2) )
     {
+    vtkErrorMacro(<<"Bad plane coordinate system");
     return 0;
     }
 
@@ -242,8 +243,9 @@ void vtkPlaneSource::SetNormal(double nx, double ny, double nz)
 // instance variables as necessary (i.e., translate the plane).
 void vtkPlaneSource::SetCenter(double center[3])
 {
-  if ( this->Center[0] == center[0] && this->Center[1] == center[1] &&
-  this->Center[2] == center[2] )
+  if ( this->Center[0] == center[0] &&
+       this->Center[1] == center[1] &&
+       this->Center[2] == center[2] )
     {
     return; //no change
     }
@@ -308,7 +310,8 @@ void vtkPlaneSource::SetPoint1(double pnt[3])
 // modifies the normal and origin
 void vtkPlaneSource::SetPoint2(double pnt[3])
 {
-  if ( this->Point2[0] == pnt[0] && this->Point2[1] == pnt[1] &&
+  if ( this->Point2[0] == pnt[0] &&
+       this->Point2[1] == pnt[1] &&
        this->Point2[2] == pnt[2] )
     {
     return; //no change
@@ -383,7 +386,6 @@ int vtkPlaneSource::UpdatePlane(double v1[3], double v2[3])
   vtkMath::Cross(v1,v2,this->Normal);
   if ( vtkMath::Normalize(this->Normal) == 0.0 )
     {
-    vtkErrorMacro(<<"Bad plane coordinate system");
     return 0;
     }
   else
@@ -399,24 +401,29 @@ void vtkPlaneSource::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "X Resolution: " << this->XResolution << "\n";
   os << indent << "Y Resolution: " << this->YResolution << "\n";
 
-  os << indent << "Origin: (" << this->Origin[0] << ", "
-                              << this->Origin[1] << ", "
-                              << this->Origin[2] << ")\n";
+  os << indent << "Origin: ("
+     << this->Origin[0] << ", "
+     << this->Origin[1] << ", "
+     << this->Origin[2] << ")\n";
 
-  os << indent << "Point 1: (" << this->Point1[0] << ", "
-                               << this->Point1[1] << ", "
-                               << this->Point1[2] << ")\n";
+  os << indent << "Point 1: ("
+     << this->Point1[0] << ", "
+     << this->Point1[1] << ", "
+     << this->Point1[2] << ")\n";
 
-  os << indent << "Point 2: (" << this->Point2[0] << ", "
-                               << this->Point2[1] << ", "
-                               << this->Point2[2] << ")\n";
+  os << indent << "Point 2: ("
+     << this->Point2[0] << ", "
+     << this->Point2[1] << ", "
+     << this->Point2[2] << ")\n";
 
-  os << indent << "Normal: (" << this->Normal[0] << ", "
-                              << this->Normal[1] << ", "
-                              << this->Normal[2] << ")\n";
+  os << indent << "Normal: ("
+     << this->Normal[0] << ", "
+     << this->Normal[1] << ", "
+     << this->Normal[2] << ")\n";
 
-  os << indent << "Center: (" << this->Center[0] << ", "
-                              << this->Center[1] << ", "
-                              << this->Center[2] << ")\n";
+  os << indent << "Center: ("
+     << this->Center[0] << ", "
+     << this->Center[1] << ", "
+     << this->Center[2] << ")\n";
 
 }

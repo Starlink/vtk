@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollapseGraph.h,v $
+  Module:    vtkCollapseGraph.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class VTK_INFOVIS_EXPORT vtkCollapseGraph : public vtkGraphAlgorithm
 {
 public:
   static vtkCollapseGraph* New();
-  vtkTypeRevisionMacro(vtkCollapseGraph,vtkGraphAlgorithm);
+  vtkTypeMacro(vtkCollapseGraph,vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   /// Convenience function provided for setting the graph input.

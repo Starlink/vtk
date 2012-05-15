@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSystemIncludes.h,v $
+  Module:    vtkSystemIncludes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -102,32 +102,16 @@
 // Constants for InterpolationType
 #define VTK_NEAREST_INTERPOLATION       0
 #define VTK_LINEAR_INTERPOLATION        1
+#define VTK_CUBIC_INTERPOLATION         2
+
+// Constants for SlabType
+#define VTK_IMAGE_SLAB_MIN  0
+#define VTK_IMAGE_SLAB_MAX  1
+#define VTK_IMAGE_SLAB_MEAN 2
+#define VTK_IMAGE_SLAB_SUM  3
 
 // For volume rendering
 #define VTK_MAX_VRCOMP                  4
-
-// For multithreading
-
-// The maximum number of threads allowed
-#ifdef VTK_USE_SPROC
-#define VTK_MAX_THREADS              32
-#endif
-
-#ifdef VTK_USE_PTHREADS
-#define VTK_MAX_THREADS              32
-#endif
-
-#ifdef VTK_USE_WIN32_THREADS
-#define VTK_MAX_THREADS              8
-#endif
-
-#ifndef VTK_USE_WIN32_THREADS
-#ifndef VTK_USE_SPROC
-#ifndef VTK_USE_PTHREADS
-#define VTK_MAX_THREADS              1
-#endif
-#endif
-#endif
 
 // If VTK_USE_PTHREADS is defined, then the multithreaded
 // function is of type void *, and returns NULL

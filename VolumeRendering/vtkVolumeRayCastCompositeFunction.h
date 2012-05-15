@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastCompositeFunction.h,v $
+  Module:    vtkVolumeRayCastCompositeFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkVolumeRayCastCompositeFunction : public vtkV
 {
 public:
   static vtkVolumeRayCastCompositeFunction *New();
-  vtkTypeRevisionMacro(vtkVolumeRayCastCompositeFunction,vtkVolumeRayCastFunction);
+  vtkTypeMacro(vtkVolumeRayCastCompositeFunction,vtkVolumeRayCastFunction);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:

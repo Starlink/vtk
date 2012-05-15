@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProperty2D.cxx,v $
+  Module:    vtkProperty2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkProperty2D.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkProperty2D, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkProperty2D);
 
 // Creates a vtkProperty2D with the following default values:

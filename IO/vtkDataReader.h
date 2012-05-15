@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataReader.h,v $
+  Module:    vtkDataReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,6 +27,7 @@
 #define __vtkDataReader_h
 
 #include "vtkAlgorithm.h"
+#include "vtkStdString.h" // For API using strings
 
 #define VTK_ASCII 1
 #define VTK_BINARY 2
@@ -45,7 +46,7 @@ class VTK_IO_EXPORT vtkDataReader : public vtkAlgorithm
 {
 public:
   static vtkDataReader *New();
-  vtkTypeRevisionMacro(vtkDataReader,vtkAlgorithm);
+  vtkTypeMacro(vtkDataReader,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -78,10 +79,12 @@ public:
   void SetInputString(const char *in, int len);
   vtkGetMacro(InputStringLength, int);
   void SetBinaryInputString(const char *, int len);
+  void SetInputString(const vtkStdString& input)
+    { this->SetBinaryInputString(input.c_str(), static_cast<int>(input.length())); }
 
   // Description:
   // Specify the vtkCharArray to be used  when reading from a string.
-  // If set, this array has precendence over InputString.
+  // If set, this array has precedence over InputString.
   // Use this instead of InputString to avoid the extra memory copy.
   // It should be noted that if the underlying char* is owned by the
   // user ( vtkCharArray::SetArray(array, 1); ) and is deleted before

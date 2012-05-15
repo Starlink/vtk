@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageToStructuredPoints.cxx,v $
+  Module:    vtkImageToStructuredPoints.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageToStructuredPoints, "$Revision: 1.64 $");
 vtkStandardNewMacro(vtkImageToStructuredPoints);
 
 //----------------------------------------------------------------------------
@@ -46,6 +45,12 @@ vtkImageToStructuredPoints::~vtkImageToStructuredPoints()
 void vtkImageToStructuredPoints::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+}
+
+//----------------------------------------------------------------------------
+vtkStructuredPoints* vtkImageToStructuredPoints::GetStructuredPointsOutput()
+{
+  return vtkStructuredPoints::SafeDownCast(this->GetOutputDataObject(0));
 }
 
 //----------------------------------------------------------------------------

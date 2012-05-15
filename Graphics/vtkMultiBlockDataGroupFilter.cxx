@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiBlockDataGroupFilter.cxx,v $
+  Module:    vtkMultiBlockDataGroupFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,9 +20,9 @@
 #include "vtkInformationVector.h"
 #include "vtkMultiBlockDataSet.h"
 #include "vtkObjectFactory.h"
+#include "vtkOnePieceExtentTranslator.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkMultiBlockDataGroupFilter, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkMultiBlockDataGroupFilter);
 //-----------------------------------------------------------------------------
 vtkMultiBlockDataGroupFilter::vtkMultiBlockDataGroupFilter()
@@ -32,6 +32,29 @@ vtkMultiBlockDataGroupFilter::vtkMultiBlockDataGroupFilter()
 //-----------------------------------------------------------------------------
 vtkMultiBlockDataGroupFilter::~vtkMultiBlockDataGroupFilter()
 {
+}
+
+//-----------------------------------------------------------------------------
+int vtkMultiBlockDataGroupFilter::RequestInformation(
+  vtkInformation *vtkNotUsed(request),
+  vtkInformationVector **,
+  vtkInformationVector *outputVector)
+{
+  vtkInformation* outInfo = outputVector->GetInformationObject(0);
+
+  // Setup ExtentTranslator so that all downstream piece requests are
+  // converted to whole extent update requests, as need by the histogram filter.
+  vtkStreamingDemandDrivenPipeline* sddp = 
+    vtkStreamingDemandDrivenPipeline::SafeDownCast(this->GetExecutive());
+  if (strcmp(
+      sddp->GetExtentTranslator(outInfo)->GetClassName(), 
+      "vtkOnePieceExtentTranslator") != 0)
+    {
+    vtkExtentTranslator* et = vtkOnePieceExtentTranslator::New();
+    sddp->SetExtentTranslator(outInfo, et);
+    et->Delete();
+    }
+  return 1;
 }
 
 //-----------------------------------------------------------------------------

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaContour.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.6 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METACONTOUR_H
@@ -38,9 +33,9 @@ namespace METAIO_NAMESPACE {
  *    Reads and Writes MetaContour Files.
  *
  * \author Julien Jomier
- * 
+ *
  * \date March 2006
- * 
+ *
  */
 class METAIO_EXPORT ContourControlPnt
 {
@@ -48,7 +43,7 @@ public:
 
   ContourControlPnt(int dim);
   ~ContourControlPnt();
-  
+
   unsigned int m_Dim;
   unsigned int m_Id;
   float* m_X;
@@ -68,17 +63,17 @@ public:
     m_Id = 0;
     m_X = new float[m_Dim];
     //Color is red by default
-    m_Color[0]=1.0;
-    m_Color[1]=0.0;
-    m_Color[2]=0.0;
-    m_Color[3]=1.0;
+    m_Color[0]=1.0f;
+    m_Color[1]=0.0f;
+    m_Color[2]=0.0f;
+    m_Color[3]=1.0f;
     }
 
   ~ContourInterpolatedPnt()
     {
     delete []m_X;
     };
-  
+
   unsigned int m_Dim;
   float* m_X;
   unsigned int  m_Id;
@@ -95,8 +90,8 @@ public:
  typedef METAIO_STL::list<ContourInterpolatedPnt*> InterpolatedPointListType;
 
  MetaContour(void);
- MetaContour(const char *_headerName);   
- MetaContour(const MetaContour *_Contour);    
+ MetaContour(const char *_headerName);
+ MetaContour(const MetaContour *_Contour);
  MetaContour(unsigned int dim);
 
  ~MetaContour(void);
@@ -124,24 +119,24 @@ public:
   const char* InterpolatedPointDim(void) const;
 
   void Closed(bool close);
-  bool Closed();
+  bool Closed() const;
 
   void     AttachedToSlice(long int slice);
-  long int AttachedToSlice();
+  long int AttachedToSlice() const;
 
   void DisplayOrientation(int display);
-  int  DisplayOrientation();
+  int  DisplayOrientation() const;
 
   void  Clear(void);
 
-  ControlPointListType & GetControlPoints(void) 
+  ControlPointListType & GetControlPoints(void)
     {return m_ControlPointsList;}
-  const ControlPointListType & GetControlPoints(void) const 
+  const ControlPointListType & GetControlPoints(void) const
     {return m_ControlPointsList;}
-   
-  InterpolatedPointListType & GetInterpolatedPoints(void) 
+
+  InterpolatedPointListType & GetInterpolatedPoints(void)
     {return m_InterpolatedPointsList;}
-  const InterpolatedPointListType & GetInterpolatedPoints(void) const 
+  const InterpolatedPointListType & GetInterpolatedPoints(void) const
     {return m_InterpolatedPointsList;}
 
 protected:

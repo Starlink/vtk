@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericCutter.h,v $
+  Module:    vtkGenericCutter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,14 +49,14 @@
 class vtkContourValues;
 
 class vtkImplicitFunction;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkPointData;
 class vtkCellData;
 
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericCutter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericCutter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGenericCutter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -125,8 +125,8 @@ public:
   // Description:
   // Specify a spatial locator for merging points. By default, 
   // an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified. The 
@@ -143,7 +143,7 @@ protected:
   int FillInputPortInformation(int, vtkInformation*);
   
   vtkImplicitFunction *CutFunction;
-  vtkPointLocator     *Locator;
+  vtkIncrementalPointLocator *Locator;
   vtkContourValues    *ContourValues;
   int                 GenerateCutScalars;
   

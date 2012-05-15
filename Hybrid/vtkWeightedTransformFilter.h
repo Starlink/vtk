@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWeightedTransformFilter.h,v $
+  Module:    vtkWeightedTransformFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -75,7 +75,7 @@ class VTK_HYBRID_EXPORT vtkWeightedTransformFilter : public vtkPointSetAlgorithm
 {
 public:
   static vtkWeightedTransformFilter *New();
-  vtkTypeRevisionMacro(vtkWeightedTransformFilter,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkWeightedTransformFilter,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageIterator.h,v $
+  Module:    vtkImageIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,13 +27,13 @@
 class vtkImageData;
 
 template<class DType>
-class vtkImageIterator
+class VTK_FILTERING_EXPORT vtkImageIterator
 {
 public:
   typedef DType *SpanIterator;
 
   // Description:
-  // Default empty constructor, usefull only when creating an array of iterators
+  // Default empty constructor, useful only when creating an array of iterators
   // You need to call Initialize afterward
   vtkImageIterator();
 

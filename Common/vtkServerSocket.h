@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkServerSocket.h,v $
+  Module:    vtkServerSocket.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_COMMON_EXPORT vtkServerSocket : public vtkSocket
 {
 public:
   static vtkServerSocket* New();
-  vtkTypeRevisionMacro(vtkServerSocket, vtkSocket);
+  vtkTypeMacro(vtkServerSocket, vtkSocket);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

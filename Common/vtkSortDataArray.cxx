@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSortDataArray.cxx,v $
+  Module:    vtkSortDataArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,12 +33,11 @@
 #include "vtkVariant.h"
 #include "vtkVariantArray.h"
 
-#include <vtkstd/algorithm>
+#include <algorithm>
 
 // -------------------------------------------------------------------------
 
 vtkStandardNewMacro(vtkSortDataArray);
-vtkCxxRevisionMacro(vtkSortDataArray,"$Revision: 1.3 $");
 
 vtkSortDataArray::vtkSortDataArray()
 {
@@ -399,7 +398,7 @@ void vtkSortDataArray::Sort(vtkIdList *keys)
 {
   vtkIdType *data = keys->GetPointer(0);
   vtkIdType numKeys = keys->GetNumberOfIds();
-  vtkstd::sort(data, data + numKeys);
+  std::sort(data, data + numKeys);
 }
 
 void vtkSortDataArray::Sort(vtkAbstractArray *keys)
@@ -415,7 +414,7 @@ void vtkSortDataArray::Sort(vtkAbstractArray *keys)
 
   switch (keys->GetDataType())
     {
-    vtkExtendedTemplateMacro(vtkstd::sort(static_cast<VTK_TT *>(data), static_cast<VTK_TT *>(data) + numKeys));
+    vtkExtendedTemplateMacro(std::sort(static_cast<VTK_TT *>(data), static_cast<VTK_TT *>(data) + numKeys));
     }
 }
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTestDriver.h,v $
+  Module:    vtkTestDriver.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,10 @@
 
 #endif
 
-#include <vtkstd/exception> // for vtkstd::exception
+#include <exception> // for std::exception
 #include "vtkFloatingPointExceptions.h"
+
+#include <clocale> // C setlocale()
+#include <locale> // C++ locale
 
 #endif

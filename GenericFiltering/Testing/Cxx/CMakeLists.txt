@@ -8,9 +8,6 @@
 
 IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
 
-INCLUDE_DIRECTORIES(
-  ${VTK_SOURCE_DIR}/GenericFiltering/Testing/Cxx/Bridge
-  )
 
 #SET(KIT Bridge)
 SET(KIT GenericFiltering)
@@ -78,7 +75,7 @@ ADD_EXECUTABLE(${KIT}CxxTests ${Tests} ${Kit_SRCS} )
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkGenericFiltering vtkRendering vtkIO)
 
 SET (TestsToRun ${Tests})
-REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+LIST( REMOVE_ITEM TestsToRun ${KIT}CxxTests.cxx)
 
 #
 # Add all the executables

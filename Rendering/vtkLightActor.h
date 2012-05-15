@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLightActor.h,v $
+  Module:    vtkLightActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_RENDERING_EXPORT vtkLightActor : public vtkProp3D
 {
 public:
   static vtkLightActor *New();
-  vtkTypeRevisionMacro(vtkLightActor,vtkProp3D);
+  vtkTypeMacro(vtkLightActor,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

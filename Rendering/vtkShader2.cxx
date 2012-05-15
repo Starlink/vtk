@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShader2.cxx,v $
+  Module:    vtkShader2.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,20 +20,23 @@
 #include "vtkOpenGLRenderWindow.h"
 #include "vtkOpenGLExtensionManager.h"
 
-GLenum vtkShaderTypeVTKToGL[3]={
+GLenum vtkShaderTypeVTKToGL[5]={
   vtkgl::VERTEX_SHADER, // VTK_SHADER_TYPE_VERTEX=0
-  vtkgl::GEOMETRY_SHADER_EXT, // VTK_SHADER_TYPE_GEOMETRY=1,
-  vtkgl::FRAGMENT_SHADER // VTK_SHADER_TYPE_FRAGMENT=2
+  vtkgl::GEOMETRY_SHADER, // VTK_SHADER_TYPE_GEOMETRY=1,
+  vtkgl::FRAGMENT_SHADER, // VTK_SHADER_TYPE_FRAGMENT=2,
+  0, // VTK_SHADER_TYPE_TESSELLATION_CONTROL=3, not yet
+  0// VTK_SHADER_TYPE_TESSELLATION_EVALUATION=4, not yet
 };
 
-const char *TypeAsStringArray[3]={
+const char *TypeAsStringArray[5]={
   "vertex shader",
   "geometry shader",
-  "fragment shader"
+  "fragment shader",
+  "tessellation control shader",
+  "tessellation evaluation shader"
 };
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkShader2, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkShader2);
 vtkCxxSetObjectMacro(vtkShader2,UniformVariables,vtkUniformVariables);
 
@@ -163,11 +166,19 @@ void vtkShader2::SetContext(vtkOpenGLRenderWindow *context)
       if(this->ExtensionsLoaded)
         {
         vtkOpenGLExtensionManager *e=this->Context->GetExtensionManager();
-        this->SupportGeometryShader=
-          e->ExtensionSupported("GL_EXT_geometry_shader4")==1;
+        bool supportGeometryShaderARB=e->ExtensionSupported("GL_ARB_geometry_shader4")==1;
+        this->SupportGeometryShader=supportGeometryShaderARB
+          || e->ExtensionSupported("GL_EXT_geometry_shader4")==1;
         if(this->SupportGeometryShader)
           {
-          e->LoadExtension("GL_EXT_geometry_shader4");
+          if(supportGeometryShaderARB)
+            {
+            e->LoadExtension("GL_ARB_geometry_shader4");
+            }
+          else
+            {
+            e->LoadAsARBExtension("GL_EXT_geometry_shader4");
+            }
           }
         }
       }
@@ -187,6 +198,20 @@ void vtkShader2::Compile()
   
   if(this->Id==0 || this->LastCompileTime<this->MTime)
     {
+    if(this->Type==VTK_SHADER_TYPE_TESSELLATION_CONTROL)
+      {
+      vtkErrorMacro(<<"tessellation control shader is not supported.");
+      this->LastCompileStatus=false;
+      this->LastCompileLog=0;
+      return;
+      }
+     if(this->Type==VTK_SHADER_TYPE_TESSELLATION_EVALUATION)
+      {
+      vtkErrorMacro(<<"tessellation evaluation shader is not supported.");
+      this->LastCompileStatus=false;
+      this->LastCompileLog=0;
+      return;
+      }
     if(this->Type==VTK_SHADER_TYPE_GEOMETRY && !this->SupportGeometryShader)
       {
       vtkErrorMacro(<<"geometry shader is not supported.");
@@ -220,7 +245,7 @@ void vtkShader2::Compile()
         {
         delete[] this->LastCompileLog;
         }
-      this->LastCompileLogCapacity=value;
+      this->LastCompileLogCapacity=static_cast<size_t>(value);
       this->LastCompileLog=new char[this->LastCompileLogCapacity];
       }
     vtkgl::GetShaderInfoLog(shaderId,value,0,this->LastCompileLog);
@@ -264,6 +289,12 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
     case VTK_SHADER_TYPE_VERTEX:
       os << "vertex" << endl;
       break;
+    case VTK_SHADER_TYPE_TESSELLATION_CONTROL:
+      os << "tessellation control" << endl;
+      break;
+    case VTK_SHADER_TYPE_TESSELLATION_EVALUATION:
+      os << "tessellation evaluation" << endl;
+      break;
     case VTK_SHADER_TYPE_GEOMETRY:
       os << "geometry" << endl;
       break;
@@ -272,16 +303,6 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
       break;
     default:
       assert("check: impossible_case" && 0); // impossible case
-    }
-  
-  os << indent << "SourceCode: ";
-  if(this->SourceCode==0)
-    {
-    os << "(none)" << endl;
-    }
-  else
-    {
-    os << this->SourceCode << endl;
     }
   
   os << indent << "OpenGL Id: " << this->Id << endl;
@@ -306,7 +327,7 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << this->LastCompileLog << endl;
     }
-  
+
   os << indent << "Context: ";
   if(this->Context!=0)
     {
@@ -316,7 +337,7 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "none" << endl;
     }
-  
+
   os << indent << "UniformVariables: ";
   if(this->UniformVariables!=0)
     {
@@ -325,5 +346,15 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
   else
     {
     os << "none" << endl;
+    }
+
+  os << indent << "SourceCode: ";
+  if(this->SourceCode==0)
+    {
+    os << "(none)" << endl;
+    }
+  else
+    {
+    os << endl << this->SourceCode << endl;
     }
 }

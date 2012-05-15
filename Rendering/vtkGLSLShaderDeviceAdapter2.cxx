@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGLSLShaderDeviceAdapter2.cxx,v $
+  Module:    vtkGLSLShaderDeviceAdapter2.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,19 +21,18 @@
 #include "vtkObjectFactory.h"
 #include "vtkShaderProgram2.h"
 
-#include <vtkstd/map>
-#include <vtkstd/string>
+#include <map>
+#include <string>
 
 #include "vtkgl.h"
 
 class vtkGLSLShaderDeviceAdapter2::vtkInternal
 {
 public:
-  typedef vtkstd::map<vtkstd::string, int> MapOfStringToInt;
+  typedef std::map<std::string, int> MapOfStringToInt;
   MapOfStringToInt AttributeIndicesCache;
 };
 
-vtkCxxRevisionMacro(vtkGLSLShaderDeviceAdapter2, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkGLSLShaderDeviceAdapter2);
 
 #define GLSL_SHADER_DEVICE_ADAPTER(msg) \

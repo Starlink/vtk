@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTesting.cxx,v $
+  Module:    vtkTesting.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,14 +18,14 @@
 #include "vtkWindowToImageFilter.h"
 #include "vtkPNGWriter.h"
 #include "vtkImageShiftScale.h"
-#include "vtkJPEGWriter.h"
 #include "vtkImageDifference.h"
-#include "vtkImageResample.h"
 #include "vtkPNGReader.h"
 #include "vtkRenderWindow.h"
 #include "vtkImageData.h"
 #include "vtkTimerLog.h"
 #include "vtkSmartPointer.h"
+#include "vtkRenderWindowInteractor.h"
+#include "vtkInteractorEventRecorder.h"
 #include "vtkImageClip.h"
 #include "vtkToolkits.h"
 #include "vtkDataSet.h"
@@ -35,14 +35,19 @@
 #include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 
+#include "vtkSmartPointer.h"
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
 #include <sys/stat.h>
 
+#include <vtksys/SystemTools.hxx>
+
 vtkStandardNewMacro(vtkTesting);
-vtkCxxRevisionMacro(vtkTesting, "$Revision: 1.35 $");
 vtkCxxSetObjectMacro(vtkTesting, RenderWindow, vtkRenderWindow);
 
-using vtkstd::vector;
-using vtkstd::string;
+using std::vector;
+using std::string;
 
 //-----------------------------------------------------------------------------
 // Find in command tail, failing that find in environment,
@@ -184,7 +189,8 @@ const char *vtkTesting::GetDataRoot()
   string dr=vtkTestingGetArgOrEnvOrDefault(
                 "-D",this->Args, "VTK_DATA_ROOT","../../../../VTKData");
 #endif
-  this->SetDataRoot(dr.c_str());
+  this->SetDataRoot(
+     vtksys::SystemTools::CollapseFullPath(dr.c_str()).c_str());
 
   return this->DataRoot;
 }
@@ -193,8 +199,8 @@ const char *vtkTesting::GetTempDirectory()
 {
   string td=vtkTestingGetArgOrEnvOrDefault(
                 "-T",this->Args, "VTK_TEMP_DIR","../../../Testing/Temporary");
-
-  this->SetTempDirectory(td.c_str());
+  this->SetTempDirectory(
+    vtksys::SystemTools::CollapseFullPath(td.c_str()).c_str());
 
   return this->TempDirectory;
 }
@@ -349,7 +355,7 @@ int vtkTesting::RegressionTest(double thresh)
 //-----------------------------------------------------------------------------
 int vtkTesting::RegressionTest(double thresh, ostream &os)
 {
-  vtkWindowToImageFilter *rt_w2if = vtkWindowToImageFilter::New(); 
+  VTK_CREATE(vtkWindowToImageFilter, rt_w2if);
   rt_w2if->SetInput(this->RenderWindow);
 
   unsigned int i;
@@ -379,7 +385,6 @@ int vtkTesting::RegressionTest(double thresh, ostream &os)
     }
 
   int res = this->RegressionTest(rt_w2if->GetOutput(), thresh, os);
-  rt_w2if->Delete(); 
   return res;
 }
 //-----------------------------------------------------------------------------
@@ -387,12 +392,12 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
 {
   // do a get to compute the real value
   this->GetValidImageFileName();
-  const char * tmpDir = this->GetTempDirectory();
+  std::string tmpDir = this->GetTempDirectory();
 
   // construct the names for the error images
-  vtkstd::string validName = this->ValidImageFileName;
-  vtkstd::string::size_type slash_pos = validName.rfind("/");
-  if(slash_pos != vtkstd::string::npos)
+  std::string validName = this->ValidImageFileName;
+  std::string::size_type slash_pos = validName.rfind("/");
+  if(slash_pos != std::string::npos)
     {
     validName = validName.substr(slash_pos + 1);
     }  
@@ -405,32 +410,28 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
     }
   else // there was no valid image, so write one to the temp dir
     {
-    char* vImage = new char[strlen(tmpDir) + validName.size() + 30];
-    sprintf(vImage, "%s/%s", tmpDir, validName.c_str());
-    vtkPNGWriter *rt_pngw = vtkPNGWriter::New();
-    rt_pngw->SetFileName(vImage);
+    std::string vImage = tmpDir + "/" + validName;
+    VTK_CREATE(vtkPNGWriter, rt_pngw);
+    rt_pngw->SetFileName(vImage.c_str());
     rt_pngw->SetInput(image);
     rt_pngw->Write();
-    rt_pngw->Delete();
-    delete [] vImage;
     os << "<DartMeasurement name=\"ImageNotFound\" type=\"text/string\">" 
       << this->ValidImageFileName << "</DartMeasurement>" << endl;
     return FAILED;
     }
 
-  vtkSmartPointer<vtkPNGReader> rt_png = vtkSmartPointer<vtkPNGReader>::New();
+  VTK_CREATE(vtkPNGReader, rt_png);
   rt_png->SetFileName(this->ValidImageFileName); 
   rt_png->Update();
   image->Update();
 
-  vtkSmartPointer<vtkImageDifference> rt_id =
-    vtkSmartPointer<vtkImageDifference>::New();
+  VTK_CREATE(vtkImageDifference, rt_id);
 
-  vtkImageClip* ic1 = vtkImageClip::New();
+  VTK_CREATE(vtkImageClip, ic1);
   ic1->SetClipData(1);
   ic1->SetInput(image);
 
-  vtkImageClip* ic2 = vtkImageClip::New();
+  VTK_CREATE(vtkImageClip, ic2);
   ic2->SetClipData(1);
   ic2->SetInput(rt_png->GetOutput());
 
@@ -454,11 +455,9 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
   rt_id->SetInput(ic1->GetOutput()); 
   ic1->Update();
   ic1->GetOutput()->GetExtent(ext1);
-  ic1->Delete();
   rt_id->SetImage(ic2->GetOutput()); 
   ic2->Update();
   ic2->GetOutput()->GetExtent(ext2);
-  ic2->Delete();
 
   double minError = VTK_DOUBLE_MAX;
   
@@ -626,90 +625,53 @@ int vtkTesting::RegressionTest(vtkImageData* image, double thresh, ostream& os)
   rt_id->Update();
 
   // test the directory for writing
-  char* diff_small = new char[strlen(tmpDir) + validName.size() + 30];
-  sprintf(diff_small, "%s/%s.diff.small.jpg", tmpDir, validName.c_str());
-  FILE *rt_dout = fopen(diff_small,"wb"); 
+  std::string diff_filename = tmpDir + "/" + validName;
+  std::string::size_type dot_pos = diff_filename.rfind(".");
+  if(dot_pos != std::string::npos)
+    {
+    diff_filename = diff_filename.substr(0, dot_pos);
+    }  
+  diff_filename += ".diff.png";
+  FILE *rt_dout = fopen(diff_filename.c_str(), "wb"); 
   if (rt_dout) 
     { 
     fclose(rt_dout);
     
-    // write out the difference image scaled and gamma adjusted
-    // for the dashboard
-    int* rt_size = rt_png->GetOutput()->GetDimensions();
-    double rt_magfactor=1.0;
-    if ( rt_size[1] > 250.0)
-      {
-      rt_magfactor = 250.0 / rt_size[1];
-      }
-    vtkImageResample*  rt_shrink = vtkImageResample::New();
-    rt_shrink->SetInput(rt_id->GetOutput());
-    rt_shrink->InterpolateOn();
-    rt_shrink->SetAxisMagnificationFactor(0, rt_magfactor );
-    rt_shrink->SetAxisMagnificationFactor(1, rt_magfactor );
-    vtkImageShiftScale* rt_gamma = vtkImageShiftScale::New();
-    rt_gamma->SetInput(rt_shrink->GetOutput());
+    // write out the difference image gamma adjusted for the dashboard
+    VTK_CREATE(vtkImageShiftScale, rt_gamma);
+    rt_gamma->SetInputConnection(rt_id->GetOutputPort());
     rt_gamma->SetShift(0);
     rt_gamma->SetScale(10);
 
-    vtkJPEGWriter* rt_jpegw_dashboard = vtkJPEGWriter::New();
-    rt_jpegw_dashboard->SetFileName( diff_small );
-    rt_jpegw_dashboard->SetInput(rt_gamma->GetOutput());
-    rt_jpegw_dashboard->SetQuality(85);
-    rt_jpegw_dashboard->Write();
+    VTK_CREATE(vtkPNGWriter, rt_pngw);
+    rt_pngw->SetFileName(diff_filename.c_str());
+    rt_pngw->SetInputConnection(rt_gamma->GetOutputPort());
+    rt_pngw->Write();
 
     // write out the image that was generated
-    rt_shrink->SetInput(ic1->GetOutput());
-    rt_jpegw_dashboard->SetInput(rt_shrink-> GetOutput());
-    char* valid_test_small = new char[strlen(tmpDir) + validName.size() + 30];
-    sprintf(valid_test_small, "%s/%s.test.small.jpg", tmpDir, 
-            validName.c_str());
-    rt_jpegw_dashboard->SetFileName(valid_test_small);
-    rt_jpegw_dashboard->Write();
-
-    // write out the valid image that matched
-    rt_shrink->SetInput(ic2->GetOutput());
-    rt_jpegw_dashboard-> SetInput (rt_shrink->GetOutput());
-    char* valid = new char[strlen(tmpDir) + validName.size() + 30];
-    sprintf(valid, "%s/%s.small.jpg", tmpDir, validName.c_str());
-    rt_jpegw_dashboard-> SetFileName( valid);
-    rt_jpegw_dashboard->Write();
-    rt_jpegw_dashboard->Delete();
-
-    os <<  "<DartMeasurementFile name=\"TestImage\" type=\"image/jpeg\">";
-    os << valid_test_small;
-    delete [] valid_test_small;
-    os << "</DartMeasurementFile>";
-    os << "<DartMeasurementFile name=\"DifferenceImage\" type=\"image/jpeg\">";
-    os << diff_small;
-    os << "</DartMeasurementFile>";
-    os << "<DartMeasurementFile name=\"ValidImage\" type=\"image/jpeg\">";
-    os << valid;
-    os <<  "</DartMeasurementFile>";
-
-    delete [] valid;
-
-    char* vImage = new char[strlen(tmpDir) + validName.size() + 30];
-    sprintf(vImage, "%s/%s", tmpDir, validName.c_str());
-    vtkPNGWriter *rt_pngw = vtkPNGWriter::New();
-    rt_pngw->SetFileName(vImage);
+    std::string vImage = tmpDir + "/" + validName;
+    rt_pngw->SetFileName(vImage.c_str());
     rt_pngw->SetInput(image);
     rt_pngw->Write();
-    rt_pngw->Delete();
-    delete [] vImage;
 
-
-    rt_shrink->Delete();
-    rt_gamma->Delete();
+    os <<  "<DartMeasurementFile name=\"TestImage\" type=\"image/png\">";
+    os << vImage;
+    os << "</DartMeasurementFile>";
+    os << "<DartMeasurementFile name=\"DifferenceImage\" type=\"image/png\">";
+    os << diff_filename;
+    os << "</DartMeasurementFile>";
+    os << "<DartMeasurementFile name=\"ValidImage\" type=\"image/png\">";
+    os << this->ValidImageFileName;
+    os <<  "</DartMeasurementFile>";
     }
 
-  delete [] diff_small;
   return FAILED;
 }
 //-----------------------------------------------------------------------------
 int vtkTesting::Test(int argc, char *argv[], vtkRenderWindow *rw, 
                      double thresh ) 
 {
-  vtkTesting * testing = vtkTesting::New();
+  VTK_CREATE(vtkTesting, testing);
   int i;
   for (i = 0; i < argc; ++i)
     {
@@ -718,7 +680,6 @@ int vtkTesting::Test(int argc, char *argv[], vtkRenderWindow *rw,
   
   if (testing->IsInteractiveModeSpecified())
     {
-    testing->Delete();
     return DO_INTERACTOR;
     }
   
@@ -735,11 +696,9 @@ int vtkTesting::Test(int argc, char *argv[], vtkRenderWindow *rw,
     { 
     testing->SetRenderWindow(rw);
     int res = testing->RegressionTest(thresh);
-    testing->Delete();
     return res;
     }
 
-  testing->Delete();
   return NOT_RUN;
 }
 //-----------------------------------------------------------------------------
@@ -891,6 +850,56 @@ int vtkTesting::CompareAverageOfL2Norm(
   // All tests passed.
   return 1;
 }
+
+//-----------------------------------------------------------------------------
+int vtkTesting::InteractorEventLoop( int argc, 
+                                     char *argv[], 
+                                     vtkRenderWindowInteractor *iren, 
+                                     const char *playbackStream )
+{
+  bool disableReplay = false, record = false;
+  for (int i = 0; i < argc; i++)
+    {
+    disableReplay |= (strcmp("--DisableReplay", argv[i]) == 0);
+    record        |= (strcmp("--Record", argv[i]) == 0);
+    }
+
+  vtkSmartPointer<vtkInteractorEventRecorder> recorder =
+      vtkSmartPointer<vtkInteractorEventRecorder>::New();
+  recorder->SetInteractor(iren);
+
+  if (!disableReplay)
+    {
+
+    if (record)
+      {
+      recorder->SetFileName("vtkInteractorEventRecorder.log");
+      recorder->On();
+      recorder->Record();
+      }
+    else
+      {
+      if (playbackStream)
+        {
+        recorder->ReadFromInputStringOn();
+        recorder->SetInputString(playbackStream);
+        recorder->Play();
+        
+        // Without this, the "-I" option if specified will fail
+        recorder->Off();
+        }
+      }
+    }
+
+  // iren will be either the object factory instantiation (vtkTestingInteractor)
+  // or vtkRenderWindowInteractor depending on whether or not "-I" is specified.
+  iren->Start();
+
+  recorder->Off();
+
+  return EXIT_SUCCESS;
+}
+
 //-----------------------------------------------------------------------------
 void vtkTesting::PrintSelf(ostream& os, vtkIndent indent)
 {

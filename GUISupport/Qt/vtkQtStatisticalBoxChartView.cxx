@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStatisticalBoxChartView.cxx,v $
+  Module:    vtkQtStatisticalBoxChartView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,6 +24,7 @@
 #include "vtkQtChartHelpFormatter.h"
 #include "vtkQtChartMouseSelection.h"
 #include "vtkQtChartSeriesModelCollection.h"
+#include "vtkQtChartSeriesOptionsModelCollection.h"
 #include "vtkQtChartSeriesSelectionHandler.h"
 #include "vtkQtChartWidget.h"
 #include "vtkQtStatisticalBoxChart.h"
@@ -31,21 +32,20 @@
 
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkQtStatisticalBoxChartView, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkQtStatisticalBoxChartView);
 
 //-----------------------------------------------------------------------------
 vtkQtStatisticalBoxChartView::vtkQtStatisticalBoxChartView()
 {
-  // Get the chart widget from the base class.
-  vtkQtChartWidget* chart = this->GetChartWidget();
-  vtkQtChartArea* area = chart->getChartArea();
+  // Get the chart area from the base class.
+  vtkQtChartArea* area = this->GetChartArea();
 
   // Create the bar chart and model. Add them to the chart between the
   // grid and axis layers.
   this->BoxChart = new vtkQtStatisticalBoxChart();
   this->BoxModel = new vtkQtChartSeriesModelCollection(this->BoxChart);
   this->BoxChart->setModel(this->BoxModel);
+  this->BoxChart->setOptionsModel(this->GetChartOptionsModel());
   area->insertLayer(area->getAxisLayerIndex(), this->BoxChart);
 }
 
@@ -103,6 +103,19 @@ vtkQtChartSeriesModelCollection*
 vtkQtStatisticalBoxChartView::GetChartSeriesModel()
 {
   return this->BoxModel;
+}
+
+//-----------------------------------------------------------------------------
+vtkQtChartSeriesLayer* vtkQtStatisticalBoxChartView::GetChartSeriesLayer()
+{
+  return this->BoxChart;
+}
+
+//-----------------------------------------------------------------------------
+vtkQtChartSeriesOptions* vtkQtStatisticalBoxChartView::GetChartSeriesOptions(
+  int series)
+{
+  return this->BoxChart->getSeriesOptions(series);
 }
 
 //-----------------------------------------------------------------------------

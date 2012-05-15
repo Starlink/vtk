@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaScene.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METASCENE_H
@@ -35,7 +30,7 @@
  *    Reads and Writes MetaTubeFiles.
  *
  * \author Julien Jomier
- * 
+ *
  * \date July, 2002
  *
  */
@@ -55,7 +50,7 @@ class METAIO_EXPORT MetaScene : public MetaObject
   public:
 
    typedef METAIO_STL::list<MetaObject*>    ObjectListType;
-   
+
    ////
     //
     // Constructors & Destructor
@@ -64,7 +59,7 @@ class METAIO_EXPORT MetaScene : public MetaObject
     MetaScene(void);
 
     MetaScene(const MetaScene *_scene);
-    
+
     MetaScene(unsigned int dim);
 
     ~MetaScene(void);
@@ -87,7 +82,7 @@ class METAIO_EXPORT MetaScene : public MetaObject
 
     void  Clear(void);
 
-    
+
     //    NObjects(...)
     //       Required Field
     //       Number of points wich compose the tube
@@ -119,7 +114,7 @@ class METAIO_EXPORT MetaScene : public MetaObject
     int m_NObjects;      // "NObjects = "         0
 
     ObjectListType    m_ObjectList;
-    
+
   };
 
 #if (METAIO_USE_NAMESPACE)

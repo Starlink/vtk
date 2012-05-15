@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRIBLight.cxx,v $
+  Module:    vtkRIBLight.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkRIBLight.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkRIBLight, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkRIBLight);
 
 vtkRIBLight::vtkRIBLight ()

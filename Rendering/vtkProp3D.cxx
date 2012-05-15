@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProp3D.cxx,v $
+  Module:    vtkProp3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkProp3D, "$Revision: 1.37 $");
 
 //----------------------------------------------------------------------------
 // Construct with the following defaults: origin(0,0,0)
@@ -353,8 +352,22 @@ void vtkProp3D::SetUserMatrix(vtkMatrix4x4 *matrix)
 //----------------------------------------------------------------------------
 void vtkProp3D::GetMatrix(vtkMatrix4x4 *result)
 {
-  this->GetMatrix(&result->Element[0][0]);
-  result->Modified();
+  double mine[16];
+  this->GetMatrix(mine);
+  int idx = 0;
+  for (int i =0; i < 4; i++)
+    {
+    for(int j=0; j < 4; j++)
+      {
+      if (mine[idx] != *(&result->Element[i][j]))
+        {
+        memcpy(&result->Element[0][0], mine, 16*sizeof(double));
+        result->Modified();
+        return;
+        }
+      idx++;
+      }
+    }
 }
 
 //----------------------------------------------------------------------------

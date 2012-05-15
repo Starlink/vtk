@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDecimatePro.h,v $
+  Module:    vtkDecimatePro.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -86,7 +86,7 @@ class vtkPriorityQueue;
 class VTK_GRAPHICS_EXPORT vtkDecimatePro : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkDecimatePro,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkDecimatePro,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPPCAStatistics.cxx,v $
+  Module:    vtkPPCAStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+/*-------------------------------------------------------------------------
+  Copyright 2011 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+  -------------------------------------------------------------------------*/
 #include "vtkToolkits.h"
 
 #include "vtkPPCAStatistics.h"
@@ -26,10 +31,9 @@
 #include "vtkPMultiCorrelativeStatistics.h"
 #include "vtkVariant.h"
 
-#include <vtkstd/map>
+#include <map>
 
 vtkStandardNewMacro(vtkPPCAStatistics);
-vtkCxxRevisionMacro(vtkPPCAStatistics, "$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkPPCAStatistics, Controller, vtkMultiProcessController);
 //-----------------------------------------------------------------------------
 vtkPPCAStatistics::vtkPPCAStatistics()
@@ -52,17 +56,17 @@ void vtkPPCAStatistics::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------
-void vtkPPCAStatistics::ExecuteLearn( vtkTable* inData,
-                                      vtkDataObject* outMetaDO )
+void vtkPPCAStatistics::Learn( vtkTable* inData,
+                               vtkTable* inParameters,
+                               vtkMultiBlockDataSet* outMeta )
 {
-  vtkMultiBlockDataSet* outMeta = vtkMultiBlockDataSet::SafeDownCast( outMetaDO );
   if ( ! outMeta )
     {
     return;
     }
 
   // First calculate correlative statistics on local data set
-  this->Superclass::ExecuteLearn( inData, outMeta );
+  this->Superclass::Learn( inData, inParameters, outMeta );
 
   // Get a hold of the (sparse) covariance matrix
   vtkTable* sparseCov = vtkTable::SafeDownCast( outMeta->GetBlock( 0 ) );

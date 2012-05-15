@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSobelGradientMagnitudePass.cxx,v $
+  Module:    vtkSobelGradientMagnitudePass.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,9 +38,7 @@
 #include "vtkPixelBufferObject.h"
 #include "vtkImageExtractComponents.h"
 
-vtkCxxRevisionMacro(vtkSobelGradientMagnitudePass, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSobelGradientMagnitudePass);
-vtkCxxSetObjectMacro(vtkSobelGradientMagnitudePass,DelegatePass,vtkRenderPass);
 
 extern const char *vtkSobelGradientMagnitudePassShader1_fs;
 extern const char *vtkSobelGradientMagnitudePassShader2_fs;
@@ -48,9 +46,7 @@ extern const char *vtkSobelGradientMagnitudePassShader2_fs;
 
 // ----------------------------------------------------------------------------
 vtkSobelGradientMagnitudePass::vtkSobelGradientMagnitudePass()
-{
-  this->DelegatePass=0;
-  
+{ 
   this->FrameBufferObject=0;
   this->Pass1=0;
   this->Gx1=0;
@@ -62,10 +58,6 @@ vtkSobelGradientMagnitudePass::vtkSobelGradientMagnitudePass()
 // ----------------------------------------------------------------------------
 vtkSobelGradientMagnitudePass::~vtkSobelGradientMagnitudePass()
 {
-  if(this->DelegatePass!=0)
-    {
-      this->DelegatePass->Delete();
-    }
   if(this->FrameBufferObject!=0)
     {
     vtkErrorMacro(<<"FrameBufferObject should have been deleted in ReleaseGraphicsResources().");
@@ -96,16 +88,6 @@ vtkSobelGradientMagnitudePass::~vtkSobelGradientMagnitudePass()
 void vtkSobelGradientMagnitudePass::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-  
-  os << indent << "DelegatePass:";
-  if(this->DelegatePass!=0)
-    {
-    this->DelegatePass->PrintSelf(os,indent);
-    }
-  else
-    {
-    os << "(none)" <<endl;
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -164,72 +146,31 @@ void vtkSobelGradientMagnitudePass::Render(const vtkRenderState *s)
     
     int width=0;
     int height=0;
-      
-    vtkFrameBufferObject *fbo=s->GetFrameBuffer();
-    if(fbo==0)
-      {
-      r->GetTiledSize(&width,&height);
-      }
-    else
-      {
-      int size[2];
-      fbo->GetLastSize(size);
-      width=size[0];
-      height=size[1];
-      }
+    int size[2];
+    s->GetWindowSize(size);
+    width=size[0];
+    height=size[1];
     
     const int extraPixels=1; // one on each side
     
     int w=width+2*extraPixels;
     int h=height+2*extraPixels;
     
-    vtkRenderState s2(r);
-    s2.SetPropArrayAndCount(s->GetPropArray(),s->GetPropArrayCount());
+    if(this->Pass1==0)
+      {
+      this->Pass1=vtkTextureObject::New();
+      this->Pass1->SetContext(r->GetRenderWindow());
+      }
     
     if(this->FrameBufferObject==0)
       {
       this->FrameBufferObject=vtkFrameBufferObject::New();
       this->FrameBufferObject->SetContext(r->GetRenderWindow());
       }
-    s2.SetFrameBuffer(this->FrameBufferObject);
     
-    if(this->Pass1==0)
-      {
-      this->Pass1=vtkTextureObject::New();
-      this->Pass1->SetContext(this->FrameBufferObject->GetContext());
-      }
-    
-    if(this->Pass1->GetWidth()!=static_cast<unsigned int>(w) ||
-       this->Pass1->GetHeight()!=static_cast<unsigned int>(h))
-      {
-      this->Pass1->Create2D(w,h,4,VTK_UNSIGNED_CHAR,false);
-      }
-    this->FrameBufferObject->SetNumberOfRenderTargets(1);
-    this->FrameBufferObject->SetColorBuffer(0,this->Pass1);
-    // because the same FBO is used in the second pass but with 2 color
-    // buffers. for the first pass to use 1, to avoid sideeffects from the
-    // render of the previous frame.
-    this->FrameBufferObject->SetActiveBuffer(0);
-    this->FrameBufferObject->SetDepthBufferNeeded(true);
-    this->FrameBufferObject->StartNonOrtho(w,h,false);
-    
-#ifdef VTK_SOBEL_PASS_DEBUG
-    cout << "sobel finish0" << endl;
-    glFinish();
-#endif
-    
-    // 2. Delegate render in FBO
-    glEnable(GL_DEPTH_TEST);
-    this->DelegatePass->Render(&s2);
-    this->NumberOfRenderedProps+=
-      this->DelegatePass->GetNumberOfRenderedProps();
-    
-    
-#ifdef VTK_SOBEL_PASS_DEBUG
-    cout << "sobel finish1" << endl;
-    glFinish();
-#endif
-    
+    this->RenderDelegate(s,width,height,w,h,this->FrameBufferObject,
+                         this->Pass1);    
+
 #ifdef VTK_SOBEL_PASS_DEBUG
     // Save first pass in file for debugging.
     vtkPixelBufferObject *pbo=this->Pass1->Download();
@@ -547,37 +488,10 @@ void vtkSobelGradientMagnitudePass::Render(const vtkRenderState *s)
     glDisable(GL_LIGHTING);
     glDisable(GL_SCISSOR_TEST);
     
-    // Viewport transformation for 1:1 'pixel=texel=data' mapping.
-    // Note this note enough for 1:1 mapping, because depending on the
-    // primitive displayed (point,line,polygon), the rasterization rules
-    // are different.
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, width, 0.0, height, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glViewport(0, 0, width, height);
-    
-    // Render quad 0,width-1,0,height-1 in original FB
-    int minX=0;
-    int maxX=width-1;
-    int minY=0;
-    int maxY=height-1;
-    
-    // skip first and last extra texel.
-    float minXTexCoord=static_cast<float>(extraPixels)/w;
-    float minYTexCoord=static_cast<float>(extraPixels)/h;
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(minXTexCoord,minYTexCoord);
-    glVertex2f(minX, minY);
-    glTexCoord2f(1.0-minXTexCoord, minYTexCoord);
-    glVertex2f(maxX+1, minY);
-    glTexCoord2f(1.0-minXTexCoord, 1.0-minYTexCoord);
-    glVertex2f(maxX+1, maxY+1);
-    glTexCoord2f(minXTexCoord, 1.0-minYTexCoord);
-    glVertex2f(minX, maxY+1);
-    glEnd();
+    // Trigger a draw on Gy1 (could be called on Gx1).
+    this->Gy1->CopyToFrameBuffer(extraPixels,extraPixels,
+                                 w-1-extraPixels,h-1-extraPixels,
+                                 0,0,width,height);
     
     this->Gy1->UnBind();
     vtkgl::ActiveTexture(vtkgl::TEXTURE0+id0);
@@ -609,10 +523,7 @@ void vtkSobelGradientMagnitudePass::ReleaseGraphicsResources(vtkWindow *w)
 {
   assert("pre: w_exists" && w!=0);
   
-  if(this->DelegatePass!=0)
-    {
-    this->DelegatePass->ReleaseGraphicsResources(w);
-    }
+  this->Superclass::ReleaseGraphicsResources(w);
   
   if(this->Program1!=0)
     {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalDataSet.h,v $
+  Module:    vtkTemporalDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_FILTERING_EXPORT vtkTemporalDataSet : public vtkCompositeDataSet
 public:
   static vtkTemporalDataSet *New();
 
-  vtkTypeRevisionMacro(vtkTemporalDataSet,vtkCompositeDataSet);
+  vtkTypeMacro(vtkTemporalDataSet,vtkCompositeDataSet);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

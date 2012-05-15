@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkTransferAttributes.h,v $
+Module:    vtkTransferAttributes.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -50,7 +50,7 @@ public:
   // TargetFieldType=vtkDataObject::FIELD_ASSOCIATION_POINTS
   static vtkTransferAttributes *New();
   
-  vtkTypeRevisionMacro(vtkTransferAttributes,vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkTransferAttributes,vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -86,10 +86,8 @@ public:
   
   // Description:
   // Method to get/set the default value.
-  //BTX
   vtkVariant GetDefaultValue();
   void SetDefaultValue(vtkVariant value);
-  //ETX
   
   // Description:
   // Set the input type of the algorithm to vtkGraph.
@@ -105,9 +103,7 @@ protected:
   int SourceFieldType;
   int TargetFieldType;
   
-  //BTX
   vtkVariant DefaultValue;
-  //ETX
   
   // Description:
   // Convert the vtkGraph into vtkPolyData.

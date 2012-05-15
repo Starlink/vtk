@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHedgeHog.h,v $
+  Module:    vtkHedgeHog.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_GRAPHICS_EXPORT vtkHedgeHog : public vtkPolyDataAlgorithm
 {
 public:
   static vtkHedgeHog *New();
-  vtkTypeRevisionMacro(vtkHedgeHog,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkHedgeHog,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

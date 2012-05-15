@@ -1,7 +1,10 @@
 from vtk import *
+import os.path
 
 # Open database
 data_dir = "../../../../VTKData/Data/Infovis/SQLite/"
+if not os.path.exists(data_dir):
+  data_dir = "../../../../../VTKData/Data/Infovis/SQLite/"
 sqlite_file = data_dir + "ports_protocols.db"
 database = vtkSQLDatabase.CreateFromURL("sqlite://" + sqlite_file)
 database.Open("")
@@ -16,10 +19,10 @@ edge_table.SetQuery(edge_query)
 cs = vtkContingencyStatistics()
 cs.AddInputConnection(edge_table.GetOutputPort())
 cs.AddColumnPair("dport","protocol")
-cs.SetAssess(1)
+cs.SetAssessOption( 1 )
 cs.Update()
-cStats = cs.GetOutput(0)
-cStats.Dump( 10 )
+cStats = cs.GetOutput( 0 )
+cStats.Dump( 12 )
 
 # Query database for vertices
 vertex_query = database.GetQueryInstance()
@@ -34,8 +37,6 @@ graph.AddLinkVertex("src", "ip", False)
 graph.AddLinkVertex("dst", "ip", False)
 graph.AddLinkEdge("src", "dst")
 graph.Update()
-
-print graph.GetOutput()
 
 view = vtkGraphLayoutView()
 view.AddRepresentationFromInputConnection(graph.GetOutputPort())
@@ -58,9 +59,9 @@ theme.SetSelectedPointColor(1,0,1)
 view.ApplyViewTheme(theme)
 view.SetVertexLabelFontSize(14)
 view.SetEdgeLabelFontSize(12)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
-window.GetInteractor().Start()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
+view.GetInteractor().Start()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractTemporalFieldData.h,v $
+  Module:    vtkExtractTemporalFieldData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractTemporalFieldData : public vtkTableAlgorithm
 {
 public:
   static vtkExtractTemporalFieldData *New();
-  vtkTypeRevisionMacro(vtkExtractTemporalFieldData,vtkTableAlgorithm);
+  vtkTypeMacro(vtkExtractTemporalFieldData,vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -70,7 +70,8 @@ protected:
   // Description:
   // This looks at the arrays in the vtkFieldData of input and copies them 
   // to the output point data.
-  void CopyDataToOutput(vtkDataSet *input, vtkTable *output);
+  void CopyDataToOutput(vtkInformation* inInfo,
+    vtkDataSet *input, vtkTable *output);
 
   int NumberOfTimeSteps;
 

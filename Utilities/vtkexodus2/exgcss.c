@@ -52,7 +52,6 @@
  *
  * revision history - 
  *
- *  $Id: exgcss.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
  *
  *****************************************************************************/
 
@@ -60,7 +59,7 @@
 #include "exodusII_int.h"
 
 /*!
- * reads the side set ID's, side set element count array, side set node count 
+ * \undoc reads the side set ID's, side set element count array, side set node count 
  * array, side set element pointers array, side set node pointers array, side 
  * set element list, side set node list, and side set distribution factors
  * \deprecated Use ex_get_concat_sets()(exoid, EX_SIDE_SET, set_specs) instead

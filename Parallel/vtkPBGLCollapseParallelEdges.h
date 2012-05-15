@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLCollapseParallelEdges.h,v $
+  Module:    vtkPBGLCollapseParallelEdges.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_PARALLEL_EXPORT vtkPBGLCollapseParallelEdges : public vtkGraphAlgorith
 {
 public:
   static vtkPBGLCollapseParallelEdges* New();
-  vtkTypeRevisionMacro(vtkPBGLCollapseParallelEdges,vtkGraphAlgorithm);
+  vtkTypeMacro(vtkPBGLCollapseParallelEdges,vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

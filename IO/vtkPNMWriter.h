@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPNMWriter.h,v $
+  Module:    vtkPNMWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_IO_EXPORT vtkPNMWriter : public vtkImageWriter
 {
 public:
   static vtkPNMWriter *New();
-  vtkTypeRevisionMacro(vtkPNMWriter,vtkImageWriter);
+  vtkTypeMacro(vtkPNMWriter,vtkImageWriter);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

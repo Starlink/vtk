@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnsignedShortArray.cxx,v $
+  Module:    vtkUnsignedShortArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(unsigned short);
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkUnsignedShortArray, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkUnsignedShortArray);
 
 //----------------------------------------------------------------------------

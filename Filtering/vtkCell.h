@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCell.h,v $
+  Module:    vtkCell.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -10,7 +10,7 @@
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
-
+     
 =========================================================================*/
 // .NAME vtkCell - abstract class to specify cell behavior
 // .SECTION Description
@@ -46,13 +46,13 @@ class vtkCellArray;
 class vtkCellData;
 class vtkDataArray;
 class vtkPointData;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkPoints;
 
 class VTK_FILTERING_EXPORT vtkCell : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCell,vtkObject);
+  vtkTypeMacro(vtkCell,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -96,6 +96,14 @@ public:
   // beyond the usual cell type and connectivity list information.
   // Most cells in VTK are implicit cells.
   virtual int IsExplicitCell() {return 0;}
+
+  // Description:
+  // Determine whether the cell requires explicit face representation, and
+  // methods for setting and getting the faces (see vtkPolyhedron for example
+  // usage of these methods).
+  virtual int RequiresExplicitFaceRepresentation() {return 0;}
+  virtual void SetFaces(vtkIdType *vtkNotUsed(faces)) {}
+  virtual vtkIdType *GetFaces() {return NULL;}
 
   // Description:
   // Get the point coordinates for the cell.
@@ -177,7 +185,7 @@ public:
   // must be invoked on both the output cell and point data. The 
   // cellId refers to the cell from which the cell data is copied.)
   virtual void Contour(double value, vtkDataArray *cellScalars, 
-                       vtkPointLocator *locator, vtkCellArray *verts, 
+                       vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                        vtkCellArray *lines, vtkCellArray *polys, 
                        vtkPointData *inPd, vtkPointData *outPd,
                        vtkCellData *inCd, vtkIdType cellId,
@@ -195,7 +203,7 @@ public:
   // method must be invoked on both the output cell and point data. The
   // cellId refers to the cell from which the cell data is copied.)
   virtual void Clip(double value, vtkDataArray *cellScalars, 
-                    vtkPointLocator *locator, vtkCellArray *connectivity,
+                    vtkIncrementalPointLocator *locator, vtkCellArray *connectivity,
                     vtkPointData *inPd, vtkPointData *outPd,
                     vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd, 
                     int insideOut) = 0;

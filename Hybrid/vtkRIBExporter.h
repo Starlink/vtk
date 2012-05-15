@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRIBExporter.h,v $
+  Module:    vtkRIBExporter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,7 @@ class VTK_HYBRID_EXPORT vtkRIBExporter : public vtkExporter
 {
 public:
   static vtkRIBExporter *New();
-  vtkTypeRevisionMacro(vtkRIBExporter,vtkExporter);
+  vtkTypeMacro(vtkRIBExporter,vtkExporter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

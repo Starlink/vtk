@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricFunctionSource.cxx,v $
+  Module:    vtkParametricFunctionSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -27,9 +27,8 @@
 #include "vtkInformationVector.h"
 
 #include <math.h>
-#include <vtkstd/string>
+#include <string>
 
-vtkCxxRevisionMacro(vtkParametricFunctionSource, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkParametricFunctionSource);
 vtkCxxSetObjectMacro(vtkParametricFunctionSource,ParametricFunction,vtkParametricFunction);
 
@@ -627,7 +626,7 @@ void vtkParametricFunctionSource::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "No Parametric function defined\n";
     }
 
-  vtkstd::string s;
+  std::string s;
   switch ( this->ScalarMode )
   {
   case SCALAR_NONE:

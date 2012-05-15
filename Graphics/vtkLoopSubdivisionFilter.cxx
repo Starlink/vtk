@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLoopSubdivisionFilter.cxx,v $
+  Module:    vtkLoopSubdivisionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkLoopSubdivisionFilter, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkLoopSubdivisionFilter);
 
 static double LoopWeights[4] =

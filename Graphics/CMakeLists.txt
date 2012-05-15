@@ -3,14 +3,20 @@ SET(UKIT GRAPHICS)
 SET(KIT_TCL_LIBS vtkFilteringTCL)
 SET(KIT_PYTHON_LIBS vtkFilteringPythonD)
 SET(KIT_JAVA_LIBS vtkFilteringJava)
-SET(KIT_LIBS vtkFiltering vtkverdict )
+IF(JAVA_AWT_LIBRARY)
+  SET(KIT_JAVA_LIBS ${KIT_JAVA_LIBS} ${JAVA_AWT_LIBRARY})
+ENDIF(JAVA_AWT_LIBRARY)
+SET(KIT_INTERFACE_LIBRARIES vtkFiltering)
+SET(KIT_LIBS vtkverdict )
 SET( Kit_SRCS
+vtkAnnotationLink.cxx
 vtkAppendCompositeDataLeaves.cxx
 vtkAppendFilter.cxx
 vtkAppendPolyData.cxx
 vtkAppendSelection.cxx
 vtkApproximatingSubdivisionFilter.cxx
 vtkArcSource.cxx
+vtkAreaContourSpectrumFilter.cxx
 vtkArrayCalculator.cxx
 vtkArrowSource.cxx
 vtkAssignAttribute.cxx
@@ -20,6 +26,7 @@ vtkBandedPolyDataContourFilter.cxx
 vtkBlankStructuredGrid.cxx
 vtkBlankStructuredGridWithImage.cxx
 vtkBlockIdScalars.cxx
+vtkBooleanOperationPolyDataFilter.cxx
 vtkBoxClipDataSet.cxx
 vtkBrownianPoints.cxx
 vtkButterflySubdivisionFilter.cxx
@@ -27,11 +34,17 @@ vtkButtonSource.cxx
 vtkCellCenters.cxx
 vtkCellDataToPointData.cxx
 vtkCellDerivatives.cxx
+vtkCellLocatorInterpolatedVelocityField.cxx
+vtkCellQuality.cxx
+vtkCenterOfMass.cxx
 vtkCleanPolyData.cxx
+vtkClipClosedSurface.cxx
+vtkClipConvexPolyData.cxx
 vtkClipDataSet.cxx
 vtkClipHyperOctree.cxx
 vtkClipPolyData.cxx
 vtkClipVolume.cxx
+vtkCoincidentPoints.cxx
 vtkCompositeDataGeometryFilter.cxx
 vtkCompositeDataProbeFilter.cxx
 vtkConeSource.cxx
@@ -49,6 +62,8 @@ vtkDashedStreamLine.cxx
 vtkDataObjectGenerator.cxx
 vtkDataObjectToDataSetFilter.cxx
 vtkDataSetEdgeSubdivisionCriterion.cxx
+vtkDataSetGradient.cxx
+vtkDataSetGradientPrecompute.cxx
 vtkDataSetSurfaceFilter.cxx
 vtkDataSetToDataObjectFilter.cxx
 vtkDataSetTriangleFilter.cxx
@@ -56,11 +71,13 @@ vtkDecimatePolylineFilter.cxx
 vtkDecimatePro.cxx
 vtkDelaunay2D.cxx
 vtkDelaunay3D.cxx
+vtkDensifyPolyData.cxx
 vtkDicer.cxx
 vtkDijkstraGraphGeodesicPath.cxx
 vtkDijkstraImageGeodesicPath.cxx
 vtkDiscreteMarchingCubes.cxx
 vtkDiskSource.cxx
+vtkDistancePolyDataFilter.cxx
 vtkEdgePoints.cxx
 vtkEdgeSubdivisionCriterion.cxx
 vtkElevationFilter.cxx
@@ -76,13 +93,14 @@ vtkExtractGrid.cxx
 vtkExtractLevel.cxx
 vtkExtractPolyDataGeometry.cxx
 vtkExtractRectilinearGrid.cxx
-vtkExtractSelectionBase.cxx
 vtkExtractSelectedBlock.cxx
 vtkExtractSelectedFrustum.cxx
 vtkExtractSelectedIds.cxx
 vtkExtractSelectedLocations.cxx
 vtkExtractSelectedPolyDataIds.cxx
+vtkExtractSelectedRows.cxx
 vtkExtractSelectedThresholds.cxx
+vtkExtractSelectionBase.cxx
 vtkExtractSelection.cxx
 vtkExtractTemporalFieldData.cxx
 vtkExtractTensorComponents.cxx
@@ -100,6 +118,8 @@ vtkGlyphSource2D.cxx
 vtkGradientFilter.cxx
 vtkGraphGeodesicPath.cxx
 vtkGraphLayoutFilter.cxx
+vtkGraphToPoints.cxx
+vtkGraphToPolyData.cxx
 vtkGridSynchronizedTemplates3D.cxx
 vtkHedgeHog.cxx
 vtkHierarchicalDataExtractDataSets.cxx
@@ -121,10 +141,13 @@ vtkHyperStreamline.cxx
 vtkIconGlyphFilter.cxx
 vtkIdFilter.cxx
 vtkImageDataGeometryFilter.cxx
+vtkImageDataToPointSet.cxx
 vtkImageMarchingCubes.cxx
+vtkImplicitPolyDataDistance.cxx
 vtkImplicitTextureCoords.cxx
 vtkInterpolateDataSetAttributes.cxx
 vtkInterpolatingSubdivisionFilter.cxx
+vtkIntersectionPolyDataFilter.cxx
 vtkKdTreeSelector.cxx
 vtkLevelIdScalars.cxx
 vtkLinearExtrusionFilter.cxx
@@ -139,12 +162,14 @@ vtkMaskFields.cxx
 vtkMaskPoints.cxx
 vtkMaskPolyData.cxx
 vtkMassProperties.cxx
+vtkMatrixMathFilter.cxx
 vtkMergeCells.cxx
 vtkMergeDataObjectFilter.cxx
 vtkMergeFields.cxx
 vtkMergeFilter.cxx
 vtkMeshQuality.cxx
 vtkModelMetadata.cxx
+vtkModifiedBSPTree.cxx
 vtkMultiBlockDataGroupFilter.cxx
 vtkMultiBlockMergeFilter.cxx
 vtkMultiThreshold.cxx
@@ -163,7 +188,9 @@ vtkPolyDataConnectivityFilter.cxx
 vtkPolyDataNormals.cxx
 vtkPolyDataPointSampler.cxx
 vtkPolyDataStreamer.cxx
+vtkPolyDataToReebGraphFilter.cxx
 vtkProbeFilter.cxx
+vtkProbePolyhedron.cxx
 vtkProbeSelectedLocations.cxx
 vtkProgrammableAttributeDataFilter.cxx
 vtkProgrammableDataObjectSource.cxx
@@ -173,21 +200,27 @@ vtkProgrammableSource.cxx
 vtkProjectedTexture.cxx
 vtkQuadraturePointInterpolator.cxx
 vtkQuadraturePointsGenerator.cxx
-vtkQuadraturePointStatistics.cxx
 vtkQuadratureSchemeDictionaryGenerator.cxx
 vtkQuadricClustering.cxx
 vtkQuadricDecimation.cxx
 vtkQuantizePolyDataPoints.cxx
+vtkQuadRotationalExtrusionFilter.cxx
 vtkRandomAttributeGenerator.cxx
 vtkRearrangeFields.cxx
 vtkRectangularButtonSource.cxx
 vtkRectilinearGridClip.cxx
 vtkRectilinearGridGeometryFilter.cxx
+vtkRectilinearGridToPointSet.cxx
 vtkRectilinearGridToTetrahedra.cxx
 vtkRectilinearSynchronizedTemplates.cxx
 vtkRecursiveDividingCubes.cxx
+vtkReebGraphSimplificationFilter.cxx
+vtkReebGraphSurfaceSkeletonFilter.cxx
+vtkReebGraphVolumeSkeletonFilter.cxx
 vtkReflectionFilter.cxx
 vtkRegularPolygonSource.cxx
+vtkResliceCursor.cxx
+vtkResliceCursorPolyDataAlgorithm.cxx
 vtkReverseSense.cxx
 vtkRibbonFilter.cxx
 vtkRotationalExtrusionFilter.cxx
@@ -195,7 +228,6 @@ vtkRotationFilter.cxx
 vtkRuledSurfaceFilter.cxx
 vtkSectorSource.cxx
 vtkSelectEnclosedPoints.cxx
-vtkSelectionLink.cxx
 vtkSelectionSource.cxx
 vtkSelectPolyData.cxx
 vtkShrinkFilter.cxx
@@ -225,12 +257,14 @@ vtkSuperquadricSource.cxx
 vtkSynchronizedTemplates2D.cxx
 vtkSynchronizedTemplates3D.cxx
 vtkSynchronizedTemplatesCutter3D.cxx
+vtkTableBasedClipDataSet.cxx
 vtkTableToPolyData.cxx
 vtkTableToStructuredGrid.cxx
 vtkTemporalPathLineFilter.cxx
 vtkTemporalStatistics.cxx
 vtkTensorGlyph.cxx
 vtkTessellatorFilter.cxx
+vtkTessellatedBoxSource.cxx
 vtkTextSource.cxx
 vtkTexturedSphereSource.cxx
 vtkTextureMapToCylinder.cxx
@@ -249,21 +283,24 @@ vtkTriangularTCoords.cxx
 vtkTubeFilter.cxx
 vtkUncertaintyTubeFilter.cxx
 vtkUnstructuredGridGeometryFilter.cxx
+vtkUnstructuredGridToReebGraphFilter.cxx
 vtkVectorDot.cxx
 vtkVectorNorm.cxx
 vtkVertexGlyphFilter.cxx
+vtkVolumeContourSpectrumFilter.cxx
 vtkVoxelContoursToSurfaceFilter.cxx
 vtkWarpLens.cxx
 vtkWarpScalar.cxx
 vtkWarpTo.cxx
 vtkWarpVector.cxx
 vtkWindowedSincPolyDataFilter.cxx
+vtkYoungsMaterialInterface.cxx
 )
 SET_SOURCE_FILES_PROPERTIES(
 vtkApproximatingSubdivisionFilter
 vtkButtonSource
 vtkDicer
-vtkEdgeSubdivisionCriterion.cxx 
+vtkEdgeSubdivisionCriterion.cxx
 vtkExtractSelectionBase
 vtkGeodesicPath
 vtkGraphGeodesicPath
@@ -271,11 +308,53 @@ vtkInterpolatingSubdivisionFilter
 vtkStreamer
 ABSTRACT
 )
+
+IF(VTK_USE_BOOST)
+  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkReebGraphToJoinSplitTreeFilter.cxx
+    )
+ENDIF(VTK_USE_BOOST)
+
+# Add Matlab Engine and Matlab Mex related files.
+IF(VTK_USE_MATLAB_MEX)
+  INCLUDE(${MATLAB_MEX_USE_FILE})
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkMatlabMexAdapter.cxx
+    vtkMatlabEngineInterface.cxx
+    vtkMatlabEngineFilter.cxx
+  )
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkMatlabMexAdapter.cxx
+    WRAP_EXCLUDE
+  )
+  SET(KIT_LIBS ${KIT_LIBS} ${MEX_LIBRARIES} ${MATLAB_ENGINE_LIBRARIES})
+ENDIF(VTK_USE_MATLAB_MEX)
+
+# Add Gnu R interface related files.
+IF(VTK_USE_GNU_R)
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkRRandomTableSource.cxx
+    vtkRCalculatorFilter.cxx
+    vtkRInterface.cxx
+    vtkRAdapter.cxx
+  )
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkRAdapter.cxx
+    WRAP_EXCLUDE
+  )
+
+  SET(KIT_LIBS ${KIT_LIBS} ${R_LIBRARIES})
+
+ENDIF(VTK_USE_GNU_R)
+
 SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS)
 SET(Kit_PYTHON_EXTRA_SRCS)
-SET(Kit_JAVA_EXTRA_SRCS)
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
 SET(KIT_JAVA_DEPS)

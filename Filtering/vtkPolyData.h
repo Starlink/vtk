@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyData.h,v $
+  Module:    vtkPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -74,7 +74,7 @@ class VTK_FILTERING_EXPORT vtkPolyData : public vtkPointSet
 public:
   static vtkPolyData *New();
 
-  vtkTypeRevisionMacro(vtkPolyData,vtkPointSet);
+  vtkTypeMacro(vtkPolyData,vtkPointSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -405,6 +405,40 @@ public:
   static vtkPolyData* GetData(vtkInformationVector* v, int i=0);
   //ETX
 
+//BTX
+  // Description:
+  // Scalar field critical point classification (for manifold 2D meshes).
+  // Reference: J. Milnor "Morse Theory", Princeton University Press, 1963.
+  //     
+  // Given a pointId and an attribute representing a scalar field, this member 
+  // returns the index of the critical point:
+  // vtkPolyData::MINIMUM (index 0): local minimum;
+  // vtkPolyData::SADDLE  (index 1): local saddle;
+  // vtkPolyData::MAXIMUM (index 2): local maximum.
+  //
+  // Other returned values are:
+  // vtkPolyData::REGULAR_POINT: regular point (the gradient does not vanish);
+  // vtkPolyData::ERR_NON_MANIFOLD_STAR: the star of the considered vertex is
+  // not manifold (could not evaluate the index)
+  // vtkPolyData::ERR_INCORRECT_FIELD: the number of entries in the scalar field
+  // array is different form the number of vertices in the mesh.
+  // vtkPolyData::ERR_NO_SUCH_FIELD: the specified scalar field does not exist.
+  enum
+    {
+    ERR_NO_SUCH_FIELD = -4,
+    ERR_INCORRECT_FIELD = -3,
+    ERR_NON_MANIFOLD_STAR = -2,
+    REGULAR_POINT = -1,
+    MINIMUM = 0,
+    SADDLE = 1,
+    MAXIMUM = 2
+    };
+//ETX
+  int GetScalarFieldCriticalIndex (vtkIdType pointId, 
+                                   vtkDataArray *scalarField);
+  int GetScalarFieldCriticalIndex (vtkIdType pointId, int fieldId);
+  int GetScalarFieldCriticalIndex (vtkIdType pointId, const char* fieldName);
+
 protected:
   vtkPolyData();
   ~vtkPolyData();
@@ -449,6 +483,8 @@ private:
   // For legacy compatibility. Do not use.
   void GetCellNeighbors(vtkIdType cellId, vtkIdList& ptIds, vtkIdList& cellIds)
     {this->GetCellNeighbors(cellId, &ptIds, &cellIds);}
+
+  void Cleanup();
 
 private:
   vtkPolyData(const vtkPolyData&);  // Not implemented.

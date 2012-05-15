@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLDataReader.h,v $
+  Module:    vtkXMLDataReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_IO_EXPORT vtkXMLDataReader : public vtkXMLReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLDataReader,vtkXMLReader);
+  vtkTypeMacro(vtkXMLDataReader,vtkXMLReader);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -118,7 +118,7 @@ protected:
   // The observer to report progress from reading data from XMLParser.
   vtkCallbackCommand* DataProgressObserver;  
 
-  // Specify the last time step read, usefull to know if we need to rearead data
+  // Specify the last time step read, useful to know if we need to rearead data
   // //PointData
   int *PointDataTimeStep;
   unsigned long *PointDataOffset;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPReflectionFilter.h,v $
+  Module:    vtkPReflectionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_PARALLEL_EXPORT vtkPReflectionFilter : public vtkReflectionFilter
 {
 public:
   static vtkPReflectionFilter* New();
-  vtkTypeRevisionMacro(vtkPReflectionFilter, vtkReflectionFilter);
+  vtkTypeMacro(vtkPReflectionFilter, vtkReflectionFilter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

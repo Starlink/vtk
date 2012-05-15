@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeTextureMapper3D.cxx,v $
+  Module:    vtkVolumeTextureMapper3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkVolumeProperty.h"
 #include "vtkVolumeRenderingFactory.h"
 
-vtkCxxRevisionMacro(vtkVolumeTextureMapper3D, "$Revision: 1.13 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -82,7 +81,7 @@ void vtkVolumeTextureMapper3DComputeScalars( T *dataPtr,
   me->GetVolumeDimensions( outputDimensions );
   me->GetVolumeSpacing( outputSpacing );
 
-  int components = input->GetNumberOfScalarComponents();
+  int components = me->GetNumberOfScalarComponents(input);
 
   double wx, wy, wz;
   double fx, fy, fz;
@@ -435,7 +434,7 @@ void vtkVolumeTextureMapper3DComputeGradients( T *dataPtr,
   sampleRate[1] = outputSpacing[1] / static_cast<double>(spacing[1]);
   sampleRate[2] = outputSpacing[2] / static_cast<double>(spacing[2]);
  
-  int components = input->GetNumberOfScalarComponents();
+  int components = me->GetNumberOfScalarComponents(input);
  
   int dim[3];
   input->GetDimensions(dim);
@@ -665,22 +664,29 @@ vtkVolumeTextureMapper3D::vtkVolumeTextureMapper3D()
   this->VolumeSize                    = 0;
   this->VolumeComponents              = 0;
   this->VolumeSpacing[0] = this->VolumeSpacing[1] = this->VolumeSpacing[2] = 0;
+  this->VolumeDimensions[0]=0;
+  this->VolumeDimensions[1]=0;
+  this->VolumeDimensions[2]=0;
   
   this->SampleDistance                = 1.0;
   this->ActualSampleDistance          = 1.0;
   
   this->RenderMethod                  = vtkVolumeTextureMapper3D::NO_METHOD;
-  this->PreferredRenderMethod         = vtkVolumeTextureMapper3D::FRAGMENT_PROGRAM_METHOD;
+  this->PreferredRenderMethod         =
+    vtkVolumeTextureMapper3D::FRAGMENT_PROGRAM_METHOD;
+  
+  this->UseCompressedTexture          = false;
+  this->SupportsNonPowerOfTwoTextures = false;
 }
 
 //-----------------------------------------------------------------------------
 vtkVolumeTextureMapper3D::~vtkVolumeTextureMapper3D()
 {
-    delete [] this->PolygonBuffer;
-    delete [] this->IntersectionBuffer;
-    delete [] this->Volume1;
-    delete [] this->Volume2;
-    delete [] this->Volume3;
+  delete [] this->PolygonBuffer;
+  delete [] this->IntersectionBuffer;
+  delete [] this->Volume1;
+  delete [] this->Volume2;
+  delete [] this->Volume3;
 }
 
 
@@ -1029,19 +1035,49 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
   // How big does the Volume need to be?
   int dim[3];
   input->GetDimensions(dim);
+  int cellFlag;
 
-  int powerOfTwoDim[3];
- 
-  for ( int i = 0; i < 3; i++ )
+  vtkDataArray *scalarArray = this->GetScalars(input,this->ScalarMode,
+                                               this->ArrayAccessMode,
+                                               this->ArrayId,
+                                               this->ArrayName,
+                                               cellFlag);
+  if (!scalarArray)
     {
-    powerOfTwoDim[i] = 32;
-    while ( powerOfTwoDim[i] < dim[i] )
+    vtkErrorMacro("No scalars found on input.");
+    return 0;
+    }
+
+  if (cellFlag)
+    {
+    vtkErrorMacro("Can not process Cell Data.");
+    return 0;
+    }
+
+  int components = scalarArray->GetNumberOfComponents();
+  
+  int powerOfTwoDim[3];
+  
+  if(this->SupportsNonPowerOfTwoTextures)
+    {
+     for ( int i = 0; i < 3; i++ )
+       {
+       powerOfTwoDim[i]=dim[i];
+       }
+    }
+  else
+    {
+    for ( int i = 0; i < 3; i++ )
       {
-      powerOfTwoDim[i] *= 2;
+      powerOfTwoDim[i] = 32;
+      while ( powerOfTwoDim[i] < dim[i] )
+        {
+        powerOfTwoDim[i] *= 2;
+        }
       }
     }
  
-  while ( ! this->IsTextureSizeSupported( powerOfTwoDim ) )
+  while ( ! this->IsTextureSizeSupported( powerOfTwoDim,components ) )
     {
     if ( powerOfTwoDim[0] >= powerOfTwoDim[1] &&
          powerOfTwoDim[0] >= powerOfTwoDim[2] )
@@ -1060,8 +1096,6 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
     }
  
   int neededSize = powerOfTwoDim[0] * powerOfTwoDim[1] * powerOfTwoDim[2];
- 
-  int components = input->GetNumberOfScalarComponents();
  
   // What is the spacing?
   double spacing[3];
@@ -1100,7 +1134,7 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
  
   // Find the scalar range
   double scalarRange[2];
-  input->GetPointData()->GetScalars()->GetRange(scalarRange, components-1);
+  scalarArray->GetRange(scalarRange, components-1);
  
   // Is the difference between max and min less than 4096? If so, and if
   // the data is not of float or double type, use a simple offset mapping.
@@ -1113,7 +1147,7 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
  
   int arraySizeNeeded;
  
-  int scalarType = input->GetScalarType();
+  int scalarType = scalarArray->GetDataType();
 
   if ( scalarType == VTK_FLOAT ||
        scalarType == VTK_DOUBLE ||
@@ -1149,7 +1183,7 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
 
 
   // Transfer the input volume to the RGBA volume
-  void *dataPtr = input->GetScalarPointer();
+  void *dataPtr = scalarArray->GetVoidPointer(0);
 
 
   switch ( scalarType )
@@ -1207,7 +1241,7 @@ int vtkVolumeTextureMapper3D::UpdateColorLookup( vtkVolume *vol )
     }
 
   // How many components?
-  int components = input->GetNumberOfScalarComponents();
+  int components = this->GetNumberOfScalarComponents(input);
 
   // Has the sample distance changed?
   if ( this->SavedSampleDistance != this->ActualSampleDistance )
@@ -1301,7 +1335,18 @@ int vtkVolumeTextureMapper3D::UpdateColorLookup( vtkVolume *vol )
 
   // Find the scalar range
   double scalarRange[2];
-  input->GetPointData()->GetScalars()->GetRange(scalarRange, components-1);
+  int cellFlag;
+  vtkDataArray *scalarArray = this->GetScalars(input,this->ScalarMode,
+                                               this->ArrayAccessMode,
+                                               this->ArrayId,
+                                               this->ArrayName,
+                                               cellFlag);
+  if (!scalarArray)
+    {
+    vtkErrorMacro("No scalars found on input.");
+    return 0;
+    }
+  scalarArray->GetRange(scalarRange, components-1);
   
   int arraySizeNeeded = this->ColorTableSize;
 
@@ -1476,7 +1521,27 @@ void vtkVolumeTextureMapper3D::PrintSelf(ostream& os, vtkIndent indent)
      << this->VolumeDimensions[1] << " " << this->VolumeDimensions[2] << endl;
   os << indent << "VolumeSpacing: " << this->VolumeSpacing[0] << " "
      << this->VolumeSpacing[1] << " " << this->VolumeSpacing[2] << endl;
+  
+  os << indent << "UseCompressedTexture: " << this->UseCompressedTexture
+     << endl;
 }
 
+//-----------------------------------------------------------------------------
+int vtkVolumeTextureMapper3D::GetNumberOfScalarComponents(vtkImageData *input)
+{
+  int cellFlag;
+  vtkDataArray *scalarArray = this->GetScalars(input,this->ScalarMode,
+                                               this->ArrayAccessMode,
+                                               this->ArrayId,
+                                               this->ArrayName,
+                                               cellFlag);
+  if (!scalarArray)
+    {
+    vtkErrorMacro("No scalars found on input.");
+    return 0;
+    }
+  return scalarArray->GetNumberOfComponents();
+}
+//-----------------------------------------------------------------------------
 
 

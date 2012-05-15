@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtBarChartView.cxx,v $
+  Module:    vtkQtBarChartView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,18 +26,18 @@
 #include "vtkQtChartHelpFormatter.h"
 #include "vtkQtChartMouseSelection.h"
 #include "vtkQtChartSeriesModelCollection.h"
+#include "vtkQtChartSeriesOptionsModelCollection.h"
 #include "vtkQtChartSeriesSelectionHandler.h"
 #include "vtkQtChartWidget.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkQtBarChartView, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkQtBarChartView);
 
 //----------------------------------------------------------------------------
 vtkQtBarChartView::vtkQtBarChartView()
 {
   // Get the chart widget from the base class.
-  vtkQtChartWidget* chart = this->GetChartWidget();
+  vtkQtChartWidget* chart = qobject_cast<vtkQtChartWidget*>(this->GetWidget());
   vtkQtChartArea* area = chart->getChartArea();
 
   // Create the bar chart and model. Add them to the chart between the
@@ -45,6 +45,7 @@ vtkQtBarChartView::vtkQtBarChartView()
   this->BarChart = new vtkQtBarChart();
   this->BarModel = new vtkQtChartSeriesModelCollection(this->BarChart);
   this->BarChart->setModel(this->BarModel);
+  this->BarChart->setOptionsModel(this->GetChartOptionsModel());
   area->insertLayer(area->getAxisLayerIndex(), this->BarChart);
 }
 
@@ -102,6 +103,18 @@ void vtkQtBarChartView::AddChartSelectionHandlers(
 vtkQtChartSeriesModelCollection* vtkQtBarChartView::GetChartSeriesModel()
 {
   return this->BarModel;
+}
+
+//----------------------------------------------------------------------------
+vtkQtChartSeriesOptions* vtkQtBarChartView::GetChartSeriesOptions(int idx)
+{
+  return this->BarChart->getSeriesOptions(idx);
+}
+
+//----------------------------------------------------------------------------
+vtkQtChartSeriesLayer* vtkQtBarChartView::GetChartSeriesLayer()
+{
+  return this->BarChart;
 }
 
 //----------------------------------------------------------------------------

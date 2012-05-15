@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    $RCSfile: metaEvent.h,v $
-  Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.4 $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaTypes.h"
 
 #ifndef ITKMetaIO_METAEVENT_H
@@ -37,19 +32,19 @@ namespace METAIO_NAMESPACE {
 
 class METAIO_EXPORT MetaEvent
 {
- 
+
 public:
 
   MetaEvent(){m_Level = -1;};
   virtual ~MetaEvent(){};
 
   virtual void SetCurrentIteration(unsigned int n) {m_CurrentIteration = n;}
-  virtual void StartReading(unsigned int n) 
+  virtual void StartReading(unsigned int n)
     {
     m_NumberOfIterations = n;
     m_Level++;
     };
-  virtual void StopReading() 
+  virtual void StopReading()
     {
     m_Level--;
     };

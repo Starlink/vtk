@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUGFacetReader.h,v $
+  Module:    vtkUGFacetReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,13 +23,13 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkShortArray;
 
 class VTK_IO_EXPORT vtkUGFacetReader : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkUGFacetReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkUGFacetReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -72,8 +72,8 @@ public:
   // Description:
   // Specify a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -89,7 +89,7 @@ protected:
   vtkShortArray *PartColors;
   int PartNumber;
   int Merging;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 private:
   vtkUGFacetReader(const vtkUGFacetReader&);  // Not implemented.
   void operator=(const vtkUGFacetReader&);  // Not implemented.

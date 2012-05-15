@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLRMATGraphSource.cxx,v $
+  Module:    vtkPBGLRMATGraphSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,6 @@
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/collectives/scan.hpp>
 
-vtkCxxRevisionMacro(vtkPBGLRMATGraphSource, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkPBGLRMATGraphSource);
 
 // ----------------------------------------------------------------------
@@ -336,7 +335,7 @@ vtkPBGLRMATGraphSource::RequestData(
     vtkIdType numEdge = output->GetNumberOfEdges();
     boost::mpi::communicator world;
     vtkIdType myStartEdge 
-      = boost::mpi::scan(world, numEdge, vtkstd::plus<vtkIdType>()) - numEdge;
+      = boost::mpi::scan(world, numEdge, std::plus<vtkIdType>()) - numEdge;
 
     vtkSmartPointer<vtkIdTypeArray> edgeIds =
       vtkSmartPointer<vtkIdTypeArray>::New();
