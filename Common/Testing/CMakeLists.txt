@@ -1,11 +1,11 @@
-SUBDIRS(Cxx)
+ADD_SUBDIRECTORY(Cxx)
 
 IF (VTK_WRAP_TCL)
-  SUBDIRS(Tcl)
+  ADD_SUBDIRECTORY(Tcl)
 ENDIF (VTK_WRAP_TCL)
 
 IF (VTK_WRAP_PYTHON)
-  SUBDIRS(Python)
+  ADD_SUBDIRECTORY(Python)
 ENDIF (VTK_WRAP_PYTHON)
 
 IF(PYTHON_EXECUTABLE)
@@ -33,8 +33,10 @@ IF(PYTHON_EXECUTABLE)
     vtkArrayWeights.h
     vtkAssemblyPaths.h
     vtkBoundingBox.h
+    vtkBreakPoint.h
     vtkByteSwap.h
     vtkCallbackCommand.h
+    vtkColor.h
     vtkCommand.h
     vtkCommonInformationKeyManager.h
     vtkContainer.h
@@ -63,6 +65,7 @@ IF(PYTHON_EXECUTABLE)
     vtkLargeInteger.h
     vtkLinkedList.h
     vtkLinkedListIterator.h
+    vtkNew.h
     vtkOStrStreamWrapper.h
     vtkOStreamWrapper.h
     vtkObject.h
@@ -74,9 +77,9 @@ IF(PYTHON_EXECUTABLE)
     vtkPlaneCollection.h
     vtkProcessStatistics.h
     vtkPropCollection.h
-    vtkPython.h
-    vtkPythonUtil.h
+    vtkPythonCommand.h
     vtkRayCastStructures.h
+    vtkRect.h
     vtkRungeKutta2.h 
     vtkSetGet.h
     vtkSmartPointer.h

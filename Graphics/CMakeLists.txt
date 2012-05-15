@@ -4,7 +4,7 @@ SET(KIT_TCL_LIBS vtkFilteringTCL)
 SET(KIT_PYTHON_LIBS vtkFilteringPythonD)
 SET(KIT_JAVA_LIBS vtkFilteringJava)
 IF(JAVA_AWT_LIBRARY)
-  SET(KIT_JAVA_LIBS ${KIT_JAVA_LIBS} ${JAVA_AWT_LIBRARY} ${JAVA_JVM_LIBRARY})
+  SET(KIT_JAVA_LIBS ${KIT_JAVA_LIBS} ${JAVA_AWT_LIBRARY})
 ENDIF(JAVA_AWT_LIBRARY)
 SET(KIT_INTERFACE_LIBRARIES vtkFiltering)
 SET(KIT_LIBS vtkverdict )
@@ -16,6 +16,7 @@ vtkAppendPolyData.cxx
 vtkAppendSelection.cxx
 vtkApproximatingSubdivisionFilter.cxx
 vtkArcSource.cxx
+vtkAreaContourSpectrumFilter.cxx
 vtkArrayCalculator.cxx
 vtkArrowSource.cxx
 vtkAssignAttribute.cxx
@@ -32,11 +33,14 @@ vtkButtonSource.cxx
 vtkCellCenters.cxx
 vtkCellDataToPointData.cxx
 vtkCellDerivatives.cxx
+vtkCellLocatorInterpolatedVelocityField.cxx
+vtkCellQuality.cxx
 vtkCleanPolyData.cxx
+vtkClipClosedSurface.cxx
+vtkClipConvexPolyData.cxx
 vtkClipDataSet.cxx
 vtkClipHyperOctree.cxx
 vtkClipPolyData.cxx
-vtkClipConvexPolyData.cxx
 vtkClipVolume.cxx
 vtkCoincidentPoints.cxx
 vtkCompositeDataGeometryFilter.cxx
@@ -152,12 +156,14 @@ vtkMaskFields.cxx
 vtkMaskPoints.cxx
 vtkMaskPolyData.cxx
 vtkMassProperties.cxx
+vtkMatrixMathFilter.cxx
 vtkMergeCells.cxx
 vtkMergeDataObjectFilter.cxx
 vtkMergeFields.cxx
 vtkMergeFilter.cxx
 vtkMeshQuality.cxx
 vtkModelMetadata.cxx
+vtkModifiedBSPTree.cxx
 vtkMultiBlockDataGroupFilter.cxx
 vtkMultiBlockMergeFilter.cxx
 vtkMultiThreshold.cxx
@@ -176,7 +182,9 @@ vtkPolyDataConnectivityFilter.cxx
 vtkPolyDataNormals.cxx
 vtkPolyDataPointSampler.cxx
 vtkPolyDataStreamer.cxx
+vtkPolyDataToReebGraphFilter.cxx
 vtkProbeFilter.cxx
+vtkProbePolyhedron.cxx
 vtkProbeSelectedLocations.cxx
 vtkProgrammableAttributeDataFilter.cxx
 vtkProgrammableDataObjectSource.cxx
@@ -198,6 +206,9 @@ vtkRectilinearGridGeometryFilter.cxx
 vtkRectilinearGridToTetrahedra.cxx
 vtkRectilinearSynchronizedTemplates.cxx
 vtkRecursiveDividingCubes.cxx
+vtkReebGraphSimplificationFilter.cxx
+vtkReebGraphSurfaceSkeletonFilter.cxx
+vtkReebGraphVolumeSkeletonFilter.cxx
 vtkReflectionFilter.cxx
 vtkRegularPolygonSource.cxx
 vtkReverseSense.cxx
@@ -262,9 +273,11 @@ vtkTriangularTCoords.cxx
 vtkTubeFilter.cxx
 vtkUncertaintyTubeFilter.cxx
 vtkUnstructuredGridGeometryFilter.cxx
+vtkUnstructuredGridToReebGraphFilter.cxx
 vtkVectorDot.cxx
 vtkVectorNorm.cxx
 vtkVertexGlyphFilter.cxx
+vtkVolumeContourSpectrumFilter.cxx
 vtkVoxelContoursToSurfaceFilter.cxx
 vtkWarpLens.cxx
 vtkWarpScalar.cxx
@@ -285,6 +298,14 @@ vtkInterpolatingSubdivisionFilter
 vtkStreamer
 ABSTRACT
 )
+
+IF(VTK_USE_BOOST)
+  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkReebGraphToJoinSplitTreeFilter.cxx
+    )
+ENDIF(VTK_USE_BOOST)
 
 # Add Matlab Engine and Matlab Mex related files.
 IF(VTK_USE_MATLAB_MEX)
@@ -324,13 +345,6 @@ SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS)
 SET(Kit_PYTHON_EXTRA_SRCS)
-SET(Kit_JAVA_EXTRA_WRAP_SRCS
-  vtkJavaProgrammableFilter.cxx
-  )
-SET(Kit_JAVA_EXTRA_SRCS
-  ${Kit_JAVA_EXTRA_WRAP_SRCS}
-  vtkJVMManager.cxx
-  )
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
 SET(KIT_JAVA_DEPS)

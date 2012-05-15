@@ -1,6 +1,6 @@
 SET(KIT Common)
 CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
-  ObjectFactory.cxx
+  TestObjectFactory.cxx
   otherArrays.cxx
   otherTimerLog.cxx
   otherLookupTable.cxx
@@ -12,22 +12,26 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
   TestConditionVariable.cxx
   TestGarbageCollector.cxx
   TestDataArray.cxx
+  TestDataArrayComponentNames.cxx
   TestDirectory.cxx
   TestFastNumericConversion.cxx
   TestMath.cxx
   TestMatrix3x3.cxx
   TestMinimalStandardRandomSequence.cxx
+  TestNew.cxx
+  TestObservers.cxx
   TestPolynomialSolversUnivariate.cxx
   TestSmartPointer.cxx
   TestSortDataArray.cxx
   TestUnicodeStringAPI.cxx
   TestUnicodeStringArrayAPI.cxx
   TestVariantComparison.cxx
-  SystemInformation.cxx
+  TestWeakPointer.cxx
+  TestSystemInformation.cxx
   EXTRA_INCLUDE vtkTestDriver.h
 )
 
-ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
+ADD_EXECUTABLE(${KIT}CxxTests ${Tests} vtkTestNewVar.cxx)
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkCommon)
 
 SET (TestsToRun ${Tests})
@@ -79,17 +83,18 @@ ENDIF(CYGWIN)
 IF(VTK_USE_N_WAY_ARRAYS)
 
   CREATE_TEST_SOURCELIST(ArrayTests ArrayCxxTests.cxx
-    ArrayAPI.cxx
-    ArrayAPIConvenience.cxx
-    ArrayAPIDense.cxx
-    ArrayAPISparse.cxx
-    ArrayBool.cxx
-    ArrayInterpolationDense.cxx
-    ArrayNullValues.cxx
-    ArrayExtents.cxx
-    ArrayUserTypes.cxx
-    ArrayVariants.cxx
-    SparseArrayValidation.cxx
+    TestArrayAPI.cxx
+    TestArrayAPIConvenience.cxx
+    TestArrayAPIDense.cxx
+    TestArrayAPISparse.cxx
+    TestArrayBool.cxx
+    TestArrayInterpolationDense.cxx
+    TestArrayNullValues.cxx
+    TestArrayExtents.cxx
+    TestArrayUserTypes.cxx
+    TestArrayVariants.cxx
+    TestArraySize.cxx
+    TestSparseArrayValidation.cxx
     EXTRA_INCLUDE vtkTestDriver.h
     )
 
@@ -105,9 +110,10 @@ IF(VTK_USE_N_WAY_ARRAYS)
   ENDFOREACH(test)
 
   IF(VTK_USE_BOOST)
-    ADD_EXECUTABLE(ArrayCasting ArrayCasting.cxx)
-    TARGET_LINK_LIBRARIES(ArrayCasting vtkCommon)
-    ADD_TEST(Array-ArrayCasting ${CXX_TEST_PATH}/ArrayCasting)
+    INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+    ADD_EXECUTABLE(TestArrayCasting TestArrayCasting.cxx)
+    TARGET_LINK_LIBRARIES(TestArrayCasting vtkCommon)
+    ADD_TEST(Array-TestArrayCasting ${CXX_TEST_PATH}/TestArrayCasting)
   ENDIF()
 
 ENDIF(VTK_USE_N_WAY_ARRAYS)

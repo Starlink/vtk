@@ -95,6 +95,10 @@ public:
   vtkGetVector2Macro(TimeStepRange, int);
   vtkSetVector2Macro(TimeStepRange, int);
 
+  virtual int ProcessRequest(vtkInformation *request,
+                             vtkInformationVector **inputVector,
+                             vtkInformationVector *outputVector);
+  
 protected:
   vtkXMLReader();
   ~vtkXMLReader();
@@ -218,10 +222,7 @@ protected:
   virtual void SetProgressRange(float* range, int curStep, float* fractions);
   virtual void UpdateProgressDiscrete(float progress);
   float ProgressRange[2];
-
-  virtual int ProcessRequest(vtkInformation *request,
-                             vtkInformationVector **inputVector,
-                             vtkInformationVector *outputVector);
+  
   virtual int RequestData(vtkInformation *request,
                           vtkInformationVector **inputVector,
                           vtkInformationVector *outputVector);
@@ -252,7 +253,7 @@ protected:
   int CurrentTimeStep;
   int NumberOfTimeSteps;
   void SetNumberOfTimeSteps(int num);
-  // buffer for reading timestep from the XML file the lenght is of 
+  // buffer for reading timestep from the XML file the length is of 
   // NumberOfTimeSteps and therefore is always long enough
   int *TimeSteps; 
   // Store the range of time steps
@@ -263,7 +264,7 @@ protected:
   // e.g. PointData/CellData/Points/Cells...
   // See SubClass for details with member vars like PointsTimeStep/PointsOffset
 
-  // Helper function usefull to know if a timestep is found in an array of timestep
+  // Helper function useful to know if a timestep is found in an array of timestep
   static int IsTimeStepInArray(int timestep, int* timesteps, int length);
 
   vtkDataObject* GetCurrentOutput();

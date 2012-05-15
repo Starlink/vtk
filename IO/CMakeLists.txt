@@ -26,6 +26,7 @@ SET(KIT_LIBS vtkDICOMParser vtkNetCDF vtkNetCDF_cxx
 
 SET( Kit_SRCS
 vtkAbstractParticleWriter.cxx
+vtkASCIITextCodec.cxx
 vtkAVSucdReader.cxx
 vtkBMPReader.cxx
 vtkBMPWriter.cxx
@@ -36,6 +37,9 @@ vtkBase64OutputStream.cxx
 vtkBase64Utilities.cxx
 vtkCGMWriter.cxx
 vtkChacoReader.cxx
+vtkCompositeDataReader.cxx
+vtkCompositeDataWriter.cxx
+vtkDatabaseToTableReader.cxx
 vtkDEMReader.cxx
 vtkDICOMImageReader.cxx
 vtkDataCompressor.cxx
@@ -54,11 +58,11 @@ vtkEnSightMasterServerReader.cxx
 vtkEnSightReader.cxx
 vtkFLUENTReader.cxx
 vtkFacetWriter.cxx
-vtkGenericDataObjectReader.cxx
-vtkGenericDataObjectWriter.cxx
 vtkGESignaReader.cxx
 vtkGAMBITReader.cxx
 vtkGaussianCubeReader.cxx
+vtkGenericDataObjectReader.cxx
+vtkGenericDataObjectWriter.cxx
 vtkGenericEnSightReader.cxx
 vtkGenericMovieWriter.cxx
 vtkGlobFileNames.cxx
@@ -107,6 +111,7 @@ vtkParticleReader.cxx
 vtkPolyDataReader.cxx
 vtkPolyDataWriter.cxx
 vtkPostScriptWriter.cxx
+vtkProStarReader.cxx
 vtkRectilinearGridReader.cxx
 vtkRectilinearGridWriter.cxx
 vtkRTXMLPolyDataReader.cxx
@@ -118,6 +123,7 @@ vtkSLACReader.cxx
 vtkSQLDatabase.cxx
 vtkSQLDatabaseSchema.cxx
 vtkSQLiteDatabase.cxx
+vtkSQLiteToTableReader.cxx
 vtkSQLiteQuery.cxx
 vtkSQLQuery.cxx
 vtkSLCReader.cxx
@@ -131,7 +137,11 @@ vtkStructuredPointsReader.cxx
 vtkStructuredPointsWriter.cxx
 vtkTableReader.cxx
 vtkTableWriter.cxx
+vtkTableToDatabaseWriter.cxx
+vtkTableToSQLiteWriter.cxx
 vtkTecplotReader.cxx
+vtkTextCodec.cxx
+vtkTextCodecFactory.cxx
 vtkTIFFReader.cxx
 vtkTIFFWriter.cxx
 vtkTreeReader.cxx
@@ -139,6 +149,8 @@ vtkTreeWriter.cxx
 vtkUGFacetReader.cxx
 vtkUnstructuredGridReader.cxx
 vtkUnstructuredGridWriter.cxx
+vtkUTF8TextCodec.cxx
+vtkUTF16TextCodec.cxx
 vtkVolume16Reader.cxx
 vtkVolumeReader.cxx
 vtkWriter.cxx
@@ -147,6 +159,7 @@ vtkXMLDataParser.cxx
 vtkXMLDataReader.cxx
 vtkXMLDataSetWriter.cxx
 vtkXMLFileReadTester.cxx
+vtkXMLGenericDataObjectReader.cxx
 vtkXMLHierarchicalBoxDataReader.cxx
 vtkXMLHierarchicalDataReader.cxx
 vtkXMLImageDataReader.cxx
@@ -202,6 +215,7 @@ vtkZLibDataCompressor.cxx
 
 SET_SOURCE_FILES_PROPERTIES(
 vtkAbstractParticleWriter
+vtkDatabaseToTableReader
 vtkDataCompressor
 vtkEnSightReader
 vtkGenericMovieWriter
@@ -209,6 +223,9 @@ vtkMoleculeReaderBase
 vtkRowQuery
 vtkSQLDatabase
 vtkSQLQuery
+vtkTableToDatabaseWriter
+vtkTextCodec
+vtkTextCodecFactory
 vtkVolumeReader
 vtkWriter
 vtkXMLCompositeDataReader.cxx
@@ -269,6 +286,10 @@ IF (VTK_USE_FFMPEG_ENCODER)
 
   INCLUDE_DIRECTORIES(${FFMPEG_INCLUDE_DIR})
   SET(Kit_SRCS ${Kit_SRCS} vtkFFMPEGWriter.cxx)
+
+  SET_SOURCE_FILES_PROPERTIES( vtkFFMPEGWriter.cxx
+    PROPERTIES COMPILE_DEFINITIONS __STDC_CONSTANT_MACROS )
+
   SET(KIT_LIBS ${KIT_LIBS}
     ${FFMPEG_avformat_LIBRARY}
     ${FFMPEG_avcodec_LIBRARY}
@@ -314,6 +335,8 @@ IF ( VTK_USE_POSTGRES AND POSTGRES_FOUND )
     ${Kit_SRCS}
     vtkPostgreSQLDatabase.cxx
     vtkPostgreSQLQuery.cxx
+    vtkPostgreSQLToTableReader.cxx
+    vtkTableToPostgreSQLWriter.cxx
   )
   LINK_LIBRARIES( ${POSTGRES_LIBRARIES} )
 ENDIF ( VTK_USE_POSTGRES AND POSTGRES_FOUND )
@@ -340,6 +363,8 @@ IF ( VTK_USE_MYSQL AND MYSQL_FOUND )
     ${Kit_SRCS}
     vtkMySQLDatabase.cxx
     vtkMySQLQuery.cxx
+    vtkMySQLToTableReader.cxx
+    vtkTableToMySQLWriter.cxx
   )
   LINK_LIBRARIES( ${MYSQL_LIBRARY}  ${MYSQL_EXTRA_LIBRARIES} )
 ENDIF ( VTK_USE_MYSQL AND MYSQL_FOUND )

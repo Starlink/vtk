@@ -203,6 +203,16 @@ int vtkThreshold::RequestData(
           }
         newCellPts->InsertId(i,newId);
         }
+      // special handling for polyhedron cells
+      if (vtkUnstructuredGrid::SafeDownCast(input) &&
+          input->GetCellType(cellId) == VTK_POLYHEDRON)
+        {
+        newCellPts->Reset();
+        vtkUnstructuredGrid::SafeDownCast(input)->
+          GetFaceStream(cellId, newCellPts);
+        vtkUnstructuredGrid::ConvertFaceStreamPointIds(
+          newCellPts, pointMap->GetPointer(0));
+        }
       newCellId = output->InsertNextCell(cell->GetCellType(),newCellPts);
       outCD->CopyData(cd,cellId,newCellId);
       newCellPts->Reset();
@@ -340,15 +350,34 @@ int vtkThreshold::ProcessRequest(vtkInformation* request,
     vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
     // get the range of the input if available
-    vtkInformation *fInfo = 
-      vtkDataObject::GetActiveFieldInformation
-      (inInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS, 
-       vtkDataSetAttributes::SCALARS);
+    vtkInformation *fInfo = NULL;
+    vtkDataArray *inscalars = this->GetInputArrayToProcess(0, inputVector);
+    if (inscalars)
+      {
+      vtkInformationVector *miv = inInfo->Get(vtkDataObject::POINT_DATA_VECTOR());
+      for (int index = 0; index < miv->GetNumberOfInformationObjects(); index++)
+        {
+        vtkInformation *mInfo = miv->GetInformationObject(index);
+        const char *minfo_arrayname =
+          mInfo->Get(vtkDataObject::FIELD_ARRAY_NAME());
+        if (minfo_arrayname && !strcmp(minfo_arrayname, inscalars->GetName()))
+          {
+          fInfo = mInfo;
+          break;
+          }
+        }
+      }
+    else
+      {
+      fInfo = vtkDataObject::GetActiveFieldInformation
+        (inInfo, vtkDataObject::FIELD_ASSOCIATION_POINTS,
+         vtkDataSetAttributes::SCALARS);
+      }
     if (!fInfo)
       {
       return 1;
       }
- 
+
     double *range = fInfo->Get(vtkDataObject::PIECE_FIELD_RANGE());
     if (range)
       {

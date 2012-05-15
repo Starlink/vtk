@@ -2429,7 +2429,7 @@ int vtkKdTree::FindClosestPointInSphere(double x, double y, double z,
       int newLocalCloseId = this->_FindClosestPointInRegion(neighbor,
                                                             x, y, z, newDistance2);
       
-      if (newDistance2 < minDistance2)
+      if (newDistance2 < minDistance2 && newDistance2 <= radius*radius)
         {
         minDistance2 = newDistance2;
         localCloseId = newLocalCloseId;

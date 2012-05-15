@@ -69,7 +69,6 @@ public:
   // Have the view show/hide its row headers
   void SetShowHorizontalHeaders(bool);
 
-  //BTX
   enum
     {
     FIELD_DATA = 0,
@@ -79,7 +78,6 @@ public:
     EDGE_DATA = 4,
     ROW_DATA = 5,
     };
-  //ETX
   
   // Description:
   // The field type to copy into the output table.
@@ -151,14 +149,12 @@ public:
   // Apply a view theme to this view.
   virtual void ApplyViewTheme(vtkViewTheme* theme);
 
-  //BTX
   enum
     {
     SELECT_ITEMS = 0,
     SELECT_ROWS,
     SELECT_COLUMNS
     };
-  //ETX
 
   // Description:
   // The selection mode for this view.
@@ -210,11 +206,9 @@ private:
   bool ApplyRowColors;
   char* ColorArrayNameInternal;
 
-//BTX
   vtkSmartPointer<vtkAddMembershipArray> AddSelectedColumn;
   vtkSmartPointer<vtkDataObjectToTable> DataObjectToTable;
   vtkSmartPointer<vtkApplyColors> ApplyColors;
-//ETX
   
   vtkQtTableView(const vtkQtTableView&);  // Not implemented.
   void operator=(const vtkQtTableView&);  // Not implemented.

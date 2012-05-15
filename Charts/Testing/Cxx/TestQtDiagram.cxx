@@ -26,8 +26,7 @@
 #include "vtkBrush.h"
 #include "vtkTextProperty.h"
 #include "vtkOpenGLContextDevice2D.h"
-
-#include "vtkRegressionTestImage.h"
+#include "vtkStdString.h"
 
 #include <QApplication>
 
@@ -76,15 +75,10 @@ int TestQtDiagram( int argc, char * argv [] )
   VTK_CREATE(vtkRenderWindowInteractor, interactor);
   interactor->SetRenderWindow(renderWindow);
   renderWindow->SetMultiSamples(0);
-  renderWindow->Render();
 
-  int retVal = vtkRegressionTestImageThreshold(renderWindow, 15);
-  if( retVal == vtkRegressionTester::DO_INTERACTOR)
-    {
-    interactor->Start();
-    }
-
-  return !retVal;
+  interactor->Initialize();
+  interactor->Start();
+  return EXIT_SUCCESS;
 }
 
 // Make our new derived class to draw a diagram

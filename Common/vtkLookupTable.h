@@ -21,7 +21,7 @@
 // alpha range and generating a table.
 //
 // .SECTION Caveats
-// You need to explicitely call Build() when constructing the LUT by hand.
+// You need to explicitly call Build() when constructing the LUT by hand.
 //
 // .SECTION See Also
 // vtkLogLookupTable vtkWindowLevelLookupTable
@@ -127,6 +127,12 @@ public:
   // [0,1].
   vtkSetVector2Macro(AlphaRange,double);
   vtkGetVector2Macro(AlphaRange,double);
+
+  // Description:
+  // Set the color to use when a NaN (not a number) is encountered.  This is an
+  // RGBA 4-tuple color of doubles in the range [0,1].
+  vtkSetVector4Macro(NanColor, double);
+  vtkGetVector4Macro(NanColor, double);
 
   // Description:
   // Map one value through the lookup table.
@@ -240,6 +246,10 @@ public:
     return (this->GetScale() == VTK_SCALE_LOG10)? 1 : 0;
     }
 
+  // Description:
+  // Get the number of available colors for mapping to.
+  virtual vtkIdType GetNumberOfAvailableColors();
+
 protected:
   vtkLookupTable(int sze=256, int ext=256);
   ~vtkLookupTable();
@@ -251,6 +261,7 @@ protected:
   double SaturationRange[2];
   double ValueRange[2];
   double AlphaRange[2];
+  double NanColor[4];
   int Scale;
   int Ramp;
   vtkTimeStamp InsertTime;

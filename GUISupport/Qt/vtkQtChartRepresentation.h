@@ -39,7 +39,6 @@ public:
   vtkTypeMacro(vtkQtChartRepresentation, vtkQtTableRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
   
-  //BTX
   // Description:
   // Return the series model for this table representation
   vtkQtChartTableSeriesModel* GetSeriesModel();
@@ -51,7 +50,6 @@ public:
   // must be changed before the representation is added to a view.
   void SetOptionsModel(vtkQtChartSeriesOptionsModel*);
   vtkQtChartSeriesOptionsModel* GetOptionsModel();
-  //ETX
 
   // Description:
   // Return the number of series.
@@ -73,12 +71,12 @@ protected:
   vtkQtChartRepresentation();
   ~vtkQtChartRepresentation();
   
-  // Decription:
+  // Description:
   // Adds the representation to the view.
   // This is called from vtkView::AddRepresentation().
   bool AddToView(vtkView* view);
   
-  // Decription:
+  // Description:
   // Removes the representation to the view.
   // This is called from vtkView::RemoveRepresentation().
   bool RemoveFromView(vtkView* view);
@@ -87,10 +85,8 @@ protected:
 
 private:
 
-  //BTX
   class vtkInternal;
   vtkInternal* Internal;
-  //ETX
 
   vtkQtChartRepresentation(const vtkQtChartRepresentation&);  // Not implemented.
   void operator=(const vtkQtChartRepresentation&);  // Not implemented.

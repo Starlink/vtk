@@ -23,6 +23,7 @@
 #define __vtkBlockItem_h
 
 #include "vtkContextItem.h"
+#include "vtkStdString.h"    // For vtkStdString ivars
 
 class vtkContext2D;
 
@@ -66,20 +67,24 @@ public:
 
   // Description:
   // Set the block label.
-  vtkSetStringMacro(Label);
+  virtual void SetLabel(const vtkStdString &label);
 
   // Description:
   // Get the block label.
-  vtkGetStringMacro(Label);
+  virtual vtkStdString GetLabel();
 
   // Description:
-  // Set the dimensions of the block, elements 0 and 1 are the x and y coordinate
-  // of the bottom corner. Elements 2 and 3 are the width and height.
+  // Set the dimensions of the block, elements 0 and 1 are the x and y
+  // coordinate of the bottom corner. Elements 2 and 3 are the width and
+  // height.
+  // Initial value is (0,0,0,0).
   vtkSetVector4Macro(Dimensions, int);
 
   // Description:
-  // Get the dimensions of the block, elements 0 and 1 are the x and y coordinate
-  // of the bottom corner. Elements 2 and 3 are the width and height.
+  // Get the dimensions of the block, elements 0 and 1 are the x and y
+  // coordinate of the bottom corner. Elements 2 and 3 are the width and
+  // height.
+  // Initial value is (0,0,0,0)
   vtkGetVector4Macro(Dimensions, int);
 
 //BTX
@@ -95,7 +100,7 @@ protected:
 
   float LastPosition[2];
 
-  char *Label;
+  vtkStdString Label;
 
   bool MouseOver;
   int MouseButtonPressed;

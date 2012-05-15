@@ -402,6 +402,7 @@ void vtkRenderer::Render(void)
       }
     this->TimeFactor = this->AllocatedRenderTime/this->LastRenderTimeInSeconds;
     }
+  this->InvokeEvent(vtkCommand::EndEvent,NULL);
 }
 
 // ----------------------------------------------------------------------------
@@ -585,7 +586,6 @@ int vtkRenderer::UpdateGeometry()
 
   if ( this->PropArrayCount == 0 )
     {
-    this->InvokeEvent(vtkCommand::EndEvent,NULL);
     return 0;
     }
 
@@ -595,7 +595,6 @@ int vtkRenderer::UpdateGeometry()
     //we are doing a visible polygon selection instead of a normal render
     int ret = this->UpdateGeometryForSelection();
 
-    this->InvokeEvent(vtkCommand::EndEvent,NULL);
     this->RenderTime.Modified();
 
     vtkDebugMacro( << "Rendered " <<
@@ -612,7 +611,6 @@ int vtkRenderer::UpdateGeometry()
     // Delegate the rendering of the props to the selector itself.
     this->NumberOfPropsRendered = this->Selector->Render(this,
       this->PropArray, this->PropArrayCount);
-    this->InvokeEvent(vtkCommand::EndEvent,NULL);
     this->RenderTime.Modified();
     vtkDebugMacro("Rendered " << this->NumberOfPropsRendered << " actors" );
     return this->NumberOfPropsRendered;
@@ -662,7 +660,6 @@ int vtkRenderer::UpdateGeometry()
       this->PropArray[i]->RenderOverlay(this);
     }
 
-  this->InvokeEvent(vtkCommand::EndEvent,NULL);
   this->RenderTime.Modified();
 
   vtkDebugMacro( << "Rendered " <<
@@ -1357,6 +1354,12 @@ void vtkRenderer::WorldToView(double &x, double &y, double &z)
   double     view[4];
 
   // get the perspective transformation from the active camera
+  if (!this->ActiveCamera)
+    {
+    vtkErrorMacro("WorldToView: no active camera, cannot compute world to view, returning 0,0,0");
+    x = y = z = 0.0;
+    return;
+    }
   matrix->DeepCopy(this->ActiveCamera->
                 GetCompositeProjectionTransformMatrix(
                   this->GetTiledAspectRatio(),0,1));

@@ -55,7 +55,6 @@ public:
   // this->ui->box->layout()->addWidget(this->View->GetWidget());
   virtual QWidget* GetWidget();
 
-  //BTX
   enum
     {
     FIELD_DATA = 0,
@@ -65,7 +64,6 @@ public:
     EDGE_DATA = 4,
     ROW_DATA = 5,
     };
-  //ETX
   
   // Description:
   // The field type to copy into the output table.
@@ -85,22 +83,10 @@ protected:
   vtkQtRecordView();
   ~vtkQtRecordView();
     
-  // Description:
-  // Connects the algorithm output to the internal pipeline.
-  // This view only supports a single representation.
-  virtual void AddInputConnection(
-    vtkAlgorithmOutput* conn,
-    vtkAlgorithmOutput* selectionConn);
-  
-  // Description:
-  // Removes the algorithm output from the internal pipeline.
-  virtual void RemoveInputConnection(
-    vtkAlgorithmOutput* conn,
-    vtkAlgorithmOutput* selectionConn);
+  virtual void AddRepresentationInternal(vtkDataRepresentation* rep);
+  virtual void RemoveRepresentationInternal(vtkDataRepresentation* rep);
     
-//BTX
   vtkSmartPointer<vtkDataObjectToTable> DataObjectToTable;
-//ETX
 
   QPointer<QTextEdit> TextWidget;
 

@@ -190,7 +190,7 @@ public:
   // The \c type arg is one of the VTK type constants recognized by the
   // vtkTemplateMacro (VTK_FLOAT, VTK_INT, etc.).  \c maxlength is measured
   // in number of values (as opposed to number of bytes) and is the maxmum
-  // lenght of the data to receive.  If the maxlength is less than the length
+  // length of the data to receive.  If the maxlength is less than the length
   // of the message sent by the sender, an error will be flagged. Once a
   // message is received, use the GetCount() method to determine the actual
   // size of the data received.
@@ -253,6 +253,9 @@ public:
   // arguments in order for it to complete.
   int Broadcast(int *data, vtkIdType length, int srcProcessId) {
     return this->BroadcastVoidArray(data, length, VTK_INT, srcProcessId);
+  }
+  int Broadcast(unsigned int *data, vtkIdType length, int srcProcessId) {
+    return this->BroadcastVoidArray(data, length, VTK_UNSIGNED_INT, srcProcessId);
   }
   int Broadcast(unsigned long *data, vtkIdType length, int srcProcessId) {
     return this->BroadcastVoidArray(data,length,VTK_UNSIGNED_LONG,srcProcessId);
@@ -389,6 +392,10 @@ public:
                                   offsets, VTK_ID_TYPE, destProcessId);
   }
 #endif
+  int GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+              vtkIdType *recvLengths, vtkIdType *offsets, int destProcessId);
+  int GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+              int destProcessId);
 
   // Description:
   // Scatter takes an array in the process with id \c srcProcessId and
@@ -581,6 +588,9 @@ public:
                                      offsets, VTK_ID_TYPE);
   }
 #endif
+  int AllGatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+                 vtkIdType *recvLengths, vtkIdType *offsets);
+  int AllGatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer);
 
   // Description:
   // Reduce an array to the given destination process.  This version of Reduce
@@ -590,6 +600,11 @@ public:
              vtkIdType length, int operation, int destProcessId) {
     return this->ReduceVoidArray(sendBuffer, recvBuffer, length,
                                  VTK_INT, operation, destProcessId);
+  }
+  int Reduce(const unsigned int *sendBuffer, unsigned int *recvBuffer,
+             vtkIdType length, int operation, int destProcessId) {
+    return this->ReduceVoidArray(sendBuffer, recvBuffer, length,
+                                 VTK_UNSIGNED_INT, operation, destProcessId);
   }
   int Reduce(const unsigned long *sendBuffer, unsigned long *recvBuffer,
              vtkIdType length, int operation, int destProcessId) {
@@ -786,6 +801,7 @@ public:
 
   static void SetUseCopy(int useCopy);
 
+//BTX
   // Description:
   // Determine the global bounds for a set of processes.  BBox is
   // initially set (outside of the call to the local bounds of the process
@@ -794,9 +810,8 @@ public:
   // If either rightHasBounds or leftHasBounds is not 0 then the
   // corresponding int will be set to 1 if the right/left processor has
   // bounds else it will be set to 0
-  // The last three arguements are the tags to be used when performing
+  // The last three arguments are the tags to be used when performing
   // the operation
-//BTX
   virtual int ComputeGlobalBounds(int processorId, int numProcesses,
                                   vtkBoundingBox *bounds,
                                   int *rightHasBounds = 0,

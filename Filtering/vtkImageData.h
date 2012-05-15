@@ -83,18 +83,16 @@ public:
   virtual int GetMaxCellSize() {return 8;}; //voxel is the largest
 
   // Description:
-  // Restore data object to initial state,
+  // Restore data object to initial state.
   virtual void Initialize();
 
   // Description:
-  // Pass your way. This is for backward compatibility only.
-  // Use SetExtent() instead.
+  // \deprecated{This is for backward compatibility only - use SetExtent().}
   // Same as SetExtent(0, i-1, 0, j-1, 0, k-1)
   virtual void SetDimensions(int i, int j, int k);
 
   // Description:
-  // Pass your way. This is for backward compatibility only.
-  // Use SetExtent() instead.
+  // \deprecated{This is for backward compatibility only - use SetExtent().}
   // Same as SetExtent(0, dims[0]-1, 0, dims[1]-1, 0, dims[2]-1)
   virtual void SetDimensions(const int dims[3]);
 
@@ -185,7 +183,7 @@ public:
   virtual double GetScalarTypeMax();
 
   // Description:
-  // Set the size of the scalar type in bytes.
+  // Get the size of the scalar type in bytes.
   virtual int GetScalarSize();
 
   // Description:
@@ -367,17 +365,10 @@ protected:
   vtkImageData();
   ~vtkImageData();
 
-  // for the GetCell method
-  vtkVertex *Vertex;
-  vtkLine *Line;
-  vtkPixel *Pixel;
-  vtkVoxel *Voxel;
-
   // The extent of what is currently in the structured grid.
   // Dimensions is just an array to return a value.
   // Its contents are out of data until GetDimensions is called.
   int Dimensions[3];
-  int DataDescription;
   vtkIdType Increments[3];
 
   double Origin[3];
@@ -386,17 +377,40 @@ protected:
   int Extent[6];
 
   void ComputeIncrements();
+  void ComputeIncrements(vtkIdType inc[3]);
   void CopyOriginAndSpacingFromPipeline();
 
   vtkTimeStamp ExtentComputeTime;
 
+  void SetDataDescription(int desc);
+  int GetDataDescription() { return this->DataDescription; }
+
 private:
   void InternalImageDataCopy(vtkImageData *src);
 private:
+
+  //BTX
+  friend class vtkUniformGrid;
+  //ETX
+
+  // for the GetCell method
+  vtkVertex *Vertex;
+  vtkLine *Line;
+  vtkPixel *Pixel;
+  vtkVoxel *Voxel;
+
+  int DataDescription;
+
   vtkImageData(const vtkImageData&);  // Not implemented.
   void operator=(const vtkImageData&);  // Not implemented.
 };
 
+
+//----------------------------------------------------------------------------
+inline void vtkImageData::ComputeIncrements()
+{
+  this->ComputeIncrements(this->Increments);
+}
 
 //----------------------------------------------------------------------------
 inline void vtkImageData::GetPoint(vtkIdType id, double x[3])
@@ -424,6 +438,3 @@ inline int vtkImageData::GetDataDimension()
 }
 
 #endif
-
-
-

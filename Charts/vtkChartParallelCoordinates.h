@@ -24,7 +24,9 @@
 #include "vtkChart.h"
 
 class vtkIdTypeArray;
+class vtkStdString;
 class vtkStringArray;
+class vtkPlotParallelCoordinates;
 
 class VTK_CHARTS_EXPORT vtkChartParallelCoordinates : public vtkChart
 {
@@ -48,28 +50,20 @@ public:
 
   // Description:
   // Set the visibility of the specified column.
-  void SetColumnVisibility(const char* name, bool visible);
+  void SetColumnVisibility(const vtkStdString& name, bool visible);
+
+  // Description:
+  // Set the visibility of all columns (true will make them all visible, false
+  // will remove all visible columns).
+  void SetColumnVisibilityAll(bool visible);
 
   // Description:
   // Get the visibility of the specified column.
-  bool GetColumnVisibility(const char* name);
+  bool GetColumnVisibility(const vtkStdString& name);
 
   // Description:
   // Get a list of the columns, and the order in which they are displayed.
   vtkGetObjectMacro(VisibleColumns, vtkStringArray);
-
-  // Description:
-  // Add a plot to the chart, defaults to using the name of the y column
-  virtual vtkPlot* AddPlot(int type);
-
-  // Description:
-  // Remove the plot at the specified index, returns true if successful,
-  // false if the index was invalid.
-  virtual bool RemovePlot(vtkIdType index);
-
-  // Description:
-  // Remove all plots from the chart.
-  virtual void ClearPlots();
 
   // Description:
   // Get the plot at the specified index, returns null if the index is invalid.
@@ -91,6 +85,11 @@ public:
   // Request that the chart recalculates the range of its axes. Especially
   // useful in applications after the parameters of plots have been modified.
   virtual void RecalculateBounds();
+
+  // Description
+  // Set plot to use for the chart. Since this type of chart can
+  // only contain one plot, this will replace the previous plot.
+  virtual void SetPlot(vtkPlotParallelCoordinates *plot);
 
 //BTX
   // Description:
@@ -149,6 +148,7 @@ protected:
   void ResetSelection();
   void UpdateGeometry();
   void CalculatePlotTransform();
+  void SwapAxes(int a1, int a2);
 
 private:
   vtkChartParallelCoordinates(const vtkChartParallelCoordinates &); // Not implemented.

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    metaBlob.cxx
-  Language:  C++
-  Date:      $Date$
-  Version:   $Revision$
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
 #pragma warning(disable:4284)
@@ -356,29 +351,31 @@ M_Read(void)
 
       for(d=0; d<m_NDims; d++)
       {
-        char* num = new char[sizeof(float)];
+        float* num = new float[1];
+        char* numAlias = reinterpret_cast<char*>(num);
         for(k=0;k<sizeof(float);k++)
           {
-          num[k] = _data[i+k];
+          numAlias[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
+        float td = num[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
-        i+=sizeof(float); 
-        pnt->m_X[d] = (float)td;
+        i+=sizeof(float);
+        pnt->m_X[d] = td;
         delete [] num;
       }
 
       for(d=0; d<4; d++)
       {
-        char* num = new char[sizeof(float)];
+        float* num = new float[1];
+        char* numAlias = reinterpret_cast<char*>(num);
         for(k=0;k<sizeof(float);k++)
           {
-          num[k] = _data[i+k];
+          numAlias[k] = _data[i+k];
           }
-        float td = (float)((float*)num)[0];
+        float td = num[0];
         MET_SwapByteIfSystemMSB(&td,MET_FLOAT);
         i+=sizeof(float);
-        pnt->m_Color[d] = (float)td;
+        pnt->m_Color[d] = td;
         delete [] num;
       }
 
@@ -500,4 +497,3 @@ M_Write(void)
 #if (METAIO_USE_NAMESPACE)
 };
 #endif
-

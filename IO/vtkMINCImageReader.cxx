@@ -67,7 +67,7 @@ POSSIBILITY OF SUCH DAMAGES.
 
 #include "vtkMINCImageAttributes.h"
 #include "vtkMINC.h"
-#include "vtknetcdf/netcdf.h"
+#include "vtk_netcdf.h"
 
 #include <stdlib.h>
 #include <ctype.h>
@@ -103,6 +103,7 @@ vtkMINCImageReader::vtkMINCImageReader()
   this->DataRange[1] = 1.0;
 
   this->ImageAttributes = vtkMINCImageAttributes::New();
+  this->ImageAttributes->ValidateAttributesOff();
 
   this->FileNameHasChanged = 0;
 }

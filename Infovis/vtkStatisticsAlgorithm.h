@@ -13,7 +13,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2010 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
   -------------------------------------------------------------------------*/
@@ -42,8 +42,8 @@ PURPOSE.  See the above copyright notice for more information.
 // * 3 output port (called Output):
 //   * Data (annotated with assessments when the Assess option is ON).
 //   * Output model (identical to the the input model when Learn option is OFF).
-//   * Meta information about the model and/or the overall fit of the data to the
-//     model; is filled only when the Assess option is ON.
+//   * Output of statistical tests. Some engines do not offer such tests yet, in
+//     which case this output will always be empty even when the Test option is ON.
 //
 // .SECTION Thanks
 // Thanks to Philippe Pebay and David Thompson from Sandia National Laboratories 
@@ -55,6 +55,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTableAlgorithm.h"
 
 class vtkDataObjectCollection;
+class vtkMultiBlockDataSet;
 class vtkStdString;
 class vtkStringArray;
 class vtkVariant;
@@ -133,6 +134,11 @@ public:
   vtkGetMacro( TestOption, bool );
 
   // Description:
+  // Set/Get the number of tables in the primary model.
+  vtkSetMacro( NumberOfPrimaryTables, vtkIdType );
+  vtkGetMacro( NumberOfPrimaryTables, vtkIdType );
+
+  // Description:
   // Set/get assessment parameters.
   virtual void SetAssessParameters( vtkStringArray* );
   vtkGetObjectMacro(AssessParameters,vtkStringArray);
@@ -142,7 +148,6 @@ public:
   virtual void SetAssessNames( vtkStringArray* );
   vtkGetObjectMacro(AssessNames,vtkStringArray);
 
-//BTX
   // Description:
   // Set the name of a parameter of the Assess option
   void SetAssessOptionParameter( vtkIdType id, vtkStdString name );
@@ -151,6 +156,7 @@ public:
   // Get the name of a parameter of the Assess option
   vtkStdString GetAssessParameter( vtkIdType id );
 
+//BTX
   // Description:
   // A base class for a functor that assesses data.
   class AssessFunctor {
@@ -217,7 +223,6 @@ public:
   virtual int GetColumnForRequest( vtkIdType r, vtkIdType c, vtkStdString& columnName );
   //ETX
 
-//BTX  
   // Description:
   // A convenience method (in particular for access from other applications) to 
   // set parameter values of Learn mode.
@@ -227,12 +232,11 @@ public:
   virtual bool SetParameter( const char* parameter,
                              int index,
                              vtkVariant value );
-//ETX
 
   // Description:
   // Given a collection of models, calculate aggregate model
   virtual void Aggregate( vtkDataObjectCollection*,
-                          vtkDataObject* ) = 0;
+                          vtkMultiBlockDataSet* ) = 0;
 
 protected:
   vtkStatisticsAlgorithm();
@@ -251,23 +255,23 @@ protected:
   // NB: input parameters are unused.
   virtual void Learn( vtkTable*,
                       vtkTable*,
-                      vtkDataObject* ) = 0;
+                      vtkMultiBlockDataSet* ) = 0;
 
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void Derive( vtkDataObject* ) = 0;
+  virtual void Derive( vtkMultiBlockDataSet* ) = 0;
 
   // Description:
   // Execute the calculations required by the Assess option.
   virtual void Assess( vtkTable*,
-                       vtkDataObject*,
+                       vtkMultiBlockDataSet*,
                        vtkTable* ) = 0; 
 
   // Description:
   // Execute the calculations required by the Test option.
   virtual void Test( vtkTable*,
-                     vtkDataObject*,
-                     vtkDataObject* ) = 0; 
+                     vtkMultiBlockDataSet*,
+                     vtkTable* ) = 0; 
 
   //BTX
   // Description:
@@ -278,6 +282,7 @@ protected:
                                     AssessFunctor*& dfunc ) = 0;
   //ETX
 
+  int NumberOfPrimaryTables;
   bool LearnOption;
   bool DeriveOption;
   bool AssessOption;

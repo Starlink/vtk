@@ -177,7 +177,6 @@ public:
   // Sets the best fir range for the given axis.
   void SetAxisRange(int index, int minimum, int maximum);
 
-  //BTX
   // Description:
   // Adds chart layer selection handlers to the mouse selection.
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
@@ -209,7 +208,6 @@ public:
   // Description:
   // Gets the chart legend widget.
   vtkQtChartLegend* GetLegend();
-  //ETX
 
   // Description:
   // Sets up the default interactor.
@@ -233,10 +231,8 @@ protected:
   virtual vtkDataRepresentation* CreateDefaultRepresentation(vtkAlgorithmOutput* conn);
 
 private:
-  //BTX
   class vtkInternal;
   vtkInternal* Internal;
-  //ETX
 
 private:
   vtkQtChartView(const vtkQtChartView&);  // Not implemented.

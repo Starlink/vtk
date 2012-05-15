@@ -25,6 +25,7 @@
 #include "vtkRenderedTreeAreaRepresentation.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkSplineGraphEdges.h"
 #include "vtkTestUtilities.h"
 #include "vtkTextProperty.h"
 #include "vtkTreeRingView.h"
@@ -61,7 +62,7 @@ int TestTreeRingView(int argc, char* argv[])
   reader2->Update();
 
   VTK_CREATE(vtkTreeRingView, view);
-  view->DisplayHoverTextOff();
+  view->DisplayHoverTextOn();
   view->SetTreeFromInputConnection(reader2->GetOutputPort());
   view->SetGraphFromInputConnection(reader1->GetOutputPort());
   view->Update();
@@ -81,6 +82,7 @@ int TestTreeRingView(int argc, char* argv[])
   view->SetAreaHoverArrayName("id");
   view->SetAreaSizeArrayName("VertexDegree");
   vtkRenderedTreeAreaRepresentation::SafeDownCast(view->GetRepresentation())->SetGraphHoverArrayName("graph edge");
+  vtkRenderedTreeAreaRepresentation::SafeDownCast(view->GetRepresentation())->SetGraphSplineType(vtkSplineGraphEdges::CUSTOM, 0);
 
   // Apply a theme to the views
   vtkViewTheme* const theme = vtkViewTheme::CreateMellowTheme();
@@ -92,7 +94,7 @@ int TestTreeRingView(int argc, char* argv[])
   view->GetRenderWindow()->SetMultiSamples(0); // ensure to have the same test image everywhere
   view->ResetCamera();
   view->Render();
-
+  
   int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if( retVal == vtkRegressionTester::DO_INTERACTOR )
     {

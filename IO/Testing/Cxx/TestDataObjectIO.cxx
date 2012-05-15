@@ -22,6 +22,8 @@
 #include <vtkUndirectedGraph.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkVariant.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkMultiPieceDataSet.h>
 
 void InitializeData(vtkDirectedGraph* Data)
 {
@@ -212,15 +214,18 @@ bool CompareData(vtkTable* Output, vtkTable* Input)
 
 void InitializeData(vtkTree* Data)
 {
+  vtkPoints *pts = vtkPoints::New();
   vtkMutableDirectedGraph *g = vtkMutableDirectedGraph::New();
   for (vtkIdType i = 0; i < 5; ++i)
     {
     g->AddVertex();
+    pts->InsertNextPoint(i, 0, 0);
     }
   g->AddEdge(2, 0);
   g->AddEdge(0, 1);
   g->AddEdge(0, 3);
   g->AddEdge(0, 4);
+  g->SetPoints(pts);
 
   if (!Data->CheckedShallowCopy(g))
     {
@@ -228,6 +233,7 @@ void InitializeData(vtkTree* Data)
     }
 
   g->Delete();
+  pts->Delete();
 }
 
 bool CompareData(vtkTree* Output, vtkTree* Input)
@@ -247,8 +253,16 @@ bool CompareData(vtkTree* Output, vtkTree* Input)
   if(Input->GetRoot() != Output->GetRoot())
     return false;
   
+  double inx[3];
+  double outx[3];
   for(vtkIdType child = 0; child != Input->GetNumberOfVertices(); ++child)
     {
+    Input->GetPoint(child, inx);
+    Output->GetPoint(child, outx);
+
+    if (inx[0] != outx[0] || inx[1] != outx[1] || inx[2] != outx[2])
+      return false;
+
     if(Input->GetParent(child) != Output->GetParent(child))
       return false;
     }
@@ -278,6 +292,46 @@ bool CompareData(vtkUnstructuredGrid* Output, vtkUnstructuredGrid* Input)
     
   return true;
 }
+
+void InitializeData(vtkMultiBlockDataSet* data)
+{
+  vtkPolyData* block0 = vtkPolyData::New();
+  InitializeData(block0);
+
+  vtkUnstructuredGrid* block1 = vtkUnstructuredGrid::New();
+  InitializeData(block1);
+
+  vtkPolyData* block2 = vtkPolyData::New();
+  InitializeData(block2);
+
+  vtkImageData* block3 = vtkImageData::New();
+  InitializeData(block3);
+
+  vtkMultiBlockDataSet* child0 = vtkMultiBlockDataSet::New();
+  data->SetBlock(0, child0);
+  child0->Delete();
+
+  child0->SetBlock(0, block0);
+  block0->Delete();
+
+  vtkMultiPieceDataSet* child1 = vtkMultiPieceDataSet::New();
+  child0->SetBlock(1, child1);
+  child1->Delete();
+
+  child1->SetPiece(0, block1);
+  block1->Delete();
+  child1->SetPiece(1, block2);
+  block2->Delete();
+
+  data->SetBlock(1, block3);
+  block3->Delete();
+}
+
+bool CompareData(vtkMultiBlockDataSet*, vtkMultiBlockDataSet*)
+{
+  return true;
+}
+
 
 template<typename DataT>
 bool TestDataObjectSerialization()
@@ -317,7 +371,13 @@ bool TestDataObjectSerialization()
 int TestDataObjectIO(int /*argc*/, char* /*argv*/[])
 {
   int result = 0;
-  
+
+ if(!TestDataObjectSerialization<vtkMultiBlockDataSet>())
+    {
+    cerr << "Error: failure serializing vtkMultiBlockDataSet" << endl;
+    result = 1;
+    }
+
   if(!TestDataObjectSerialization<vtkDirectedGraph>())
     {
     cerr << "Error: failure serializing vtkDirectedGraph" << endl;

@@ -64,7 +64,7 @@ bool vtkVariantStrictWeakOrder::operator()(const vtkVariant& s1, const vtkVarian
     {
     return s1.Type < s2.Type;
     }
- 
+
   // Next check for nulls
   if (!(s1.Valid && s2.Valid))
     {
@@ -101,10 +101,10 @@ bool vtkVariantStrictWeakOrder::operator()(const vtkVariant& s1, const vtkVarian
 
     case VTK_UNSIGNED_CHAR:
       return (s1.Data.UnsignedChar < s2.Data.UnsignedChar);
-      
+
     case VTK_SHORT:
       return (s1.Data.Short < s2.Data.Short);
-      
+
     case VTK_UNSIGNED_SHORT:
       return (s1.Data.UnsignedShort < s2.Data.UnsignedShort);
 
@@ -138,7 +138,7 @@ bool vtkVariantStrictWeakOrder::operator()(const vtkVariant& s1, const vtkVarian
 
     case VTK_FLOAT:
       return (s1.Data.Float < s2.Data.Float);
-      
+
     case VTK_DOUBLE:
       return (s1.Data.Double < s2.Data.Double);
 
@@ -159,7 +159,7 @@ vtkVariantStrictEquality::operator()(const vtkVariant &s1, const vtkVariant &s2)
     cerr << "Types differ: " << s1.Type << " and " << s2.Type << "\n";
     return false;
     }
-  
+
   // Next check for nulls
   if (!(s1.Valid && s2.Valid))
     {
@@ -195,10 +195,10 @@ vtkVariantStrictEquality::operator()(const vtkVariant &s1, const vtkVariant &s2)
 
     case VTK_UNSIGNED_CHAR:
       return (s1.Data.UnsignedChar == s2.Data.UnsignedChar);
-      
+
     case VTK_SHORT:
       return (s1.Data.Short == s2.Data.Short);
-      
+
     case VTK_UNSIGNED_SHORT:
       return (s1.Data.UnsignedShort == s2.Data.UnsignedShort);
 
@@ -232,7 +232,7 @@ vtkVariantStrictEquality::operator()(const vtkVariant &s1, const vtkVariant &s2)
 
     case VTK_FLOAT:
       return (s1.Data.Float == s2.Data.Float);
-      
+
     case VTK_DOUBLE:
       return (s1.Data.Double == s2.Data.Double);
 
@@ -287,6 +287,103 @@ vtkVariant::vtkVariant(const vtkVariant & other)
     }
 }
 
+vtkVariant::vtkVariant(const vtkVariant &s2, unsigned int type)
+{
+  bool valid = false;
+
+  if (s2.Valid)
+    {
+    switch (type)
+      {
+      case VTK_STRING:
+        this->Data.String = new vtkStdString(s2.ToString());
+        valid = true;
+        break;
+
+      case VTK_UNICODE_STRING:
+        this->Data.UnicodeString =
+          new vtkUnicodeString(s2.ToUnicodeString());
+        valid = true;
+        break;
+
+      case VTK_OBJECT:
+        this->Data.VTKObject = s2.ToVTKObject();
+        if (this->Data.VTKObject)
+          {
+          this->Data.VTKObject->Register(0);
+          valid = true;
+          }
+        break;
+
+      case VTK_CHAR:
+        this->Data.Char = s2.ToChar(&valid);
+        break;
+
+      case VTK_SIGNED_CHAR:
+        this->Data.SignedChar = s2.ToSignedChar(&valid);
+        break;
+
+      case VTK_UNSIGNED_CHAR:
+        this->Data.UnsignedChar = s2.ToUnsignedChar(&valid);
+        break;
+
+      case VTK_SHORT:
+        this->Data.Short = s2.ToShort(&valid);
+        break;
+
+      case VTK_UNSIGNED_SHORT:
+        this->Data.UnsignedShort = s2.ToUnsignedShort(&valid);
+        break;
+
+      case VTK_INT:
+        this->Data.Int = s2.ToInt(&valid);
+        break;
+
+      case VTK_UNSIGNED_INT:
+        this->Data.UnsignedInt = s2.ToUnsignedInt(&valid);
+        break;
+
+      case VTK_LONG:
+        this->Data.Long = s2.ToLong(&valid);
+        break;
+
+      case VTK_UNSIGNED_LONG:
+        this->Data.UnsignedLong = s2.ToUnsignedLong(&valid);
+        break;
+
+#if defined(VTK_TYPE_USE___INT64)
+      case VTK___INT64:
+        this->Data.__Int64 = s2.To__Int64(&valid);
+        break;
+
+      case VTK_UNSIGNED___INT64:
+        this->Data.Unsigned__Int64 = s2.ToUnsigned__Int64(&valid);
+        break;
+#endif
+
+#if defined(VTK_TYPE_USE_LONG_LONG)
+      case VTK_LONG_LONG:
+        this->Data.LongLong = s2.ToLongLong(&valid);
+        break;
+
+      case VTK_UNSIGNED_LONG_LONG:
+        this->Data.UnsignedLongLong = s2.ToUnsignedLongLong(&valid);
+        break;
+#endif
+
+      case VTK_FLOAT:
+        this->Data.Float = s2.ToFloat(&valid);
+        break;
+
+      case VTK_DOUBLE:
+        this->Data.Double = s2.ToDouble(&valid);
+        break;
+      }
+    }
+
+  this->Type = (valid ? type : 0);
+  this->Valid = valid;
+}
 
 const vtkVariant & vtkVariant::operator= (const vtkVariant & other)
 {
@@ -471,9 +568,14 @@ vtkVariant::vtkVariant(double value)
 
 vtkVariant::vtkVariant(const char* value)
 {
-  this->Data.String = new vtkStdString(value);
-  this->Valid = 1;
-  this->Type = VTK_STRING;
+  this->Valid = 0;
+  this->Type = 0;
+  if (value)
+    {
+    this->Data.String = new vtkStdString(value);
+    this->Valid = 1;
+    this->Type = VTK_STRING;
+    }
 }
 
 vtkVariant::vtkVariant(vtkStdString value)
@@ -492,10 +594,15 @@ vtkVariant::vtkVariant(const vtkUnicodeString& value)
 
 vtkVariant::vtkVariant(vtkObjectBase* value)
 {
-  value->Register(0);
-  this->Data.VTKObject = value;
-  this->Valid = 1;
-  this->Type = VTK_OBJECT;
+  this->Valid = 0;
+  this->Type = 0;
+  if (value)
+    {
+    value->Register(0);
+    this->Data.VTKObject = value;
+    this->Valid = 1;
+    this->Type = VTK_OBJECT;
+    }
 }
 
 bool vtkVariant::IsValid() const
@@ -515,20 +622,20 @@ bool vtkVariant::IsUnicodeString() const
 
 bool vtkVariant::IsNumeric() const
 {
-  return this->IsFloat() 
-    || this->IsDouble() 
+  return this->IsFloat()
+    || this->IsDouble()
     || this->IsChar()
     || this->IsUnsignedChar()
     || this->IsSignedChar()
     || this->IsShort()
     || this->IsUnsignedShort()
-    || this->IsInt() 
+    || this->IsInt()
     || this->IsUnsignedInt()
-    || this->IsLong() 
+    || this->IsLong()
     || this->IsUnsignedLong()
-    || this->Is__Int64() 
-    || this->IsUnsigned__Int64() 
-    || this->IsLongLong() 
+    || this->Is__Int64()
+    || this->IsUnsigned__Int64()
+    || this->IsLongLong()
     || this->IsUnsignedLongLong();
 }
 
@@ -614,8 +721,8 @@ bool vtkVariant::IsVTKObject() const
 
 bool vtkVariant::IsArray() const
 {
-  return this->Type == VTK_OBJECT 
-    && this->Valid 
+  return this->Type == VTK_OBJECT
+    && this->Valid
     && this->Data.VTKObject->IsA("vtkAbstractArray");
 }
 
@@ -941,91 +1048,91 @@ vtkVariantToNumericInstantiateMacro(unsigned long long);
 //----------------------------------------------------------------------------
 // Callers causing implicit instantiations of ToNumeric
 
-float vtkVariant::ToFloat(bool* valid) const
+float vtkVariant::ToFloat(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<float *>(0));
 }
 
-double vtkVariant::ToDouble(bool* valid) const
+double vtkVariant::ToDouble(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<double *>(0));
 }
 
-char vtkVariant::ToChar(bool* valid) const
+char vtkVariant::ToChar(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<char *>(0));
 }
 
-unsigned char vtkVariant::ToUnsignedChar(bool* valid) const
+unsigned char vtkVariant::ToUnsignedChar(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned char *>(0));
 }
 
-signed char vtkVariant::ToSignedChar(bool* valid) const
+signed char vtkVariant::ToSignedChar(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<signed char *>(0));
 }
 
-short vtkVariant::ToShort(bool* valid) const
+short vtkVariant::ToShort(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<short *>(0));
 }
 
-unsigned short vtkVariant::ToUnsignedShort(bool* valid) const
+unsigned short vtkVariant::ToUnsignedShort(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned short *>(0));
 }
 
-int vtkVariant::ToInt(bool* valid) const
+int vtkVariant::ToInt(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<int *>(0));
 }
 
-unsigned int vtkVariant::ToUnsignedInt(bool* valid) const
+unsigned int vtkVariant::ToUnsignedInt(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned int *>(0));
 }
 
-long vtkVariant::ToLong(bool* valid) const
+long vtkVariant::ToLong(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<long *>(0));
 }
 
-unsigned long vtkVariant::ToUnsignedLong(bool* valid) const
+unsigned long vtkVariant::ToUnsignedLong(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned long *>(0));
 }
 
 #if defined(VTK_TYPE_USE___INT64)
-__int64 vtkVariant::To__Int64(bool* valid) const
+__int64 vtkVariant::To__Int64(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<__int64 *>(0));
 }
 
-unsigned __int64 vtkVariant::ToUnsigned__Int64(bool* valid) const
+unsigned __int64 vtkVariant::ToUnsigned__Int64(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned __int64 *>(0));
 }
 #endif
 
 #if defined(VTK_TYPE_USE_LONG_LONG)
-long long vtkVariant::ToLongLong(bool* valid) const
+long long vtkVariant::ToLongLong(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<long long *>(0));
 }
 
-unsigned long long vtkVariant::ToUnsignedLongLong(bool* valid) const
+unsigned long long vtkVariant::ToUnsignedLongLong(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<unsigned long long *>(0));
 }
 #endif
 
-vtkTypeInt64 vtkVariant::ToTypeInt64(bool* valid) const
+vtkTypeInt64 vtkVariant::ToTypeInt64(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<vtkTypeInt64 *>(0));
 }
 
-vtkTypeUInt64 vtkVariant::ToTypeUInt64(bool* valid) const
+vtkTypeUInt64 vtkVariant::ToTypeUInt64(bool *valid) const
 {
   return this->ToNumeric(valid, static_cast<vtkTypeUInt64 *>(0));
 }

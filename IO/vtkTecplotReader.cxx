@@ -22,7 +22,7 @@
 *
 * This file was adapted from the ASCII Tecplot reader of VisIt. For  details,
 * see https://visit.llnl.gov/.  The full copyright notice is contained in the
-* file COPYRIGHT located at the root of the VisIt distribution or at 
+* file COPYRIGHT located at the root of the VisIt distribution or at
 * http://www.llnl.gov/visit/copyright.html.
 *
 *****************************************************************************/
@@ -47,17 +47,139 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkDataArraySelection.h"
 
+#include "vtk_zlib.h"
+#include <vtksys/SystemTools.hxx>
+
+#include <fstream>
+
 #include <ctype.h> // for isspace(), isalnum()
 
 vtkStandardNewMacro( vtkTecplotReader );
 
+
 // ============================================================================
+class FileStreamReader
+{
+public:
+  FileStreamReader();
+  ~FileStreamReader(){};
+
+  bool open(const char* fileName);
+  bool is_open()const{return Open;};
+  bool eof()const{return Eof;};
+
+  void rewind();
+  void close();
+  int get();
+  bool operator !() const;
+
+protected:
+  bool Open;
+  bool Eof;
+  static const unsigned int BUFF_SIZE = 2048;
+  char buff[BUFF_SIZE];
+  unsigned int Pos;
+  unsigned int BuffEnd;
+  gzFile file;
+
+};
+
+// ----------------------------------------------------------------------------
+FileStreamReader::FileStreamReader()
+: Open(false),Eof(true),Pos(BUFF_SIZE),BuffEnd(BUFF_SIZE)
+{
+
+}
+
+// ----------------------------------------------------------------------------
+bool FileStreamReader::open( const char* fileName )
+  {
+  if ( !this->Open )
+    {
+    //zlib handles both compressed and uncompressed file
+    //we just have peak into the file and see if it has the magic
+    //flags or not
+    unsigned char magic[2];
+    FILE *ff = fopen(fileName,"rb");
+    fread(magic,1,2,ff);
+    fclose(ff);
+
+    const char* mode = (magic[0] == 0x1f && magic[1] == 0x8b) ? "rb" : "r";
+    this->file = gzopen(fileName,mode);
+
+    this->Eof = (this->file == 0);
+    this->Open = (this->file != 0);
+    this->Pos = BUFF_SIZE;
+    }
+  return this->Open;
+  }
+// ----------------------------------------------------------------------------
+int FileStreamReader::get()
+{
+  if (!this->is_open() || this->eof() )
+    {
+    return this->eof();
+    }
+
+  //when reading uncompressed data, zlib will return if it hits
+  //and eol character
+
+  if (this->Pos >= this->BuffEnd)
+    {
+    this->Pos = 0;
+    //read the first buffer
+    this->BuffEnd = gzread(this->file,this->buff,this->BUFF_SIZE);
+    //assign EOF to what gzread returned
+    this->Eof = (this->BuffEnd <= 0);
+    if (this->Eof)
+      {
+      return this->Eof;
+      }
+    }
+  return this->buff[this->Pos++];
+}
+
+// ----------------------------------------------------------------------------
+void FileStreamReader::rewind()
+{
+  if ( this->Open )
+    {
+    this->Open = false;
+    this->Eof = false;
+    this->Pos = this->BUFF_SIZE;
+    this->BuffEnd = this->BUFF_SIZE;
+
+    gzrewind(this->file);
+    }
+}
+
+// ----------------------------------------------------------------------------
+void FileStreamReader::close()
+{
+  if ( this->Open )
+    {
+    this->Open = false;
+    this->Eof = false;
+    this->Pos = this->BUFF_SIZE;
+    this->BuffEnd = this->BUFF_SIZE;
+
+    gzclose(this->file);
+    }
+}
+
+// ----------------------------------------------------------------------------
+bool FileStreamReader::operator!() const
+{
+  return this->Eof;
+}
+
+// ==========================================================================//
 class vtkTecplotReaderInternal
 {
 public:
   vtkTecplotReaderInternal()  { this->Init(); }
   ~vtkTecplotReaderInternal() { this->Init(); }
-  
+
   int     XIdInList;
   int     YIdInList;
   int     ZIdInList;
@@ -69,29 +191,31 @@ public:
   bool    NextCharEOL;
   bool    NextCharValid;
   bool    TokenIsString;
-  ifstream       ASCIIStream;
+  bool    IsCompressed;
+  FileStreamReader ASCIIStream;
   vtkstd::string TokenBackup;
-  
+
+public:
   void Init()
   {
     this->Completed =  0;
     this->XIdInList = -1;
     this->YIdInList = -1;
     this->ZIdInList = -1;
-    
+
     this->TopologyDim   = 0;
-    this->GeometryDim   = 1;      
+    this->GeometryDim   = 1;
     this->TheNextChar   = '\0';
     this->TokenBackup   = "";
     this->NextCharEOF   = false;
     this->NextCharEOL   = false;
     this->NextCharValid = false;
     this->TokenIsString = false;
-    this->ASCIIStream.clear();
+    this->IsCompressed  = false;
   }
-    
-  // This functions obtains the next token from the ASCII stream. 
-  // Note that it is assumed that the ASCII stream is ready and no 
+
+  // This functions obtains the next token from the ASCII stream.
+  // Note that it is assumed that the ASCII stream is ready and no
   // reading error occurs.
   vtkstd::string GetNextToken()
   {
@@ -117,7 +241,7 @@ public:
       {
       this->TheNextChar   = this->ASCIIStream.get();
       this->NextCharValid = true;
-      
+
       if ( !this->ASCIIStream )
         {
         this->NextCharEOF = true;
@@ -146,7 +270,7 @@ public:
       if ( !this->ASCIIStream )
         {
         this->NextCharEOF = true;
-        }        
+        }
 
       // Ignore blank lines since they don't return a token
       if ( this->NextCharEOL )
@@ -154,7 +278,7 @@ public:
         return this->GetNextToken();
         }
       }
-     
+
     if ( this->TheNextChar == '\"' )
       {
       this->TokenIsString = true;
@@ -162,13 +286,13 @@ public:
       if ( !this->ASCIIStream )
         {
         this->NextCharEOF = true;
-        } 
-               
+        }
+
       while ( !this->NextCharEOF && this->TheNextChar != '\"' )
         {
         retval += this->TheNextChar;
         this->TheNextChar = this->ASCIIStream.get();
-        
+
         if ( !this->ASCIIStream )
           {
           this->NextCharEOF = true;
@@ -200,14 +324,14 @@ public:
           {
           this->TheNextChar += (  int( 'A' ) - int( 'a' )  );
           }
-          
+
         retval += this->TheNextChar;
         this->TheNextChar = this->ASCIIStream.get();
-        
+
         if ( !this->ASCIIStream )
           {
           this->NextCharEOF = true;
-          }        
+          }
         }
       }
 
@@ -233,17 +357,16 @@ public:
       if ( !this->ASCIIStream )
         {
         this->NextCharEOF = true;
-        }        
+        }
 
       if ( this->NextCharEOL )
         {
         break;
         }
       }
-   
     return retval;
   }
-  
+
 private:
 
   vtkTecplotReaderInternal( const vtkTecplotReaderInternal & );  // Not implemented.
@@ -252,7 +375,7 @@ private:
 // ==========================================================================//
 
 // ----------------------------------------------------------------------------
-//                         Supporting Functions (begin)                        
+//                         Supporting Functions (begin)
 // ----------------------------------------------------------------------------
 
 #ifndef MAX
@@ -266,17 +389,17 @@ static int GetCoord( const vtkstd::string & theToken )
     {
     return 0;
     }
-    
+
   if ( theToken == "Y" || theToken == "y" || theToken == "J" )
     {
     return 1;
     }
-    
+
   if ( theToken == "Z" || theToken == "z" || theToken == "K" )
     {
     return 2;
     }
-    
+
   return -1;
 }
 
@@ -304,40 +427,40 @@ static vtkstd::string SimplifyWhitespace( const vtkstd::string & s )
 {
   int headIndx = 0;
   int tailIndx = int( s.length() ) - 1;
-  
+
   while (  headIndx < tailIndx && ( s[headIndx] == ' ' || s[headIndx] == '\t' )  )
     {
     headIndx ++;
     }
-    
+
   while (  tailIndx > headIndx && ( s[tailIndx]  == ' ' || s[tailIndx]  == '\t' )  )
     {
     tailIndx --;
     }
-    
+
   return s.substr( headIndx, tailIndx - headIndx + 1 );
 }
 
 // ----------------------------------------------------------------------------
-//                         Supporting Functions ( end )                        
+//                         Supporting Functions ( end )
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 vtkTecplotReader::vtkTecplotReader()
-{ 
+{
   this->SelectionObserver  = vtkCallbackCommand::New();
   this->SelectionObserver->SetClientData( this );
   this->SelectionObserver->SetCallback
         ( &vtkTecplotReader::SelectionModifiedCallback );
-        
+
   this->DataArraySelection = vtkDataArraySelection::New();
   this->DataArraySelection->AddObserver( vtkCommand::ModifiedEvent,
                                          this->SelectionObserver );
-                                            
+
   this->FileName = NULL;
   this->Internal = new vtkTecplotReaderInternal;
   this->SetNumberOfInputPorts( 0 );
-  
+
   this->Init();
 }
 
@@ -345,21 +468,21 @@ vtkTecplotReader::vtkTecplotReader()
 vtkTecplotReader::~vtkTecplotReader()
 {
   this->Init();
-  
+
   if ( this->FileName )
     {
     delete [] this->FileName;
     this->FileName = NULL;
     }
-    
+
   delete this->Internal;
   this->Internal = NULL;
-  
+
   this->DataArraySelection->RemoveAllArrays();
   this->DataArraySelection->RemoveObserver( this->SelectionObserver );
   this->DataArraySelection->Delete();
   this->DataArraySelection = NULL;
-  
+
   this->SelectionObserver->SetClientData( NULL );
   this->SelectionObserver->SetCallback( NULL );
   this->SelectionObserver->Delete();
@@ -370,20 +493,20 @@ vtkTecplotReader::~vtkTecplotReader()
 void vtkTecplotReader::Init()
 {
   // do NOT address this->FileName in this function !!!
-  
+
   this->DataTitle         = "";
   this->NumberOfVariables = 0;
   this->CellBased.clear();
   this->ZoneNames.clear();
   this->Variables.clear();
-  
+
   this->Internal->Init();
 }
 
 // ----------------------------------------------------------------------------
 void vtkTecplotReader::SetFileName( const char * fileName )
-{   
-  if (    fileName 
+{
+  if (    fileName
        && strcmp( fileName, "" )
        && ( ( this->FileName == NULL ) || strcmp( fileName, this->FileName ) )
      )
@@ -393,11 +516,11 @@ void vtkTecplotReader::SetFileName( const char * fileName )
       delete [] this->FileName;
       this->FileName = NULL;
       }
-      
+
     this->FileName = new char[  strlen( fileName ) + 1  ];
     strcpy( this->FileName, fileName );
     this->FileName[ strlen( fileName ) ] = '\0';
-    
+
     this->Modified();
     this->Internal->Completed = 0;
     }
@@ -422,9 +545,9 @@ int vtkTecplotReader::FillOutputPortInformation
 int vtkTecplotReader::RequestInformation( vtkInformation * request,
                                           vtkInformationVector ** inputVector,
                                           vtkInformationVector  * outputVector )
-{ 
+{
   if(  !this->Superclass::RequestInformation
-        ( request, inputVector, outputVector )  
+        ( request, inputVector, outputVector )
     )
     {
     return 0;
@@ -434,24 +557,24 @@ int vtkTecplotReader::RequestInformation( vtkInformation * request,
   info->Set( vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1 );
 
   this->GetDataArraysList();
-  
+
   return 1;
 }
 
 // ----------------------------------------------------------------------------
 int vtkTecplotReader::RequestData( vtkInformation *        vtkNotUsed( request ),
-                                   vtkInformationVector ** vtkNotUsed( inputVector ), 
+                                   vtkInformationVector ** vtkNotUsed( inputVector ),
                                    vtkInformationVector *  outputVector )
 {
   vtkInformation *       outInf = outputVector->GetInformationObject( 0 );
   vtkMultiBlockDataSet * output = vtkMultiBlockDataSet::SafeDownCast
                                   (  outInf->Get( vtkDataObject::DATA_OBJECT() )  );
-  
-  this->Internal->Completed = 0;                                
+
+  this->Internal->Completed = 0;
   this->ReadFile( output );
   outInf = NULL;
   output = NULL;
-  
+
   return 1;
 }
 
@@ -474,14 +597,14 @@ const char * vtkTecplotReader::GetBlockName( int blockIdx )
     {
     return NULL;
     }
-    
+
   return this->ZoneNames[ blockIdx ].c_str();
 }
 
 // ----------------------------------------------------------------------------
 int  vtkTecplotReader::GetNumberOfDataAttributes()
 {
-  return 
+  return
     this->NumberOfVariables - (   !(  !( this->Internal->XIdInList + 1 )  )   )
                             - (   !(  !( this->Internal->YIdInList + 1 )  )   )
                             - (   !(  !( this->Internal->ZIdInList + 1 )  )   );
@@ -494,9 +617,9 @@ const char * vtkTecplotReader::GetDataAttributeName( int attrIndx )
     {
     return NULL;
     }
-    
+
   return this->Variables[ attrIndx +
-                          this->Variables.size() - 
+                          this->Variables.size() -
                           this->GetNumberOfDataAttributes()
                         ].c_str();
 }
@@ -509,11 +632,11 @@ int   vtkTecplotReader::IsDataAttributeCellBased( int attrIndx )
     {
     // the if-statement ensures that this->CellBased has been ready
     cellBasd = this->CellBased[ attrIndx +
-                                this->CellBased.size() - 
+                                this->CellBased.size() -
                                 this->GetNumberOfDataAttributes()
                               ];
     }
-    
+
   return cellBasd;
 }
 
@@ -522,7 +645,7 @@ int   vtkTecplotReader::IsDataAttributeCellBased( const char * attrName )
 {
   int  cellBasd = -1;
   int  varIndex = -1;
-  
+
   if ( attrName )
     {
     for ( unsigned int i = 0; i < this->Variables.size(); i ++ )
@@ -533,10 +656,10 @@ int   vtkTecplotReader::IsDataAttributeCellBased( const char * attrName )
         break;
         }
       }
-      
+
     cellBasd = ( varIndex == -1 ) ? -1: this->CellBased[ varIndex ];
     }
-   
+
   return cellBasd;
 }
 
@@ -561,9 +684,9 @@ int vtkTecplotReader::GetDataArrayStatus( const char * arayName )
 //-----------------------------------------------------------------------------
 void vtkTecplotReader::SetDataArrayStatus( const char * arayName, int bChecked )
 {
-  vtkDebugMacro( "Set cell array \"" << arayName 
+  vtkDebugMacro( "Set cell array \"" << arayName
                  << "\" status to: " << bChecked );
-  
+
   if( bChecked )
     {
     this->DataArraySelection->EnableArray( arayName );
@@ -578,7 +701,7 @@ void vtkTecplotReader::SetDataArrayStatus( const char * arayName, int bChecked )
 void vtkTecplotReader::PrintSelf( ostream & os, vtkIndent indent )
 {
   this->Superclass::PrintSelf( os, indent );
-  
+
   os << indent << "DataTitle: "          << this->DataTitle         << endl;
   os << indent << "Size of CellBased: "  << this->CellBased.size()  << endl;
   os << indent << "Size of ZoneNames: "  << this->ZoneNames.size()  << endl;
@@ -589,21 +712,20 @@ void vtkTecplotReader::PrintSelf( ostream & os, vtkIndent indent )
 // ----------------------------------------------------------------------------
 void vtkTecplotReader::GetArraysFromPointPackingZone
   ( int numNodes, vtkPoints * theNodes, vtkPointData * nodeData )
-{ 
+{
   // NOTE: The Tecplot ASCII file format mandates that cell data of any zone be
   // stored in block-packing mode (VARLOCATION, pp. 158, Tecplot 360 Data Format
   // Guide 2009). Thus we do not need to consider any cell data in this function.
-  
+
   if ( !theNodes || !nodeData ||
-       !this->Internal->ASCIIStream.is_open() || 
-       !this->Internal->ASCIIStream.good()
+    !this->Internal->ASCIIStream.is_open()
      )
     {
     vtkErrorMacro( << "File not open, errors with reading, or NULL vtkPoints /"
                    << "vtkPointData." );
     return;
     }
-       
+
   int     n,  v;
   int     zArrayId;        // indexing zoneData
   int     cordBase;        // offset of a 3D-coordinate triple in cordsPtr
@@ -619,16 +741,16 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
   vtkFloatArray * theArray = NULL;
   vtkstd::vector< float * > pointers;
   vtkstd::vector< vtkFloatArray * > zoneData;
-  
+
   pointers.clear();
   zoneData.clear();
-  
+
   // geoemtry: 3D point coordinates (note that this array must be initialized
-  // since only 2D coordinates might be provided by a Tecplot file) 
+  // since only 2D coordinates might be provided by a Tecplot file)
   theNodes->SetNumberOfPoints( numNodes );
   cordsPtr = static_cast< float * > (  theNodes->GetVoidPointer( 0 )  );
   memset( cordsPtr, 0, sizeof( float ) * 3 * numNodes );
-  
+
   // three arrays used to determine the role of each variable (including
   // the coordinate arrays)
   anyCoord = new int[ this->NumberOfVariables ];
@@ -645,9 +767,9 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
     coordIdx[v] = isYcoord + ( isZcoord << 1 );
     selected[v] = this->DataArraySelection
                       ->ArrayIsEnabled( this->Variables[v].c_str() );
-             
+
     if ( anyCoord[v] + selected[v] )
-      {        
+      {
       theArray = vtkFloatArray::New();
       theArray->SetNumberOfTuples( numNodes );
       theArray->SetName( this->Variables[v].c_str() );
@@ -663,7 +785,7 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
   for ( n = 0; n < numNodes; n ++ )
     {
     cordBase = ( n << 1 ) + n;
-    
+
     zArrayId = 0;
     for ( v = 0; v < this->NumberOfVariables; v ++ )
       {
@@ -672,7 +794,7 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
         {
         theValue = atof( this->Internal->GetNextToken().c_str() );
         pointers[ zArrayId ++ ][n] = theValue;
-        
+
         // collect the coordinate
         if ( anyCoord[v] )
           {
@@ -687,7 +809,7 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
       }
     }
   cordsPtr = NULL;
-  
+
   // attach the node-based data attributes to the grid
   zArrayId = 0;
   for ( v = 0; v < this->NumberOfVariables; v ++ )
@@ -696,13 +818,23 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
       {
       nodeData->AddArray( zoneData[zArrayId] );
       }
-    
+
     zArrayId += int(    !(  !( anyCoord[v] + selected[v] )  )    );
-    } 
-  
+    }
+
   pointers.clear();
+
+  //remove all the float arrays from vector so they won't leak
+  for ( unsigned int i=0; i < zoneData.size(); ++i)
+    {
+    vtkFloatArray *fa = zoneData.at(i);
+    if ( fa )
+      {
+      fa->FastDelete();
+      }
+    }
   zoneData.clear();
-  
+
   delete [] anyCoord;
   delete [] coordIdx;
   delete [] selected;
@@ -712,24 +844,23 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
 }
 
 // ----------------------------------------------------------------------------
-void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells, 
+void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells,
      vtkPoints * theNodes, vtkPointData * nodeData, vtkCellData * cellData )
 {
-  // NOTE: The Tecplot ASCII file format states that a block-packing zone may 
-  // contain point data or cell data (VARLOCATION, pp. 158, Tecplot 360 Data 
+  // NOTE: The Tecplot ASCII file format states that a block-packing zone may
+  // contain point data or cell data (VARLOCATION, pp. 158, Tecplot 360 Data
   // Format Guide 2009). Thus we need to consider both cases in this function.
-  
+
   if ( !theNodes || !nodeData || !cellData ||
-       !this->Internal->ASCIIStream.is_open() || 
-       !this->Internal->ASCIIStream.good()
+      !this->Internal->ASCIIStream.is_open()
      )
     {
     vtkErrorMacro( << "File not open, errors with reading, or NULL vtkPoints /"
                    << "vtkPointData / vtkCellData." );
     return;
     }
-    
-  int     i,  v;
+
+  int     v;
   int     zArrayId;        // indexing zoneData
   int     arraySiz;
   int     isXcoord;
@@ -744,18 +875,18 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
   vtkDataSetAttributes * attribut[2] = { nodeData, cellData };
 
   zoneData.clear();
-  
+
   // geoemtry: 3D point coordinates (note that this array must be initialized
   // since only 2D coordinates might be provided by a Tecplot file)
   theNodes->SetNumberOfPoints( numNodes );
   cordsPtr = static_cast< float * > (  theNodes->GetVoidPointer( 0 )  );
   memset( cordsPtr, 0, sizeof( float ) * 3 * numNodes );
-  
+
   // two arrays used to determine the role of each variable (including
   // the coordinate arrays)
   anyCoord = new int[ this->NumberOfVariables ];
   selected = new int[ this->NumberOfVariables ];
-  
+
   for ( v = 0; v < this->NumberOfVariables; v ++ )
     {
     // check if this variable refers to a coordinate array
@@ -763,11 +894,11 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
     isYcoord = int(  !( v - this->Internal->YIdInList )  );
     isZcoord = int(  !( v - this->Internal->ZIdInList )  );
     anyCoord[v] = isXcoord + isYcoord + isZcoord;
-    
+
     // in case of a data attribute, is it selected by the user?
     selected[v] = this->DataArraySelection
                       ->ArrayIsEnabled( this->Variables[v].c_str() );
-    
+
     // obtain the size of the block
     arraySiz = ( this->CellBased[v] ? numCells : numNodes );
 
@@ -775,15 +906,15 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
       {
       // parse the block to extract either coordinates or data attribute
       // values
-      
+
       // extract the variable array throughout a block
       theArray = vtkFloatArray::New();
       theArray->SetNumberOfTuples( arraySiz );
       theArray->SetName( this->Variables[v].c_str() );
       zoneData.push_back( theArray );
-    
+
       arrayPtr = static_cast< float * > (  theArray->GetVoidPointer( 0 )  );
-      for ( i = 0; i < arraySiz; i ++ )
+      for (int i = 0; i < arraySiz; i ++ )
         {
         arrayPtr[i] = atof( this->Internal->GetNextToken().c_str() );
         }
@@ -793,44 +924,53 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
       if ( anyCoord[v] )
         {
         float * coordPtr = cordsPtr + isYcoord + ( isZcoord << 1 );
-        for ( i = 0; i < arraySiz; i ++, coordPtr += 3 )
+        for (int i = 0; i < arraySiz; i ++, coordPtr += 3 )
           {
           *coordPtr = arrayPtr[i];
           }
         coordPtr = NULL;
         }
-        
+
       arrayPtr = NULL;
       }
     else
       {
       // this block contains an un-selected data attribute and we
       // need to read but ignore the values
-      for ( i = 0; i < arraySiz; i ++ )
+      for (int i = 0; i < arraySiz; i ++ )
         {
         this->Internal->GetNextToken();
         }
       }
     }
   cordsPtr = NULL;
-  
+
   // attach the dataset attributes (node-based and cell-based) to the grid
   // NOTE: zoneData[] and this->Variables (and this->CellBased) may differ
   // in the number of the maintained arrays
   zArrayId = 0;
   for ( v = 0; v < this->NumberOfVariables; v ++ )
-    {    
+    {
     if ( !anyCoord[v] && selected[v] )
       {
       attribut[ this->CellBased[v] ]->AddArray( zoneData[zArrayId] );
       }
-    
+
     zArrayId += int(    !(  !( anyCoord[v] + selected[v] )  )    );
-    } 
-    
+    }
+
+  //remove all the float arrays from vector so they won't leak
+  for ( unsigned int i=0; i < zoneData.size(); ++i)
+    {
+    vtkFloatArray *fa = zoneData.at(i);
+    if ( fa )
+      {
+      fa->FastDelete();
+      }
+    }
   zoneData.clear();
   attribut[0] = attribut[1] = NULL;
-  
+
   delete [] anyCoord;
   delete [] selected;
   anyCoord = NULL;
@@ -839,21 +979,21 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
 
 // ----------------------------------------------------------------------------
 void vtkTecplotReader::GetStructuredGridFromBlockPackingZone
-  ( int iDimSize, int jDimSize, int kDimSize, 
+  ( int iDimSize, int jDimSize, int kDimSize,
     int zoneIndx, const char * zoneName, vtkMultiBlockDataSet * multZone )
-{ 
+{
   if ( !zoneName || !multZone )
     {
     vtkErrorMacro( "Zone name un-specified or NULL vtkMultiBlockDataSet." );
     return;
     }
-    
+
   // determine the topological dimension
   if ( jDimSize == 1 && kDimSize == 1 )
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 1 );
     }
-  else 
+  else
   if ( kDimSize == 1 )
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 2 );
@@ -862,14 +1002,14 @@ void vtkTecplotReader::GetStructuredGridFromBlockPackingZone
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 3 );
     }
-    
+
   // number of points, number of cells, and dimensionality
   int numNodes    = iDimSize * jDimSize * kDimSize;
   int numCells    = (  ( iDimSize <= 1 ) ? 1 : ( iDimSize - 1 )  ) *
                     (  ( jDimSize <= 1 ) ? 1 : ( jDimSize - 1 )  ) *
                     (  ( kDimSize <= 1 ) ? 1 : ( kDimSize - 1 )  );
-  int gridDims[3] = { iDimSize, jDimSize, kDimSize };                    
-  
+  int gridDims[3] = { iDimSize, jDimSize, kDimSize };
+
   // Create vtkPoints and vtkStructuredGrid and associate them
   vtkPoints *         pntCords = vtkPoints::New();
   vtkStructuredGrid * strcGrid = vtkStructuredGrid::New();
@@ -881,10 +1021,10 @@ void vtkTecplotReader::GetStructuredGridFromBlockPackingZone
   pntCords = NULL;
 
   if (    (    this->Internal->TopologyDim == 2
-            || this->Internal->TopologyDim == 3 
-          ) 
-       || (    this->Internal->TopologyDim == 0 
-            && this->Internal->GeometryDim >  1 
+            || this->Internal->TopologyDim == 3
+          )
+       || (    this->Internal->TopologyDim == 0
+            && this->Internal->GeometryDim >  1
           )
      )
     {
@@ -906,13 +1046,12 @@ void vtkTecplotReader::GetStructuredGridFromPointPackingZone
     vtkErrorMacro( "Zone name un-specified or NULL vtkMultiBlockDataSet." );
     return;
     }
-    
+
   if ( jDimSize == 1 && kDimSize == 1 )
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 1 );
     }
-  else 
-  if ( kDimSize == 1 )
+  else if ( kDimSize == 1 )
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 2 );
     }
@@ -920,11 +1059,11 @@ void vtkTecplotReader::GetStructuredGridFromPointPackingZone
     {
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 3 );
     }
-    
+
   // number of points, number of cells, and dimensionality
   int numNodes    = iDimSize * jDimSize * kDimSize;
   int gridDims[3] = { iDimSize, jDimSize, kDimSize };
-  
+
   // Create vtkPoints and vtkStructuredGrid and associate them
   vtkPoints *         pntCords = vtkPoints::New();
   vtkStructuredGrid * strcGrid = vtkStructuredGrid::New();
@@ -935,11 +1074,11 @@ void vtkTecplotReader::GetStructuredGridFromPointPackingZone
   pntCords->Delete();
   pntCords = NULL;
 
-  if (    (    this->Internal->TopologyDim == 2 
-            || this->Internal->TopologyDim == 3 
-          ) 
-       || (    this->Internal->TopologyDim == 0 
-            && this->Internal->GeometryDim >  1 
+  if (    (    this->Internal->TopologyDim == 2
+            || this->Internal->TopologyDim == 3
+          )
+       || (    this->Internal->TopologyDim == 0
+            && this->Internal->GeometryDim >  1
           )
      )
     {
@@ -955,28 +1094,28 @@ void vtkTecplotReader::GetStructuredGridFromPointPackingZone
 void vtkTecplotReader::GetUnstructuredGridFromBlockPackingZone
   ( int numNodes, int numCells, const char * cellType,
     int zoneIndx, const char * zoneName, vtkMultiBlockDataSet * multZone )
-{ 
+{
   if ( !cellType || !zoneName || !multZone )
     {
     vtkErrorMacro( << "Zone name / cell type un-specified, or NULL "
                    << "vtkMultiBlockDataSet object." );
     return;
     }
-    
+
   vtkPoints *           gridPnts = vtkPoints::New();
   vtkUnstructuredGrid * unstruct = vtkUnstructuredGrid::New();
-  this->GetArraysFromBlockPackingZone( numNodes, numCells, 
+  this->GetArraysFromBlockPackingZone( numNodes, numCells,
         gridPnts, unstruct->GetPointData(), unstruct->GetCellData() );
   this->GetUnstructuredGridCells( numCells, cellType, unstruct );
   unstruct->SetPoints( gridPnts );
   gridPnts->Delete();
   gridPnts = NULL;
 
-  if (    (    this->Internal->TopologyDim == 2 
-            || this->Internal->TopologyDim == 3 
-          ) 
-       || (    this->Internal->TopologyDim == 0 
-            && this->Internal->GeometryDim >  1 
+  if (    (    this->Internal->TopologyDim == 2
+            || this->Internal->TopologyDim == 3
+          )
+       || (    this->Internal->TopologyDim == 0
+            && this->Internal->GeometryDim >  1
           )
      )
     {
@@ -999,7 +1138,7 @@ void vtkTecplotReader::GetUnstructuredGridFromPointPackingZone
                    << "vtkMultiBlockDataSet object." );
     return;
     }
-    
+
   vtkPoints *           gridPnts = vtkPoints::New();
   vtkUnstructuredGrid * unstruct = vtkUnstructuredGrid::New();
   this->GetArraysFromPointPackingZone
@@ -1008,12 +1147,12 @@ void vtkTecplotReader::GetUnstructuredGridFromPointPackingZone
   unstruct->SetPoints( gridPnts );
   gridPnts->Delete();
   gridPnts = NULL;
-  
-  if (    (    this->Internal->TopologyDim == 2 
-            || this->Internal->TopologyDim == 3 
-          ) 
-       || (    this->Internal->TopologyDim == 0 
-            && this->Internal->GeometryDim >  1 
+
+  if (    (    this->Internal->TopologyDim == 2
+            || this->Internal->TopologyDim == 3
+          )
+       || (    this->Internal->TopologyDim == 0
+            && this->Internal->GeometryDim >  1
           )
      )
     {
@@ -1026,7 +1165,7 @@ void vtkTecplotReader::GetUnstructuredGridFromPointPackingZone
 }
 
 // ----------------------------------------------------------------------------
-void vtkTecplotReader::GetUnstructuredGridCells( int numberCells, 
+void vtkTecplotReader::GetUnstructuredGridCells( int numberCells,
   const char * cellTypeStr, vtkUnstructuredGrid * unstrctGrid )
 {
   if ( !cellTypeStr || !unstrctGrid )
@@ -1035,40 +1174,36 @@ void vtkTecplotReader::GetUnstructuredGridCells( int numberCells,
                    << "vtkUnstructuredGrid object." );
     return;
     }
-    
+
   // determine the number of points per cell and the cell type
   int numCellPnts = -1;
   int theCellType = -1;
-  
+
   if (  strcmp( cellTypeStr, "BRICK" ) == 0  )
     {
     numCellPnts = 8;
     theCellType = VTK_HEXAHEDRON;
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 3 );
     }
-  else 
-  if (  strcmp( cellTypeStr, "TRIANGLE" ) == 0  )
+  else if (  strcmp( cellTypeStr, "TRIANGLE" ) == 0  )
     {
     numCellPnts = 3;
     theCellType = VTK_TRIANGLE;
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 2 );
     }
-  else
-  if (  strcmp( cellTypeStr, "QUADRILATERAL" ) == 0  )
+  else if (  strcmp( cellTypeStr, "QUADRILATERAL" ) == 0  )
     {
     numCellPnts = 4;
     theCellType = VTK_QUAD;
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 2 );
     }
-  else 
-  if ( strcmp( cellTypeStr, "TETRAHEDRON" ) == 0  )
+  else if ( strcmp( cellTypeStr, "TETRAHEDRON" ) == 0  )
     {
     numCellPnts = 4;
     theCellType = VTK_TETRA;
     this->Internal->TopologyDim = MAX( this->Internal->TopologyDim, 3 );
     }
-  else 
-  if (  strcmp( cellTypeStr, "POINT" ) == 0 || strcmp( cellTypeStr, "" ) == 0  )
+  else if (  strcmp( cellTypeStr, "POINT" ) == 0 || strcmp( cellTypeStr, "" ) == 0  )
     {
     numCellPnts = 1;
     theCellType = VTK_VERTEX;
@@ -1079,7 +1214,7 @@ void vtkTecplotReader::GetUnstructuredGridCells( int numberCells,
     vtkErrorMacro( << this->FileName << ": Unknown cell type for a zone." );
     }
 
-  // the storage of each cell begins with the number of points per cell, 
+  // the storage of each cell begins with the number of points per cell,
   // followed by a list of point ids representing the cell
   vtkIdTypeArray * cellInfoList = vtkIdTypeArray::New();
   cellInfoList->SetNumberOfValues(  ( numCellPnts + 1 ) * numberCells  );
@@ -1101,16 +1236,16 @@ void vtkTecplotReader::GetUnstructuredGridCells( int numberCells,
     {
     *cellTypesPtr ++ = theCellType;
     *cellInforPtr ++ = numCellPnts;
-    
+
     // 1-origin connectivity array
     for ( int j = 0; j < numCellPnts; j ++ )
       {
-      *cellInforPtr ++ = (   theCellType == VTK_VERTEX 
-                           ? c 
-                           : atoi( this->Internal->GetNextToken().c_str() ) - 1 
+      *cellInforPtr ++ = (   theCellType == VTK_VERTEX
+                           ? c
+                           : atoi( this->Internal->GetNextToken().c_str() ) - 1
                          );
       }
-    
+
     *cellLocatPtr ++ = locateOffset;
     locateOffset    += numCellPnts + 1;
     }
@@ -1124,7 +1259,7 @@ void vtkTecplotReader::GetUnstructuredGridCells( int numberCells,
   cellInfoList->Delete();
   cellInfoList = NULL;
 
-  // create a vtkUnstructuredGrid object and attach the 3 arrays (types, locations, 
+  // create a vtkUnstructuredGrid object and attach the 3 arrays (types, locations,
   // and cells) to it for export.
   unstrctGrid->SetCells( cellTypeList, cellLocArray, theCellArray );
   theCellArray->Delete();
@@ -1145,45 +1280,43 @@ void vtkTecplotReader::GetDataArraysList()
     {
     return;
     }
-    
+
   #define READ_UNTIL_TITLE_OR_VARIABLES !this->Internal->NextCharEOF &&\
                                         theTpToken != "TITLE"        &&\
                                         theTpToken != "VARIABLES"
-  int             i;        
+  int             i;
   int             tpTokenLen = 0;
   int             guessedXid = -1;
   int             guessedYid = -1;
-  int             guessedZid = -1;                    
+  int             guessedZid = -1;
   bool            firstToken = true;
   bool            tokenReady = false;
   vtkstd::string  theTpToken = "";
   vtkstd::string  noSpaceTok = "";
-  
+
   this->Variables.clear();
   this->NumberOfVariables = 0;
-  
+
   this->Internal->Init();
   this->Internal->ASCIIStream.open( this->FileName );
   theTpToken = this->Internal->GetNextToken();
-  
+
   while ( !this->Internal->NextCharEOF )
     {
     tokenReady = false;
-    
+
     if ( theTpToken == "" )
       {
       // whitespace: do nothing
       }
-    else 
-    if ( theTpToken == "TITLE" )
-      { 
+    else if ( theTpToken == "TITLE" )
+      {
       this->Internal->GetNextToken();
       }
-    else 
-    if ( theTpToken == "VARIABLES" )
+    else if ( theTpToken == "VARIABLES" )
       {
       theTpToken = this->Internal->GetNextToken();
-      
+
       while ( this->Internal->TokenIsString )
         {
         tpTokenLen = int( theTpToken.length() );
@@ -1193,13 +1326,11 @@ void vtkTecplotReader::GetDataArraysList()
             {
             theTpToken[i] = '[';
             }
-          else 
-          if ( theTpToken[i] == ')' )
+          else if ( theTpToken[i] == ')' )
             {
             theTpToken[i] = ']';
             }
-          else 
-          if ( theTpToken[i] == '/' )
+          else if ( theTpToken[i] == '/' )
             {
             theTpToken[i] = '_';
             }
@@ -1214,7 +1345,7 @@ void vtkTecplotReader::GetDataArraysList()
           case 2:  this->Internal->ZIdInList = this->NumberOfVariables; break;
           default: break;
           }
-          
+
         switch (  GuessCoord( noSpaceTok )  )
           {
           case 0:  guessedXid = this->NumberOfVariables; break;
@@ -1227,7 +1358,7 @@ void vtkTecplotReader::GetDataArraysList()
         this->NumberOfVariables ++;
         theTpToken = this->Internal->GetNextToken();
         }
-        
+
       if ( this->NumberOfVariables == 0 )
         {
         while ( true )
@@ -1241,7 +1372,7 @@ void vtkTecplotReader::GetDataArraysList()
             case 2:  this->Internal->ZIdInList = this->NumberOfVariables; break;
             default: break;
             }
-            
+
           switch (  GuessCoord( noSpaceTok )  )
             {
             case 0:  guessedXid = this->NumberOfVariables; break;
@@ -1252,7 +1383,7 @@ void vtkTecplotReader::GetDataArraysList()
 
           this->Variables.push_back( theTpToken );
           this->NumberOfVariables ++;
-          
+
           theTpToken = this->Internal->GetNextToken();
           if ( this->Internal->NextCharEOL )
             {
@@ -1271,31 +1402,30 @@ void vtkTecplotReader::GetDataArraysList()
       this->Internal->ZIdInList = ( this->Internal->ZIdInList < 0 )
                                   ? guessedZid
                                   : this->Internal->ZIdInList;
-        
+
       break;
       }
     else
       {
       do
         {
-        theTpToken = this->Internal->GetNextToken();  
+        theTpToken = this->Internal->GetNextToken();
         } while ( READ_UNTIL_TITLE_OR_VARIABLES );
 
       tokenReady = true;
       }
 
     firstToken = false;
-    
+
     if ( !tokenReady )
       {
       theTpToken = this->Internal->GetNextToken();
       }
-      
+
     }
-    
-  this->Internal->ASCIIStream.close();
-  this->Internal->ASCIIStream.clear();
-  
+
+  this->Internal->ASCIIStream.rewind();
+
   // register the data arrays
   for ( i = 0; i < this->GetNumberOfDataAttributes(); i ++ )
     {
@@ -1313,13 +1443,13 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
     {
     return;
     }
-    
+
   if ( multZone == NULL )
     {
     vtkErrorMacro( "vtkMultiBlockDataSet multZone NULL!" );
     return;
     }
-    
+
   #define READ_UNTIL_LINE_END !this->Internal->NextCharEOF &&\
                               tok != "TITLE"               &&\
                               tok != "VARIABLES"           &&\
@@ -1330,11 +1460,11 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
   int  zoneIndex  = 0;
   bool firstToken = true;
   bool tokenReady = false;
-  
+
   this->Init();
   this->Internal->ASCIIStream.open( this->FileName );
   vtkstd::string tok = this->Internal->GetNextToken();
-  
+
   while ( !this->Internal->NextCharEOF )
     {
     tokenReady = false;
@@ -1342,13 +1472,11 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
       {
       // whitespace: do nothing
       }
-    else 
-    if ( tok == "TITLE" )
+    else if ( tok == "TITLE" )
       {
       this->DataTitle = this->Internal->GetNextToken();
       }
-    else 
-    if ( tok == "GEOMETRY" )
+    else if ( tok == "GEOMETRY" )
       {
       // unsupported
       tok = this->Internal->GetNextToken();
@@ -1359,8 +1487,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
         }
       tokenReady = true;
       }
-    else 
-    if ( tok == "TEXT" )
+    else if ( tok == "TEXT" )
       {
       // unsupported
       tok = this->Internal->GetNextToken();
@@ -1371,8 +1498,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
         }
       tokenReady = true;
       }
-    else 
-    if ( tok == "VARIABLES" )
+    else if ( tok == "VARIABLES" )
       {
       int guessedXindex = -1;
       int guessedYindex = -1;
@@ -1389,12 +1515,12 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
             {
             tok[i] = '[';
             }
-          else 
+          else
           if ( tok[i] == ')' )
             {
             tok[i] = ']';
             }
-          else 
+          else
           if ( tok[i] == '/' )
             {
             tok[i] = '_';
@@ -1410,7 +1536,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
           case 2:  this->Internal->ZIdInList = this->NumberOfVariables; break;
           default: break;
           }
-          
+
         switch (  GuessCoord( tok_nw )  )
           {
           case 0:  guessedXindex = this->NumberOfVariables; break;
@@ -1423,7 +1549,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
         this->NumberOfVariables ++;
         tok = this->Internal->GetNextToken();
         }
-        
+
       if ( this->NumberOfVariables == 0 )
         {
         while ( true )
@@ -1437,7 +1563,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
             case 2:  this->Internal->ZIdInList = this->NumberOfVariables; break;
             default: break;
             }
-            
+
           switch (  GuessCoord( tok_nw )  )
             {
             case 0:  guessedXindex = this->NumberOfVariables; break;
@@ -1448,7 +1574,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
 
           this->Variables.push_back( tok );
           this->NumberOfVariables ++;
-          
+
           if ( this->Internal->NextCharEOL )
             {
             tok = this->Internal->GetNextToken();
@@ -1466,15 +1592,15 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
       this->CellBased.resize( this->NumberOfVariables, 0 );
 
       // If we didn't find an exact match for coordinate axis vars, guess
-      if ( this->Internal->XIdInList < 0 ) 
+      if ( this->Internal->XIdInList < 0 )
         {
         this->Internal->XIdInList = guessedXindex;
         }
-      if ( this->Internal->YIdInList < 0 ) 
+      if ( this->Internal->YIdInList < 0 )
         {
         this->Internal->YIdInList = guessedYindex;
         }
-      if ( this->Internal->ZIdInList < 0 ) 
+      if ( this->Internal->ZIdInList < 0 )
         {
         this->Internal->ZIdInList = guessedZindex;
         }
@@ -1495,8 +1621,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
 
       tokenReady = true;
       }
-    else 
-    if ( tok == "ZONE" )
+    else if ( tok == "ZONE" )
       {
       int      numI = 1;
       int      numJ = 1;
@@ -1505,7 +1630,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
       int      numElements = 0;
       char     untitledZoneName[40];
       sprintf( untitledZoneName, "zone%05d", zoneIndex );
-      
+
       vtkstd::string format    = "";
       vtkstd::string elemType  = "";
       vtkstd::string ZoneName = untitledZoneName;
@@ -1537,117 +1662,153 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
                            << "quoted." );
             }
           }
-        else 
-        if ( tok == "I" )
+        else if ( tok == "I" )
           {
           numI = atoi( this->Internal->GetNextToken().c_str() );
           }
-        else 
-        if ( tok == "J" )
+        else if ( tok == "J" )
           {
           numJ = atoi( this->Internal->GetNextToken().c_str() );
           }
-        else 
-        if ( tok == "K" )
+        else if ( tok == "K" )
           {
           numK = atoi( this->Internal->GetNextToken().c_str() );
           }
-        else 
-        if ( tok == "N" )
+        else if ( tok == "N" )
           {
           numNodes = atoi( this->Internal->GetNextToken().c_str() );
           }
-        else 
-        if ( tok == "E" )
+        else if ( tok == "E" )
           {
           numElements = atoi( this->Internal->GetNextToken().c_str() );
           }
-        else 
-        if ( tok == "ET" )
+        else if ( tok == "ET" )
           {
           elemType = this->Internal->GetNextToken();
           }
-        else 
-        if ( tok == "F" || tok == "DATAPACKING" )
+        else if ( tok == "F" || tok == "DATAPACKING" )
           {
           format = this->Internal->GetNextToken();
           }
-        else 
-        if ( tok == "VARLOCATION" )
+        else if ( tok == "VARLOCATION" )
           {
           vtkstd::string  centering;
           this->CellBased.clear();
           this->CellBased.resize( this->NumberOfVariables, 0 );
-          
-          for ( int i = 0; i < this->NumberOfVariables; i ++ )
+
+          //read token to ascertain VARLOCATION syntax usage
+          vtkstd::string var_format_type = this->Internal->GetNextToken();
+
+          //if each variable will have data type specified explicitly (as is handled in old Tecplot reader),
+          //else a range is specified for CELLCENTERED only, with NODAL values assumed implicitly
+          if ( var_format_type == "NODAL" || var_format_type == "CELLCENTERED" )
             {
-            centering = this->Internal->GetNextToken();
-            if ( centering == "CELLCENTERED" )
+            if ( var_format_type == "CELLCENTERED" )
               {
-              this->CellBased[i] = 1;
+              this->CellBased[0] = 1;
+              }
+            for ( int i = 1; i < this->NumberOfVariables; i ++ )
+              {
+              centering = this->Internal->GetNextToken();
+              if ( centering == "CELLCENTERED" )
+                {
+                this->CellBased[i] = 1;
+                }
               }
             }
+          else
+            {
+            do
+              {
+              //remove left square bracket, if it exists
+              size_t brack_pos = var_format_type.find("[");
+              if ( brack_pos != vtkstd::string::npos )
+                var_format_type.erase(brack_pos, brack_pos+1);
+
+              //remove right square bracket, if it exists
+              brack_pos = var_format_type.find("]");
+              if ( brack_pos != vtkstd::string::npos )
+                var_format_type.erase(brack_pos,brack_pos+1);
+
+              //if a range is defined, then split again, convert to int and set to cell data
+              //else if a single value is defined, then just set the flag directly
+              if ( var_format_type.find("-") != vtkstd::string::npos )
+                {
+                std::vector<vtkstd::string> var_range;
+                vtksys::SystemTools::Split(var_format_type.c_str(), var_range, '-');
+
+                int cell_start = atoi(var_range[0].c_str()) - 1;
+                int cell_end = atoi(var_range[1].c_str());
+                for ( int i = cell_start; i != cell_end; ++i )
+                  {
+                  this->CellBased[i] = 1;
+                  }
+                }
+              else
+                {
+                int index = atoi(var_format_type.c_str())-1;
+                this->CellBased[index] = 1;
+                }
+
+              //get next value
+              var_format_type = this->Internal->GetNextToken();
+
+              //continue until the CELLCENTERED keyword is found
+              } while ( var_format_type != "CELLCENTERED" );
+            }
           }
-        else 
-        if ( tok == "DT" )
+        else if ( tok == "DT" )
           {
           for ( int i = 0; i < this->NumberOfVariables; i ++ )
             {
             this->Internal->GetNextToken();
             }
           }
-        else 
-        if ( tok == "D" )
-          {                    
+        else if ( tok == "D" )
+          {
           vtkErrorMacro( << this->FileName << "; Tecplot zone record parameter "
                          << "'D' is currently unsupported." );
           }
-        else 
-        if ( tok == "STRANDID" )
-          {                    
+        else if ( tok == "STRANDID" )
+          {
           vtkErrorMacro( << this->FileName << "; Tecplot zone record parameter "
                          << "'STRANDID' is currently unsupported." );
           this->Internal->GetNextToken();
           }
-        else 
-        if ( tok == "SOLUTIONTIME" )
-          {                    
+        else if ( tok == "SOLUTIONTIME" )
+          {
           vtkErrorMacro( << this->FileName << "; Tecplot zone record parameter "
                          << "'SOLUTIONTIME' is currently unsupported." );
           this->Internal->GetNextToken();
           }
         tok = this->Internal->GetNextToken();
         }
-          
+
       this->Internal->TokenBackup = tok;
 
       this->ZoneNames.push_back( ZoneName );
-      
+
       if ( format == "FEBLOCK" )
         {
         this->GetUnstructuredGridFromBlockPackingZone( numNodes, numElements,
               elemType.c_str(), zoneIndex, ZoneName.c_str(),  multZone );
         }
-      else 
-      if ( format == "FEPOINT" )
+      else if ( format == "FEPOINT" )
         {
-        this->GetUnstructuredGridFromPointPackingZone( numNodes, numElements, 
+        this->GetUnstructuredGridFromPointPackingZone( numNodes, numElements,
               elemType.c_str(), zoneIndex, ZoneName.c_str(),  multZone );
         }
-      else 
-      if ( format == "BLOCK" )
+      else if ( format == "BLOCK" )
         {
         this->GetStructuredGridFromBlockPackingZone
               ( numI, numJ, numK, zoneIndex, ZoneName.c_str(),  multZone );
         }
-      else 
-      if ( format == "POINT" )
+      else if ( format == "POINT" )
         {
         this->GetStructuredGridFromPointPackingZone
               ( numI, numJ, numK, zoneIndex, ZoneName.c_str(),  multZone );
         }
-      else 
-      if ( format == "" )
+      else if ( format == "" )
         {
         // No format given; we will assume we got a POINT format
         this->GetStructuredGridFromPointPackingZone
@@ -1659,11 +1820,10 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
         vtkErrorMacro( << this->FileName << ": The format " << format.c_str()
                        << " found in the file is unknown." );
         }
-        
+
       zoneIndex ++;
       }
-    else 
-    if( tok == "DATASETAUXDATA" )
+    else if( tok == "DATASETAUXDATA" )
       {
       int   tokIndex       = 0;
       bool  haveVectorExpr = false;
@@ -1675,8 +1835,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
           {
           haveVectorExpr = ( tok == "VECTOR" );
           }
-        else 
-        if( tokIndex == 1 )
+        else if( tokIndex == 1 )
           {
           if( haveVectorExpr )
             {
@@ -1716,8 +1875,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
 
       tokenReady = true;
       }
-    else 
-    if ( firstToken && this->Internal->TokenIsString )
+    else if ( firstToken && this->Internal->TokenIsString )
       {
       // Robust: assume it's a title
       this->DataTitle = tok;
@@ -1736,12 +1894,11 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
       }
     }
   this->Internal->ASCIIStream.close();
-  this->Internal->ASCIIStream.clear();
-  
+
   if ( this->Internal->TopologyDim > this->Internal->GeometryDim )
     {
     this->Internal->TopologyDim = this->Internal->GeometryDim;
     }
-    
+
   this->Internal->Completed = 1;
 }

@@ -17,7 +17,7 @@ class vtkMultiProcessController;
 #include <vtkstd/map>
 #include <vtkstd/vector>
 
-#include "vtkExodusII.h"
+#include "vtk_exodusII.h"
 
 class vtkExodusIIReaderParser;
 class vtkMutableDirectedGraph;
@@ -357,7 +357,9 @@ public:
     /// Cached cell connectivity arrays for mesh
     vtkUnstructuredGrid* CachedConnectivity;
 
-    BlockSetInfoType() { this->CachedConnectivity = 0; }
+    BlockSetInfoType(){this->CachedConnectivity=0;}
+    BlockSetInfoType(const BlockSetInfoType& block);
+    ~BlockSetInfoType();
   };
 
   /// A struct to hold information about Exodus blocks
@@ -374,7 +376,7 @@ public:
     int CellType; 
     // Number of points per cell as used by VTK 
     // -- not what's in the file (i.e., BdsPerEntry[0] >= PointsPerCell)
-    int PointsPerCell; 
+    int PointsPerCell;
   };
 
   /// A struct to hold information about Exodus blocks
@@ -419,6 +421,7 @@ public:
   vtkTimeStamp InformationTimeStamp;
  
   friend class vtkExodusIIReader;
+  friend class vtkPExodusIIReader;
 
   virtual void SetParser( vtkExodusIIReaderParser* );
   vtkGetObjectMacro(Parser,vtkExodusIIReaderParser);

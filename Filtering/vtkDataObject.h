@@ -303,7 +303,7 @@ public:
   // Set/Get the maximum number of pieces that can be requested.  
   // The maximum number of pieces is meta data for unstructured data sets.
   // It gets set by the source during the update information call.
-  // A value of -1 indicates that there is no maximum.  A value of
+  // A value of -1 indicates that there is no maximum.
   virtual void SetMaximumNumberOfPieces(int);
   virtual int GetMaximumNumberOfPieces();
 
@@ -522,6 +522,7 @@ public:
   static vtkInformationIntegerKey* FIELD_OPERATION();
   static vtkInformationDoubleVectorKey* FIELD_RANGE();
   static vtkInformationDoubleVectorKey* PIECE_FIELD_RANGE();
+  static vtkInformationStringKey* FIELD_ARRAY_NAME();
   static vtkInformationIntegerVectorKey* PIECE_EXTENT();
   static vtkInformationStringKey* FIELD_NAME();
   static vtkInformationDoubleVectorKey* ORIGIN();

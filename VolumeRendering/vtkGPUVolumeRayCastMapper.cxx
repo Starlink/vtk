@@ -53,7 +53,10 @@ vtkGPUVolumeRayCastMapper::vtkGPUVolumeRayCastMapper()
   this->CanonicalViewImageData     = NULL;
 
   this->MaskInput                  = NULL;
-  this->MaskBlendFactor=1.0f;
+  this->MaskBlendFactor            = 1.0f;
+  this->MaskType
+    = vtkGPUVolumeRayCastMapper::LabelMapMaskType;
+
 
   this->AMRMode=0;
   this->ClippedCroppingRegionPlanes[0]=VTK_DOUBLE_MAX;
@@ -245,9 +248,20 @@ int vtkGPUVolumeRayCastMapper::ValidateRender(vtkRenderer *ren,
   // Check that we have input data
   vtkImageData *input=this->GetInput();
 
+  if(goodSoFar && input==0)
+    {
+    vtkErrorMacro("Input is NULL but is required");
+    goodSoFar = 0;
+    }
+
+  if(goodSoFar)
+    {
+    input->Update();
+    }
+
   // If we have a timestamp change or data change then create a new clone.
-  if(input != this->LastInput ||
-     input->GetMTime() > this->TransformedInput->GetMTime())
+  if(goodSoFar && (input != this->LastInput ||
+                   input->GetMTime() > this->TransformedInput->GetMTime()))
     {
     this->LastInput = input;
 
@@ -290,13 +304,6 @@ int vtkGPUVolumeRayCastMapper::ValidateRender(vtkRenderer *ren,
 
     clone->SetOrigin(origin);
     clone->SetExtent(extents);
-    }
-
-
-  if ( goodSoFar && !this->TransformedInput )
-    {
-    vtkErrorMacro("Input is NULL but is required");
-    goodSoFar = 0;
     }
 
   // Update the date then make sure we have scalars. Note
@@ -366,11 +373,12 @@ int vtkGPUVolumeRayCastMapper::ValidateRender(vtkRenderer *ren,
     {
     if(this->BlendMode!=vtkVolumeMapper::COMPOSITE_BLEND &&
        this->BlendMode!=vtkVolumeMapper::MAXIMUM_INTENSITY_BLEND &&
-       this->BlendMode!=vtkVolumeMapper::MINIMUM_INTENSITY_BLEND)
+       this->BlendMode!=vtkVolumeMapper::MINIMUM_INTENSITY_BLEND &&
+       this->BlendMode!=vtkVolumeMapper::ADDITIVE_BLEND)
       {
       goodSoFar = 0;
       vtkErrorMacro(<< "Selected blend mode not supported. "
-                    << "Only Composite and MIP and MinIP modes "
+                    << "Only Composite, MIP, MinIP and additive modes "
                     << "are supported by the current implementation.");
       }
     }
@@ -401,6 +409,13 @@ int vtkGPUVolumeRayCastMapper::ValidateRender(vtkRenderer *ren,
     vtkErrorMacro("Only unsigned char is supported for 4-component scalars!");
     }
 
+  if(goodSoFar && numberOfComponents!=1 &&
+     this->BlendMode==vtkVolumeMapper::ADDITIVE_BLEND)
+    {
+    goodSoFar=0;
+    vtkErrorMacro("Additive mode only works with 1-component scalars!");
+    }
+  
   // return our status
   return goodSoFar;
 }
@@ -579,6 +594,7 @@ void vtkGPUVolumeRayCastMapper::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "FinalColorWindow: " << this->FinalColorWindow << endl;
   os << indent << "FinalColorLevel: " << this->FinalColorLevel << endl;
   os << indent << "MaskInput: " << this->MaskInput << endl;
+  os << indent << "MaskType: " << this->MaskType << endl;
   os << indent << "MaskBlendFactor: " << this->MaskBlendFactor << endl;
   os << indent << "MaxMemoryInBytes: " << this->MaxMemoryInBytes << endl;
   os << indent << "MaxMemoryFraction: " << this->MaxMemoryFraction << endl;
@@ -641,4 +657,16 @@ void vtkGPUVolumeRayCastMapper::ClipCroppingRegionPlanes()
       }
     ++i;
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkGPUVolumeRayCastMapper::SetMaskTypeToBinary()
+{
+  this->MaskType = vtkGPUVolumeRayCastMapper::BinaryMaskType;
+}
+
+//----------------------------------------------------------------------------
+void vtkGPUVolumeRayCastMapper::SetMaskTypeToLabelMap()
+{
+  this->MaskType = vtkGPUVolumeRayCastMapper::LabelMapMaskType;
 }

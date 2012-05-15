@@ -80,7 +80,7 @@ class VTK_PARALLEL_EXPORT vtkExodusIIWriter : public vtkWriter
 {
 public:
   static vtkExodusIIWriter *New ();
-  vtkTypeMacro (vtkExodusIIWriter, vtkWriter);
+  vtkTypeMacro(vtkExodusIIWriter,vtkWriter);
   void PrintSelf (ostream& os, vtkIndent indent);
 
   // Description:
@@ -200,7 +200,9 @@ protected:
       this->Type = 0;
       this->NumElements = 0;
       this->ElementStartIndex = -1;
-      this->NodesPerElements = 0;
+      this->NodesPerElement = 0;
+      this->EntityCounts = std::vector<int>();
+      this->EntityNodeOffsets = std::vector<int>();
       this->GridIndex = 0;
       this->OutputIndex = -1;
       this->NumAttributes = 0;
@@ -209,7 +211,9 @@ protected:
     int Type;
     int NumElements;
     int ElementStartIndex;
-    int NodesPerElements;
+    int NodesPerElement;
+    std::vector<int> EntityCounts;
+    std::vector<int> EntityNodeOffsets;
     size_t GridIndex;
     // vtkstd::vector<int> CellIndex;
     int OutputIndex;

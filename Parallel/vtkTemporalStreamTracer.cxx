@@ -605,13 +605,13 @@ void vtkTemporalStreamTracer::AssignSeedsToProcessors(
   if (this->UpdateNumPieces>1) {
     // Gather all seed particles to all processes
     this->TransmitReceiveParticles(candidates, allCandidates, false);
-    numTested = allCandidates.size();
+    numTested = static_cast<int>(allCandidates.size());
     vtkDebugMacro(<< "Local Particles " << numSeeds << " TransmitReceive Total " << numTested);
     // Test to see which ones belong to us
     this->TestParticles(allCandidates, LocalSeedPoints, LocalAssignedCount);
   } 
   else {
-    numTested = candidates.size();
+    numTested = static_cast<int>(candidates.size());
     this->TestParticles(candidates, LocalSeedPoints, LocalAssignedCount);
   }
   int TotalAssigned = 0; 
@@ -619,7 +619,7 @@ void vtkTemporalStreamTracer::AssignSeedsToProcessors(
 #else 
   numTested = static_cast<int>(candidates.size());
   this->TestParticles(candidates, LocalSeedPoints, LocalAssignedCount);
-  int TotalAssigned = LocalAssignedCount; 
+  int TotalAssigned = LocalAssignedCount; (void)TotalAssigned;
 #endif
   // Assign unique identifiers taking into account uneven distribution 
   // across processes and seeds which were rejected
@@ -1119,7 +1119,7 @@ int vtkTemporalStreamTracer::RequestData(
   if (this->ParticleWriter && this->EnableParticleWriting) {
     vtkSmartPointer<vtkPolyData> polys = vtkSmartPointer<vtkPolyData>::New();
     polys->ShallowCopy(output);
-    int N = polys->GetNumberOfPoints();
+    int N = polys->GetNumberOfPoints(); (void)N;
     this->ParticleWriter->SetFileName(this->ParticleFileName);
     this->ParticleWriter->SetTimeStep(this->ActualTimeStep);
     this->ParticleWriter->SetTimeValue(this->CurrentTimeSteps[1]);

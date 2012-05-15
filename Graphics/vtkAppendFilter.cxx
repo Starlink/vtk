@@ -32,6 +32,7 @@ vtkStandardNewMacro(vtkAppendFilter);
 vtkAppendFilter::vtkAppendFilter()
 {
   this->InputList = NULL;
+  this->MergePoints = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -98,7 +99,8 @@ int vtkAppendFilter::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-   if ( inputVector[0]->GetNumberOfInformationObjects() > 0 )
+   if (this->MergePoints == 1 &&
+     inputVector[0]->GetNumberOfInformationObjects() > 0 )
      {
      vtkDataSet * tempData = 
      vtkDataSet::SafeDownCast
@@ -248,16 +250,35 @@ int vtkAppendFilter::RequestData(
       
       cd = ds->GetCellData();
       // copy cell and cell data
+      vtkUnstructuredGrid *ug = vtkUnstructuredGrid::SafeDownCast(ds);
       for (cellId=0; cellId < numCells && !abort; cellId++)
         {
-        ds->GetCellPoints(cellId, ptIds);
-        newPtIds->Reset ();
-        for (i=0; i < ptIds->GetNumberOfIds(); i++)
+        if (ug && ds->GetCellType(cellId) == VTK_POLYHEDRON )
           {
-          newPtIds->InsertId(i,ptIds->GetId(i)+ptOffset);
+          vtkIdType nfaces, *facePtIds;
+          ug->GetFaceStream(cellId,nfaces,facePtIds);
+          for(vtkIdType id=0; id < nfaces; ++id)
+            {
+            vtkIdType nPoints = *facePtIds;
+            newPtIds->InsertNextId(nPoints);
+            for (vtkIdType j=0; j <= nPoints; ++j)
+              {
+              newPtIds->InsertNextId(*(++facePtIds)+ptOffset);
+              }
+            }
+          output->InsertNextCell(VTK_POLYHEDRON,nfaces,newPtIds->GetPointer(0));
           }
-        newCellId = output->InsertNextCell(ds->GetCellType(cellId),newPtIds);
-        outputCD->CopyData(cellList,cd,inputCount,cellId,newCellId);
+        else
+          {
+          ds->GetCellPoints(cellId, ptIds);
+          newPtIds->Reset ();
+          for (i=0; i < ptIds->GetNumberOfIds(); i++)
+            {
+            newPtIds->InsertId(i,ptIds->GetId(i)+ptOffset);
+            }
+          newCellId = output->InsertNextCell(ds->GetCellType(cellId),newPtIds);
+          outputCD->CopyData(cellList,cd,inputCount,cellId,newCellId);
+          }
         
         // Update progress
         count++;
@@ -280,6 +301,7 @@ int vtkAppendFilter::RequestData(
   ptIds->Delete();
   newPtIds->Delete();
 
+  output->Squeeze();
   return 1;
 }
   
@@ -450,12 +472,33 @@ int vtkAppendFilter::AppendBlocksWithPointLocator
       for ( cellId = 0; cellId < numCells && !abort; cellId ++ )
         {
         newPtIds->Reset();
-        ds->GetCellPoints( cellId, ptIds );
-        for ( i = 0; i < ptIds->GetNumberOfIds(); i ++ )
+        if (vtkUnstructuredGrid::SafeDownCast(ds) && 
+            ds->GetCellType( cellId ) == VTK_POLYHEDRON)
           {
-          newPtIds->InsertId(  i,  globalIdxs[ ptIds->GetId(i) + ptOffset ]  );
+          vtkUnstructuredGrid * ug = vtkUnstructuredGrid::SafeDownCast(ds);
+          vtkIdType nfaces, *facePtIds;
+          ug->GetFaceStream(cellId, nfaces, facePtIds);
+          for (vtkIdType id = 0; id < nfaces; id++)
+            {
+            vtkIdType nPoints = facePtIds[0];
+            newPtIds->InsertNextId(nPoints);
+            for (vtkIdType j = 1; j <= nPoints; j++)
+              {
+              newPtIds->InsertNextId(globalIdxs[facePtIds[j] + ptOffset]);
+              }
+            facePtIds += nPoints + 1;
+            }
+          output->InsertNextCell( VTK_POLYHEDRON, nfaces, newPtIds->GetPointer(0));
           }
-        output->InsertNextCell(  ds->GetCellType( cellId ),  newPtIds  );
+        else
+          {
+          ds->GetCellPoints( cellId, ptIds );
+          for ( i = 0; i < ptIds->GetNumberOfIds(); i ++ )
+            {
+            newPtIds->InsertId(  i,  globalIdxs[ ptIds->GetId(i) + ptOffset ]  );
+            }
+          output->InsertNextCell(  ds->GetCellType( cellId ),  newPtIds  );
+          }
         
         count ++;
         if (  !( count % tenth )  ) 
@@ -580,4 +623,5 @@ int vtkAppendFilter::FillInputPortInformation(int, vtkInformation *info)
 void vtkAppendFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+  os << "MergePoints:" << (this->MergePoints?"On":"Off") << endl;
 }

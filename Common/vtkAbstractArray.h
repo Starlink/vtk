@@ -49,6 +49,7 @@ class vtkDataArray;
 class vtkIdList;
 class vtkIdTypeArray;
 class vtkInformation;
+class vtkInformationIntegerKey;
 
 class VTK_COMMON_EXPORT vtkAbstractArray : public vtkObject 
 {
@@ -91,6 +92,24 @@ public:
   vtkSetClampMacro(NumberOfComponents, int, 1, VTK_LARGE_INTEGER);
   int GetNumberOfComponents() { return this->NumberOfComponents; }
 
+  // Description:
+  // Set the name for a component. Must be >= 1. 
+  void SetComponentName( vtkIdType component, const char *name );
+  
+  //Description:
+  // Get the component name for a given component.
+  // Note: will return the actual string that is stored
+  const char* GetComponentName( vtkIdType component );
+
+  // Description:
+  // Returns if any component has had a name assigned
+  bool HasAComponentName();
+
+  // Description:
+  // Copies the component names from the inputed array to the current array
+  // make sure that the current array has the same number of components as the input array
+  int CopyComponentNames( vtkAbstractArray *da );
+  
   // Description:
   // Set the number of tuples (a component group) in the array. Note that 
   // this may allocate space depending on the number of components.
@@ -236,7 +255,7 @@ public:
   // VTK_UNSIGNED_SHORT, VTK_INT, VTK_UNSIGNED_INT, VTK_LONG,
   // VTK_UNSIGNED_LONG, VTK_DOUBLE, VTK_DOUBLE, VTK_ID_TYPE,
   // VTK_STRING.
-  // Note that the data array returned has be deleted by the
+  // Note that the data array returned has to be deleted by the
   // user.
   static vtkAbstractArray* CreateArray(int dataType);
 
@@ -246,20 +265,20 @@ public:
   virtual int IsNumeric() = 0;
 
   // Description:
-  // Subclasses must override this method and provide the right 
-  // kind of templated vtkArrayIteratorTemplate.
+  // Subclasses must override this method and provide the right kind
+  // of templated vtkArrayIteratorTemplate.
   virtual vtkArrayIterator* NewIterator() = 0;
 
   // Description:
-  // Returns the size of the data in DataTypeSize units. Thus, the number of bytes
-  // for the data can be computed by GetDataSize() * GetDataTypeSize(). Non-contiguous 
-  // or variable- size arrays  need to override this method.
+  // Returns the size of the data in DataTypeSize units. Thus, the
+  // number of bytes for the data can be computed by GetDataSize() *
+  // GetDataTypeSize(). Non-contiguous or variable- size arrays need
+  // to override this method.
   virtual vtkIdType GetDataSize()
     {
     return this->GetNumberOfComponents() * this->GetNumberOfTuples();
     }
 
-  //BTX
   // Description:
   // Return the indices where a specific value appears.
   virtual vtkIdType LookupValue(vtkVariant value) = 0;
@@ -270,9 +289,14 @@ public:
   virtual vtkVariant GetVariantValue(vtkIdType idx);
 
   // Description:
-  // Insert a value into the array from a variant.
-  virtual void InsertVariantValue(vtkIdType idx, vtkVariant value) = 0;
-  //ETX
+  // Insert a value into the array from a variant.  This method does
+  // bounds checking.
+  virtual void InsertVariantValue(vtkIdType idx, vtkVariant value);
+
+  // Description:
+  // Set a value in the array from a variant.  This method does NOT do
+  // bounds checking.
+  virtual void SetVariantValue(vtkIdType idx, vtkVariant value) = 0;
 
   // Description:
   // Tell the array explicitly that the data has changed.
@@ -318,6 +342,11 @@ public:
   virtual int CopyInformation(vtkInformation *infoFrom, int deep=1);
   //ETX
 
+  // Description:
+  // This key is a hint to end user interface that this array
+  // is internal and should not be shown to the end user.
+  static vtkInformationIntegerKey* GUI_HIDE();
+
 protected:
   // Description:
   // Set an information object that can be used to annotate the array.
@@ -338,6 +367,11 @@ protected:
   bool RebuildArray;      // whether to rebuild the fast lookup data structure.
 
   vtkInformation* Information;
+
+  //BTX
+  class vtkInternalComponentNames;
+  vtkInternalComponentNames* ComponentNames; //names for each component
+  //ETX
 
 private:
   vtkAbstractArray(const vtkAbstractArray&);  // Not implemented.

@@ -38,8 +38,8 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnstructuredGrid.h"
 
-#include "netcdf.h"
-#include "vtkExodusII.h"
+#include "vtk_netcdf.h"
+#include "vtk_exodusII.h"
 
 #include "vtksys/SystemTools.hxx"
 
@@ -143,6 +143,8 @@ protected:
 // Instantiate object with NULL filename.
 vtkPExodusIIReader::vtkPExodusIIReader()
 {
+  this->ProcRank = 0;
+  this->ProcSize = 1;
   // NB. SetController will initialize ProcSize and ProcRank
   this->Controller = 0;
   this->SetController( vtkMultiProcessController::GetGlobalController() );
@@ -560,9 +562,16 @@ int vtkPExodusIIReader::RequestData(
         }
       else
         {
-        // Let the metadata know the time value so that the Metadata->RequestData call below will generate
-        // the animated mode shape properly.
-        this->SetModeShapeTime( requestedTimeSteps[0] );
+        // Let the metadata know the time value so that the
+        // Metadata->RequestData call below will generate the animated mode
+        // shape properly.
+
+        // Don't use this->SetModeShapeTime because that will cause Modified
+        // to be called.
+        //this->SetModeShapeTime( requestedTimeSteps[0] );
+        double phase = requestedTimeSteps[0] - floor(requestedTimeSteps[0]);
+        this->Metadata->ModeShapeTime = phase;
+
         this->ReaderList[reader_idx]->SetTimeStep( this->TimeStep );
         this->ReaderList[reader_idx]->SetModeShapeTime( requestedTimeSteps[0] );
         output->GetInformation()->Set( vtkDataObject::DATA_TIME_STEPS(), requestedTimeSteps, 1 );

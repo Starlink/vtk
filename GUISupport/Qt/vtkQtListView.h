@@ -33,6 +33,7 @@
 #include "vtkQtView.h"
 
 #include <QPointer>
+#include <QImage>
 #include <QSortFilterProxyModel>
 #include "vtkQtAbstractModelAdapter.h"
 #include "vtkSmartPointer.h"
@@ -59,7 +60,6 @@ public:
   // this->ui->box->layout()->addWidget(this->View->GetWidget());
   virtual QWidget* GetWidget();
 
-  //BTX
   enum
     {
     FIELD_DATA = 0,
@@ -69,7 +69,6 @@ public:
     EDGE_DATA = 4,
     ROW_DATA = 5,
     };
-  //ETX
   
   // Description:
   // The field type to copy into the output table.
@@ -157,10 +156,8 @@ private:
   int FieldType;
   int VisibleColumn;
   
-//BTX
   vtkSmartPointer<vtkDataObjectToTable> DataObjectToTable;
   vtkSmartPointer<vtkApplyColors> ApplyColors;
-//ETX
 
   vtkQtListView(const vtkQtListView&);  // Not implemented.
   void operator=(const vtkQtListView&);  // Not implemented.

@@ -18,18 +18,21 @@
 // .SECTION Description
 // This class implements an XY chart.
 
+// .SECTION See Also
+// vtkBarChartActor
+
 #ifndef __vtkChartXY_h
 #define __vtkChartXY_h
 
 #include "vtkChart.h"
+#include "vtkSmartPointer.h" // For SP ivars
+#include "vtkVector.h" // For vtkVector2f in struct
 
 class vtkPlot;
 class vtkAxis;
 class vtkPlotGrid;
-class vtkTable;
 class vtkChartLegend;
 class vtkTooltipItem;
-class vtkContextMouseEvent;
 class vtkChartXYPrivate; // Private class to keep my STL vector in...
 
 class VTK_CHARTS_EXPORT vtkChartXY : public vtkChart
@@ -57,6 +60,10 @@ public:
   virtual vtkPlot * AddPlot(int type);
 
   // Description:
+  // Adds a plot to the chart
+  virtual vtkIdType AddPlot(vtkPlot* plot);
+
+  // Description:
   // Remove the plot at the specified index, returns true if successful,
   // false if the index was invalid.
   virtual bool RemovePlot(vtkIdType index);
@@ -82,10 +89,22 @@ public:
   void SetPlotCorner(vtkPlot *plot, int corner);
 
   // Description:
-  // Get the axis specified by axisIndex. This should probably
-  // be improved either using a string or enum to select the axis.
-  // (0 - left, 1 - bottom, 2 - right, 3 - top).
+  // Get the axis specified by axisIndex. This is specified with the vtkAxis
+  // position enum, valid values are vtkAxis::LEFT, vtkAxis::BOTTOM,
+  // vtkAxis::RIGHT and vtkAxis::TOP.
   virtual vtkAxis* GetAxis(int axisIndex);
+
+  // Description:
+  // Set whether the chart should draw a legend.
+  virtual void SetShowLegend(bool visible);
+
+  // Description:
+  // Get the vtkChartLegend object that will be displayed by the chart.
+  virtual vtkChartLegend* GetLegend();
+
+  // Description:
+  // Get the vtkTooltipItem object that will be displayed by the chart.
+  virtual vtkTooltipItem* GetTooltip();
 
   // Description:
   // Get the number of axes in the current chart.
@@ -100,13 +119,27 @@ public:
   // If true then the axes will be drawn at the origin (scientific style).
   vtkSetMacro(DrawAxesAtOrigin, bool);
   vtkGetMacro(DrawAxesAtOrigin, bool);
+  vtkBooleanMacro(DrawAxesAtOrigin, bool);
 
   // Description:
   // If true then the axes will be turned on and off depending upon whether
   // any plots are in that corner. Defaults to true.
   vtkSetMacro(AutoAxes, bool);
   vtkGetMacro(AutoAxes, bool);
+  vtkBooleanMacro(AutoAxes, bool);
 
+  // Description:
+  // Border size of the axes that are hidden (vtkAxis::GetVisible())
+  vtkSetMacro(HiddenAxisBorder, int);
+  vtkGetMacro(HiddenAxisBorder, int);
+
+  // Description
+  // Force the axes to have their Minimum and Maximum properties inside the
+  // plot boundaries. It constrains pan and zoom interaction.
+  // False by default.
+  vtkSetMacro(ForceAxesToBounds, bool);
+  vtkGetMacro(ForceAxesToBounds, bool);
+  vtkBooleanMacro(ForceAxesToBounds, bool);
 
   // Description:
   // Set the width fraction for any bar charts drawn in this chart. It is
@@ -116,6 +149,13 @@ public:
   // The default value is 0.8, 1.0 would lead to bars that touch.
   vtkSetMacro(BarWidthFraction, float);
   vtkGetMacro(BarWidthFraction, float);
+
+  // Description:
+  // Set the information passed to the tooltip.
+  virtual void SetTooltipInfo(const vtkContextMouseEvent &,
+                              const vtkVector2f &,
+                              vtkIdType, vtkPlot*,
+                              vtkIdType segmentIndex = -1);
 
 //BTX
   // Description:
@@ -147,10 +187,6 @@ public:
   virtual bool MouseWheelEvent(const vtkContextMouseEvent &mouse, int delta);
 //ETX
 
-  // Description:
-  // Set the vtkContextScene for the item, always set for an item in a scene.
-  virtual void SetScene(vtkContextScene *scene);
-
 //BTX
 protected:
   vtkChartXY();
@@ -161,43 +197,42 @@ protected:
   void RecalculatePlotTransforms();
 
   // Description:
-  // Recalculate the supplied transform for the two axes.
-  void RecalculatePlotTransform(vtkAxis *x, vtkAxis *y,
-                                vtkTransform2D *transform);
-
-  // Description:
   // Calculate the optimal zoom level such that all of the points to be plotted
   // will fit into the plot area.
   void RecalculatePlotBounds();
 
   // Description:
-  // Process a rubber band selection event.
-  virtual void ProcessSelectionEvent(vtkObject* caller, void* callData);
+  // Update the layout of the chart, this may require the vtkContext2D in order
+  // to get font metrics etc. Initially this was added to resize the charts
+  // according in response to the size of the axes.
+  virtual bool UpdateLayout(vtkContext2D* painter);
 
   // Description:
-  // The grid for the chart.
-  vtkPlotGrid *Grid;
-  vtkPlotGrid *Grid2;
+  // Layout for the legend if it is visible. This is run after the axes layout
+  // and will adjust the borders to account for the legend position.
+  // \return The required space in the specified border.
+  virtual int GetLegendBorder(vtkContext2D* painter, int axisPosition);
+
+  // Description:
+  // Called after the edges of the chart are decided, set the position of the
+  // legend, depends upon its alignment.
+  virtual void SetLegendPosition(const vtkRectf& rect);
 
   // Description:
   // The legend for the chart.
-  vtkChartLegend *Legend;
+  vtkSmartPointer<vtkChartLegend> Legend;
 
   // Description:
   // The tooltip item for the chart - can be used to display extra information.
-  vtkTooltipItem *Tooltip;
+  vtkSmartPointer<vtkTooltipItem> Tooltip;
 
   // Description:
   // Does the plot area transform need to be recalculated?
   bool PlotTransformValid;
 
   // Description:
-  // The origin of the box when selecting a region of the chart.
-  float BoxOrigin[2];
-
-  // Description:
-  // The width and height of the selection box.
-  float BoxGeometry[2];
+  // The box created as the mouse is dragged around the screen.
+  vtkRectf MouseBox;
 
   // Description:
   // Should the box be drawn (could be selection, zoom etc).
@@ -218,6 +253,10 @@ protected:
   bool AutoAxes;
 
   // Description:
+  // Size of the border when an axis is hidden
+  int HiddenAxisBorder;
+
+  // Description:
   // The fraction of the interval taken up along the x axis by any bars that are
   // drawn on the chart.
   float BarWidthFraction;
@@ -227,6 +266,12 @@ protected:
   // code to be called.
   bool LayoutChanged;
 
+  // Description:
+  // Property to force the axes to have their Minimum and Maximum properties
+  // inside the plot boundaries. It constrains pan and zoom interaction.
+  // False by default.
+  bool ForceAxesToBounds;
+
 private:
   vtkChartXY(const vtkChartXY &); // Not implemented.
   void operator=(const vtkChartXY &);   // Not implemented.
@@ -234,16 +279,15 @@ private:
   vtkChartXYPrivate *ChartPrivate; // Private class where I hide my STL containers
 
   // Description:
-  // Private functions to render different parts of the chart
-  void RenderPlots(vtkContext2D *painter);
-
-  // Description:
   // Figure out the spacing between the bar chart plots, and their offsets.
   void CalculateBarPlots();
 
   // Description:
-  // Try to locate a point within the plots to display in a tooltip
-  bool LocatePointInPlots(const vtkContextMouseEvent &mouse);
+  // Try to locate a point within the plots to display in a tooltip.
+  // If invokeEvent is greater than 0, then an event will be invoked if a point
+  // is at that mouse position.
+  bool LocatePointInPlots(const vtkContextMouseEvent &mouse,
+                          int invokeEvent = -1);
 
   // Description:
   // Remove the plot from the plot corners list.
@@ -252,6 +296,18 @@ private:
   void ZoomInAxes(vtkAxis *x, vtkAxis *y, float *orign, float *max);
 
 //ETX
+};
+
+// Description:
+// Small struct used by InvokeEvent to send some information about the point
+// that was clicked on. This is an experimental part of the API, subject to
+// change.
+struct vtkChartPlotData
+{
+  vtkStdString SeriesName;
+  vtkVector2f Position;
+  vtkVector2i ScreenPosition;
+  int Index;
 };
 
 #endif //__vtkChartXY_h

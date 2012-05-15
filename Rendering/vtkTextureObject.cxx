@@ -144,6 +144,7 @@ vtkTextureObject::vtkTextureObject()
   this->Components = 0;
   this->Width=this->Height=this->Depth=0;
   this->SupportsTextureInteger=false;
+  this->SupportsTextureFloat=false;
   
   this->WrapS=Repeat;
   this->WrapT=Repeat;
@@ -190,9 +191,8 @@ bool vtkTextureObject::IsSupported(vtkRenderWindow* win)
     
     bool tex3D=gl12 || mgr->ExtensionSupported("GL_EXT_texture3D");
     bool multi=gl13 || mgr->ExtensionSupported("GL_ARB_multitexture");
-    bool floatTextures=mgr->ExtensionSupported("GL_ARB_texture_float")==1;
     
-    return npot && tex3D && multi && floatTextures;
+    return npot && tex3D && multi;
     }
   return false;
 }
@@ -204,6 +204,9 @@ bool vtkTextureObject::LoadRequiredExtensions(vtkOpenGLExtensionManager* mgr)
   this->SupportsTextureInteger =
     mgr->LoadSupportedExtension("GL_EXT_texture_integer") != 0;
   
+  this->SupportsTextureFloat=
+    mgr->ExtensionSupported("GL_ARB_texture_float")==1;
+  
   bool gl12=mgr->ExtensionSupported("GL_VERSION_1_2")==1;
   bool gl13=mgr->ExtensionSupported("GL_VERSION_1_3")==1;
   bool gl20=mgr->ExtensionSupported("GL_VERSION_2_0")==1;
@@ -213,9 +216,8 @@ bool vtkTextureObject::LoadRequiredExtensions(vtkOpenGLExtensionManager* mgr)
   
   bool tex3D=gl12 || mgr->ExtensionSupported("GL_EXT_texture3D");
   bool multi=gl13 || mgr->ExtensionSupported("GL_ARB_multitexture");
-  bool floatTextures=mgr->ExtensionSupported("GL_ARB_texture_float")==1;
   
-  bool supported=npot && tex3D && multi && floatTextures;
+  bool supported=npot && tex3D && multi;
   
   if(supported)
     {
@@ -546,11 +548,27 @@ unsigned int vtkTextureObject::GetInternalFormat(int vtktype, int numComps,
         switch (numComps)
           {
           case 1:
-            return vtkgl::LUMINANCE32F_ARB;
+            if(this->SupportsTextureFloat)
+              {
+              return vtkgl::LUMINANCE32F_ARB;
 //            return GL_LUMINANCE16; // not supported as a render target
+              }
+            else
+              {
+              vtkGenericWarningMacro("Unsupported type!");
+              return 0;
+              }
           case 2:
-            return vtkgl::LUMINANCE_ALPHA32F_ARB;
-//            return GL_LUMINANCE16_ALPHA16; // not supported as a render target
+            if(this->SupportsTextureFloat)
+              {
+              return vtkgl::LUMINANCE_ALPHA32F_ARB;
+              //            return GL_LUMINANCE16_ALPHA16; // not supported as a render target
+              }
+            else
+              {
+              vtkGenericWarningMacro("Unsupported type!");
+              return 0;
+              }
           case 3:
             return GL_RGB16;
           case 4:
@@ -578,13 +596,27 @@ unsigned int vtkTextureObject::GetInternalFormat(int vtktype, int numComps,
         switch (numComps)
           {
           case 1:
-            return vtkgl::LUMINANCE32F_ARB;
+            if(this->SupportsTextureFloat)
+              {
+              return vtkgl::LUMINANCE32F_ARB;
 //      return GL_LUMINANCE16; // not supported as a render target
-            
+              }
+            else
+              {
+              vtkGenericWarningMacro("Unsupported type!");
+              return 0;
+              }
           case 2:
-            return vtkgl::LUMINANCE_ALPHA32F_ARB;
+            if(this->SupportsTextureFloat)
+              {
+              return vtkgl::LUMINANCE_ALPHA32F_ARB;
 //      return GL_LUMINANCE16_ALPHA16; // not supported as a render target
-            
+              }
+            else
+              {
+               vtkGenericWarningMacro("Unsupported type!");
+               return 0;
+              }
           case 3:
             return GL_RGB16;
           case 4:
@@ -612,19 +644,27 @@ unsigned int vtkTextureObject::GetInternalFormat(int vtktype, int numComps,
         }
       else
         {
-        switch (numComps)
+        if(this->SupportsTextureFloat)
           {
-          case 1:
-            return vtkgl::LUMINANCE32F_ARB;
-            
-          case 2:
-            return vtkgl::LUMINANCE_ALPHA32F_ARB;
-            
-          case 3:
-            return vtkgl::RGB32F_ARB;
-            
-          case 4:
-            return vtkgl::RGBA32F_ARB;
+          switch (numComps)
+            {
+            case 1:
+              return vtkgl::LUMINANCE32F_ARB;
+              
+            case 2:
+              return vtkgl::LUMINANCE_ALPHA32F_ARB;
+              
+            case 3:
+              return vtkgl::RGB32F_ARB;
+              
+            case 4:
+              return vtkgl::RGBA32F_ARB;
+            }
+          }
+        else
+          {
+          vtkGenericWarningMacro("Unsupported type!");
+          return 0;
           }
         }
       
@@ -648,6 +688,33 @@ unsigned int vtkTextureObject::GetInternalFormat(int vtktype, int numComps,
         }
       else
         {
+        if(this->SupportsTextureFloat)
+          {
+          switch (numComps)
+            {
+            case 1:
+              return vtkgl::LUMINANCE32F_ARB;
+              
+            case 2:
+              return vtkgl::LUMINANCE_ALPHA32F_ARB;
+              
+            case 3:
+              return vtkgl::RGB32F_ARB;
+              
+            case 4:
+              return vtkgl::RGBA32F_ARB;
+            }
+          }
+        else
+          {
+          vtkGenericWarningMacro("Unsupported type!");
+          return 0;
+          }
+        }
+      
+    case VTK_FLOAT:
+      if(this->SupportsTextureFloat)
+        {
         switch (numComps)
           {
           case 1:
@@ -663,23 +730,11 @@ unsigned int vtkTextureObject::GetInternalFormat(int vtktype, int numComps,
             return vtkgl::RGBA32F_ARB;
           }
         }
-      
-    case VTK_FLOAT:
-      switch (numComps)
+      else
         {
-        case 1:
-          return vtkgl::LUMINANCE32F_ARB;
-          
-        case 2:
-          return vtkgl::LUMINANCE_ALPHA32F_ARB;
-          
-        case 3:
-          return vtkgl::RGB32F_ARB;
-          
-        case 4:
-          return vtkgl::RGBA32F_ARB;
+        vtkGenericWarningMacro("Unsupported type!");
+        return 0;
         }
-      
     case VTK_DOUBLE:
       vtkGenericWarningMacro("Unsupported type double!");
     }
@@ -833,7 +888,7 @@ bool vtkTextureObject::Create1D(int numComps,
 
   if (!internalFormat || !format || !type)
     {
-    vtkErrorMacro("Failed to detemine texture paramters.");
+    vtkErrorMacro("Failed to detemine texture parameters.");
     return false;
     }
 
@@ -916,7 +971,7 @@ bool vtkTextureObject::Create2D(unsigned int width, unsigned int height,
 
   if (!internalFormat || !format || !type)
     {
-    vtkErrorMacro("Failed to detemine texture paramters.");
+    vtkErrorMacro("Failed to detemine texture parameters.");
     return false;
     }
 
@@ -1243,7 +1298,7 @@ bool vtkTextureObject::Create3D(unsigned int width, unsigned int height,
 
   if (!internalFormat || !format || !type)
     {
-    vtkErrorMacro("Failed to detemine texture paramters.");
+    vtkErrorMacro("Failed to detemine texture parameters.");
     return false;
     }
 
@@ -1359,7 +1414,7 @@ bool vtkTextureObject::Create2D(unsigned int width, unsigned int height,
 
   if (!internalFormat || !format || !type)
     {
-    vtkErrorMacro("Failed to detemine texture paramters.");
+    vtkErrorMacro("Failed to detemine texture parameters.");
     return false;
     }
 
@@ -1415,7 +1470,7 @@ bool vtkTextureObject::Create3D(unsigned int width, unsigned int height,
 
   if (!internalFormat || !format || !type)
     {
-    vtkErrorMacro("Failed to detemine texture paramters.");
+    vtkErrorMacro("Failed to detemine texture parameters.");
     return false;
     }
 

@@ -416,6 +416,8 @@ void vtkQtTableView::SetVTKSelection()
 //----------------------------------------------------------------------------
 void vtkQtTableView::Update()
 {
+  vtkView::Update() ;
+   
   if(this->InSelectionChanged)
     {
     this->InSelectionChanged = false;
@@ -428,7 +430,7 @@ void vtkQtTableView::Update()
     this->TableAdapter->reset();
     return;
     }
-
+  
   vtkAlgorithmOutput *selConn, *annConn, *conn;
   conn = rep->GetInputConnection();
   annConn = rep->GetInternalAnnotationOutputPort();

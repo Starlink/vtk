@@ -53,7 +53,6 @@ public:
   // this->ui->box->layout()->addWidget(this->View->GetWidget());
   virtual QWidget* GetWidget();
 
-//BTX
   enum
     {
     FIELD_DATA = 0,
@@ -63,7 +62,6 @@ public:
     EDGE_DATA = 4,
     ROW_DATA = 5,
     };
-//ETX
 
   // Description:
   // The field type to copy into the output table.

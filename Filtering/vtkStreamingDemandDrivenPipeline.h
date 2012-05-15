@@ -25,6 +25,9 @@
 
 #include "vtkDemandDrivenPipeline.h"
 
+#define VTK_UPDATE_EXTENT_COMBINE 1
+#define VTK_UPDATE_EXTENT_REPLACE 2
+
 class vtkExtentTranslator;
 class vtkInformationDoubleKey;
 class vtkInformationDoubleVectorKey;
@@ -113,20 +116,6 @@ public:
   double GetUpdateResolution(vtkInformation *);
 
   // Description:
-  // Convenience method to set a particular minor update piece within
-  // a particular major update piece. For example, when streaming in
-  // parallel. This is needed in paraview, to let each processor set 
-  // their own piece locally, independent of processor.
-  int SetSplitUpdateExtent(int port, 
-                           int major, int minor,
-                           int numPieces, 
-                           int ghostLevel)
-  {
-    return this->SetUpdateExtent(port, major+minor, numPieces, ghostLevel);
-  }
-  
-
-  // Description:
   // Get/Set the update extent for output ports that use Temporal Extents
   int SetUpdateTimeSteps(int port, double *times, int length);
   int SetUpdateTimeSteps(vtkInformation *, double *times, int length);
@@ -198,6 +187,11 @@ public:
   static vtkInformationIntegerKey* UPDATE_NUMBER_OF_GHOST_LEVELS();
 
   // Description:
+  // Key for combining the update extents requested by all consumers,
+  // so that the final extent that is produced satisfies all consumers.
+  static vtkInformationIntegerVectorKey* COMBINED_UPDATE_EXTENT();
+
+  // Description:
   // This is set if the extent was set through extent translation.
   // GenerateGhostLevelArray() is called only when this is set.
   static vtkInformationIntegerKey* UPDATE_EXTENT_TRANSLATED();
@@ -205,6 +199,12 @@ public:
   // Description:
   // Key to store the whole extent provided in pipeline information.
   static vtkInformationIntegerVectorKey* WHOLE_EXTENT();
+
+  // Description:
+  // This is set if the update extent is not restricted to the
+  // whole extent, for sources that can generate an extent of
+  // any requested size.
+  static vtkInformationIntegerKey* UNRESTRICTED_UPDATE_EXTENT();
 
   // Description:
   // Key to store the maximum number of pieces provided in pipeline

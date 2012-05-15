@@ -1124,7 +1124,7 @@ xmlRelaxNGAddStates(xmlRelaxNGValidCtxtPtr ctxt,
 /**
  * xmlRelaxNGFreeStates:
  * @ctxt:  a Relax-NG validation context
- * @states:  teh container
+ * @states:  the container
  *
  * Free a RelaxNG validation state container
  */
@@ -8220,7 +8220,7 @@ xmlRelaxNGValidatePushElement(xmlRelaxNGValidCtxtPtr ctxt,
  * xmlRelaxNGValidatePushCData:
  * @ctxt:  the RelaxNG validation context
  * @data:  some character data read
- * @len:  the lenght of the data
+ * @len:  the length of the data
  *
  * check the CData parsed for validation in the current stack
  *

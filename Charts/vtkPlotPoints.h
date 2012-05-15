@@ -13,22 +13,31 @@
 
 =========================================================================*/
 
-// .NAME vtkPlotPoints - Class for drawing an XY plot given two columns from a
+// .NAME vtkPlotPoints - Class for drawing an points given two columns from a
 // vtkTable.
 //
 // .SECTION Description
+// This class draws points in a plot given two columns from a table. If you need
+// a line as well you should use vtkPlotLine which derives from vtkPlotPoints
+// and is capable of drawing both points and a line.
 //
+// .SECTION See Also
+// vtkPlotLine
 
 #ifndef __vtkPlotPoints_h
 #define __vtkPlotPoints_h
 
 #include "vtkPlot.h"
+#include "vtkScalarsToColors.h" // For VTK_COLOR_MODE_DEFAULT and _MAP_SCALARS
+#include "vtkStdString.h"       // For color array name
 
 class vtkContext2D;
 class vtkTable;
 class vtkPoints2D;
 class vtkStdString;
 class vtkImageData;
+class vtkScalarsToColors;
+class vtkUnsignedCharArray;
 
 class VTK_CHARTS_EXPORT vtkPlotPoints : public vtkPlot
 {
@@ -55,18 +64,48 @@ public:
   // plot items symbol/mark/line drawn. A rect is supplied with the lower left
   // corner of the rect (elements 0 and 1) and with width x height (elements 2
   // and 3). The plot can choose how to fill the space supplied.
-  virtual bool PaintLegend(vtkContext2D *painter, float rect[4]);
+  virtual bool PaintLegend(vtkContext2D *painter, const vtkRectf& rect,
+                           int legendIndex);
 
   // Description:
-  // Get the bounds for this mapper as (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax).
+  // Get the bounds for this plot as (Xmin, Xmax, Ymin, Ymax).
   virtual void GetBounds(double bounds[4]);
+
+  // Description:
+  // Specify a lookup table for the mapper to use.
+  void SetLookupTable(vtkScalarsToColors *lut);
+  vtkScalarsToColors *GetLookupTable();
+
+  // Description:
+  // Create default lookup table. Generally used to create one when none
+  // is available with the scalar data.
+  virtual void CreateDefaultLookupTable();
+
+  // Description:
+  // Turn on/off flag to control whether scalar data is used to color objects.
+  vtkSetMacro(ScalarVisibility,int);
+  vtkGetMacro(ScalarVisibility,int);
+  vtkBooleanMacro(ScalarVisibility,int);
+
+  // Description:
+  // When ScalarMode is set to UsePointFieldData or UseCellFieldData,
+  // you can specify which array to use for coloring using these methods.
+  // The lookup table will decide how to convert vectors to colors.
+  void SelectColorArray(vtkIdType arrayNum);
+  void SelectColorArray(const vtkStdString& arrayName);
+
+  // Description:
+  // Get the array name to color by.
+  vtkStdString GetColorArrayName();
 
 //BTX
   // Description:
   // Function to query a plot for the nearest point to the specified coordinate.
-  virtual bool GetNearestPoint(const vtkVector2f& point,
-                               const vtkVector2f& tolerance,
-                               vtkVector2f* location);
+  // Returns the index of the data series with which the point is associated or
+  // -1.
+  virtual vtkIdType GetNearestPoint(const vtkVector2f& point,
+                                    const vtkVector2f& tolerance,
+                                    vtkVector2f* location);
 
   // Description:
   // Select all points in the specified rectangle.
@@ -89,6 +128,12 @@ public:
   // in this class is used as a parameter.
   vtkGetMacro(MarkerStyle, int);
   vtkSetMacro(MarkerStyle, int);
+
+  // Description:
+  // Get/set the marker size that should be used. The default is negative, and
+  // in that case it is 2.3 times the pen width, if less than 8 will be used.
+  vtkGetMacro(MarkerSize, float);
+  vtkSetMacro(MarkerSize, float);
 
 //BTX
 protected:
@@ -119,6 +164,10 @@ protected:
   void CalculateBounds(double bounds[4]);
 
   // Description:
+  // Create the sorted point list if necessary.
+  void CreateSortedPoints();
+
+  // Description:
   // Store a well packed set of XY coordinates for this data series.
   vtkPoints2D *Points;
 
@@ -139,15 +188,25 @@ protected:
   // Description:
   // The marker style that should be used
   int MarkerStyle;
+  float MarkerSize;
   vtkImageData* Marker;
   vtkImageData* HighlightMarker;
 
   bool LogX, LogY;
 
+  // Description:
+  // Lookup Table for coloring points by scalar value
+  vtkScalarsToColors *LookupTable;
+  vtkUnsignedCharArray *Colors;
+  int ScalarVisibility;
+  vtkStdString ColorArrayName;
+
 private:
   vtkPlotPoints(const vtkPlotPoints &); // Not implemented.
   void operator=(const vtkPlotPoints &); // Not implemented.
 
+// #define  VTK_COLOR_MODE_DEFAULT   0
+// #define  VTK_COLOR_MODE_MAP_SCALARS   1
 //ETX
 };
 

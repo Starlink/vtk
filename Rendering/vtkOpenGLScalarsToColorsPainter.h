@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLScalarsToColorsPainter :
 public:
   static vtkOpenGLScalarsToColorsPainter* New();
   vtkTypeMacro(vtkOpenGLScalarsToColorsPainter,
-               vtkScalarsToColorsPainter);
+    vtkScalarsToColorsPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
 
@@ -42,6 +42,11 @@ public:
   virtual void ReleaseGraphicsResources(vtkWindow *);
   
   virtual int GetPremultiplyColorsWithAlpha(vtkActor* actor);
+
+  // Description:
+  // Return the texture size limit, i.e. GL_MAX_TEXTURE_SIZE.
+  virtual vtkIdType GetTextureSizeLimit();
+
 protected:
   vtkOpenGLScalarsToColorsPainter();
   ~vtkOpenGLScalarsToColorsPainter();

@@ -202,6 +202,23 @@ public:
   // Take an RMI away.
   void RemoveRMI(vtkRMIFunctionType f, void *arg, int tag)
     {f = f; arg = arg; tag = tag; vtkErrorMacro("RemoveRMI Not Implemented Yet");};
+
+  // Description:
+  // These methods are a part of the newer API to add multiple rmi callbacks.
+  // When the RMI is triggered, all the callbacks are called
+  // Adds a new callback for an RMI. Returns the identifier for the callback.
+  unsigned long AddRMICallback(vtkRMIFunctionType, void* localArg, int tag);
+
+  // Description:
+  // These methods are a part of the newer API to add multiple rmi callbacks.
+  // When the RMI is triggered, all the callbacks are called
+  // Removes all callbacks for the tag.
+  void RemoveAllRMICallbacks(int tag);
+
+  // Description:
+  // Remove a callback. Returns true is the remove was successful.
+  bool RemoveRMICallback(unsigned long id);
+
   //ETX
   
   // Description:
@@ -383,6 +400,9 @@ public:
   int Broadcast(int *data, vtkIdType length, int srcProcessId) {
     return this->Communicator->Broadcast(data, length, srcProcessId);
   }
+  int Broadcast(unsigned int *data, vtkIdType length, int srcProcessId) {
+    return this->Communicator->Broadcast(data, length, srcProcessId);
+  }
   int Broadcast(unsigned long *data, vtkIdType length, int srcProcessId) {
     return this->Communicator->Broadcast(data, length, srcProcessId);
   }
@@ -526,6 +546,22 @@ public:
                                        offsets, destProcessId);
   }
 #endif
+  int GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+              vtkIdType *recvLengths, vtkIdType *offsets, int destProcessId) {
+    return this->Communicator->GatherV(sendBuffer, recvBuffer,
+                                       recvLengths, offsets,
+                                       destProcessId);
+  }
+
+  // Description:
+  // This special form of GatherV will automatically determine \c recvLengths
+  // and \c offsets to tightly pack the data in the \c recvBuffer in process
+  // order.  It will also resize \c recvBuffer in order to accommodate the
+  // incoming data (unlike the other GatherV variants).
+  int GatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+              int destProcessId) {
+    return this->Communicator->GatherV(sendBuffer, recvBuffer, destProcessId);
+  }
 
   // Description:
   // Scatter takes an array in the process with id \c srcProcessId and
@@ -719,12 +755,31 @@ public:
                                           offsets);
   }
 #endif
+  int AllGatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer,
+                 vtkIdType *recvLengths, vtkIdType *offsets) {
+    return this->Communicator->AllGatherV(sendBuffer, recvBuffer,
+                                          recvLengths, offsets);
+  }
+
+  // Description:
+  // This special form of AllGatherV will automatically determine \c recvLengths
+  // and \c offsets to tightly pack the data in the \c recvBuffer in process
+  // order.  It will also resize \c recvBuffer in order to accommodate the
+  // incoming data (unlike the other GatherV variants).
+  int AllGatherV(vtkDataArray *sendBuffer, vtkDataArray *recvBuffer) {
+    return this->Communicator->AllGatherV(sendBuffer, recvBuffer);
+  }
 
   // Description:
   // Reduce an array to the given destination process.  This version of Reduce
   // takes an identifier defined in the
   // vtkCommunicator::StandardOperations enum to define the operation.
   int Reduce(const int *sendBuffer, int *recvBuffer,
+             vtkIdType length, int operation, int destProcessId) {
+    return this->Communicator->Reduce(sendBuffer, recvBuffer, length,
+                                      operation, destProcessId);
+  }
+  int Reduce(const unsigned int *sendBuffer, unsigned int *recvBuffer,
              vtkIdType length, int operation, int destProcessId) {
     return this->Communicator->Reduce(sendBuffer, recvBuffer, length,
                                       operation, destProcessId);
@@ -926,8 +981,6 @@ protected:
   void                       *SingleData;
 
   void GetMultipleMethod(int index, vtkProcessFunctionType &func, void *&data);
-  
-  vtkCollection *RMIs;
   
   // This is a flag that can be used by the ports to break
   // their update loop. (same as ProcessRMIs)

@@ -7,7 +7,7 @@ INCLUDE(${VTK_USE_FILE})
 ENDIF(NOT VTK_BINARY_DIR)
 
 ADD_EXECUTABLE(DumpXMLFile DumpXMLFile.cxx)
-TARGET_LINK_LIBRARIES(DumpXMLFile vtkIO)
+TARGET_LINK_LIBRARIES(DumpXMLFile vtkIO vtkGraphics)
 
 ADD_EXECUTABLE(ParticleReader ParticleReader.cxx)
 TARGET_LINK_LIBRARIES(ParticleReader vtkHybrid)
@@ -16,7 +16,7 @@ TARGET_LINK_LIBRARIES(ParticleReader vtkHybrid)
 SET(KIT IOExamples)
 SET(MyTests TestDumpXMLFile.cxx TestParticleReader.cxx)
 
-INCLUDE(${VTK_SOURCE_DIR}/Rendering/vtkTestingObjectFactory.cmake)
+INCLUDE(vtkTestingObjectFactory)
 
 ADD_EXECUTABLE(${KIT}CxxTests ${KIT}CxxTests.cxx
                ${MyTests})

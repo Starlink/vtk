@@ -46,6 +46,19 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Allocates space for the specified number of vertices in the graph's
+  // internal data structures.
+  //
+  // This has no effect on the number of vertex coordinate tuples or
+  // vertex attribute tuples allocated; you are responsible for
+  // guaranteeing these match.
+  // Also, this call is not implemented for distributed-memory graphs since
+  // the semantics are unclear; calling this function on a graph with a
+  // non-NULL DistributedGraphHelper will generate an error message and
+  // no allocation will be performed.
+  virtual vtkIdType SetNumberOfVertices( vtkIdType numVerts );
+
+  // Description:
   // Adds a vertex to the graph and returns the index of the new vertex.
   //
   // \note In a distributed graph (i.e. a graph whose DistributedHelper
@@ -61,7 +74,7 @@ public:
   // \p propertyArr and returns the index of the new vertex.
   // The number and order of values in \p propertyArr must match up with the
   // arrays in the vertex data retrieved by GetVertexData().
-  // 
+  //
   // If a vertex with the given pedigree ID already exists, its properties will be
   // overwritten with the properties in \p propertyArr and the existing
   // vertex index will be returned.
@@ -75,7 +88,6 @@ public:
   // the delays associated with returning the vertex index.
   vtkIdType AddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
   // Adds a vertex with the given \p pedigreeID to the graph and
   // returns the index of the new vertex.
@@ -91,8 +103,8 @@ public:
   // LazyAddVertex, which provides better performance by eliminating
   // the delays associated with returning the vertex index.
   vtkIdType AddVertex(const vtkVariant& pedigreeId);
-  //ETX
 
+//BTX
   // Description:
   // Adds a directed edge from \p u to \p v,
   // where \p u and \p v are vertex indices,
@@ -100,10 +112,10 @@ public:
   //
   // \p vtkEdgeType contains fields for \p Source vertex index,
   // \p Target vertex index, and edge index \p Id.
-//BTX
   vtkEdgeType AddEdge(vtkIdType u, vtkIdType v);
 //ETX
 
+//BTX
   // Description:
   // Adds a directed edge from \p u to \p v,
   // where \p u and \p v are vertex indices,
@@ -115,7 +127,6 @@ public:
   //
   // \p vtkEdgeType contains fields for \p Source vertex index,
   // \p Target vertex index, and edge index \p Id.
-//BTX
   vtkEdgeType AddEdge(vtkIdType u, vtkIdType v,
                       vtkVariantArray *propertyArr);
 //ETX
@@ -167,7 +178,7 @@ public:
 
   // Description:
   // Adds a vertex to the graph.
-  // 
+  //
   // This method is lazily evaluated for distributed graphs (i.e. graphs
   // whose DistributedHelper is non-null) the next time Synchronize is
   // called on the helper.
@@ -178,16 +189,15 @@ public:
   // \p propertyArr.
   // The number and order of values in \p propertyArr must match up with the
   // arrays in the vertex data retrieved by GetVertexData().
-  // 
+  //
   // If a vertex with the given pedigree ID already exists, its properties will be
   // overwritten with the properties in \p propertyArr.
-  // 
+  //
   // This method is lazily evaluated for distributed graphs (i.e. graphs
   // whose DistributedHelper is non-null) the next time Synchronize is
   // called on the helper.
   void LazyAddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
   // Adds a vertex with the given \p pedigreeID to the graph.
   //
@@ -219,7 +229,7 @@ public:
   // The number and order of values in the optional parameter
   // \p propertyArr must match up with the arrays in the edge data
   // retrieved by GetEdgeData().
-  // 
+  //
   // This method is lazily evaluated for distributed graphs (i.e. graphs
   // whose DistributedHelper is non-null) the next time Synchronize is
   // called on the helper.
@@ -233,7 +243,7 @@ public:
   // The number and order of values in the optional parameter
   // \p propertyArr must match up with the arrays in the edge data
   // retrieved by GetEdgeData().
-  // 
+  //
   // This method is lazily evaluated for distributed graphs (i.e. graphs
   // whose DistributedHelper is non-null) the next time Synchronize is
   // called on the helper.
@@ -254,13 +264,12 @@ public:
   void LazyAddEdge(const vtkVariant& u,
                    const vtkVariant& v,
                    vtkVariantArray *propertyArr = 0);
-  //ETX
 
   // Description:
   // Variant of AddEdge() that returns a heavyweight \p vtkGraphEdge object.
   // The graph owns the reference of the edge and will replace
   // its contents on the next call to AddGraphEdge().
-  // 
+  //
   // \note This is a less efficient method for use with wrappers.
   // In C++ you should use the faster AddEdge().
   vtkGraphEdge *AddGraphEdge(vtkIdType u, vtkIdType v);

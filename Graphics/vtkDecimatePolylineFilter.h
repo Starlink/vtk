@@ -37,9 +37,12 @@
 #ifndef __vtkDecimatePolylineFilter_h
 #define __vtkDecimatePolylineFilter_h
 
+#include "vtkSmartPointer.h" // Needed for SP ivars
+
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkPriorityQueue;
+
 
 class VTK_GRAPHICS_EXPORT vtkDecimatePolylineFilter : public vtkPolyDataAlgorithm
 {
@@ -66,7 +69,18 @@ protected:
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  double TargetReduction;
+  double ComputeError( vtkPolyData* input, int prev, int id, int next );
+  void UpdateError( vtkPolyData* input, int iId );
+
+  int GetPrev( int iId );
+  int GetNext( int iId );
+
+  struct    vtkDecimatePolylineVertexErrorSTLMap;
+  vtkDecimatePolylineVertexErrorSTLMap*  ErrorMap;
+
+  vtkSmartPointer< vtkPriorityQueue >   PriorityQueue;
+  bool                                  Closed;
+  double                                TargetReduction;
 
 private:
   vtkDecimatePolylineFilter(const vtkDecimatePolylineFilter&);  // Not implemented.

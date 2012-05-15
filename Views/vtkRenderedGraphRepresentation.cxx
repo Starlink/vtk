@@ -139,6 +139,8 @@ vtkRenderedGraphRepresentation::vtkRenderedGraphRepresentation()
   this->HideVertexLabelsOnInteraction = false;
   this->HideEdgeLabelsOnInteraction = false;
 
+  this->EdgeSelection = true;
+
   /*
    <graphviz>
    digraph {
@@ -339,6 +341,16 @@ bool vtkRenderedGraphRepresentation::GetEdgeVisibility()
   return this->EdgeActor->GetVisibility() ? true : false;
 }
 
+void vtkRenderedGraphRepresentation::SetEdgeSelection(bool b)
+{
+  this->EdgeSelection = b;
+}
+
+bool vtkRenderedGraphRepresentation::GetEdgeSelection()
+{
+  return this->EdgeSelection;
+}
+
 void vtkRenderedGraphRepresentation::SetVertexLabelTextProperty(vtkTextProperty* p)
 {
   this->VertexLabelHierarchy->SetTextProperty(p);
@@ -496,6 +508,16 @@ void vtkRenderedGraphRepresentation::SetVertexSelectedIcon(int icon)
 int vtkRenderedGraphRepresentation::GetVertexSelectedIcon()
 {
   return this->ApplyVertexIcons->GetSelectedIcon();
+}
+
+void vtkRenderedGraphRepresentation::SetVertexDefaultIcon(int icon)
+{
+  this->ApplyVertexIcons->SetDefaultIcon(icon);
+}
+
+int vtkRenderedGraphRepresentation::GetVertexDefaultIcon()
+{
+  return this->ApplyVertexIcons->GetDefaultIcon();
 }
 
 void vtkRenderedGraphRepresentation::SetVertexIconSelectionMode(int mode)
@@ -1017,7 +1039,8 @@ void vtkRenderedGraphRepresentation::PrepareForRendering(vtkRenderView* view)
       this->VertexIconActor->GetTexture()->GetInput())
     {
     this->VertexIconGlyph->SetIconSize(view->GetIconSize());
-    this->VertexIconGlyph->SetUseIconSize(true);
+    this->VertexIconGlyph->SetDisplaySize(view->GetDisplaySize());
+    this->VertexIconGlyph->SetUseIconSize(false);
     this->VertexIconActor->GetTexture()->MapColorScalarsThroughLookupTableOff();
     this->VertexIconActor->GetTexture()->GetInput()->Update();
     int* dim = this->VertexIconActor->GetTexture()->GetInput()->GetDimensions();
@@ -1123,8 +1146,8 @@ vtkSelection* vtkRenderedGraphRepresentation::ConvertSelection(
     // For all output selection nodes, select all the edges among selected vertices.
     for (unsigned int i = 0; i < vertexConverted->GetNumberOfNodes(); ++i)
       {
-      if (vertexConverted->GetNode(i)->GetSelectionList()->
-          GetNumberOfTuples() > 0)
+      if ((vertexConverted->GetNode(i)->GetSelectionList()->
+          GetNumberOfTuples() > 0) && (input->GetNumberOfEdges()) > 0)
         {
         // Get the list of selected vertices.
         selectedVerticesFound = true;
@@ -1133,31 +1156,34 @@ vtkSelection* vtkRenderedGraphRepresentation::ConvertSelection(
         vtkConvertSelection::GetSelectedVertices(
           vertexConverted, input, selectedVerts);
 
-        // Get the list of induced edges on these vertices.
-        vtkSmartPointer<vtkIdTypeArray> selectedEdges =
-          vtkSmartPointer<vtkIdTypeArray>::New();
-        input->GetInducedEdges(selectedVerts, selectedEdges);
-
-        // Create an edge index selection containing the induced edges.
-        vtkSmartPointer<vtkSelection> edgeSelection =
-          vtkSmartPointer<vtkSelection>::New();
-        vtkSmartPointer<vtkSelectionNode> edgeSelectionNode =
-          vtkSmartPointer<vtkSelectionNode>::New();
-        edgeSelectionNode->SetSelectionList(selectedEdges);
-        edgeSelectionNode->SetContentType(vtkSelectionNode::INDICES);
-        edgeSelectionNode->SetFieldType(vtkSelectionNode::EDGE);
-        edgeSelection->AddNode(edgeSelectionNode);
-
-        // Convert the edge selection to the appropriate type for this representation.
-        vtkSelection* edgeConverted = vtkConvertSelection::ToSelectionType(
-          edgeSelection, input, this->SelectionType, this->SelectionArrayNames);
-
-        // Add the converted induced edge selection to the output selection.
-        if (edgeConverted->GetNumberOfNodes() > 0)
+        if( this->EdgeSelection )
           {
-          converted->AddNode(edgeConverted->GetNode(0));
+          // Get the list of induced edges on these vertices.
+          vtkSmartPointer<vtkIdTypeArray> selectedEdges =
+            vtkSmartPointer<vtkIdTypeArray>::New();
+          input->GetInducedEdges(selectedVerts, selectedEdges);
+
+          // Create an edge index selection containing the induced edges.
+          vtkSmartPointer<vtkSelection> edgeSelection =
+            vtkSmartPointer<vtkSelection>::New();
+          vtkSmartPointer<vtkSelectionNode> edgeSelectionNode =
+            vtkSmartPointer<vtkSelectionNode>::New();
+          edgeSelectionNode->SetSelectionList(selectedEdges);
+          edgeSelectionNode->SetContentType(vtkSelectionNode::INDICES);
+          edgeSelectionNode->SetFieldType(vtkSelectionNode::EDGE);
+          edgeSelection->AddNode(edgeSelectionNode);
+
+          // Convert the edge selection to the appropriate type for this representation.
+          vtkSelection* edgeConverted = vtkConvertSelection::ToSelectionType(
+            edgeSelection, input, this->SelectionType, this->SelectionArrayNames);
+
+          // Add the converted induced edge selection to the output selection.
+          if (edgeConverted->GetNumberOfNodes() > 0)
+            {
+            converted->AddNode(edgeConverted->GetNode(0));
+            }
+          edgeConverted->Delete();
           }
-        edgeConverted->Delete();
         }
 
       // Add the vertex selection node to the output selection.
@@ -1166,7 +1192,7 @@ vtkSelection* vtkRenderedGraphRepresentation::ConvertSelection(
     polyConverted->Delete();
     vertexConverted->Delete();
     }
-  if (foundEdgeNode && !selectedVerticesFound)
+  if (foundEdgeNode && !selectedVerticesFound && this->EdgeSelection)
     {
     // If no vertices were found (hence no induced edges), look for
     // edges that were within the selection box.

@@ -20,6 +20,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkMultiProcessController.h"
 #include "vtkTable.h"
 #include "vtkVariant.h"
@@ -49,18 +50,23 @@ void vtkPDescriptiveStatistics::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------------------------------------------------------
 void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
                                        vtkTable* inParameters,
-                                       vtkDataObject* outMetaDO )
+                                       vtkMultiBlockDataSet* outMeta )
 {
-  vtkTable* outMeta = vtkTable::SafeDownCast( outMetaDO );
-  if ( ! outMeta ) 
-    { 
-    return; 
-    } 
+  if ( ! outMeta )
+    {
+    return;
+    }
 
   // First calculate descriptive statistics on local data set
   this->Superclass::Learn( inData, inParameters, outMeta );
 
-  vtkIdType nRow = outMeta->GetNumberOfRows();
+  vtkTable* primaryTab = vtkTable::SafeDownCast( outMeta->GetBlock( 0 ) );
+  if ( ! primaryTab ) 
+    {
+    return;
+    }
+
+  vtkIdType nRow = primaryTab->GetNumberOfRows();
   if ( ! nRow )
     {
     // No statistics were calculated.
@@ -82,7 +88,7 @@ void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
     }
 
   // (All) gather all sample sizes
-  int n_l = outMeta->GetValueByName( 0, "Cardinality" ).ToInt(); // Cardinality
+  int n_l = primaryTab->GetValueByName( 0, "Cardinality" ).ToInt(); // Cardinality
   int* n_g = new int[np];
   com->AllGather( &n_l, n_g, 1 ); 
   
@@ -91,25 +97,25 @@ void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
     {
     // Reduce to global extrema
     double extrema_l[2];
-    extrema_l[0] = outMeta->GetValueByName( r, "Minimum" ).ToDouble();
+    extrema_l[0] = primaryTab->GetValueByName( r, "Minimum" ).ToDouble();
     // Collect - max instead of max so a single reduce op. (minimum) can process both extrema at a time
-    extrema_l[1] = - outMeta->GetValueByName( r, "Maximum" ).ToDouble();
+    extrema_l[1] = - primaryTab->GetValueByName( r, "Maximum" ).ToDouble();
 
     double extrema_g[2];
     com->AllReduce( extrema_l, 
                     extrema_g, 
                     2, 
                     vtkCommunicator::MIN_OP );
-    outMeta->SetValueByName( r, "Minimum", extrema_g[0] );
+    primaryTab->SetValueByName( r, "Minimum", extrema_g[0] );
     // max = - min ( - max )
-    outMeta->SetValueByName( r, "Maximum", - extrema_g[1] );
+    primaryTab->SetValueByName( r, "Maximum", - extrema_g[1] );
 
     // (All) gather all local M statistics
     double M_l[4];
-    M_l[0] = outMeta->GetValueByName( r, "Mean" ).ToDouble();
-    M_l[1] = outMeta->GetValueByName( r, "M2" ).ToDouble();
-    M_l[2] = outMeta->GetValueByName( r, "M3" ).ToDouble();
-    M_l[3] = outMeta->GetValueByName( r, "M4" ).ToDouble();
+    M_l[0] = primaryTab->GetValueByName( r, "Mean" ).ToDouble();
+    M_l[1] = primaryTab->GetValueByName( r, "M2" ).ToDouble();
+    M_l[2] = primaryTab->GetValueByName( r, "M3" ).ToDouble();
+    M_l[3] = primaryTab->GetValueByName( r, "M4" ).ToDouble();
     double* M_g = new double[4 * np];
     com->AllGather( M_l, M_g, 4 );
 
@@ -156,13 +162,13 @@ void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
       ns = N;
       }
 
-    outMeta->SetValueByName( r, "Mean", mean );
-    outMeta->SetValueByName( r, "M2", mom2 );
-    outMeta->SetValueByName( r, "M3", mom3 );
-    outMeta->SetValueByName( r, "M4", mom4 );
+    primaryTab->SetValueByName( r, "Mean", mean );
+    primaryTab->SetValueByName( r, "M2", mom2 );
+    primaryTab->SetValueByName( r, "M3", mom3 );
+    primaryTab->SetValueByName( r, "M4", mom4 );
 
     // Set global statistics
-    outMeta->SetValueByName( r, "Cardinality", ns );
+    primaryTab->SetValueByName( r, "Cardinality", ns );
 
     // Clean-up
     delete [] M_g;

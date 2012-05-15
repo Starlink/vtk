@@ -24,7 +24,7 @@
 #include "vtkContextScene.h"
 #include "vtkPen.h"
 #include "vtkBrush.h"
-#include "vtkOpenGLContextDevice2D.h"
+#include "vtkOpenGL2ContextDevice2D.h"
 #include "vtkPoints2D.h"
 
 #include "vtkShaderProgram2.h"
@@ -90,7 +90,7 @@ public:
 };
 
 //----------------------------------------------------------------------------
-int TestGLSL( int argc, char * argv [] )
+int TestGLSL( int, char * [] )
 {
   // Set up a 2D context view, context test object and add it to the scene
   VTK_CREATE(vtkContextView, view);
@@ -101,23 +101,19 @@ int TestGLSL( int argc, char * argv [] )
 
   // Ensure that there is a valid OpenGL context - Mac inconsistent behavior.
   view->GetRenderWindow()->SetMultiSamples(0);
+  // Need to attempt at least one render, to see if the GLSL can compile.
+  view->Render();
 
-  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
-  if(retVal == vtkRegressionTester::DO_INTERACTOR)
+  if (test->IsCompiled)
     {
     view->GetInteractor()->Initialize();
     view->GetInteractor()->Start();
     }
-
-  if (test->IsCompiled)
-    {
-    return !retVal;
-    }
   else
     {
     cout << "GLSL 1.20 required, shader failed to compile." << endl;
-    return 0;
     }
+  return EXIT_SUCCESS;
 }
 
 // Make our new derived class to draw a diagram
@@ -126,8 +122,8 @@ vtkStandardNewMacro(GLSLTestItem);
 bool GLSLTestItem::Paint(vtkContext2D *painter)
 {
   // Build and link our shader if necessary
-  vtkOpenGLContextDevice2D* device =
-    vtkOpenGLContextDevice2D::SafeDownCast(painter->GetDevice());
+  vtkOpenGL2ContextDevice2D *device =
+    vtkOpenGL2ContextDevice2D::SafeDownCast(painter->GetDevice());
   if (device)
     {
     this->BuildShader(device->GetRenderWindow());
@@ -138,6 +134,7 @@ bool GLSLTestItem::Paint(vtkContext2D *painter)
     }
   else
     {
+    this->IsCompiled = false;
     return false;
     }
 

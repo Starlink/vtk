@@ -42,15 +42,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                                                                 
 =========================================================================*/
 
+#include "Partition.h"
+#include "ParticleExchange.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 
 #include <sys/types.h>
-
-#include "Partition.h"
-#include "ParticleExchange.h"
 
 using namespace std;
 
@@ -595,12 +595,10 @@ void ParticleExchange::exchangeNeighborParticles()
 #endif
 
   // Allocate messages to send and receive MPI buffers
-  int bufferSize = (1 * sizeof(int)) +          // number of particles
+  // Space for particle count +record(loc, vel, mass, tag) + potential + mask
+  int bufferSize = sizeof(int) +
         (maxShareSize * 
-          ((COSMO_FLOAT * sizeof(POSVEL_T)) +   // location, velocity, mass
-           (1 * sizeof(POSVEL_T)) +             // potential
-           (COSMO_INT * sizeof(ID_T)) +        // id tag
-           (1 * sizeof(MASK_T))));             // mask
+          (RECORD_SIZE + sizeof(POSVEL_T) + sizeof(MASK_T)));
 
   Message* sendMessage = new Message(bufferSize);
   Message* recvMessage = new Message(bufferSize);

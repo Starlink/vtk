@@ -21,6 +21,7 @@ vtkRenderedRepresentation.cxx
 vtkRenderedTreeAreaRepresentation.cxx
 vtkRenderedHierarchyRepresentation.cxx
 vtkRenderView.cxx
+vtkRenderViewBase.cxx
 vtkTreeAreaView.cxx
 vtkTreeMapView.cxx
 vtkTreeRingView.cxx
@@ -30,19 +31,21 @@ vtkViewUpdater.cxx
 
 IF(VTK_USE_N_WAY_ARRAYS)
   SET(Kit_SRCS
-    ${Kit_SRCS}    
+    ${Kit_SRCS}
     vtkParallelCoordinatesHistogramRepresentation.cxx
     vtkParallelCoordinatesRepresentation.cxx
     vtkParallelCoordinatesView.cxx
     )
-ENDIF(VTK_USE_N_WAY_ARRAYS)
 
-IF(VTK_USE_BOOST)
-  SET(Kit_SRCS
-    ${Kit_SRCS}
-    vtkPipelineGraphSource.cxx
-    )
-ENDIF(VTK_USE_BOOST)
+  IF(VTK_USE_BOOST)
+    INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+    SET(Kit_SRCS
+      ${Kit_SRCS}
+      vtkPipelineGraphSource.cxx
+      )
+  ENDIF(VTK_USE_BOOST)
+
+ENDIF(VTK_USE_N_WAY_ARRAYS)
 
 #SET_SOURCE_FILES_PROPERTIES(
 #vtkView.cxx

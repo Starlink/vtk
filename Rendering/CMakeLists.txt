@@ -59,9 +59,11 @@ SET( Kit_SRCS
   vtkExporter.cxx
   vtkFollower.cxx
   vtkFrameBufferObject.cxx
+  vtkFreeTypeStringToImage.cxx
   vtkFrustumCoverageCuller.cxx
   vtkGenericRenderWindowInteractor.cxx
   vtkGenericVertexAttributeMapping.cxx
+  vtkGlyph3DMapper.cxx
   vtkGPUInfo.cxx
   vtkGPUInfoList.cxx
   vtkGraphicsFactory.cxx
@@ -139,6 +141,7 @@ SET( Kit_SRCS
   vtkPrimitivePainter.cxx
   vtkProp3DCollection.cxx
   vtkProp3D.cxx
+  vtkProp3DFollower.cxx
   vtkProperty.cxx
   vtkPropPicker.cxx
   vtkQuadricLODActor.cxx
@@ -163,10 +166,12 @@ SET( Kit_SRCS
   vtkShaderDeviceAdapter.cxx
   vtkShaderProgram.cxx
   vtkStandardPolyDataPainter.cxx
+  vtkStringToImage.cxx
   vtkSurfaceLICDefaultPainter.cxx
   vtkSurfaceLICPainter.cxx
   vtkTDxInteractorStyle.cxx
   vtkTDxInteractorStyleCamera.cxx
+  vtkTDxInteractorStyleGeo.cxx
   vtkTDxInteractorStyleSettings.cxx
   vtkTesting.cxx
   vtkTestingInteractor.cxx
@@ -202,7 +207,7 @@ ENDIF (NOT VTK_LEGACY_REMOVE)
 
 IF(VTK_USE_GL2PS)
   SET(Kit_SRCS ${Kit_SRCS} vtkGL2PSExporter.cxx)
-   
+
   IF(VTK_USE_SYSTEM_GL2PS)
   ELSE(VTK_USE_SYSTEM_GL2PS)
     SET(Kit_GL2PS_SRCS ${VTK_SOURCE_DIR}/Utilities/vtkgl2ps/gl2ps.c)
@@ -212,7 +217,7 @@ IF(VTK_USE_GL2PS)
 ENDIF(VTK_USE_GL2PS)
 
 IF(VTK_USE_CG_SHADERS)
-  SET(Kit_SRCS ${Kit_SRCS} 
+  SET(Kit_SRCS ${Kit_SRCS}
     vtkCgShader.cxx
     vtkCgShaderDeviceAdapter.cxx
     vtkCgShaderProgram.cxx
@@ -238,6 +243,7 @@ SET( KitOpenGL_SRCS
   vtkOpenGLCoincidentTopologyResolutionPainter.cxx
   vtkOpenGLDisplayListPainter.cxx
   vtkOpenGLExtensionManager.cxx
+  vtkOpenGLGlyph3DMapper.cxx
   vtkOpenGLHardwareSupport.cxx
   vtkOpenGLImageActor.cxx
   vtkOpenGLImageMapper.cxx
@@ -259,6 +265,7 @@ SET( KitOpenGL_SRCS
   vtkShader2.cxx
   vtkShader2Collection.cxx
   vtkShaderProgram2.cxx
+  vtkShadowMapBakerPass.cxx
   vtkShadowMapPass.cxx
   vtkSobelGradientMagnitudePass.cxx
   vtkTextureUnitManager.cxx
@@ -299,6 +306,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkShader
   vtkShaderDeviceAdapter
   vtkShaderProgram
+  vtkStringToImage
   vtkTDxInteractorStyle
   vtkVisibilitySort.cxx
   ABSTRACT
@@ -341,10 +349,13 @@ if(VTK_USE_X)
  set(Kit_SRCS ${Kit_SRCS} vtkXGPUInfoList.cxx)
 endif()
 
-SET(Kit_SRCS ${Kit_SRCS} vtkFreeTypeUtilities.cxx )
-SET_SOURCE_FILES_PROPERTIES(vtkFreeTypeUtilities WRAP_EXCLUDE)
+SET(Kit_SRCS ${Kit_SRCS} vtkFreeTypeUtilities.cxx vtkFreeTypeTools.cxx )
+SET_SOURCE_FILES_PROPERTIES(
+  vtkFreeTypeTools
+  vtkFreeTypeUtilities
+  WRAP_EXCLUDE)
 
-SET(Kit_FT_SRCS 
+SET(Kit_FT_SRCS
   fonts/face_arial.cxx
   fonts/face_arial_bold.cxx
   fonts/face_arial_bold_italic.cxx
@@ -369,12 +380,13 @@ IF(VTK_USE_X)
   OPTION(VTK_USE_TDX "Use 3Dconnexion device" OFF)
   MARK_AS_ADVANCED(VTK_USE_TDX)
   IF(VTK_USE_TDX)
-   
+
    SET(VTK_TDX_INCLUDE_PATH CACHE PATH "Directory path to xdrvlib.h for 3DConnexion device")
    SET(VTK_TDX_OBJECT_PATH CACHE FILEPATH "File path to xdrvlib.a for 3DConnexion device")
    SET(Kit_SRCS ${Kit_SRCS} vtkTDxDevice.cxx vtkTDxUnixDevice.cxx)
    INCLUDE_DIRECTORIES(${VTK_TDX_INCLUDE_PATH})
-   SET_SOURCE_FILES_PROPERTIES(vtkTDxDevice.cxx ABSTRACT)
+   SET_SOURCE_FILES_PROPERTIES(vtkTDxDevice ABSTRACT)
+   SET_SOURCE_FILES_PROPERTIES(vtkTDxUnixDevice WRAP_EXCLUDE)
    LIST(APPEND KIT_INTERFACE_LIBRARIES ${VTK_TDX_OBJECT_PATH})
   ENDIF()
 ENDIF()
@@ -409,7 +421,7 @@ ENDIF()
 CONFIGURE_FILE(${VTK_SOURCE_DIR}/Rendering/vtkTDxConfigure.h.in
                ${VTK_BINARY_DIR}/Rendering/vtkTDxConfigure.h @ONLY IMMEDIATE)
 
-IF(VTK_USE_QT)   
+IF(VTK_USE_QT)
   SET(QT_DONT_USE_QTGUI)
   INCLUDE(${QT_USE_FILE})
 
@@ -417,6 +429,7 @@ IF(VTK_USE_QT)
     vtkQImageToImageSource.cxx
     vtkQtInitialization.cxx
     vtkQtLabelRenderStrategy.cxx
+    vtkQtStringToImage.cxx
     vtkQtTreeRingLabelMapper.cxx
     )
   # On the Mac, make the QT_LIBRARIES KIT_INTERFACE_LIBRARIES. This is a
@@ -485,16 +498,16 @@ ENDIF(VTK_USE_X)
 # Parse the extensions into vtkgl.h/vtkgl.cxx.
 ADD_CUSTOM_COMMAND(
   OUTPUT ${VTK_BINARY_DIR}/Rendering/vtkgl.cxx
-  COMMAND ${VTK_PARSEOGLEXT_EXE}
+  COMMAND vtkParseOGLExt
   ARGS ${VTK_BINARY_DIR}/Rendering ${VTK_GLEXT_FILE} ${VTK_GLXEXT_FILE} ${VTK_WGLEXT_FILE}
-  DEPENDS ${VTK_GLEXT_FILE} ${VTK_GLXEXT_FILE} ${VTK_WGLEXT_FILE} ${VTK_PARSEOGLEXT_EXE}
+  DEPENDS ${VTK_GLEXT_FILE} ${VTK_GLXEXT_FILE} ${VTK_WGLEXT_FILE} vtkParseOGLExt
   )
 
 SET_SOURCE_FILES_PROPERTIES(vtkOpenGLExtensionManager.cxx
   PROPERTIES OBJECT_DEPENDS ${VTK_BINARY_DIR}/Rendering/vtkgl.cxx)
 
-SET(KitOpenGL_SRCS ${KitOpenGL_SRCS} 
-  ${VTK_BINARY_DIR}/Rendering/vtkgl.cxx 
+SET(KitOpenGL_SRCS ${KitOpenGL_SRCS}
+  ${VTK_BINARY_DIR}/Rendering/vtkgl.cxx
   )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -585,12 +598,16 @@ IF(VTK_USE_GL2PS)
   ENDIF(VTK_USE_SYSTEM_GL2PS)
 ENDIF(VTK_USE_GL2PS)
 
+IF(OPENGL_gl_LIBRARY)
+  SET(KitOpenGL_SRCS ${KitOpenGL_SRCS} vtkGenericOpenGLRenderWindow.cxx)
+ENDIF(OPENGL_gl_LIBRARY)
+
 IF (WIN32)
   IF(VTK_USE_X)
     IF (OPENGL_gl_LIBRARY)
       SET(KitOpenGL_SRCS ${KitOpenGL_SRCS} vtkXOpenGLRenderWindow.cxx)
       SET(KIT_LIBS ${KIT_LIBS} ${OPENGL_gl_LIBRARY} )
-    ENDIF (OPENGL_gl_LIBRARY)    
+    ENDIF (OPENGL_gl_LIBRARY)
   ELSE(VTK_USE_X)
     SET(KitOpenGL_SRCS ${KitOpenGL_SRCS}
                  vtkWin32OpenGLRenderWindow.cxx
@@ -604,13 +621,13 @@ ELSE (WIN32)
                    vtkCocoaRenderWindowInteractor.mm
                    vtkCocoaRenderWindow.mm
                    vtkCocoaGLView.mm)
-       
+
       # The objective-c++ classes might need their own flags.
       # Set them if specified.
       IF(VTK_REQUIRED_OBJCXX_FLAGS)
 
-        SET_SOURCE_FILES_PROPERTIES(vtkCocoaRenderWindowInteractor.mm 
-                                    vtkCocoaRenderWindow.mm 
+        SET_SOURCE_FILES_PROPERTIES(vtkCocoaRenderWindowInteractor.mm
+                                    vtkCocoaRenderWindow.mm
                                     vtkCocoaGLView.mm
                                     PROPERTIES COMPILE_FLAGS "${VTK_REQUIRED_OBJCXX_FLAGS}")
 
@@ -633,6 +650,11 @@ ELSE (WIN32)
     ENDIF(VTK_USE_CARBON)
     IF(VTK_USE_X  AND  OPENGL_gl_LIBRARY)
       SET(KitOpenGL_SRCS ${KitOpenGL_SRCS} vtkXOpenGLRenderWindow.cxx)
+    ELSE (VTK_USE_X  AND  OPENGL_gl_LIBRARY)
+      IF (VTK_OPENGL_HAS_OSMESA  AND  OSMESA_LIBRARY)
+        SET(KitOpenGL_SRCS ${KitOpenGL_SRCS} vtkOSOpenGLRenderWindow.cxx)
+        SET (KIT_LIBS ${KIT_LIBS} ${OSMESA_LIBRARY} )
+      ENDIF (VTK_OPENGL_HAS_OSMESA  AND  OSMESA_LIBRARY)
     ENDIF(VTK_USE_X  AND  OPENGL_gl_LIBRARY)
   ELSE (APPLE)
     IF (VTK_USE_X AND OPENGL_gl_LIBRARY)
@@ -653,7 +675,7 @@ ENDIF(VTK_USE_CG_SHADERS)
 
 if(DirectX_FOUND)
  # d3d9.lib for symbol Direct3DCreate9
- # symbol CLSID_WbemLocator IID_IWbemLocator: wbemuuid.lib 
+ # symbol CLSID_WbemLocator IID_IWbemLocator: wbemuuid.lib
  # wbemuuid.lib is *NOT A FILE* (you cannot find it), it is probably an
  # embedded library added by the linker itself.
  set(KIT_LIBS ${KIT_LIBS} ${DirectX_LIBRARY} wbemuuid)
@@ -767,8 +789,8 @@ IF (VTK_WRAP_TCL AND VTK_USE_TK)
   IF(VTK_USE_CARBON)
     SET(KIT_TCL_LIBS ${KIT_TCL_LIBS} "-framework Carbon")
   ENDIF(VTK_USE_CARBON)
-  SET(Kit_TCL_EXTRA_CMDS 
-    vtkTkRenderWidget 
+  SET(Kit_TCL_EXTRA_CMDS
+    vtkTkRenderWidget
     vtkTkImageViewerWidget)
 ENDIF (VTK_WRAP_TCL AND VTK_USE_TK)
 
@@ -792,6 +814,12 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
     COMPONENT Development
     )
+
+  INSTALL(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkTestingObjectFactory.cmake
+    DESTINATION ${VTK_INSTALL_PACKAGE_DIR_CM24}/CMake
+    COMPONENT Development
+    )
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
 IF (VTK_WRAP_PYTHON AND VTK_USE_TK AND TK_FOUND)
@@ -805,7 +833,7 @@ IF (VTK_WRAP_PYTHON AND VTK_USE_TK AND TK_FOUND)
         vtkCocoaTkUtilities.mm)
   ENDIF (VTK_USE_COCOA)
 
-  ADD_LIBRARY(vtkRenderingPythonTkWidgets SHARED
+  VTK_ADD_LIBRARY(vtkRenderingPythonTkWidgets SHARED
               ${RenderingPythonTkWidgets_SRCS})
   SET(VTK_PYTHONTK_LIBRARIES ${VTK_TK_LIBRARIES})
   IF(VTK_USE_X)
@@ -814,7 +842,7 @@ IF (VTK_WRAP_PYTHON AND VTK_USE_TK AND TK_FOUND)
   IF(VTK_USE_CARBON)
     SET(VTK_PYTHONTK_LIBRARIES ${VTK_PYTHONTK_LIBRARIES} "-framework Carbon")
   ENDIF(VTK_USE_CARBON)
- 
+
   TARGET_LINK_LIBRARIES (vtkRenderingPythonTkWidgets
                         vtk${KIT}
                         ${VTK_PYTHONTK_LIBRARIES})
@@ -827,6 +855,7 @@ IF (VTK_WRAP_PYTHON AND VTK_USE_TK AND TK_FOUND)
 
   IF(NOT VTK_INSTALL_NO_LIBRARIES)
     INSTALL(TARGETS vtkRenderingPythonTkWidgets
+      EXPORT ${VTK_INSTALL_EXPORT_NAME}
       RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeLibraries
       LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT RuntimeLibraries
       ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} COMPONENT Development)
@@ -836,9 +865,9 @@ ENDIF (VTK_WRAP_PYTHON AND VTK_USE_TK AND TK_FOUND)
 IF(VTK_USE_X)
   SET(X11_LIB_SEARCH_PATH
     /usr/X11R6/lib
-    /usr/local/lib 
-    /usr/openwin/lib 
-    /usr/lib 
+    /usr/local/lib
+    /usr/openwin/lib
+    /usr/lib
     )
   FIND_LIBRARY(X11_Xt_LIB Xt ${X11_LIB_SEARCH_PATH})
   MARK_AS_ADVANCED(X11_Xt_LIB)

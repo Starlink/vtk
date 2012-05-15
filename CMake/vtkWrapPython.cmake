@@ -31,61 +31,102 @@ MACRO(VTK_WRAP_PYTHON3 TARGET SRC_LIST_NAME SOURCES)
     SET(VTK_WRAP_PYTHON_CUSTOM_NAME ${TARGET})
     SET(VTK_WRAP_PYTHON_CUSTOM_LIST)
   ENDIF(VTK_WRAP_PYTHON_NEED_CUSTOM_TARGETS)
-  
+
   # start writing the input file for the init file
   SET(VTK_WRAPPER_INIT_DATA "${TARGET}")
-  
+
+  GET_DIRECTORY_PROPERTY(TMP_DEF_LIST DEFINITION COMPILE_DEFINITIONS)
+  SET(TMP_DEFINITIONS)
+  FOREACH(TMP_DEF ${TMP_DEF_LIST})
+    SET(TMP_DEFINITIONS ${TMP_DEFINITIONS} -D "${quote}${TMP_DEF}${quote}")
+  ENDFOREACH(TMP_DEF ${TMP_DEF_LIST})
+
+  IF(VTK_WRAP_INCLUDE_DIRS)
+    SET(TMP_INCLUDE_DIRS ${VTK_WRAP_INCLUDE_DIRS})
+  ELSE(VTK_WRAP_INCLUDE_DIRS)
+    SET(TMP_INCLUDE_DIRS ${VTK_INCLUDE_DIRS})
+  ENDIF(VTK_WRAP_INCLUDE_DIRS)
+  SET(TMP_INCLUDE)
+  FOREACH(INCLUDE_DIR ${TMP_INCLUDE_DIRS})
+    SET(TMP_INCLUDE ${TMP_INCLUDE} -I "${quote}${INCLUDE_DIR}${quote}")
+  ENDFOREACH(INCLUDE_DIR ${TMP_INCLUDE_DIRS})
+
+  IF (VTK_WRAP_HINTS)
+    SET(TMP_HINTS "--hints" "${quote}${VTK_WRAP_HINTS}${quote}")
+  ELSE (VTK_WRAP_HINTS)
+    SET(TMP_HINTS)
+  ENDIF (VTK_WRAP_HINTS)
+
+  IF (KIT_HIERARCHY_FILE)
+    SET(TMP_HIERARCHY "--types" "${quote}${KIT_HIERARCHY_FILE}${quote}")
+  ELSE (KIT_HIERARCHY_FILE)
+    SET(TMP_HIERARCHY)
+  ENDIF (KIT_HIERARCHY_FILE)
+
   # For each class
   FOREACH(FILE ${SOURCES})
     # should we wrap the file?
     GET_SOURCE_FILE_PROPERTY(TMP_WRAP_EXCLUDE ${FILE} WRAP_EXCLUDE)
-    
+    GET_SOURCE_FILE_PROPERTY(TMP_WRAP_SPECIAL ${FILE} WRAP_SPECIAL)
+
     # if we should wrap it
-    IF (NOT TMP_WRAP_EXCLUDE)
-      
+    IF (TMP_WRAP_SPECIAL OR NOT TMP_WRAP_EXCLUDE)
+
       # what is the filename without the extension
       GET_FILENAME_COMPONENT(TMP_FILENAME ${FILE} NAME_WE)
-      
+
       # the input file might be full path so handle that
       GET_FILENAME_COMPONENT(TMP_FILEPATH ${FILE} PATH)
-      
+
       # compute the input filename
       IF (TMP_FILEPATH)
-        SET(TMP_INPUT ${TMP_FILEPATH}/${TMP_FILENAME}.h) 
+        SET(TMP_INPUT ${TMP_FILEPATH}/${TMP_FILENAME}.h)
       ELSE (TMP_FILEPATH)
         SET(TMP_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/${TMP_FILENAME}.h)
       ENDIF (TMP_FILEPATH)
-      
+
       # is it abstract?
       GET_SOURCE_FILE_PROPERTY(TMP_ABSTRACT ${FILE} ABSTRACT)
       IF (TMP_ABSTRACT)
-        SET(TMP_CONCRETE 0)
+        SET(TMP_CONCRETE "--abstract")
       ELSE (TMP_ABSTRACT)
-        SET(TMP_CONCRETE 1)
+        SET(TMP_CONCRETE "--concrete")
       ENDIF (TMP_ABSTRACT)
-      
+
+      # is it special?
+      IF (TMP_WRAP_SPECIAL)
+        SET(TMP_SPECIAL "--special")
+      ELSE (TMP_WRAP_SPECIAL)
+        SET(TMP_SPECIAL "--vtkobject")
+      ENDIF (TMP_WRAP_SPECIAL)
+
       # add the info to the init file
       SET(VTK_WRAPPER_INIT_DATA
         "${VTK_WRAPPER_INIT_DATA}\n${TMP_FILENAME}")
-      
+
       # new source file is namePython.cxx, add to resulting list
-      SET(${SRC_LIST_NAME} ${${SRC_LIST_NAME}} 
+      SET(${SRC_LIST_NAME} ${${SRC_LIST_NAME}}
         ${TMP_FILENAME}Python.cxx)
-      
+
       # add custom command to output
       ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TMP_FILENAME}Python.cxx
         DEPENDS ${VTK_WRAP_PYTHON_EXE} ${VTK_WRAP_HINTS} ${TMP_INPUT}
+        ${KIT_HIERARCHY_FILE}
         COMMAND ${VTK_WRAP_PYTHON_EXE}
-        ARGS 
-        "${quote}${TMP_INPUT}${quote}" 
-        "${quote}${VTK_WRAP_HINTS}${quote}" 
-        ${TMP_CONCRETE} 
+        ARGS
+        ${TMP_CONCRETE}
+        ${TMP_SPECIAL}
+        ${TMP_HINTS}
+        ${TMP_HIERARCHY}
+        ${TMP_DEFINITIONS}
+        ${TMP_INCLUDE}
+        "${quote}${TMP_INPUT}${quote}"
         "${quote}${CMAKE_CURRENT_BINARY_DIR}/${TMP_FILENAME}Python.cxx${quote}"
         COMMENT "Python Wrapping - generating ${TMP_FILENAME}Python.cxx"
         ${verbatim}
         )
-      
+
       # Add this output to a custom target if needed.
       IF(VTK_WRAP_PYTHON_NEED_CUSTOM_TARGETS)
         SET(VTK_WRAP_PYTHON_CUSTOM_LIST ${VTK_WRAP_PYTHON_CUSTOM_LIST}
@@ -99,32 +140,32 @@ MACRO(VTK_WRAP_PYTHON3 TARGET SRC_LIST_NAME SOURCES)
           SET(VTK_WRAP_PYTHON_CUSTOM_COUNT)
         ENDIF(VTK_WRAP_PYTHON_CUSTOM_COUNT MATCHES "^${VTK_WRAP_PYTHON_CUSTOM_LIMIT}$")
       ENDIF(VTK_WRAP_PYTHON_NEED_CUSTOM_TARGETS)
-    ENDIF (NOT TMP_WRAP_EXCLUDE)
+    ENDIF (TMP_WRAP_SPECIAL OR NOT TMP_WRAP_EXCLUDE)
   ENDFOREACH(FILE)
-  
-  # finish the data file for the init file        
+
+  # finish the data file for the init file
   CONFIGURE_FILE(
-    ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in 
+    ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in
     ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.data
     COPY_ONLY
     IMMEDIATE
     )
-  
+
   ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.cxx
     DEPENDS ${VTK_WRAP_PYTHON_INIT_EXE}
     ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.data
     COMMAND ${VTK_WRAP_PYTHON_INIT_EXE}
-    ARGS 
+    ARGS
     "${quote}${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.data${quote}"
     "${quote}${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.cxx${quote}"
     COMMENT "Python Wrapping - generating ${TARGET}Init.cxx"
     ${verbatim}
     )
-  
+
   # Create the Init File
   SET(${SRC_LIST_NAME} ${${SRC_LIST_NAME}} ${TARGET}Init.cxx)
-  
+
 ENDMACRO(VTK_WRAP_PYTHON3)
 
 IF(VTK_WRAP_PYTHON_FIND_LIBS)

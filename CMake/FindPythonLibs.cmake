@@ -3,12 +3,18 @@
 # include files and libraries are. It also determines what the name of
 # the library is. This code sets the following variables:
 #
-#  PYTHONLIBS_FOUND       - have the Python libs been found
-#  PYTHON_LIBRARIES       - path to the python library
-#  PYTHON_INCLUDE_PATH    - path to where Python.h is found (deprecated)
-#  PYTHON_INCLUDE_DIRS    - path to where Python.h is found
-#  PYTHON_DEBUG_LIBRARIES - path to the debug library
+#  PYTHONLIBS_FOUND           - have the Python libs been found
+#  PYTHON_LIBRARIES           - path to the python library
+#  PYTHON_INCLUDE_PATH        - path to where Python.h is found (deprecated)
+#  PYTHON_INCLUDE_DIRS        - path to where Python.h is found
+#  PYTHON_DEBUG_LIBRARIES     - path to the debug library
+#  PYTHON_VERSION             - python version string e.g. 2.7.1
+#  PYTHON_MAJOR_VERSION       - python major version number
+#  PYTHON_MINOR_VERSION       - python minor version number
+#  PYTHON_MICRO_VERSION       - python release version number
 #
+# This code uses the following variables:
+#  Python_ADDITIONAL_VERSIONS - list of additional Python versions to search for
 
 #=============================================================================
 # Copyright 2001-2009 Kitware, Inc.
@@ -20,14 +26,20 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the License for more information.
 #=============================================================================
-# (To distributed this file outside of CMake, substitute the full
+# (To distribute this file outside of CMake, substitute the full
 #  License text for the above reference.)
 
 INCLUDE(CMakeFindFrameworks)
 # Search for the python framework on Apple.
 CMAKE_FIND_FRAMEWORKS(Python)
 
-FOREACH(_CURRENT_VERSION 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
+# Set up the versions we know about, in the order we will search. Always add
+# the user supplied additional versions to the front.
+set(_Python_VERSIONS
+  ${Python_ADDITIONAL_VERSIONS}
+  2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
+
+FOREACH(_CURRENT_VERSION ${_Python_VERSIONS})
   STRING(REPLACE "." "" _CURRENT_VERSION_NO_DOTS ${_CURRENT_VERSION})
   IF(WIN32)
     FIND_LIBRARY(PYTHON_DEBUG_LIBRARY
@@ -53,7 +65,7 @@ FOREACH(_CURRENT_VERSION 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
     PATH_SUFFIXES python${_CURRENT_VERSION}/config
   )
 
-  # For backward compatibility, honour value of PYTHON_INCLUDE_PATH, if 
+  # For backward compatibility, honour value of PYTHON_INCLUDE_PATH, if
   # PYTHON_INCLUDE_DIR is not set.
   IF(DEFINED PYTHON_INCLUDE_PATH AND NOT DEFINED PYTHON_INCLUDE_DIR)
     SET(PYTHON_INCLUDE_DIR "${PYTHON_INCLUDE_PATH}" CACHE PATH
@@ -78,9 +90,9 @@ FOREACH(_CURRENT_VERSION 2.6 2.5 2.4 2.3 2.2 2.1 2.0 1.6 1.5)
   )
 
   # For backward compatibility, set PYTHON_INCLUDE_PATH, but make it internal.
-  SET(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}" CACHE INTERNAL 
+  SET(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}" CACHE INTERNAL
     "Path to where Python.h is found (deprecated)")
-  
+
 ENDFOREACH(_CURRENT_VERSION)
 
 MARK_AS_ADVANCED(
@@ -88,6 +100,26 @@ MARK_AS_ADVANCED(
   PYTHON_LIBRARY
   PYTHON_INCLUDE_DIR
 )
+
+
+# look in PYTHON_INCLUDE_DIR for patchlevel.h, which contains the
+# version number macros in all versions of python from 1.5 through
+# at least version 3.2, and set these vars:  PYTHON_VERSION,
+# PYTHON_MAJOR_VERSION, PYTHON_MINOR_VERSION, PYTHON_MICRO_VERSION.
+IF(PYTHON_INCLUDE_DIR)
+  SET(_VERSION_REGEX
+      "^#define[ \t]+PY([A-Z_]*_VERSION)[ \t]+[\"]*([[0-9A-Za-z\\.]+)[\"]*[ \t]*$")
+  FILE(STRINGS "${PYTHON_INCLUDE_DIR}/patchlevel.h" _VERSION_STRINGS
+       LIMIT_COUNT 10 REGEX ${_VERSION_REGEX})
+  FOREACH(_VERSION_STRING ${_VERSION_STRINGS})
+    STRING(REGEX REPLACE ${_VERSION_REGEX} "PYTHON\\1"
+           _VERSION_VARIABLE "${_VERSION_STRING}")
+    STRING(REGEX REPLACE ${_VERSION_REGEX} "\\2"
+           _VERSION_NUMBER "${_VERSION_STRING}")
+    SET(${_VERSION_VARIABLE} ${_VERSION_NUMBER})
+  ENDFOREACH(_VERSION_STRING ${_VERSION_STRINGS})
+ENDIF(PYTHON_INCLUDE_DIR)
+
 
 # We use PYTHON_INCLUDE_DIR, PYTHON_LIBRARY and PYTHON_DEBUG_LIBRARY for the
 # cache entries because they are meant to specify the location of a single
@@ -103,13 +135,11 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(PythonLibs DEFAULT_MSG PYTHON_LIBRARIES PYTHON
 
 
 # PYTHON_ADD_MODULE(<name> src1 src2 ... srcN) is used to build modules for python.
-# PYTHON_WRITE_MODULES_HEADER(<filename>) writes a header file you can include 
+# PYTHON_WRITE_MODULES_HEADER(<filename>) writes a header file you can include
 # in your sources to initialize the static python modules
-
-GET_PROPERTY(_TARGET_SUPPORTS_SHARED_LIBS
-  GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
-
 FUNCTION(PYTHON_ADD_MODULE _NAME )
+  GET_PROPERTY(_TARGET_SUPPORTS_SHARED_LIBS
+    GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
   OPTION(PYTHON_ENABLE_MODULE_${_NAME} "Add module ${_NAME}" TRUE)
   OPTION(PYTHON_MODULE_${_NAME}_BUILD_SHARED
     "Add module ${_NAME} shared" ${_TARGET_SUPPORTS_SHARED_LIBS})
@@ -130,6 +160,13 @@ FUNCTION(PYTHON_ADD_MODULE _NAME )
     ADD_LIBRARY(${_NAME} ${PY_MODULE_TYPE} ${ARGN})
 #    TARGET_LINK_LIBRARIES(${_NAME} ${PYTHON_LIBRARIES})
 
+    IF(PYTHON_MODULE_${_NAME}_BUILD_SHARED)
+      SET_TARGET_PROPERTIES(${_NAME} PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}")
+      IF(WIN32 AND NOT CYGWIN)
+        SET_TARGET_PROPERTIES(${_NAME} PROPERTIES SUFFIX ".pyd")
+      ENDIF(WIN32 AND NOT CYGWIN)
+    ENDIF(PYTHON_MODULE_${_NAME}_BUILD_SHARED)
+
   ENDIF(PYTHON_ENABLE_MODULE_${_NAME})
 ENDFUNCTION(PYTHON_ADD_MODULE)
 
@@ -143,7 +180,7 @@ FUNCTION(PYTHON_WRITE_MODULES_HEADER _filename)
 
   SET(_filenameTmp "${_filename}.in")
   FILE(WRITE ${_filenameTmp} "/*Created by cmake, do not edit, changes will be lost*/\n")
-  FILE(APPEND ${_filenameTmp} 
+  FILE(APPEND ${_filenameTmp}
 "#ifndef ${_nameUpper}
 #define ${_nameUpper}
 
@@ -159,7 +196,7 @@ extern \"C\" {
     FILE(APPEND ${_filenameTmp} "extern void init${PYTHON_MODULE_PREFIX}${_currentModule}(void);\n\n")
   ENDFOREACH(_currentModule ${PY_STATIC_MODULES_LIST})
 
-  FILE(APPEND ${_filenameTmp} 
+  FILE(APPEND ${_filenameTmp}
 "#ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -177,7 +214,7 @@ extern \"C\" {
   ENDFOREACH(_currentModule ${PY_STATIC_MODULES_LIST})
   FILE(APPEND ${_filenameTmp} "}\n\n")
   FILE(APPEND ${_filenameTmp} "#ifndef EXCLUDE_LOAD_ALL_FUNCTION\nvoid CMakeLoadAllPythonModules(void)\n{\n  ${_name}_LoadAllPythonModules();\n}\n#endif\n\n#endif\n")
-  
+
 # with CONFIGURE_FILE() cmake complains that you may not use a file created using FILE(WRITE) as input file for CONFIGURE_FILE()
   EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_filenameTmp}" "${_filename}" OUTPUT_QUIET ERROR_QUIET)
 

@@ -33,11 +33,13 @@ QVTKPaintEngine::~QVTKPaintEngine()
 bool QVTKPaintEngine::begin(QPaintDevice* dev)
 {
   Widget = static_cast<QVTKWidget*>(dev);
+  //Widget->GetRenderWindow()->MakeCurrent();
   return true;
 }
 
 bool QVTKPaintEngine::end()
 {
+  //Widget->GetRenderWindow()->Frame();
   Widget = NULL;
   return true;
 }
@@ -93,5 +95,15 @@ void QVTKPaintEngine::drawPath(const QPainterPath& path)
   p.translate(-box.left(), -box.right());
   p.drawPath(path);
   this->drawPixmap(QRectF(QPoint(0,0), img.size()), img, box);
+}
+
+void QVTKPaintEngine::drawPolygon(const QPointF* /*points*/, int /*pointCount*/,
+  PolygonDrawMode /*mode*/)
+{
+}
+
+void QVTKPaintEngine::drawPolygon(const QPoint* /*points*/, int /*pointCount*/,
+  PolygonDrawMode /*mode*/)
+{
 }
 

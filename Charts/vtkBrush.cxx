@@ -16,6 +16,7 @@
 #include "vtkBrush.h"
 
 #include "vtkObjectFactory.h"
+#include "vtkImageData.h"
 
 //-----------------------------------------------------------------------------
 
@@ -26,11 +27,18 @@ vtkStandardNewMacro(vtkBrush);
 vtkBrush::vtkBrush()
 {
   this->Color = this->BrushColor.GetData();
+  this->Texture = 0;
+  this->TextureProperties = vtkBrush::Linear | vtkBrush::Stretch;
 }
 
 //-----------------------------------------------------------------------------
 vtkBrush::~vtkBrush()
 {
+  if (this->Texture)
+    {
+    this->Texture->Delete();
+    this->Texture = 0;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -90,6 +98,11 @@ void vtkBrush::SetColor(unsigned char r, unsigned char g, unsigned char b,
   this->Color[3] = a;
 }
 
+void vtkBrush::SetColor(const vtkColor4ub &color)
+{
+  this->BrushColor = color;
+}
+
 //-----------------------------------------------------------------------------
 void vtkBrush::SetOpacity(unsigned char a)
 {
@@ -114,6 +127,17 @@ void vtkBrush::GetColor(unsigned char color[4])
     }
 }
 
+vtkColor4ub vtkBrush::GetColorObject()
+{
+  return this->BrushColor;
+}
+
+//-----------------------------------------------------------------------------
+void vtkBrush::SetTexture(vtkImageData* image)
+{
+  vtkSetObjectBodyMacro(Texture, vtkImageData, image);
+}
+
 //-----------------------------------------------------------------------------
 void vtkBrush::DeepCopy(vtkBrush *brush)
 {
@@ -122,6 +146,8 @@ void vtkBrush::DeepCopy(vtkBrush *brush)
     return;
     }
   this->BrushColor = brush->BrushColor;
+  this->TextureProperties = brush->TextureProperties;
+  this->SetTexture(brush->Texture);
 }
 
 //-----------------------------------------------------------------------------
@@ -130,5 +156,7 @@ void vtkBrush::PrintSelf(ostream &os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
   os << indent << "Color: " << this->Color[0] << ", " << this->Color[1]
      << ", " << this->Color[2] << ", " << this->Color[3] << endl;
+  os << indent << "Texture: " << reinterpret_cast<void *>(this->Texture) << endl;
+  os << indent << "Texture Properties: " << this->TextureProperties << endl;
 
 }

@@ -18,12 +18,6 @@
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
-#ifndef __vtkTokenizer_h
-#define __vtkTokenizer_h
-
-#include <vtkTableAlgorithm.h>
-#include <vtkUnicodeString.h> //Needed for delimiter specification
-
 // .NAME vtkTokenizer - Converts a document collection into a term collection.
 //
 // .SECTION Description
@@ -56,7 +50,7 @@
 //
 // Outputs:
 //   Output port 0: A vtkTable containing "document", "begin", "end", "type", and
-//     "text" columns. 
+//     "text" columns.
 //
 // Use SetInputArrayToProcess(0, ...) to specify the input table column that contains
 // document ids (must be a vtkIdTypeArray).  Default: "document"
@@ -76,6 +70,12 @@
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
+#ifndef __vtkTokenizer_h
+#define __vtkTokenizer_h
+
+#include <vtkTableAlgorithm.h>
+#include <vtkUnicodeString.h> //Needed for delimiter specification
+
 class VTK_TEXT_ANALYSIS_EXPORT vtkTokenizer :
   public vtkTableAlgorithm
 {
@@ -91,7 +91,7 @@ public:
   // Description:
   // Defines storage for a collection of half-open ranges of Unicode characters.
   typedef vtkstd::vector<DelimiterRange> DelimiterRanges;
- 
+
   // Description:
   // Returns a set of delimiter ranges that match Unicode punctuation codepoints.
   static const DelimiterRanges Punctuation();
@@ -102,7 +102,7 @@ public:
   // Returns a set of delimiter ranges that match logosyllabic languages where characters represent
   // words instead of sounds, such as Chinese, Japanese, and Korean.
   static const DelimiterRanges Logosyllabic();
-  
+
   // Description:
   // Adds the half-open range of Unicode characters [begin, end) to the set of "dropped" delimiters.
   void AddDroppedDelimiters(vtkUnicodeString::value_type begin, vtkUnicodeString::value_type end);

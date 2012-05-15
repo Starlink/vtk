@@ -94,7 +94,8 @@ public:
   vtkBooleanMacro(HideEdgeLabelsOnInteraction, bool);
 
   // Description:
-  // The array to use for coloring vertices.  Default is "color".
+  // The array to use for coloring vertices.  The default behavior
+  // is to color by vertex degree.
   void SetVertexColorArrayName(const char* name);
   const char* GetVertexColorArrayName();
   
@@ -114,6 +115,12 @@ public:
   void SetColorEdges(bool vis);
   bool GetColorEdges();
   vtkBooleanMacro(ColorEdges, bool);
+
+  // Description:
+  // Whether edges are selectable. Default is on.
+  void SetEdgeSelection(bool vis);
+  bool GetEdgeSelection();
+  vtkBooleanMacro(EdgeSelection, bool);
 
   // Description:
   // The array to use for coloring edges.

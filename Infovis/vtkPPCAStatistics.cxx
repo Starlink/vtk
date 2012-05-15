@@ -52,10 +52,9 @@ void vtkPPCAStatistics::PrintSelf(ostream& os, vtkIndent indent)
 
 // ----------------------------------------------------------------------
 void vtkPPCAStatistics::Learn( vtkTable* inData,
-                                      vtkTable* inParameters,
-                                      vtkDataObject* outMetaDO )
+                               vtkTable* inParameters,
+                               vtkMultiBlockDataSet* outMeta )
 {
-  vtkMultiBlockDataSet* outMeta = vtkMultiBlockDataSet::SafeDownCast( outMetaDO );
   if ( ! outMeta )
     {
     return;

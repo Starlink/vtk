@@ -44,6 +44,21 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Allocates space for the specified number of vertices in the graph's
+  // internal data structures.
+  // The previous number of vertices is returned on success and -1
+  // is returned on failure.
+  //
+  // This has no effect on the number of vertex coordinate tuples or
+  // vertex attribute tuples allocated; you are responsible for
+  // guaranteeing these match.
+  // Also, this call is not implemented for distributed-memory graphs since
+  // the semantics are unclear; calling this function on a graph with a
+  // non-NULL DistributedGraphHelper will generate an error message,
+  // no allocation will be performed, and a value of -1 will be returned.
+  virtual vtkIdType SetNumberOfVertices( vtkIdType numVerts );
+
+  // Description:
   // Adds a vertex to the graph and returns the index of the new vertex.
   //
   // \note In a distributed graph (i.e. a graph whose DistributedHelper
@@ -73,8 +88,6 @@ public:
   // the delays associated with returning the vertex index.
   vtkIdType AddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
-
   // Description:
   // Adds a vertex with the given \p pedigreeID to the graph and
   // returns the index of the new vertex.
@@ -91,6 +104,7 @@ public:
   // the delays associated with returning the vertex index.
   vtkIdType AddVertex(const vtkVariant& pedigreeId);
 
+  //BTX
   // Description:
   // Adds an undirected edge from \p u to \p v,
   // where \p u and \p v are vertex indices,
@@ -181,7 +195,6 @@ public:
   // called on the helper.
   void LazyAddVertex(vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
   // Adds a vertex with the given \p pedigreeID to the graph.
   //
@@ -192,7 +205,6 @@ public:
   // whose DistributedHelper is non-null) the next time Synchronize is
   // called on the helper.
   void LazyAddVertex(const vtkVariant& pedigreeId);
-  //ETX
 
   // Description:
   // Adds an undirected edge from \p u to \p v,
@@ -216,7 +228,6 @@ public:
   // called on the helper.
   void LazyAddEdge(vtkIdType u, vtkIdType v, vtkVariantArray *propertyArr);
 
-  //BTX
   // Description:
   // Adds an undirected edge from \p u to \p v,
   // where \p u is a vertex pedigree ID and \p v is a vertex index.
@@ -259,7 +270,6 @@ public:
   void LazyAddEdge(const vtkVariant& u,
                    const vtkVariant& v,
                    vtkVariantArray *propertyArr = 0);
-  //ETX
 
   // Description:
   // Variant of AddEdge() that returns a heavyweight \p vtkGraphEdge object.

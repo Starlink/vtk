@@ -25,8 +25,6 @@ vtkStandardNewMacro(vtkContextBufferId);
 // ----------------------------------------------------------------------------
 vtkContextBufferId::vtkContextBufferId()
 {
-  this->Width=0;
-  this->Height=0;
   this->IdArray=0;
 }
 

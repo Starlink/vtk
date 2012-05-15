@@ -47,6 +47,9 @@ class vtkOpacityTables; // Pimpl
 class vtkDensifyPolyData;
 class vtkStdString;
 
+class vtkShaderProgram2;
+class vtkShader2;
+
 class VTK_VOLUMERENDERING_EXPORT vtkOpenGLGPUVolumeRayCastMapper : public vtkGPUVolumeRayCastMapper
 {
 public:
@@ -63,6 +66,11 @@ public:
                                 vtkVolumeProperty *property);
 
   // Description:
+  // Delete OpenGL objects.
+  // \post done: this->OpenGLObjectsCreated==0
+  virtual void ReleaseGraphicsResources(vtkWindow *window);
+
+  // Description:
   // Return a string matching the OpenGL errorCode.
   // \post result_exists: result!=0
   static const char *OpenGLErrorMessage(unsigned int errorCode);
@@ -72,8 +80,6 @@ public:
   // message if any.
   // \pre headerMessage_exists: headerMessage!=0
   static void PrintError(const char *headerMessage);
-
-
 
 protected:
   vtkOpenGLGPUVolumeRayCastMapper();
@@ -117,21 +123,12 @@ protected:
   void LoadExtensions(vtkRenderWindow *window);
 
   // Description:
-  // Create GLSL OpenGL objects such fragment program Ids.
-  void CreateGLSLObjects();
-
-  // Description:
   // Create OpenGL objects such as textures, buffers and fragment program Ids.
   // It only registers Ids, there is no actual initialization of textures or
   // fragment program.
   // \pre extensions_loaded: this->LoadExtensionsSucceeded
   // \post done: this->OpenGLObjectsCreated==1
-  void CreateOpenGLObjects();
-
-  // Description:
-  // Delete OpenGL objects.
-  // \post done: this->OpenGLObjectsCreated==0
-  void ReleaseGraphicsResources(vtkWindow *window);
+  void CreateOpenGLObjects(vtkRenderer *ren);
 
   // Description:
   // Allocate memory on the GPU for the framebuffers according to the size of
@@ -250,7 +247,8 @@ protected:
   // Concatenate the header string, projection type code and method to the
   // final fragment code in this->FragmentCode.
   // \pre valid_raycastMethod: raycastMethod>= vtkOpenGLGPUVolumeRayCastMapperMethodMaximumIntensityProjection && raycastMethod<=vtkOpenGLGPUVolumeRayCastMapperMethodMinIPFourDependent
-  void BuildProgram(int parallelProjection,
+  void BuildProgram(vtkRenderWindow *w,
+                    int parallelProjection,
                     int raycastMethod,
                     int shadeMethod,
                     int componentMethod);
@@ -258,23 +256,6 @@ protected:
   // Description:
   // Return the current OpenGL state about lighting.
   void GetLightingStatus();
-
-  // Description:
-  // Check the compilation status of some fragment shader source.
-  void CheckCompilation(unsigned int fragmentShader);
-
-  // Description:
-  // Check the linkage status of the fragment program.
-  int CheckLinkage(unsigned int programShader);
-
-  // Description:
-  // Print all active uniform variables
-  void PrintUniformVariables(unsigned int programShader);
-
-  // Description:
-  // Is the program shader valid in the current OpenGL state?
-  // Debugging purpose only.
-  void ValidateProgram();
 
   // Description:
   // Update the reduction factor of the render viewport (this->ReductionFactor)
@@ -381,13 +362,6 @@ protected:
   // 3D scalar texture +1D color+1D opacity+2D grabbed depth buffer
   // +1 2D colorbuffer.
   unsigned int TextureObjects[5];
-  unsigned int FragmentMainShader;
-  unsigned int FragmentProjectionShader;
-  unsigned int FragmentTraceShader;
-  unsigned int FragmentCroppingShader;
-  unsigned int FragmentComponentShader;
-  unsigned int FragmentShadeShader;
-  unsigned int ProgramShader;
   // used in MIP Mode (2 needed for ping-pong technique)
   unsigned int MaxValueFrameBuffer;
   unsigned int MaxValueFrameBuffer2;
@@ -437,12 +411,7 @@ protected:
   // Description:
   // Build the fragment shader program that scale and bias a texture
   // for window/level purpose.
-  void BuildScaleBiasProgram();
-
-  unsigned int ScaleBiasProgramShader; // GLuint
-  int UFrameBufferTexture; // GLint
-  int UScale; // GLint
-  int UBias; // GLint
+  void BuildScaleBiasProgram(vtkRenderWindow *w);
 
 #if 0
   vtkIdType LoadedExtent[6];
@@ -479,6 +448,20 @@ protected:
 
   bool PreserveOrientation;
   
+  vtkShaderProgram2 *Program;
+  vtkShader2 *Main;
+  vtkShader2 *Projection;
+  vtkShader2 *Trace;
+  vtkShader2 *CroppingShader;
+  vtkShader2 *Component;
+  vtkShader2 *Shade;
+
+  // Internal Variable used to keep track of whether or render window's size
+  // changed and therefore we need re-allocation.
+  bool        SizeChanged;
+
+  vtkShaderProgram2 *ScaleBiasProgram;
+
 private:
   vtkOpenGLGPUVolumeRayCastMapper(const vtkOpenGLGPUVolumeRayCastMapper&);  // Not implemented.
   void operator=(const vtkOpenGLGPUVolumeRayCastMapper&);  // Not implemented.

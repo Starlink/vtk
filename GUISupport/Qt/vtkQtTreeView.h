@@ -189,9 +189,7 @@ private:
   char* ColorArrayNameInternal;
   QFilterTreeProxyModel* TreeFilter;
   
-//BTX
   vtkSmartPointer<vtkApplyColors> ApplyColors;
-//ETX
   
   vtkQtTreeView(const vtkQtTreeView&);  // Not implemented.
   void operator=(const vtkQtTreeView&);  // Not implemented.

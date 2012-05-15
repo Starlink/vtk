@@ -32,12 +32,14 @@ vtkBitArrayIterator.cxx
 vtkBoundingBox.cxx
 vtkBox.cxx
 vtkBoxMuellerRandomSequence.cxx
+vtkBreakPoint.cxx
 vtkByteSwap.cxx
 vtkCallbackCommand.cxx
 vtkCharArray.cxx
 vtkClientSocket.cxx
 vtkCollection.cxx
 vtkCollectionIterator.cxx
+vtkColor.h
 vtkCommand.cxx
 vtkCommonInformationKeyManager.cxx
 vtkConditionVariable.cxx
@@ -156,6 +158,7 @@ vtkProperty2D.cxx
 vtkQuadratureSchemeDefinition.cxx
 vtkQuadric.cxx
 vtkRandomSequence.cxx
+vtkRect.h
 vtkReferenceCount.cxx
 vtkRungeKutta2.cxx
 vtkRungeKutta4.cxx
@@ -172,6 +175,7 @@ vtkSphericalTransform.cxx
 vtkStdString.cxx
 vtkStringArray.cxx
 vtkStructuredData.cxx
+vtkStructuredExtent.cxx
 vtkStructuredVisibilityConstraint.cxx
 vtkTableExtentTranslator.cxx
 vtkTensor.cxx
@@ -190,6 +194,7 @@ vtkUnsignedLongArray.cxx
 vtkUnsignedShortArray.cxx
 vtkVariant.cxx
 vtkVariantArray.cxx
+vtkVector.h
 vtkVersion.cxx
 vtkVoidArray.cxx
 vtkWarpTransform.cxx
@@ -206,7 +211,7 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/vtkUnicodeString.cmake.in ${CMAKE_CUR
 ADD_CUSTOM_COMMAND(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CaseFolding.txt
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake 
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeString.cmake
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vtkUnicodeCaseFoldData.h
   )
 
@@ -321,6 +326,14 @@ CONFIGURE_FILE(
   ${CMAKE_CURRENT_BINARY_DIR}/vtkFloatingPointExceptionsConfigure.h
   )
 
+# header files that have constants that can be wrapped
+SET(Kit_WRAP_HEADERS
+  vtkSystemIncludes.h
+  vtkType.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
+  ${VTK_BINARY_DIR}/vtkConfigure.h
+  )
+
 SET_SOURCE_FILES_PROPERTIES(
 # vtkObjectBase is marked ABSTRACT so that instantiators are happy.
 vtkAbstractArray
@@ -374,10 +387,18 @@ ABSTRACT
 )
 
 SET_SOURCE_FILES_PROPERTIES(
+  vtkColor
+  vtkRect
+  vtkVector
+  HEADER_FILE_ONLY
+)
+
+SET_SOURCE_FILES_PROPERTIES(
   vtkArrayIteratorTemplate.txx
   vtkBoundingBox.cxx
+  vtkBreakPoint.cxx
   vtkCallbackCommand.cxx
-  vtkCommand.cxx
+  vtkColor.h
   vtkCommonInformationKeyManager.cxx
   vtkDebugLeaksManager.cxx
   vtkErrorCode.cxx
@@ -390,14 +411,26 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkOStrStreamWrapper.cxx
   vtkOStreamWrapper.cxx
   vtkOldStyleCallbackCommand.cxx
+  vtkRect.h
   vtkSmartPointerBase.cxx
   vtkStdString.cxx
   vtkTimeStamp.cxx
   vtkVariant.cxx
   vtkWeakPointerBase.cxx
   vtkUnicodeString.cxx
+  vtkVector.h
 
   WRAP_EXCLUDE
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+  vtkColor.h
+  vtkRect.h
+  vtkTimeStamp.cxx
+  vtkVariant.cxx
+  vtkVector.h
+
+  PROPERTIES WRAP_SPECIAL 1
 )
 
 # Activate code in "vtkVariant.cxx".  See the comment in the source.
@@ -416,6 +449,10 @@ IF(VTK_USE_N_WAY_ARRAYS)
     vtkArrayRange.cxx
     vtkArraySort.cxx
     vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
     )
 
   SET_SOURCE_FILES_PROPERTIES(
@@ -430,15 +467,41 @@ IF(VTK_USE_N_WAY_ARRAYS)
     vtkArrayRange.cxx
     vtkArraySort.cxx
     vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
     WRAP_EXCLUDE
     )
+
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
+    HEADER_FILE_ONLY
+    )
+
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkArrayCoordinates.cxx
+    vtkArrayExtents.cxx
+    vtkArrayExtentsList.cxx
+    vtkArrayRange.cxx
+    vtkArraySort.cxx
+    vtkArrayWeights.cxx
+    vtkDenseArray.h
+    vtkSparseArray.h
+    vtkTypedArray.h
+    vtkTypeTemplate.h
+    PROPERTIES WRAP_SPECIAL 1
+  )
 
 ENDIF(VTK_USE_N_WAY_ARRAYS)
 
 SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS vtkTclUtil.cxx)
-SET(Kit_PYTHON_EXTRA_SRCS vtkPythonUtil.cxx)
+SET(Kit_PYTHON_EXTRA_SRCS vtkPythonCommand.cxx)
 SET(Kit_JAVA_EXTRA_SRCS vtkJavaUtil.cxx)
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
@@ -470,7 +533,7 @@ ENDIF(NOT HAVE_SOCKETS)
 # and socket also
 IF(CMAKE_SYSTEM MATCHES "SunOS.*")
   SET(KIT_LIBS ${KIT_LIBS} socket nsl)
-ENDIF(CMAKE_SYSTEM MATCHES "SunOS.*") 
+ENDIF(CMAKE_SYSTEM MATCHES "SunOS.*")
 
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.
@@ -495,16 +558,14 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkABI.h
     vtkArrayIteratorTemplate.h
     vtkDataArrayTemplate.h
-    vtkDenseArray.h
     vtkIOStream.h
     vtkIOStreamFwd.h
+    vtkNew.h
     vtkSetGet.h
     vtkSmartPointer.h
     vtkSystemIncludes.h
     vtkTemplateAliasMacro.h
     vtkType.h
-    vtkTypedArray.h
-    vtkTypeTemplate.h
     vtkTypeTraits.h
     vtkVariantCast.h
     vtkVariantInlineOperators.h
@@ -524,16 +585,15 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   ENDIF(VTK_WRAP_TCL)
   IF(VTK_WRAP_PYTHON)
     SET(__inst_files ${__inst_files}
-      vtkPythonUtil.h
-      vtkPython.h
+      vtkPythonCommand.h
       )
     IF (TK_FOUND)
-      IF(NOT VTK_USE_COCOA)
+      IF(VTK_USE_TK)
         SET(__inst_files ${__inst_files}
           vtkTcl.h
           vtkTk.h
           )
-      ENDIF(NOT VTK_USE_COCOA)
+      ENDIF(VTK_USE_TK)
     ENDIF (TK_FOUND)
   ENDIF(VTK_WRAP_PYTHON)
   IF(VTK_WRAP_JAVA)

@@ -21,7 +21,6 @@
 #endif // VTK_COMPILED_USING_MPI
 
 #include "vtkPython.h"
-
 #include "vtkVersion.h"
 #include "Wrapping/Python/vtkPythonAppInitConfigure.h"
 
@@ -85,7 +84,7 @@ public:
       MPI_Init(argc, argv);
       this->Controller = vtkMPIController::New();
       this->Controller->Initialize(argc, argv, 1);
-      vtkMultiProcessController::SetGlobalController(this->Controller);      
+      vtkMultiProcessController::SetGlobalController(this->Controller);
     }
   ~vtkMPICleanup()
     {
@@ -128,7 +127,7 @@ static void vtkPythonAppInitPrependPath(const char* self_dir);
 int main(int argc, char **argv)
 {
   vtkPythonAppInitEnableMSVCDebugHook();
-  
+
 #ifdef VTK_COMPILED_USING_MPI
   VTKMPICleanup.Initialize(&argc, &argv);
 #endif // VTK_COMPILED_USING_MPI
@@ -282,6 +281,8 @@ static void vtkPythonAppInitPrependPath(const char* self_dir)
     // packages in sys.path himself/herself.
     const char* inst_dirs[] = {
       "/lib/python" VTK_PYTHON_VERSION "/site-packages/vtk", // UNIX --prefix
+      "/python" VTK_PYTHON_VERSION "/site-packages/vtk", // UNIX + Forwarding exe --prefix
+      "/../Library/Python/" VTK_PYTHON_VERSION "/site-packages/vtk", // Apple + Forwarding exe
       "/lib/python/vtk", // UNIX --home
       "/Lib/site-packages/vtk", "/Lib/vtk", // Windows
       "/site-packages/vtk", "/vtk", // Windows

@@ -1,4 +1,5 @@
 /* changed by ndfabia: replace all instances of 'sqlite' with 'vtk_sqlite' */
+/* changed by dgobbi: expandBlob() macro changed to "if" */
 
 /******************************************************************************
 ** This file is an amalgamation of many separate C source files from Vtk_Sqlite
@@ -28931,7 +28932,7 @@ VTK_SQLITE_API int vtk_sqlite3_current_time = 0;
 ** current time and date as a Julian Day number into *prNow and
 ** return 0.  Return 1 if the time and date cannot be found.
 */
-int winCurrentTime(vtk_sqlite3_vfs *pVfs, double *prNow){
+int vtk_winCurrentTime(vtk_sqlite3_vfs *pVfs, double *prNow){
   FILETIME ft;
   /* FILETIME structure is a 64-bit value representing the number of 
      100-nanosecond intervals since January 1, 1601 (= JD 2305813.5). 
@@ -29035,7 +29036,7 @@ VTK_SQLITE_API int vtk_sqlite3_os_init(void){
     winDlClose,        /* xDlClose */
     winRandomness,     /* xRandomness */
     winSleep,          /* xSleep */
-    winCurrentTime,    /* xCurrentTime */
+    vtk_winCurrentTime,/* xCurrentTime */
     winGetLastError    /* xGetLastError */
   };
 
@@ -46084,7 +46085,11 @@ VTK_SQLITE_PRIVATE int vtk_sqlite3BtreeCopyFile(Btree *pTo, Btree *pFrom){
 ** Call vtk_sqlite3VdbeMemExpandBlob() on the supplied value (type Mem*)
 ** P if required.
 */
-#define expandBlob(P) (((P)->flags&MEM_Zero)?vtk_sqlite3VdbeMemExpandBlob(P):0)
+/*
+** OLD MACRO DEFINITION CHANGED BECAUSE OF COMPILER WARNING
+** (((P)->flags&MEM_Zero)?vtk_sqlite3VdbeMemExpandBlob(P):0)
+*/
+#define expandBlob(P) { if ((P)->flags&MEM_Zero) { vtk_sqlite3VdbeMemExpandBlob(P); } }
 
 /*
 ** If pMem is an object with a valid string representation, this routine
@@ -47976,7 +47981,7 @@ VTK_SQLITE_PRIVATE void vtk_sqlite3VdbeNoopComment(Vdbe *p, const char *zFormat,
 ** having to check to see if the return from this routine is a valid pointer.
 **
 ** About the #ifdef VTK_SQLITE_OMIT_TRACE:  Normally, this routine is never called
-** unless p->nOp>0.  This is because in the absense of VTK_SQLITE_OMIT_TRACE,
+** unless p->nOp>0.  This is because in the absence of VTK_SQLITE_OMIT_TRACE,
 ** an OP_Trace instruction is always inserted by vtk_sqlite3VdbeGet() as soon as
 ** a new VDBE is created.  So we are free to set addr to p->nOp-1 without
 ** having to double-check to make sure that the result is non-negative. But
@@ -48537,7 +48542,7 @@ VTK_SQLITE_PRIVATE void vtk_sqlite3VdbeMakeReady(
   ** being called from vtk_sqlite3_reset() to reset the virtual machine.
   */
   if( nVar>=0 && ALWAYS(db->mallocFailed==0) ){
-    u8 *zCsr = (u8 *)&p->aOp[p->nOp];       /* Memory avaliable for alloation */
+    u8 *zCsr = (u8 *)&p->aOp[p->nOp];       /* Memory available for alloation */
     u8 *zEnd = (u8 *)&p->aOp[p->nOpAlloc];  /* First byte past available mem */
     int nByte;                              /* How much extra memory needed */
 
@@ -53916,8 +53921,8 @@ case OP_Ge: {             /* same as TK_GE, jump, in1, in3 */
     }
 
     assert( pOp->p4type==P4_COLLSEQ || pOp->p4.pColl==0 );
-    ExpandBlob(pIn1);
-    ExpandBlob(pIn3);
+    expandBlob(pIn1);
+    expandBlob(pIn3);
     u.ai.res = vtk_sqlite3MemCompare(pIn3, pIn1, pOp->p4.pColl);
   }
   switch( pOp->opcode ){
@@ -54499,7 +54504,7 @@ case OP_Affinity: {
   pIn1 = &aMem[pOp->p1];
   while( (u.an.cAff = *(u.an.zAffinity++))!=0 ){
     assert( pIn1 <= &p->aMem[p->nMem] );
-    ExpandBlob(pIn1);
+    expandBlob(pIn1);
     applyAffinity(pIn1, u.an.cAff, encoding);
     pIn1++;
   }
@@ -55478,7 +55483,7 @@ case OP_SeekGt: {       /* jump, in3 */
       assert( u.az.oc!=OP_SeekLt || u.az.r.flags==0 );
 
       u.az.r.aMem = &aMem[pOp->p3];
-      ExpandBlob(u.az.r.aMem);
+      expandBlob(u.az.r.aMem);
       rc = vtk_sqlite3BtreeMovetoUnpacked(u.az.pC->pCursor, &u.az.r, 0, 0, &u.az.res);
       if( rc!=VTK_SQLITE_OK ){
         goto abort_due_to_error;
@@ -55610,7 +55615,7 @@ case OP_Found: {        /* jump, in3 */
       u.bb.pIdxKey = &u.bb.r;
     }else{
       assert( pIn3->flags & MEM_Blob );
-      ExpandBlob(pIn3);
+      expandBlob(pIn3);
       u.bb.pIdxKey = vtk_sqlite3VdbeRecordUnpack(u.bb.pC->pKeyInfo, pIn3->n, pIn3->z,
                                         u.bb.aTempRec, sizeof(u.bb.aTempRec));
       if( u.bb.pIdxKey==0 ){
@@ -60920,7 +60925,7 @@ static int exprStructSize(Expr *p){
 ** Note that with flags==EXPRDUP_REDUCE, this routines works on full-size
 ** (unreduced) Expr objects as they or originally constructed by the parser.
 ** During expression analysis, extra information is computed and moved into
-** later parts of teh Expr object and that extra information might get chopped
+** later parts of the Expr object and that extra information might get chopped
 ** off if the expression is reduced.  Note also that it does not work to
 ** make a EXPRDUP_REDUCE copy of a reduced expression.  It is only legal
 ** to reduce a pristine expression tree from the parser.  The implementation
@@ -61029,7 +61034,9 @@ static Expr *exprDup(vtk_sqlite3 *db, Expr *p, int flags, u8 **pzBuffer){
       }else{
         int nSize = exprStructSize(p);
         memcpy(zAlloc, p, nSize);
-        memset(&zAlloc[nSize], 0, EXPR_FULLSIZE-nSize);
+        if (nSize < (int)EXPR_FULLSIZE){
+          memset(&zAlloc[nSize], 0, EXPR_FULLSIZE-nSize);
+        }
       }
 
       /* Set the EP_Reduced, EP_TokenOnly, and EP_Static flags appropriately. */

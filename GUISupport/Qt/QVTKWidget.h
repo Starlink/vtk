@@ -36,17 +36,20 @@
 #ifndef Q_VTK_WIDGET_H
 #define Q_VTK_WIDGET_H
 
-#include <qwidget.h>
-class QPaintEngine;
+#include "QVTKInteractor.h"
+#include <QtGui/QWidget>
+
+class QVTKInteractorAdapter;
 
 class vtkRenderWindow;
-class QVTKInteractor;
-class QVTKPaintEngine;
-#include <vtkRenderWindowInteractor.h>
-#include <vtkCommand.h>
 #include <vtkConfigure.h>
 #include <vtkToolkits.h>
 class vtkImageData;
+
+#include "vtkTDxConfigure.h" // defines VTK_USE_TDX
+#ifdef VTK_USE_TDX
+class vtkTDxDevice;
+#endif
 
 #if defined(Q_WS_MAC)
 # if defined(QT_MAC_USE_COCOA) && defined(VTK_USE_COCOA)
@@ -66,14 +69,6 @@ class vtkImageData;
 #endif
 
 #include "QVTKWin32Header.h"
-
-#include "vtkTDxConfigure.h" // defines VTK_USE_TDX
-#if defined(VTK_USE_TDX) && defined(Q_WS_WIN)
-class vtkTDxWinDevice;
-#endif
-#if defined(VTK_USE_TDX) && defined(Q_WS_MAC)
-class vtkTDxMacDevice;
-#endif
 
 //! QVTKWidget displays a VTK window in a Qt window.
 class QVTK_EXPORT QVTKWidget : public QWidget
@@ -110,11 +105,11 @@ public:
   // These events can be picked up by command observers on the interactor
   enum vtkCustomEvents
   {
-    ContextMenuEvent = vtkCommand::UserEvent + 100,
-    DragEnterEvent,
-    DragMoveEvent,
-    DragLeaveEvent,
-    DropEvent
+    ContextMenuEvent = QVTKInteractor::ContextMenuEvent,
+    DragEnterEvent = QVTKInteractor::DragEnterEvent,
+    DragMoveEvent = QVTKInteractor::DragMoveEvent,
+    DragLeaveEvent = QVTKInteractor::DragLeaveEvent,
+    DropEvent = QVTKInteractor::DropEvent
   };
 
   // Description:
@@ -185,6 +180,13 @@ public Q_SLOTS:
   // the render window and the cachedImageClean() signal is emitted.
   void saveImageToCache();
 
+  // Description:
+  // Receive notification of the creation of the TDxDevice.
+  // Only relevant for Unix.
+#ifdef VTK_USE_TDX
+  void setDevice(vtkTDxDevice *device);
+#endif
+
 protected:
   // overloaded resize handler
   virtual void resizeEvent(QResizeEvent* event);
@@ -252,6 +254,7 @@ protected:
   bool cachedImageCleanFlag;
   bool automaticImageCache;
   double maxImageCacheRenderRate;
+  QVTKInteractorAdapter* mIrenAdapter;
   
 private:
   //! unimplemented operator=
@@ -261,67 +264,4 @@ private:
 
 };
 
-class QVTKInteractorInternal;
-
-// .NAME QVTKInteractor - An interactor for the QVTKWidget.
-// .SECTION Description
-// QVTKInteractor is an interactor for a QVTKWiget.
-
-class QVTK_EXPORT QVTKInteractor : public QObject, public vtkRenderWindowInteractor
-{
-  Q_OBJECT
-public:
-  static QVTKInteractor* New();
-  vtkTypeMacro(QVTKInteractor,vtkRenderWindowInteractor);
-
-  // Description:
-  // Overloaded terminiate app, which does nothing in Qt.
-  // Use qApp->exit() instead.
-  virtual void TerminateApp();
-  
-  // Description:
-  // Overloaded start method does nothing.
-  // Use qApp->exec() instead.
-  virtual void Start();
-  virtual void Initialize();
- 
-  // Description:
-  // Start listening events on 3DConnexion device.
-  virtual void StartListening();
-  
-  // Description:
-  // Stop listening events on 3DConnexion device.
-  virtual void StopListening();
-
-public Q_SLOTS:
-// timer event slot
-virtual void TimerEvent(int timerId);
-
-protected:
-  // constructor
-  QVTKInteractor();
-  // destructor
-  ~QVTKInteractor();
-
-  // create a Qt Timer
-  virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
-  // destroy a Qt Timer
-  virtual int InternalDestroyTimer(int platformTimerId);
-#if defined(VTK_USE_TDX) && defined(Q_WS_WIN)
-  vtkTDxWinDevice *Device;
-#endif
-#if defined(VTK_USE_TDX) && defined(Q_WS_MAC)
-  vtkTDxMacDevice *Device;
-#endif
-  
-private:
-
-  QVTKInteractorInternal* Internal;
-
-  // unimplemented copy
-  QVTKInteractor(const QVTKInteractor&);
-  // unimplemented operator=
-  void operator=(const QVTKInteractor&);
-
-};
 #endif

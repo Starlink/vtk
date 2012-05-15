@@ -35,7 +35,6 @@ vtkCell.cxx
 vtkCellData.cxx
 vtkCellLinks.cxx
 vtkCellLocator.cxx
-vtkCellLocatorInterpolatedVelocityField.cxx
 vtkCellTypes.cxx
 vtkColorTransferFunction.cxx
 vtkCompositeDataIterator.cxx
@@ -73,6 +72,7 @@ vtkDistributedGraphHelper.cxx
 vtkEdgeListIterator.cxx
 vtkEmptyCell.cxx
 vtkExecutionScheduler.cxx
+vtkExecutionSchedulerManager.cxx
 vtkExecutive.cxx
 vtkExecutiveCollection.cxx
 vtkExplicitCell.cxx
@@ -137,8 +137,8 @@ vtkKochanekSpline.cxx
 vtkLine.cxx
 vtkLocator.cxx
 vtkMapper2D.cxx
+vtkMeanValueCoordinatesInterpolator.cxx
 vtkMergePoints.cxx
-vtkModifiedBSPTree.cxx
 vtkMultiBlockDataSetAlgorithm.cxx
 vtkMultiBlockDataSet.cxx
 vtkMultiPieceDataSet.cxx
@@ -172,6 +172,7 @@ vtkPolyData.cxx
 vtkPolyDataSource.cxx
 vtkPolyDataToPolyDataFilter.cxx
 vtkPolygon.cxx
+vtkPolyhedron.cxx
 vtkPolyLine.cxx
 vtkPolyVertex.cxx
 vtkProcessObject.cxx
@@ -191,6 +192,8 @@ vtkRectilinearGridAlgorithm.cxx
 vtkRectilinearGrid.cxx
 vtkRectilinearGridSource.cxx
 vtkRectilinearGridToPolyDataFilter.cxx
+vtkReebGraph.cxx
+vtkReebGraphSimplificationMetric.cxx
 vtkScalarTree.cxx
 vtkSelectionAlgorithm.cxx
 vtkSelection.cxx
@@ -224,6 +227,7 @@ vtkThreadedImageAlgorithm.cxx
 vtkThreadedStreamingPipeline.cxx
 vtkTreeAlgorithm.cxx
 vtkTree.cxx
+vtkTreeBFSIterator.cxx
 vtkTreeDFSIterator.cxx
 vtkTriangle.cxx
 vtkTriangleStrip.cxx
@@ -323,13 +327,11 @@ vtkViewport
 
 SET_SOURCE_FILES_PROPERTIES(
   vtkAMRBox.cxx
+  vtkExecutionSchedulerManager.cxx
   vtkFilteringInformationKeyManager.cxx
   vtkImageIterator.cxx
   vtkInformation.cxx
   vtkImageProgressIterator.cxx
-  vtkComputingResources.cxx
-  vtkExecutionScheduler.cxx
-  vtkThreadedStreamingPipeline.cxx
   WRAP_EXCLUDE
 )
 
@@ -351,6 +353,10 @@ IF(VTK_USE_N_WAY_ARRAYS)
     )
 
 ENDIF(VTK_USE_N_WAY_ARRAYS)
+
+SET(Kit_WRAP_HEADERS
+  vtkCellType.h
+  )
 
 #-----------------------------------------------------------------------------
 # Include CMake code common to all kits.

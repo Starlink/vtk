@@ -53,7 +53,6 @@ public:
   // Sets whether or not the stacked chart is drawn with a gradient.
   void SetGradientDisplayed(bool gradient);
 
-  //BTX
   // Description:
   // Adds stacked chart selection handlers to the mouse selection.
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
@@ -69,7 +68,6 @@ public:
   // Description:
   // Gets the stacked chart series options.
   virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
-  //ETX
 
 protected:
   vtkQtStackedChartView();

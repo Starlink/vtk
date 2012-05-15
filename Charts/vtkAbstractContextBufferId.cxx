@@ -15,6 +15,7 @@
 
 #include "vtkAbstractContextBufferId.h"
 
+
 // ----------------------------------------------------------------------------
 vtkAbstractContextBufferId::vtkAbstractContextBufferId()
 {

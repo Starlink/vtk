@@ -57,7 +57,17 @@ public:
   vtkSetMacro(UseStringDelimiter, bool);
   vtkGetMacro(UseStringDelimiter, bool);
 
-//BTX
+  // Description:
+  // Enable writing to an OutputString instead of the default, a file.
+  vtkSetMacro(WriteToOutputString,bool);
+  vtkGetMacro(WriteToOutputString,bool);
+  vtkBooleanMacro(WriteToOutputString,bool);
+
+  // Description:
+  // This convenience method returns the string, sets the IVAR to NULL,
+  // so that the user is responsible for deleting the string.
+  char *RegisterAndGetOutputString();
+
   // Description:
   // Internal method: Returns the "string" with the "StringDelimiter" if 
   // UseStringDelimiter is true.
@@ -66,7 +76,10 @@ protected:
   vtkDelimitedTextWriter();
   ~vtkDelimitedTextWriter();
 
-  bool OpenFile();
+  bool WriteToOutputString;
+  char* OutputString;
+
+  bool OpenStream();
 
   virtual void WriteData();
   virtual void WriteTable(vtkTable* rectilinearGrid);
@@ -79,11 +92,12 @@ protected:
   char* FieldDelimiter;
   char* StringDelimiter;
   bool UseStringDelimiter;
-  ofstream* Stream;
+//BTX
+  ostream* Stream;
+//ETX
 private:
   vtkDelimitedTextWriter(const vtkDelimitedTextWriter&); // Not implemented.
   void operator=(const vtkDelimitedTextWriter&); // Not implemented.
-//ETX
 };
 
 

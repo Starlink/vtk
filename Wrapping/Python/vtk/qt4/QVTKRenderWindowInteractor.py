@@ -28,7 +28,13 @@ Changes by Phil Thompson, Mar. 2008
 """
 
 
-from PyQt4 import QtCore, QtGui
+try:
+    from PyQt4 import QtCore, QtGui
+except ImportError:
+    try:
+        from PySide import QtCore, QtGui
+    except ImportError as err:
+        raise ImportError("Cannot load either PyQt or PySide")
 import vtk
 
 
@@ -85,14 +91,14 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
     - Keypress f: fly to the picked point
 
     - Keypress p: perform a pick operation. The render window interactor
-    has an internal instance of vtkCellPicker that it uses to pick. 
+    has an internal instance of vtkCellPicker that it uses to pick.
 
     - Keypress r: reset the camera view along the current view
     direction. Centers the actors and moves the camera so that all actors
     are visible.
 
     - Keypress s: modify the representation of all actors so that they
-    are surfaces. 
+    are surfaces.
 
     - Keypress u: invoke the user-defined function. Typically, this
     keypress will bring up an interactor that you can type commands in.
@@ -155,8 +161,11 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
             self._RenderWindow.StereoCapableWindowOn()
             self._RenderWindow.SetStereoTypeToCrystalEyes()
 
-        self._Iren = vtk.vtkGenericRenderWindowInteractor()
-        self._Iren.SetRenderWindow(self._RenderWindow)
+        if kw.has_key('iren'):
+            self._Iren = kw['iren']
+        else:
+            self._Iren = vtk.vtkGenericRenderWindowInteractor()
+            self._Iren.SetRenderWindow(self._RenderWindow)
 
         # do all the necessary qt setup
         self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
@@ -217,7 +226,7 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         return None
 
     def paintEvent(self, ev):
-        self._RenderWindow.Render()
+        self._Iren.Render()
 
     def resizeEvent(self, ev):
         w = self.width()
@@ -338,7 +347,7 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         self.update()
 
 
-def QVTKRenderWidgetConeExample():    
+def QVTKRenderWidgetConeExample():
     """A simple example that uses the QVTKRenderWindowInteractor class."""
 
     # every QT app needs an app

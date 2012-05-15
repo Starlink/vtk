@@ -345,7 +345,14 @@ void vtkInteractorStyle::HighlightProp3D(vtkProp3D *prop3D)
         {
         this->PickedRenderer->RemoveActor(this->OutlineActor);
         }
-      this->CurrentRenderer->AddActor(this->OutlineActor);
+      if(this->CurrentRenderer!=0)
+        {
+        this->CurrentRenderer->AddActor(this->OutlineActor);
+        }
+      else
+        {
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
+        }
       this->PickedRenderer = this->CurrentRenderer;      
       }
     this->Outline->SetBounds(prop3D->GetBounds());
@@ -363,6 +370,9 @@ void vtkInteractorStyle::HighlightActor2D(vtkActor2D *actor2D)
 
   if ( actor2D )
     {
+    double tmpColor[3];
+    actor2D->GetProperty()->GetColor(tmpColor);
+
     if ( this->PickedActor2D )
       {
       actor2D->GetProperty()->SetColor(
@@ -371,13 +381,13 @@ void vtkInteractorStyle::HighlightActor2D(vtkActor2D *actor2D)
       }
     else
       {
-      double tmpColor[3];
-      actor2D->GetProperty()->GetColor(tmpColor);
       actor2D->GetProperty()->SetColor(this->PickColor);
-      this->PickColor[0] = tmpColor[0];
-      this->PickColor[1] = tmpColor[1];
-      this->PickColor[2] = tmpColor[2];
       }
+
+    this->PickColor[0] = tmpColor[0];
+    this->PickColor[1] = tmpColor[1];
+    this->PickColor[2] = tmpColor[2];
+
     }
   else
     {
@@ -692,24 +702,31 @@ void vtkInteractorStyle::OnChar()
     case 'f' :      
     case 'F' :
       {
-      this->AnimState = VTKIS_ANIM_ON;
-      vtkAssemblyPath *path = NULL;
-      this->FindPokedRenderer(rwi->GetEventPosition()[0],
-                              rwi->GetEventPosition()[1]);
-      rwi->GetPicker()->Pick(rwi->GetEventPosition()[0],
-                             rwi->GetEventPosition()[1], 
-                             0.0, 
-                             this->CurrentRenderer);
-      vtkAbstractPropPicker *picker;
-      if ((picker=vtkAbstractPropPicker::SafeDownCast(rwi->GetPicker())))
+      if(this->CurrentRenderer!=0)
         {
-        path = picker->GetPath();
+        this->AnimState = VTKIS_ANIM_ON;
+        vtkAssemblyPath *path = NULL;
+        this->FindPokedRenderer(rwi->GetEventPosition()[0],
+                                rwi->GetEventPosition()[1]);
+        rwi->GetPicker()->Pick(rwi->GetEventPosition()[0],
+                               rwi->GetEventPosition()[1],
+                               0.0,
+                               this->CurrentRenderer);
+        vtkAbstractPropPicker *picker;
+        if ((picker=vtkAbstractPropPicker::SafeDownCast(rwi->GetPicker())))
+          {
+          path = picker->GetPath();
+          }
+        if (path != NULL)
+          {
+          rwi->FlyTo(this->CurrentRenderer, picker->GetPickPosition());
+          }
+        this->AnimState = VTKIS_ANIM_OFF;
         }
-      if (path != NULL)
+      else
         {
-        rwi->FlyTo(this->CurrentRenderer, picker->GetPickPosition());
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
         }
-      this->AnimState = VTKIS_ANIM_OFF;
       }
       break;
 
@@ -722,7 +739,14 @@ void vtkInteractorStyle::OnChar()
     case 'R' :
       this->FindPokedRenderer(rwi->GetEventPosition()[0], 
                               rwi->GetEventPosition()[1]);
-      this->CurrentRenderer->ResetCamera();
+      if(this->CurrentRenderer!=0)
+        {
+        this->CurrentRenderer->ResetCamera();
+        }
+      else
+        {
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
+        }
       rwi->Render();
       break;
 
@@ -734,15 +758,22 @@ void vtkInteractorStyle::OnChar()
       vtkAssemblyPath *path;
       this->FindPokedRenderer(rwi->GetEventPosition()[0],
                               rwi->GetEventPosition()[1]);
-      ac = this->CurrentRenderer->GetActors();
-      vtkCollectionSimpleIterator ait;
-      for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); ) 
+      if(this->CurrentRenderer!=0)
         {
-        for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); ) 
+        ac = this->CurrentRenderer->GetActors();
+        vtkCollectionSimpleIterator ait;
+        for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); )
           {
-          aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
-          aPart->GetProperty()->SetRepresentationToWireframe();
+          for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); )
+            {
+            aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
+            aPart->GetProperty()->SetRepresentationToWireframe();
+            }
           }
+        }
+      else
+        {
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
         }
       rwi->Render();
       }
@@ -756,15 +787,22 @@ void vtkInteractorStyle::OnChar()
       vtkAssemblyPath *path;
       this->FindPokedRenderer(rwi->GetEventPosition()[0],
                               rwi->GetEventPosition()[1]);
-      ac = this->CurrentRenderer->GetActors();
-      vtkCollectionSimpleIterator ait;
-      for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); ) 
+      if(this->CurrentRenderer!=0)
         {
-        for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); ) 
+        ac = this->CurrentRenderer->GetActors();
+        vtkCollectionSimpleIterator ait;
+        for (ac->InitTraversal(ait); (anActor = ac->GetNextActor(ait)); )
           {
-          aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
-          aPart->GetProperty()->SetRepresentationToSurface();
+          for (anActor->InitPathTraversal(); (path=anActor->GetNextPath()); )
+            {
+            aPart=static_cast<vtkActor *>(path->GetLastNode()->GetViewProp());
+            aPart->GetProperty()->SetRepresentationToSurface();
+            }
           }
+        }
+      else
+        {
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
         }
       rwi->Render();
       }
@@ -784,31 +822,38 @@ void vtkInteractorStyle::OnChar()
 
     case 'p' :
     case 'P' :
-      if (this->State == VTKIS_NONE) 
+      if(this->CurrentRenderer!=0)
         {
-        vtkAssemblyPath *path = NULL;
-        int *eventPos = rwi->GetEventPosition();
-        this->FindPokedRenderer(eventPos[0], eventPos[1]);
-        rwi->StartPickCallback();
-        vtkAbstractPropPicker *picker = 
-          vtkAbstractPropPicker::SafeDownCast(rwi->GetPicker());
-        if ( picker != NULL )
+        if (this->State == VTKIS_NONE)
           {
-          picker->Pick(eventPos[0], eventPos[1], 
-                       0.0, this->CurrentRenderer);
-          path = picker->GetPath();
+          vtkAssemblyPath *path = NULL;
+          int *eventPos = rwi->GetEventPosition();
+          this->FindPokedRenderer(eventPos[0], eventPos[1]);
+          rwi->StartPickCallback();
+          vtkAbstractPropPicker *picker =
+            vtkAbstractPropPicker::SafeDownCast(rwi->GetPicker());
+          if ( picker != NULL )
+            {
+            picker->Pick(eventPos[0], eventPos[1],
+                         0.0, this->CurrentRenderer);
+            path = picker->GetPath();
+            }
+          if ( path == NULL )
+            {
+            this->HighlightProp(NULL);
+            this->PropPicked = 0;
+            }
+          else
+            {
+            this->HighlightProp(path->GetFirstNode()->GetViewProp());
+            this->PropPicked = 1;
+            }
+          rwi->EndPickCallback();
           }
-        if ( path == NULL )
-          {
-          this->HighlightProp(NULL);
-          this->PropPicked = 0;
-          }
-        else
-          {
-          this->HighlightProp(path->GetFirstNode()->GetViewProp());
-          this->PropPicked = 1;
-          }
-        rwi->EndPickCallback();
+        }
+      else
+        {
+        vtkWarningMacro(<<"no current renderer on the interactor style.");
         }
       break;
     }

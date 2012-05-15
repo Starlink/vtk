@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    metaUtils.cxx
-  Language:  C++
-  Date:      $Date$
-  Version:   $Revision$
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
 #pragma warning(disable:4996)
@@ -23,6 +18,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <stddef.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -510,7 +506,7 @@ METAIO_STL::streamoff MET_UncompressStream(METAIO_STREAM::ifstream * stream,
     d_stream->zalloc = (alloc_func)0;
     d_stream->zfree = (free_func)0;
     d_stream->opaque = (voidpf)0;
-    inflateInit(d_stream);
+    inflateInit2(d_stream,47); // allow both gzip and zlib compression headers
     compressionTable->compressedStream = d_stream;
     compressionTable->buffer = new char[1001];
     compressionTable->bufferSize = 0;
@@ -597,7 +593,11 @@ METAIO_STL::streamoff MET_UncompressStream(METAIO_STREAM::ifstream * stream,
     d_stream->avail_in = stream->gcount();
     d_stream->next_out = outdata;
 
-    inflate(d_stream, Z_NO_FLUSH);
+    int inflate_error = inflate(d_stream, Z_NO_FLUSH);
+    if(inflate_error < 0)
+      {
+      return -1;
+      }
 
     METAIO_STL::streampos previousSeekpos = seekpos;
 
@@ -769,7 +769,7 @@ bool MET_PerformUncompression(const unsigned char * sourceCompressed,
   d_stream.zfree = (free_func)0;
   d_stream.opaque = (voidpf)0;
 
-  inflateInit(&d_stream);
+  inflateInit2(&d_stream,47); // allow both gzip and zlib compression headers
   d_stream.next_in  = const_cast<unsigned char *>(sourceCompressed);
   d_stream.avail_in = (uInt)sourceCompressedSize;
   
@@ -876,20 +876,22 @@ bool MET_GetFilePath(const char *_fName, char *_fPath)
   size_t l = strlen(_fName);
 
   for(i=(long)l-1; i>=0; i--)
+    {
     if(_fName[i] == '\\' || _fName[i] == '/')
       break;
+    }
 
-    if(i >= 0 && (_fName[i] == '/' || _fName[i] == '\\'))
-      {
-      strcpy(_fPath, _fName);
-      _fPath[i+1] = '\0';
-      return true;
-      }
-    else
-      {
-      _fPath[0] = '\0';
-      return false;
-      }
+  if(i >= 0 && (_fName[i] == '/' || _fName[i] == '\\'))
+    {
+    strcpy(_fPath, _fName);
+    _fPath[i+1] = '\0';
+    return true;
+    }
+  else
+    {
+    _fPath[0] = '\0';
+    return false;
+    }
   }
 
 //
@@ -983,7 +985,7 @@ bool MET_InitReadField(MET_FieldRecordType * _mf,
 //
 bool MET_SkipToVal(METAIO_STREAM::istream &fp)
   {
-  char c;
+  int c;
   if( fp.eof() )
     {
     return false;
@@ -991,12 +993,12 @@ bool MET_SkipToVal(METAIO_STREAM::istream &fp)
 
   c = fp.get();
 
-  while( c != MET_SeperatorChar && c != ':' && !fp.eof() )
+  while(  !fp.eof() && c != MET_SeperatorChar && c != ':' )
     {
     c = fp.get();
     }
 
-  while( ( c == MET_SeperatorChar || c == ':' || isspace(c) ) && !fp.eof() )
+  while( !fp.eof() && ( c == MET_SeperatorChar || c == ':' || isspace(c) ) )
     {
     c = fp.get();
     }
@@ -1034,7 +1036,8 @@ bool MET_IsComplete(METAIO_STL::vector<MET_FieldRecordType *> * fields)
 //
 bool MET_Read(METAIO_STREAM::istream &fp,
               METAIO_STL::vector<MET_FieldRecordType *> * fields,
-              char _MET_SeperatorChar, bool oneLine, bool display_warnings)
+              char _MET_SeperatorChar, bool oneLine, bool display_warnings,
+              METAIO_STL::vector<MET_FieldRecordType *> * newFields)
   {
 
   char s[1024];
@@ -1053,11 +1056,11 @@ bool MET_Read(METAIO_STREAM::istream &fp,
     i = 0;
     c = fp.get();
     while(!fp.eof() && c != MET_SeperatorChar && c != ':'
-          && (c == '\n' || isspace(c)))
+          && (c == '\r' || c == '\n' || isspace(c)))
       {
       c = fp.get();
       }
-    while(!fp.eof() && c != MET_SeperatorChar && c != ':' && c != '\n' && i<500)
+    while(!fp.eof() && c != MET_SeperatorChar && c != ':' && c != '\r' && c != '\n' && i<500)
       {
       s[i++] = c;
       c = fp.get();
@@ -1241,12 +1244,34 @@ bool MET_Read(METAIO_STREAM::istream &fp,
       }
     if(!found)
       {
-      if(display_warnings)
+      if( newFields != NULL )
         {
-        METAIO_STREAM::cerr << "Skipping unrecognized field "
-                            << s << METAIO_STREAM::endl;
+        MET_SkipToVal(fp);
+        if(fp.eof())
+          {
+          break;
+          }
+        MET_FieldRecordType * mF = new MET_FieldRecordType;
+        MET_InitReadField(mF, s, MET_STRING, false);
+        MET_CHAR_TYPE * str = (MET_CHAR_TYPE *)(mF->value);
+        fp.getline( str, 500 );
+        j = strlen(str) - 1;
+        while(!isprint(str[j]) || isspace(str[j]))
+          {
+          str[j--] = '\0';
+          }
+        mF->length = static_cast<int>( strlen( str ) );
+        newFields->push_back(mF);
         }
-      fp.getline( s, 500 );
+      else
+        {
+        if(display_warnings)
+          {
+          METAIO_STREAM::cerr << "Skipping unrecognized field "
+                              << s << METAIO_STREAM::endl;
+          }
+        fp.getline( s, 500 );
+        }
       }
     if(oneLine)
       {

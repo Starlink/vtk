@@ -100,6 +100,7 @@ private:
 // Initialize static members:
 int vtkXRenderWindowInteractor::NumAppInitialized = 0;
 XtAppContext vtkXRenderWindowInteractor::App = 0;
+int vtkXRenderWindowInteractor::BreakLoopFlag = 1;
 
 
 typedef struct
@@ -117,7 +118,6 @@ vtkXRenderWindowInteractor::vtkXRenderWindowInteractor()
   this->OwnTop = 0;
   this->OwnApp = 0;
   this->TopLevelShell = NULL;
-  this->BreakLoopFlag = 1;
 }
 
 //-------------------------------------------------------------------------
@@ -129,6 +129,8 @@ vtkXRenderWindowInteractor::~vtkXRenderWindowInteractor()
     {
     XtDestroyWidget(this->Top);
     }
+
+  delete this->Internal;
 
   if (vtkXRenderWindowInteractor::App)
     {
@@ -142,8 +144,6 @@ vtkXRenderWindowInteractor::~vtkXRenderWindowInteractor()
       }
     vtkXRenderWindowInteractor::NumAppInitialized--;
     }
-
-  delete this->Internal;
 }
 
 //-------------------------------------------------------------------------
@@ -213,6 +213,18 @@ void vtkXRenderWindowInteractor::TerminateApp()
 
   this->BreakLoopFlag = 1;
 
+#ifdef VTK_USE_TDX
+  // 3DConnexion device
+  if(this->UseTDx)
+    {
+    vtkTDxUnixDevice *d=this->Internal->GetDevice();
+    if(d->GetInitialized())
+      {
+      d->Close();
+      }
+    }
+#endif
+  
   // Send a VTK_BreakXtLoop ClientMessage event to be sure we pop out of the
   // event loop.  This "wakes up" the event loop.  Otherwise, it might sit idle 
   // waiting for an event before realizing an exit was requested.
@@ -367,7 +379,7 @@ void vtkXRenderWindowInteractor::Initialize()
   // get the info we need from the RenderingWindow
   ren->SetDisplayId(this->DisplayId);
 
-  size    = ren->GetSize();
+  size    = ren->GetActualSize();
   size[0] = ((size[0] > 0) ? size[0] : 300);
   size[1] = ((size[1] > 0) ? size[1] : 300);
   if (!this->Top)

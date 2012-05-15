@@ -11,6 +11,9 @@ IF(VTK_USE_RENDERING)
   SET(KIT_JAVA_LIBS vtkRenderingJava ${KIT_JAVA_LIBS})
   SET(KIT_INTERFACE_LIBRARIES vtkRendering ${KIT_INTERFACE_LIBRARIES})
   SET(KIT_LIBS ${KIT_LIBS} ${OPENGL_gl_LIBRARY})
+  IF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
+    SET (KIT_LIBS ${KIT_LIBS} ${OSMESA_LIBRARY} )
+  ENDIF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
 ELSE(VTK_USE_RENDERING)
   SET(KIT_PYTHON_LIBS ${KIT_PYTHON_LIBS} vtkGraphicsPythonD)
   SET(KIT_LIBS ${KIT_LIBS} vtkGraphics vtkImaging)
@@ -22,10 +25,12 @@ ENDIF(VTK_HAS_EXODUS)
 SET ( Kit_SRCS
 vtkBranchExtentTranslator.cxx
 vtkCachingInterpolatedVelocityField.cxx
+vtkClientServerSynchronizedRenderers.cxx
 vtkCollectGraph.cxx
 vtkCollectPolyData.cxx
 vtkCollectTable.cxx
 vtkCommunicator.cxx
+vtkCompositedSynchronizedRenderers.cxx
 vtkCompositer.cxx
 vtkCompressCompositer.cxx
 vtkCutMaterial.cxx
@@ -52,6 +57,7 @@ vtkPCosmoReader.cxx
 vtkPDataSetReader.cxx
 vtkPDataSetWriter.cxx
 vtkPExtractArraysOverTime.cxx
+vtkPHardwareSelector.cxx
 vtkPieceRequestFilter.cxx
 vtkPieceScalars.cxx
 vtkPKdTree.cxx
@@ -93,15 +99,18 @@ vtkXMLPMultiBlockDataWriter.cxx
 IF(VTK_USE_RENDERING)
   SET ( Kit_SRCS
     ${Kit_SRCS}
+    vtkClientServerCompositePass.cxx
     vtkCompositeRenderManager.cxx
-    vtkImageRenderManager.cxx
-    vtkMemoryLimitImageDataStreamer.cxx
-    vtkPipelineSize.cxx
-    vtkParallelRenderManager.cxx
-    vtkPImageWriter.cxx
-    vtkTreeCompositer.cxx
     vtkCompositeRGBAPass.cxx
     vtkCompositeZPass.cxx
+    vtkImageRenderManager.cxx
+    vtkMemoryLimitImageDataStreamer.cxx
+    vtkParallelRenderManager.cxx
+    vtkPImageWriter.cxx
+    vtkPipelineSize.cxx
+    vtkSynchronizedRenderers.cxx
+    vtkSynchronizedRenderWindows.cxx
+    vtkTreeCompositer.cxx
     )
 
 # The set of source files to be encoded.
@@ -141,6 +150,9 @@ ENDIF(VTK_USE_RENDERING)
 
 IF (VTK_USE_MPI)
   INCLUDE (FindMPI)
+
+  INCLUDE_DIRECTORIES("${MPI_INCLUDE_PATH}")
+
   SET ( Kit_SRCS
     ${Kit_SRCS}
     vtkMPICommunicator.cxx

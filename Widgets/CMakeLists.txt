@@ -4,8 +4,12 @@ SET(UKIT WIDGETS)
 SET(KIT_TCL_LIBS vtkRenderingTCL vtkHybridTCL)
 SET(KIT_PYTHON_LIBS vtkRenderingPythonD vtkHybridPythonD)
 SET(KIT_JAVA_LIBS vtkRenderingJava vtkHybridJava)
-SET(KIT_INTERFACE_LIBRARIES vtkRendering vtkHybrid)
+SET(KIT_INTERFACE_LIBRARIES vtkRendering vtkHybrid vtkVolumeRendering)
 SET(KIT_LIBS ${OPENGL_gl_LIBRARY})
+
+IF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
+  SET (KIT_LIBS ${KIT_LIBS} ${OSMESA_LIBRARY} )
+ENDIF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
 
 SET ( Kit_SRCS
 vtk3DWidget.cxx
@@ -17,9 +21,12 @@ vtkAngleRepresentation.cxx
 vtkAngleRepresentation2D.cxx
 vtkAngleRepresentation3D.cxx
 vtkAngleWidget.cxx
+vtkAxesTransformWidget.cxx
+vtkAxesTransformRepresentation.cxx
 vtkBalloonRepresentation.cxx
 vtkBalloonWidget.cxx
 vtkBezierContourLineInterpolator.cxx
+vtkBiDimensionalRepresentation.cxx
 vtkBiDimensionalRepresentation2D.cxx
 vtkBiDimensionalWidget.cxx
 vtkBorderRepresentation.cxx
@@ -28,6 +35,8 @@ vtkBoundedPlanePointPlacer.cxx
 vtkBoxRepresentation.cxx
 vtkBoxWidget.cxx
 vtkBoxWidget2.cxx
+vtkButtonRepresentation.cxx
+vtkButtonWidget.cxx
 vtkCameraRepresentation.cxx
 vtkCameraWidget.cxx
 vtkCaptionRepresentation.cxx
@@ -47,6 +56,7 @@ vtkDijkstraImageContourLineInterpolator.cxx
 vtkDistanceWidget.cxx
 vtkDistanceRepresentation.cxx
 vtkDistanceRepresentation2D.cxx
+vtkDistanceRepresentation3D.cxx
 vtkEllipsoidTensorProbeRepresentation.cxx
 vtkEvent.cxx
 vtkFocalPlanePointPlacer.cxx
@@ -87,6 +97,7 @@ vtkOrientedPolygonalHandleRepresentation3D.cxx
 vtkPolygonalSurfacePointPlacer.cxx
 vtkPolyDataContourLineInterpolator.cxx
 vtkPolygonalSurfaceContourLineInterpolator.cxx
+vtkProp3DButtonRepresentation.cxx
 vtkRectilinearWipeRepresentation.cxx
 vtkRectilinearWipeWidget.cxx
 vtkScalarBarRepresentation.cxx
@@ -109,6 +120,8 @@ vtkTensorProbeRepresentation.cxx
 vtkTerrainDataPointPlacer.cxx
 vtkTerrainContourLineInterpolator.cxx
 vtkTextRepresentation.cxx
+vtkTexturedButtonRepresentation.cxx
+vtkTexturedButtonRepresentation2D.cxx
 vtkTextWidget.cxx
 vtkWidgetCallbackMapper.cxx
 vtkWidgetEvent.cxx
@@ -124,6 +137,8 @@ vtkAbstractWidget
 vtkAbstractPolygonalHandleRepresentation3D
 vtkAffineRepresentation
 vtkAngleRepresentation
+vtkBiDimensionalRepresentation
+vtkButtonRepresentation
 vtkContinuousValueWidget
 vtkContinuousValueWidgetRepresentation
 vtkContourLineInterpolator

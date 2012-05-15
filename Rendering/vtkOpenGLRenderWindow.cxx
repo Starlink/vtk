@@ -232,9 +232,10 @@ void vtkOpenGLRenderWindow::StereoUpdate(void)
 
 void vtkOpenGLRenderWindow::OpenGLInit()
 {
-  // When a new OpenGL context is created, we want to get rid of the old OpenGL
-  // extension manager, if any.
-  this->SetExtensionManager(0);
+  // When a new OpenGL context is created, force an update
+  // of the extension manager by calling modified on it.
+  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
+  extensions->Modified();
 
   this->ContextCreationTime.Modified();
   glMatrixMode( GL_MODELVIEW );
@@ -251,7 +252,6 @@ void vtkOpenGLRenderWindow::OpenGLInit()
   vtkgl::BlendFuncSeparate=0;
   
   // Try to initialize vtkgl::BlendFuncSeparate() if available.
-  vtkOpenGLExtensionManager *extensions = this->GetExtensionManager();
   if (extensions->ExtensionSupported("GL_VERSION_1_4"))
     {
     extensions->LoadExtension("GL_VERSION_1_4");
@@ -617,11 +617,11 @@ int vtkOpenGLRenderWindow::SetPixelData(int x1, int y1, int x2, int y2,
 
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
   if (y1 < y2)
@@ -962,11 +962,11 @@ int vtkOpenGLRenderWindow::SetRGBAPixelData(int x1, int y1, int x2, int y2,
 
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
   if (y1 < y2)
@@ -1271,11 +1271,11 @@ int vtkOpenGLRenderWindow::SetRGBACharPixelData(int x1, int y1, int x2,
 
   if (front)
     {
-    glDrawBuffer(GL_FRONT);
+    glDrawBuffer(this->GetFrontBuffer());
     }
   else
     {
-    glDrawBuffer(GL_BACK);
+    glDrawBuffer(this->GetBackBuffer());
     }
 
 

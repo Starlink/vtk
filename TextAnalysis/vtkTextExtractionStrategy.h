@@ -18,17 +18,6 @@
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
-#ifndef _vtkTextExtractionStrategy_h
-#define _vtkTextExtractionStrategy_h
-
-#include <vtkObject.h>
-
-class vtkIdTypeArray;
-class vtkStdString;
-class vtkStringArray;
-class vtkUnicodeString;
-class vtkUnicodeStringArray;
-
 // .NAME vtkTextExtractionStrategy - Abstract interface for an object that can extract
 // tagged text from a resource.
 //
@@ -41,6 +30,17 @@ class vtkUnicodeStringArray;
 //
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
+#ifndef _vtkTextExtractionStrategy_h
+#define _vtkTextExtractionStrategy_h
+
+#include <vtkObject.h>
+
+class vtkIdTypeArray;
+class vtkStdString;
+class vtkStringArray;
+class vtkUnicodeString;
+class vtkUnicodeStringArray;
+
 class VTK_TEXT_ANALYSIS_EXPORT vtkTextExtractionStrategy :
   public vtkObject
 {
@@ -48,7 +48,6 @@ public:
   vtkTypeMacro(vtkTextExtractionStrategy, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-//BTX
   // Description:
   // Given a resource Mime type and content, implementations should return 'true' if they can
   // extract text from resources with the given Mime type, otherwise false.  If the implementation
@@ -69,7 +68,6 @@ public:
     vtkIdTypeArray* tag_begin,
     vtkIdTypeArray* tag_end,
     vtkStringArray* tag_type) = 0;
-//ETX
 
 protected:
   vtkTextExtractionStrategy();

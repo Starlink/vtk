@@ -43,6 +43,22 @@ enum vtkShaderProgram2BuildStatus
   VTK_SHADER_PROGRAM2_LINK_SUCCEEDED=2
 };
 
+enum vtkShaderProgram2GeometryInType
+{
+  VTK_GEOMETRY_SHADER_IN_TYPE_POINTS,
+  VTK_GEOMETRY_SHADER_IN_TYPE_LINES,
+  VTK_GEOMETRY_SHADER_IN_TYPE_LINES_ADJACENCY,
+  VTK_GEOMETRY_SHADER_IN_TYPE_TRIANGLES,
+  VTK_GEOMETRY_SHADER_IN_TYPE_TRIANGLES_ADJACENCY
+};
+
+enum vtkShaderProgram2GeometryOutType
+{
+  VTK_GEOMETRY_SHADER_OUT_TYPE_POINTS,
+  VTK_GEOMETRY_SHADER_OUT_TYPE_LINE_STRIP,
+  VTK_GEOMETRY_SHADER_OUT_TYPE_TRIANGLE_STRIP
+};
+
 class VTK_RENDERING_EXPORT vtkShaderProgram2 : public vtkObject
 {
 public:
@@ -105,29 +121,45 @@ public:
   
   // Description:
   // Tell if the shader program is valid with the current OpenGL state.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->Context()->IsCurrent()
+  // \pre built this->GetLastBuildStatus()==VTK_SHADER_PROGRAM2_LINK_SUCCEEDED
   bool IsValid();
   
   // Description:
   // If not done yet, compile all the shaders and link the program.
   // The status of the build can then be query with GetLastBuildStatus()
   // and GetLastLinkLog().
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   void Build();
   
   // Description:
   // Send the uniform variables values to the program.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
+  // \pre built this->GetLastBuildStatus()==VTK_SHADER_PROGRAM2_LINK_SUCCEEDED
   void SendUniforms();
   
   // Description:
   // Introspection. Return the list of active uniform variables of the program.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->Context()->IsCurrent()
+  // \pre built this->GetLastBuildStatus()==VTK_SHADER_PROGRAM2_LINK_SUCCEEDED
   void PrintActiveUniformVariables(ostream &os,
                                    vtkIndent indent);
   
   // Description:
   // Call PrintActiveUniformVariables on cout. Useful for calling inside gdb.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->Context()->IsCurrent()
+  // \pre built this->GetLastBuildStatus()==VTK_SHADER_PROGRAM2_LINK_SUCCEEDED
   void PrintActiveUniformVariablesOnCout();
   
   // Description:
   // Tell if the program is the one currently used by OpenGL.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   bool IsUsed();
   
   // Description:
@@ -140,12 +172,16 @@ public:
   
   // Description:
   // Restore the previous shader program (or fixed-pipeline).
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   void Restore();
   
   // Description:
   // Force the current shader program to be the fixed-pipeline.
   // Warning: this call will be compiled if called inside a display list
   // creation.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   void RestoreFixedPipeline();
 
   // Description:
@@ -177,6 +213,8 @@ public:
   // Description:
   // Returns the generic attribute location.
   // The shader must be bound before calling this.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   // \pre name_exists: name!=0
   // \pre built: this->GetLastBuildStatus()==VTK_SHADER_PROGRAM2_LINK_SUCCEEDED
   int GetAttributeLocation(const char *name);
@@ -193,8 +231,52 @@ public:
   // mode is GL_COMPILE_AND_EXECUTE.
   // Used internally and provided as a public method for whoever find it
   // useful.
+  // \pre context_is_set: this->GetContext()!=0
+  // \pre current_context_matches: this->GetContext()->IsCurrent()
   bool DisplayListUnderCreationInCompileMode();
   
+  // Description:
+  // Specific to the geometry shader part of the program.
+  // Relevant only when HasGeometryShaders() is true.
+  // From OpenGL 3.2, it is replaced by an input layout qualifier in GLSL
+  // 1.50.
+  // The input primitive type on which the geometry shader operate.
+  // It can be VTK_GEOMETRY_SHADER_IN_TYPE_POINTS,
+  // VTK_GEOMETRY_SHADER_IN_TYPE_LINES,
+  // VTK_GEOMETRY_SHADER_IN_TYPE_LINES_ADJACENCY,
+  // VTK_GEOMETRY_SHADER_IN_TYPE_TRIANGLES or
+  // VTK_GEOMETRY_SHADER_IN_TYPE_TRIANGLES_ADJACENCY
+  // Initial value is VTK_GEOMETRY_SHADER_IN_TYPE_POINTS.
+  vtkSetMacro(GeometryTypeIn,int);
+  vtkGetMacro(GeometryTypeIn,int);
+
+  // Description:
+  // Specific to the geometry shader part of the program.
+  // Relevant only when HasGeometryShaders() is true.
+  // This is a pre OpenGL 3.2 geometry shader setting.
+  // From OpenGL 3.2, it is replaced by an output layout qualifier in GLSL
+  // 1.50.
+  // The maximum number of vertices the geometry shader will emit in one
+  // invocation.
+  // If a geometry shader, in one invocation, emits more vertices than this
+  // value, these emits may have no effect.
+  // Initial value is 1.
+  vtkSetMacro(GeometryVerticesOut,int);
+  vtkGetMacro(GeometryVerticesOut,int);
+
+  // Description:
+  // Specific to the geometry shader part of the program.
+  // Relevant only when HasGeometryShaders() is true.
+  // From OpenGL 3.2, it is replaced by an output layout qualifier in GLSL
+  // 1.50.
+  // The output primitive type generated by the geometry shader.
+  // It can be VTK_GEOMETRY_SHADER_OUT_TYPE_POINTS,
+  // VTK_GEOMETRY_SHADER_OUT_TYPE_LINE_STRIP or
+  // VTK_GEOMETRY_SHADER_OUT_TYPE_TRIANGLE_STRIP.
+  // Initial value is VTK_GEOMETRY_SHADER_OUT_TYPE_POINTS.
+  vtkSetMacro(GeometryTypeOut,int);
+  vtkGetMacro(GeometryTypeOut,int);
+
 protected:
   vtkShaderProgram2();
   virtual ~vtkShaderProgram2();
@@ -223,6 +305,10 @@ protected:
   vtkOpenGLRenderWindow *Context;
   bool ExtensionsLoaded;
   
+  int GeometryTypeIn;
+  int GeometryTypeOut;
+  int GeometryVerticesOut;
+
 private:
   vtkShaderProgram2(const vtkShaderProgram2&); // Not implemented.
   void operator=(const vtkShaderProgram2&); // Not implemented.

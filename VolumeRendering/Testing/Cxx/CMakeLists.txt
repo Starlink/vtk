@@ -14,12 +14,15 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       ProjectedTetrahedraZoomIn.cxx
       TestFinalColorWindowLevel.cxx
       TestFixedPointRayCastLightComponents.cxx
+      TestGPURayCastAdditive.cxx
       TestGPURayCastCompositeMaskBlend.cxx
       TestGPURayCastCompositeMask.cxx
+      TestGPURayCastCompositeBinaryMask.cxx
       TestGPURayCastCompositeShadeMask.cxx
       TestGPURayCastCompositeToMIP.cxx
       TestGPURayCastCropping.cxx
       TestGPURayCastDataTypesMinIP.cxx
+      TestGPURayCastMIPBinaryMask.cxx
       TestGPURayCastDataTypesMIP.cxx
       TestGPURayCastFourComponentsComposite.cxx
       TestGPURayCastFourComponentsCompositeStreaming.cxx
@@ -27,9 +30,14 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestGPURayCastFourComponentsMIP.cxx
       TestGPURayCastMIPToComposite.cxx
       TestGPURayCastNearestDataTypesMIP.cxx
-      TestHAVSVolumeMapper.cxx
+      TestGPURayCastPerspectiveParallel.cxx
+      #TestHAVSVolumeMapper.cxx
       TestMinIntensityRendering.cxx
       TestProjectedTetrahedra.cxx
+      TestProjectedHexahedra.cxx
+      TestProp3DFollower.cxx
+      TestSmartVolumeMapper.cxx
+      TestSmartVolumeMapperWindowLevel.cxx
       TestTM3DLightComponents.cxx
       volProt.cxx
       ZsweepConcavities.cxx
@@ -39,21 +47,21 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       )
   ENDIF (VTK_DATA_ROOT)
 
-# Force to not enable floating point exception as we hit some exception
-# inside the OpenGL driver at vtkgl::LinkProgram() (nVidia 185.18.36).
-set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN)
-set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "${CMAKE_TESTDRIVER_BEFORE_TESTMAIN}
+  # use the testing interactor.
+  INCLUDE(${VTK_SOURCE_DIR}/Rendering/vtkTestingObjectFactory.cmake)
+
+  # Force to not enable floating point exception as we hit some exception
+  # inside the OpenGL driver at vtkgl::LinkProgram() (nVidia 185.18.36).
+  set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "${CMAKE_TESTDRIVER_BEFORE_TESTMAIN}
     try {")
 
-  CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
-                         EXTRA_INCLUDE vtkTestDriver.h)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests} ${MyTestSupport} )
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkVolumeRendering)
   SET (TestsToRun ${Tests})
   REMOVE (TestsToRun ${KIT}CxxTests.cxx)
 
   #
-  # Add all the executables 
+  # Add all the executables
   FOREACH (test ${TestsToRun})
     GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
     IF (VTK_DATA_ROOT)
@@ -62,7 +70,7 @@ set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "${CMAKE_TESTDRIVER_BEFORE_TESTMAIN}
           -T ${VTK_BINARY_DIR}/Testing/Temporary
           -V Baseline/${KIT}/${TName}.png)
     ELSE (VTK_DATA_ROOT)
-      ADD_TEST(${TName} ${CXX_TEST_PATH}/${KIT}CxxTests ${TName}) 
+      ADD_TEST(${TName} ${CXX_TEST_PATH}/${KIT}CxxTests ${TName})
     ENDIF (VTK_DATA_ROOT)
-  ENDFOREACH (test) 
+  ENDFOREACH (test)
 ENDIF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)

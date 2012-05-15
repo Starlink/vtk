@@ -53,12 +53,6 @@ configure_file(
 
 if ( VERDICT_MANGLE )
   set( verdict_LIBRARY "${VERDICT_MANGLE_PREFIX}verdict" )
-  # if the name of the library is not 'verdict', then add verdict_EXPORTS 
-  # manually so that the usual dllexport/dllimport tricks still work.
-  if(WIN32)
-    set_source_files_properties(${verdict_SRCS} PROPERTIES
-      COMPILE_FLAGS "-Dverdict_EXPORTS")
-  endif(WIN32)
 else ( VERDICT_MANGLE )
   set( verdict_LIBRARY "verdict" )
 endif ( VERDICT_MANGLE )
@@ -75,7 +69,9 @@ if ( NOT VERDICT_NO_LIBRARY_VERSION )
   )
 endif ( NOT VERDICT_NO_LIBRARY_VERSION )
 
-add_library( ${verdict_LIBRARY} ${verdict_SRCS} )
+vtk_add_library( ${verdict_LIBRARY} ${verdict_SRCS} )
+set_target_properties( ${verdict_LIBRARY} PROPERTIES DEFINE_SYMBOL verdict_EXPORTS)
+
 # Apply user-defined properties to the library targets.
 if ( VERDICT_LIBRARY_PROPERTIES )
   set_target_properties( ${verdict_LIBRARY}
@@ -105,9 +101,9 @@ if(VTK_INSTALL_LIB_DIR_CM24)
   set (verdict_INSTALL_LIB_DIR ${VTK_INSTALL_LIB_DIR_CM24})
 endif(VTK_INSTALL_LIB_DIR_CM24)
 
-if(VTK_INSTALL_INCLUDE_DIR_CM24)
-  set (verdict_INSTALL_INCLUDE_SUBDIR ${VTK_INSTALL_INCLUDE_DIR_CM24})
-endif(VTK_INSTALL_INCLUDE_DIR_CM24)
+if(VTK_INSTALL_INCLUDE_DIR)
+  set (verdict_INSTALL_INCLUDE_SUBDIR ${VTK_INSTALL_INCLUDE_DIR})
+endif(VTK_INSTALL_INCLUDE_DIR)
 
 if ( NOT verdict_INSTALL_DOC_DIR )
   set (verdict_INSTALL_DOC_DIR doc)
@@ -159,6 +155,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
 
 install(TARGETS ${verdict_LIBRARY}
+      EXPORT ${VTK_INSTALL_EXPORT_NAME}
       RUNTIME DESTINATION ${verdict_INSTALL_BIN_DIR} COMPONENT RuntimeLibraries # .exe, .dll
       LIBRARY DESTINATION ${verdict_INSTALL_LIB_DIR} COMPONENT RuntimeLibraries # .so, mod.dll
       ARCHIVE DESTINATION ${verdict_INSTALL_LIB_DIR} COMPONENT Development      # .a, .lib

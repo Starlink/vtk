@@ -51,7 +51,6 @@ public:
   // Sets the bar chart help format.
   void SetHelpFormat(const char* format);
 
-  //BTX
   // Description:
   // Adds line chart selection handlers to the mouse selection.
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
@@ -63,7 +62,6 @@ public:
   // Description:
   // Gets the chart series layer
   virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
-  //ETX
 
   // Description:
   // Gets the series options.

@@ -36,6 +36,7 @@ vtkVolumeOutlineSource::vtkVolumeOutlineSource ()
 {
   this->VolumeMapper = 0;
   this->GenerateScalars = 0;
+  this->GenerateOutline = 1;
   this->GenerateFaces = 0;
   this->ActivePlaneId = -1;
 
@@ -77,6 +78,9 @@ void vtkVolumeOutlineSource::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "GenerateFaces: "
      << (this->GenerateFaces ? "On\n" : "Off\n" );
+
+  os << indent << "GenerateOutline: "
+     << (this->GenerateOutline ? "On\n" : "Off\n" );
 
   os << indent << "GenerateScalars: "
      << (this->GenerateScalars ? "On\n" : "Off\n" );
@@ -299,8 +303,13 @@ int vtkVolumeOutlineSource::RequestData(
     }
 
   // Generate all the lines for the outline.
-  vtkCellArray *lines = vtkCellArray::New();
-  this->GenerateLines(lines, scalars, colors, activePlane, flags, tolPtId);
+  vtkCellArray *lines = 0;
+
+  if (this->GenerateOutline)
+    {
+    lines = vtkCellArray::New();
+    this->GenerateLines(lines, scalars, colors, activePlane, flags, tolPtId);
+    }
 
   // Generate the polys for the outline
   vtkCellArray *polys =  0;
@@ -325,7 +334,10 @@ int vtkVolumeOutlineSource::RequestData(
     }
 
   output->SetLines(lines);
-  lines->Delete();
+  if (lines)
+    {
+    lines->Delete();
+    }
 
   output->GetCellData()->SetScalars(scalars);
   if (scalars)

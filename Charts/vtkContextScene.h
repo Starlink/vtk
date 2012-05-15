@@ -25,14 +25,14 @@
 
 #include "vtkObject.h"
 #include "vtkWeakPointer.h" // Needed for weak pointer to the window.
-#include "vtkVector.h" // Needed for vtkVector2f
 
 class vtkContext2D;
-class vtkContextItem;
+class vtkAbstractContextItem;
 class vtkTransform2D;
 class vtkContextMouseEvent;
+class vtkContextScenePrivate;
+class vtkContextInteractorStyle;
 
-class vtkInteractorStyle;
 class vtkAnnotationLink;
 
 class vtkRenderer;
@@ -53,15 +53,34 @@ public:
   virtual bool Paint(vtkContext2D *painter);
 
   // Description:
-  // Add an item to the scene.
-  void AddItem(vtkContextItem *item);
+  // Add child items to this item. Increments reference count of item.
+  // \return the index of the child item.
+  unsigned int AddItem(vtkAbstractContextItem* item);
 
   // Description:
-  // Get the number of items in the scene.
-  int GetNumberOfItems();
+  // Remove child item from this item. Decrements reference count of item.
+  // \param item the item to be removed.
+  // \return true on success, false otherwise.
+  bool RemoveItem(vtkAbstractContextItem* item);
 
+  // Description:
+  // Remove child item from this item. Decrements reference count of item.
+  // \param index of the item to be removed.
+  // \return true on success, false otherwise.
+  bool RemoveItem(unsigned int index);
+
+  // Description:
   // Get the item at the specified index.
-  vtkContextItem * GetItem(int index);
+  // \return the item at the specified index (null if index is invalid).
+  vtkAbstractContextItem* GetItem(unsigned int index);
+
+  // Description:
+  // Get the number of child items.
+  unsigned int GetNumberOfItems();
+
+  // Description:
+  // Remove all child items from this item.
+  void ClearItems();
 
   // Description:
   // Set the vtkAnnotationLink for the chart.
@@ -104,8 +123,12 @@ public:
   int GetSceneHeight();
 
   // Description:
-  // Add the scene as an observer on the supplied interactor style.
-  void SetInteractorStyle(vtkInteractorStyle *interactor);
+  // Whether to scale the scene transform when tiling, for example when
+  // using vtkWindowToImageFilter to take a large screenshot.
+  // The default is true.
+  vtkSetMacro(ScaleTiles, bool);
+  vtkGetMacro(ScaleTiles, bool);
+  vtkBooleanMacro(ScaleTiles, bool);
 
   // Description:
   // This should not be necessary as the context view should take care of
@@ -117,12 +140,13 @@ public:
   // scene. This should only be used by the vtkContextItem derived objects in
   // a scene in their event handlers.
   void SetDirty(bool isDirty);
+  bool GetDirty()const;
 
 //BTX
   // Description:
   // Release graphics resources hold by the scene.
   void ReleaseGraphicsResources();
-  
+
   // Description:
   // Last painter used.
   // Not part of the end-user API. Can be used by context items to
@@ -152,11 +176,6 @@ protected:
   ~vtkContextScene();
 
   // Description:
-  // Protected function called after any event to check if a repaint of the
-  // scene is required. Called by the Command object after interaction events.
-  void CheckForRepaint();
-
-  // Description:
   // Called to process events - figure out what child(ren) to propagate events
   // to.
   virtual void ProcessEvents(vtkObject* caller, unsigned long eventId,
@@ -164,23 +183,27 @@ protected:
 
   // Description:
   // Process a rubber band selection event.
-  virtual void ProcessSelectionEvent(vtkObject* caller, void* callData);
+  virtual bool ProcessSelectionEvent(unsigned int rect[5]);
 
   // Description:
   // Process a mouse move event.
-  virtual void MouseMoveEvent(int x, int y);
+  virtual bool MouseMoveEvent(int x, int y);
 
   // Description:
   // Process a mouse button press event.
-  virtual void ButtonPressEvent(int button, int x, int y);
+  virtual bool ButtonPressEvent(int button, int x, int y);
 
   // Description:
   // Process a mouse button release event.
-  virtual void ButtonReleaseEvent(int button, int x, int y);
+  virtual bool ButtonReleaseEvent(int button, int x, int y);
+
+  // Description:
+  // Process a mouse button double click event.
+  virtual bool DoubleClickEvent(int button, int x, int y);
 
   // Description:
   // Process a mouse wheel event where delta is the movement forward or back.
-  virtual void MouseWheelEvent(int delta, int x, int y);
+  virtual bool MouseWheelEvent(int delta, int x, int y);
 
   // Description:
   // Paint the scene in a special mode to build a cache for picking.
@@ -188,10 +211,19 @@ protected:
   virtual void PaintIds();
 
   // Description:
+  // Test if BufferId is supported by the OpenGL context.
+  void TestBufferIdSupport();
+
+  // Description:
   // Return the item id under mouse cursor at position (x,y).
   // Return -1 if there is no item under the mouse cursor.
   // \post valid_result: result>=-1 && result<this->GetNumberOfItems()
   vtkIdType GetPickedItem(int x, int y);
+
+  // Description:
+  // Return the item under the mouse.
+  // If no item is under the mouse, the method returns a null pointer.
+  vtkAbstractContextItem* GetPickedItem();
 
   // Description:
   // Make sure the buffer id used for picking is up-to-date.
@@ -204,14 +236,21 @@ protected:
 
   // Description:
   // The command object for the charts.
-  class Command;
-  friend class Command;
-  Command *Observer;
+  //class Command;
+  //friend class Command;
+  //Command *Observer;
+  friend class vtkContextInteractorStyle;
 
   // Description:
   // Private storage object - where we hide all of our STL objects...
   class Private;
   Private *Storage;
+
+  // Description:
+  // This structure provides a list of children, along with convenience
+  // functions to paint the children etc. It is derived from
+  // std::vector<vtkAbstractContextItem>, defined in a private header.
+  vtkContextScenePrivate* Children;
 
   vtkWeakPointer<vtkContext2D> LastPainter;
 
@@ -222,62 +261,24 @@ protected:
 
   bool UseBufferId;
 
+  bool BufferIdSupportTested;
+  bool BufferIdSupported;
+
+  bool ScaleTiles;
+
   // Description:
   // The scene level transform.
   vtkTransform2D* Transform;
 
-  // Description:
-  // Perform translation and fill in the vtkContextMouseEvent struct.
-  void PerformTransform(vtkTransform2D *transform, vtkContextMouseEvent &mouse);
-
 private:
   vtkContextScene(const vtkContextScene &); // Not implemented.
   void operator=(const vtkContextScene &);   // Not implemented.
+
+  typedef bool (vtkAbstractContextItem::* MouseEvents)(const vtkContextMouseEvent&);
+  bool ProcessItem(vtkAbstractContextItem* cur,
+                   const vtkContextMouseEvent& event,
+                   MouseEvents eventPtr);
 //ETX
 };
-
-//BTX
-// Description:
-// Data structure to store context scene mouse events to be passed to items.
-class vtkContextMouseEvent
-{
-public:
-  // Description:
-  // Enumeration of mouse buttons.
-  enum {
-    LEFT_BUTTON = 0,
-    MIDDLE_BUTTON,
-    RIGHT_BUTTON
-  };
-
-  // Description:
-  // Position of the mouse in item coordinate system.
-  vtkVector2f Pos;
-
-  // Description:
-  // Position of the mouse the scene coordinate system.
-  vtkVector2f ScenePos;
-
-  // Description:
-  // Position of the mouse in screen coordinates
-  vtkVector2i ScreenPos;
-
-  // Description:
-  // `Pos' at the previous mouse event.
-  vtkVector2f LastPos;
-
-  // Description:
-  // `ScenePos'at the previous mouse event.
-  vtkVector2f LastScenePos;
-
-  // Description:
-  // `ScreenPos' at the previous mouse event.
-  vtkVector2i LastScreenPos;
-
-  // Description:
-  // Mouse button that was pressed, using the anonymous enumeration.
-  int Button;
-};
-//ETX
 
 #endif //__vtkContextScene_h

@@ -1,19 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    metaTube.cxx
-  Language:  C++
-  Date:      $Date$
-  Version:   $Revision$
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
 #pragma warning(disable:4284)
@@ -754,7 +749,12 @@ M_Write(void)
     int elementSize;
     MET_SizeOfType(m_ElementType, &elementSize);
 
-    char* data = new char[(m_NDims*(2+m_NDims)+10)*m_NPoints*elementSize];
+    const unsigned int writeSize = m_NPoints*(m_NDims*(2+m_NDims)+10)*elementSize;
+
+    char* data = new char[writeSize];
+
+    memset( data, '\0', writeSize );
+
     int i=0;
     int d;
     while(it != itEnd)
@@ -807,8 +807,7 @@ M_Write(void)
       it++;
       }
 
-    m_WriteStream->write((char *)data,
-                         (m_NDims*(2+m_NDims)+10)*m_NPoints*elementSize);
+    m_WriteStream->write((char *)data,writeSize);
     m_WriteStream->write("\n",1);
     delete [] data;
     }

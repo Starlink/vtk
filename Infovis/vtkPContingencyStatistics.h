@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkPContingencyStatistics - A class for parallel univariate contingency statistics
+// .NAME vtkPContingencyStatistics - A class for parallel bivariate contingency statistics
 // .SECTION Description
 // vtkPContingencyStatistics is vtkContingencyStatistics subclass for parallel datasets.
 // It learns and derives the global statistical model on each node, but assesses each 
@@ -38,6 +38,7 @@
 #include <vtkstd/vector> // STL Header
 //ETX
 
+class vtkMultiBlockDataSet;
 class vtkMultiProcessController;
 
 class VTK_INFOVIS_EXPORT vtkPContingencyStatistics : public vtkContingencyStatistics
@@ -57,7 +58,7 @@ public:
   // Execute the parallel calculations required by the Learn option.
   virtual void Learn( vtkTable* inData,
                       vtkTable* inParameters,
-                      vtkDataObject* outMeta );
+                      vtkMultiBlockDataSet* outMeta );
 
 protected:
   vtkPContingencyStatistics();

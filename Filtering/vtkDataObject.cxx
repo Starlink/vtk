@@ -63,6 +63,7 @@ vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_COMPONENTS, Integer);
 vtkInformationKeyMacro(vtkDataObject, FIELD_NUMBER_OF_TUPLES, Integer);
 vtkInformationKeyRestrictedMacro(vtkDataObject, FIELD_RANGE, DoubleVector, 2);
 vtkInformationKeyRestrictedMacro(vtkDataObject, PIECE_FIELD_RANGE, DoubleVector, 2);
+vtkInformationKeyMacro(vtkDataObject, FIELD_ARRAY_NAME, String);
 vtkInformationKeyRestrictedMacro(vtkDataObject, PIECE_EXTENT, IntegerVector, 6);
 vtkInformationKeyMacro(vtkDataObject, FIELD_OPERATION, Integer);
 vtkInformationKeyRestrictedMacro(vtkDataObject, DATA_EXTENT, IntegerPointer, 6);
@@ -122,8 +123,6 @@ vtkDataObject::vtkDataObject()
   this->PipelineInformation = 0;
 
   this->Information = vtkInformation::New();
-  this->Information->Register(this);
-  this->Information->Delete();
 
   // We have to assume that if a user is creating the data on their own,
   // then they will fill it with valid data.
@@ -132,7 +131,7 @@ vtkDataObject::vtkDataObject()
   this->FieldData = NULL;
   vtkFieldData *fd = vtkFieldData::New();
   this->SetFieldData(fd);
-  fd->Delete();
+  fd->FastDelete();
 }
 
 //----------------------------------------------------------------------------
@@ -193,6 +192,16 @@ void vtkDataObject::PrintSelf(ostream& os, vtkIndent indent)
          << updateExtent[1] << ", " << updateExtent[2] << ", "
          << updateExtent[3] << ", " << updateExtent[4] << ", "
          << updateExtent[5] << endl;
+      }
+    if(pInfo->Has(vtkStreamingDemandDrivenPipeline::COMBINED_UPDATE_EXTENT()))
+      {
+      int combinedExtent[6];
+      pInfo->Get(vtkStreamingDemandDrivenPipeline::COMBINED_UPDATE_EXTENT(),
+                 combinedExtent);
+      os << indent << "CombinedUpdateExtent: " << combinedExtent[0] << ", "
+         << combinedExtent[1] << ", " << combinedExtent[2] << ", "
+         << combinedExtent[3] << ", " << combinedExtent[4] << ", "
+         << combinedExtent[5] << endl;
       }
     if(pInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()))
       {
@@ -346,7 +355,7 @@ vtkAlgorithmOutput* vtkDataObject::GetProducerPort()
     {
     vtkTrivialProducer* tp = vtkTrivialProducer::New();
     tp->SetOutput(this);
-    tp->Delete();
+    tp->FastDelete();
     }
 
   // Get the port from the executive.
@@ -654,7 +663,7 @@ vtkInformation *vtkDataObject::SetActiveAttribute(vtkInformation *info,
       {
       info->Set(EDGE_DATA_VECTOR(), fieldDataInfoVector);
       }
-    fieldDataInfoVector->Delete();
+    fieldDataInfoVector->FastDelete();
     }
 
   // if we find a matching field, turn it on (active);  if another field of same
@@ -693,7 +702,7 @@ vtkInformation *vtkDataObject::SetActiveAttribute(vtkInformation *info,
       activeField->Set( FIELD_NAME(), attributeName );
       }
     fieldDataInfoVector->Append(activeField);
-    activeField->Delete();
+    activeField->FastDelete();
     }
 
   return activeField;
@@ -863,7 +872,7 @@ vtkStreamingDemandDrivenPipeline* vtkDataObject::TrySDDP(const char* method)
     {
     vtkTrivialProducer* tp = vtkTrivialProducer::New();
     tp->SetOutput(this);
-    tp->Delete();
+    tp->FastDelete();
     }
 
   // Try downcasting the executive to the proper type.
@@ -929,7 +938,7 @@ void vtkDataObject::ShallowCopy(vtkDataObject *src)
       vtkFieldData* fd = vtkFieldData::New();
       fd->ShallowCopy(src->FieldData);
       this->SetFieldData(fd);
-      fd->Delete();
+      fd->FastDelete();
       }
     }
 }
@@ -946,7 +955,7 @@ void vtkDataObject::DeepCopy(vtkDataObject *src)
     vtkFieldData *newFieldData = vtkFieldData::New();
     newFieldData->DeepCopy(srcFieldData);
     this->SetFieldData(newFieldData);
-    newFieldData->Delete();
+    newFieldData->FastDelete();
     }
   else
     {
@@ -957,14 +966,6 @@ void vtkDataObject::DeepCopy(vtkDataObject *src)
 //----------------------------------------------------------------------------
 void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
 {
-  // If the input data object has pipeline information and this object
-  // does not, setup a trivial producer so that this object will have
-  // pipeline information into which to copy values.
-  if(src->GetPipelineInformation() && !this->GetPipelineInformation())
-    {
-    this->GetProducerPort();
-    }
-
   this->DataReleased = src->DataReleased;
   
   // Do not copy pipeline specific information from data object to
@@ -998,33 +999,6 @@ void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
     this->Information->CopyEntry(src->Information, DATA_RESOLUTION(), 1);
     }
   
-  vtkInformation* thatPInfo = src->GetPipelineInformation();
-  vtkInformation* thisPInfo = this->GetPipelineInformation();
-  if(thisPInfo && thatPInfo)
-    {
-    // copy the pipeline info if it is available
-    if(thisPInfo)
-      {
-      // Do not override info if it exists. Normally WHOLE_EXTENT
-      // and MAXIMUM_NUMBER_OF_PIECES should not be copied here since
-      // they belong to the pipeline not the data object.
-      // However, removing the copy can break things in older filters
-      // that rely on ShallowCopy to set these (mostly, sources/filters
-      // that use another source/filter internally and shallow copy
-      // in RequestInformation). As a compromise, I changed the following
-      // code such that these entries are only copied if they do not
-      // exist in the output.
-      if (!thisPInfo->Has(SDDP::WHOLE_EXTENT()))
-        {
-        thisPInfo->CopyEntry(thatPInfo, SDDP::WHOLE_EXTENT());
-        }
-      if (!thisPInfo->Has(SDDP::MAXIMUM_NUMBER_OF_PIECES()))
-        {
-        thisPInfo->CopyEntry(thatPInfo, SDDP::MAXIMUM_NUMBER_OF_PIECES());
-        }
-      thisPInfo->CopyEntry(thatPInfo, vtkDemandDrivenPipeline::RELEASE_DATA());
-      }
-    }
   // This also caused a pipeline problem.
   // An input pipelineMTime was copied to output.  Pipeline did not execute...
   // We do not copy MTime of object, so why should we copy these.

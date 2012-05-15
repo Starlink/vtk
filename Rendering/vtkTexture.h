@@ -154,10 +154,10 @@ public:
   void SetTransform(vtkTransform *transform);
   vtkGetObjectMacro(Transform, vtkTransform);
 
+//BTX
   // Description:
   // Used to specify how the texture will blend its RGB and Alpha values
   // with other textures and the fragment the texture is rendered upon.
-  //BTX
   enum VTKTextureBlendingMode
   {
     VTK_TEXTURE_BLENDING_MODE_NONE = 0,
@@ -168,7 +168,7 @@ public:
     VTK_TEXTURE_BLENDING_MODE_INTERPOLATE,
     VTK_TEXTURE_BLENDING_MODE_SUBTRACT
   };
-  //ETX
+//ETX
 
   // Description:
   // Used to specify how the texture will blend its RGB and Alpha values
@@ -192,6 +192,14 @@ public:
   vtkGetMacro(RestrictPowerOf2ImageSmaller,int);
   vtkSetMacro(RestrictPowerOf2ImageSmaller,int);
   vtkBooleanMacro(RestrictPowerOf2ImageSmaller,int);
+
+  // Description:
+  // Is this Texture Translucent?
+  // returns false (0) if the texture is either fully opaque or has
+  // only fully transparent pixels and fully opaque pixels and the
+  // Interpolate flag is turn off.
+  virtual int IsTranslucent();
+
 protected:
   vtkTexture();
   ~vtkTexture();
@@ -210,6 +218,11 @@ protected:
   // this is to duplicated the previous behavior of SelfCreatedLookUpTable
   int SelfAdjustingTableRange;
   bool PremultipliedAlpha;
+
+  // the result of HasTranslucentPolygonalGeometry is cached
+  vtkTimeStamp TranslucentComputationTime;
+  int TranslucentCachedResult;
+
 private:
   vtkTexture(const vtkTexture&);  // Not implemented.
   void operator=(const vtkTexture&);  // Not implemented.

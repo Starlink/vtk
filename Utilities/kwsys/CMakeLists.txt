@@ -61,6 +61,8 @@
 #                                             If not given the install rules
 #                                             will not be in any component.
 #
+#  KWSYS_INSTALL_EXPORT_NAME = The EXPORT option value for install(TARGETS) calls.
+#
 #    Example:
 #
 #      SET(KWSYS_INSTALL_BIN_DIR bin)
@@ -141,12 +143,6 @@ IF(COMMAND SET_PROPERTY)
     "KWSYS_HEADER(%)=<${KWSYS_NAMESPACE}/%>"
     )
 ENDIF(COMMAND SET_PROPERTY)
-# add option to disable memory cleanup at exit of putenv memory
-IF(DEFINED KWSYS_DO_NOT_CLEAN_PUTENV)
-  SET(KWSYS_DO_NOT_CLEAN_PUTENV 1)
-ELSE(DEFINED KWSYS_DO_NOT_CLEAN_PUTENV)
-  SET(KWSYS_DO_NOT_CLEAN_PUTENV 0)
-ENDIF(DEFINED KWSYS_DO_NOT_CLEAN_PUTENV)
 
 # Select library components.
 IF(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
@@ -242,6 +238,9 @@ IF(COMMAND INSTALL)
   # Setup library install rules.
   SET(KWSYS_INSTALL_LIBRARY_RULE)
   IF(KWSYS_INSTALL_LIB_DIR)
+    IF(KWSYS_INSTALL_EXPORT_NAME)
+      LIST(APPEND KWSYS_INSTALL_LIBRARY_RULE EXPORT ${KWSYS_INSTALL_EXPORT_NAME})
+    ENDIF()
     # Install the shared library to the lib directory.
     SET(KWSYS_INSTALL_LIBRARY_RULE ${KWSYS_INSTALL_LIBRARY_RULE}
       LIBRARY DESTINATION ${KWSYS_INSTALL_LIB_DIR}
@@ -308,6 +307,14 @@ IF(NOT KWSYS_IN_SOURCE_BUILD)
   CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/kwsysPrivate.h
     ${PROJECT_BINARY_DIR}/kwsysPrivate.h COPY_ONLY IMMEDIATE)
 ENDIF(NOT KWSYS_IN_SOURCE_BUILD)
+
+# Select plugin module file name convention.
+IF(NOT KWSYS_DynamicLoader_PREFIX)
+  SET(KWSYS_DynamicLoader_PREFIX ${CMAKE_SHARED_MODULE_PREFIX})
+ENDIF()
+IF(NOT KWSYS_DynamicLoader_SUFFIX)
+  SET(KWSYS_DynamicLoader_SUFFIX ${CMAKE_SHARED_MODULE_SUFFIX})
+ENDIF()
 
 #-----------------------------------------------------------------------------
 # We require ANSI support from the C compiler.  Add any needed flags.
@@ -597,6 +604,23 @@ ELSE(KWSYS_BUILD_SHARED)
 ENDIF(KWSYS_BUILD_SHARED)
 
 #-----------------------------------------------------------------------------
+# Configure some implementation details.
+
+KWSYS_PLATFORM_C_TEST(KWSYS_C_HAS_PTRDIFF_T
+  "Checking whether C compiler has ptrdiff_t in stddef.h" DIRECT)
+KWSYS_PLATFORM_C_TEST(KWSYS_C_HAS_SSIZE_T
+  "Checking whether C compiler has ssize_t in unistd.h" DIRECT)
+SET_SOURCE_FILES_PROPERTIES(ProcessUNIX.c System.c PROPERTIES
+  COMPILE_FLAGS "-DKWSYS_C_HAS_PTRDIFF_T=${KWSYS_C_HAS_PTRDIFF_T} -DKWSYS_C_HAS_SSIZE_T=${KWSYS_C_HAS_SSIZE_T}"
+  )
+
+IF(KWSYS_DO_NOT_CLEAN_PUTENV)
+  # Disable cleanup of putenv memory for issues with GCOV.
+  SET_SOURCE_FILES_PROPERTIES(SystemTools.cxx PROPERTIES
+    COMPILE_FLAGS -DKWSYS_DO_NOT_CLEAN_PUTENV=1)
+ENDIF(KWSYS_DO_NOT_CLEAN_PUTENV)
+
+#-----------------------------------------------------------------------------
 # Choose a directory for the generated headers.
 IF(NOT KWSYS_HEADER_ROOT)
   SET(KWSYS_HEADER_ROOT "${PROJECT_BINARY_DIR}")
@@ -774,15 +798,6 @@ IF(KWSYS_USE_Process)
   ELSE(NOT UNIX)
     # Use the UNIX implementation.
     SET(KWSYS_C_SRCS ${KWSYS_C_SRCS} ProcessUNIX.c)
-
-    # Help ProcessUNIX.c compile properly on all platforms.
-    KWSYS_PLATFORM_C_TEST(KWSYS_C_HAS_PTRDIFF_T
-      "Checking whether C compiler has ptrdiff_t in stddef.h" DIRECT)
-    KWSYS_PLATFORM_C_TEST(KWSYS_C_HAS_SSIZE_T
-      "Checking whether C compiler has ssize_t in unistd.h" DIRECT)
-    SET_SOURCE_FILES_PROPERTIES(ProcessUNIX.c PROPERTIES
-      COMPILE_FLAGS "-DKWSYS_C_HAS_PTRDIFF_T=${KWSYS_C_HAS_PTRDIFF_T} -DKWSYS_C_HAS_SSIZE_T=${KWSYS_C_HAS_SSIZE_T}"
-      )
   ENDIF(NOT UNIX)
 ENDIF(KWSYS_USE_Process)
 
@@ -1087,6 +1102,7 @@ IF(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
     FOREACH(n 1 2 3 4 5 6 ${KWSYS_TEST_PROCESS_7})
       ADD_TEST(kwsys.testProcess-${n} ${EXEC_DIR}/${KWSYS_NAMESPACE}TestProcess ${n})
       KWSYS_SET_PROPERTY(TEST kwsys.testProcess-${n} PROPERTY LABELS ${KWSYS_LABELS_TEST})
+      SET_TESTS_PROPERTIES(kwsys.testProcess-${n} PROPERTIES TIMEOUT 120)
     ENDFOREACH(n)
 
     # Some Apple compilers produce bad optimizations in this source.
@@ -1114,5 +1130,11 @@ IF(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
       SET_TESTS_PROPERTIES(kwsys.testFail PROPERTIES MEASUREMENT "Some Key=Some Value")
       MESSAGE(STATUS "GET_TEST_PROPERTY returned: ${wfv}")
     ENDIF(COMMAND SET_TESTS_PROPERTIES AND COMMAND GET_TEST_PROPERTY AND KWSYS_STANDALONE)
+
+    # Suppress known consistent failures on buggy systems.
+    IF(KWSYS_TEST_BOGUS_FAILURES)
+      SET_TESTS_PROPERTIES(${KWSYS_TEST_BOGUS_FAILURES} PROPERTIES WILL_FAIL ON)
+    ENDIF()
+
   ENDIF(BUILD_TESTING)
 ENDIF(KWSYS_STANDALONE OR CMake_SOURCE_DIR)

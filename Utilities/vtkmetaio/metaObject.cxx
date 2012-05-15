@@ -1,26 +1,21 @@
-/*=========================================================================
+/*============================================================================
+  MetaIO
+  Copyright 2000-2010 Insight Software Consortium
 
-  Program:   MetaIO
-  Module:    metaObject.cxx
-  Language:  C++
-  Date:      $Date$
-  Version:   $Revision$
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Insight Software Consortium. All rights reserved.
-  See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #include "metaObject.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-
+#include <algorithm>
 #if defined (__BORLANDC__) && (__BORLANDC__ >= 0x0580)
 #include <mem.h>
 #endif
@@ -39,6 +34,7 @@ MetaObject(void)
   m_NDims = 0;
   this->ClearFields();
   this->ClearUserFields();
+  this->ClearAdditionalFields();
   MetaObject::Clear();
   m_ReadStream = NULL;
   m_WriteStream = NULL;
@@ -54,6 +50,7 @@ MetaObject(const char * _fileName)
   m_NDims = 0;
   this->ClearFields();
   this->ClearUserFields();
+  this->ClearAdditionalFields();
   MetaObject::Clear();
   m_ReadStream = NULL;
   m_WriteStream = NULL;
@@ -69,6 +66,7 @@ MetaObject(unsigned int dim)
   m_NDims = 0;
   this->ClearFields();
   this->ClearUserFields();
+  this->ClearAdditionalFields();
   MetaObject::Clear();
   m_ReadStream = NULL;
   m_WriteStream = NULL;
@@ -89,6 +87,7 @@ MetaObject::
   
   this->ClearFields();
   this->ClearUserFields();
+  this->ClearAdditionalFields();
   }
 
 
@@ -195,6 +194,26 @@ void MetaObject
   m_UserDefinedReadFields.clear();
   }
  
+// Clear AdditionalReadFields
+void MetaObject
+::ClearAdditionalFields()
+  {
+  // Clear read field
+  FieldsContainerType::iterator it  = m_AdditionalReadFields.begin();
+  FieldsContainerType::iterator end = m_AdditionalReadFields.end();
+  while( it != end )
+    {
+    MET_FieldRecordType* field = *it;
+    if( field )
+      {
+      delete field;
+      }
+    ++it;
+    }
+
+  m_AdditionalReadFields.clear();
+  }
+
 //
 //
 void MetaObject::
@@ -987,6 +1006,7 @@ AcquisitionDate(const char * _acquisitionDate)
     {
     m_AcquisitionDate[i] = _acquisitionDate[i];
     }
+  m_AcquisitionDate[strlen( _acquisitionDate )] = '\0';
   }
       
 const char * MetaObject::AcquisitionDate(void) const
@@ -1334,6 +1354,7 @@ M_SetupWriteFields(void)
     mF = new MET_FieldRecordType;
     MET_InitWriteField(mF, "AcquisitionDate", MET_STRING,
                        strlen(m_AcquisitionDate), m_AcquisitionDate);
+    m_Fields.push_back(mF);
     }
 
   bool valSet = false;
@@ -1471,7 +1492,10 @@ bool MetaObject::
 M_Read(void)
   {
 
-  if(!MET_Read(*m_ReadStream, & m_Fields))
+  this->ClearAdditionalFields();
+
+  if(!MET_Read(*m_ReadStream, &m_Fields, '=', false, true,
+     &m_AdditionalReadFields))
     {
     METAIO_STREAM::cerr << "MetaObject: Read: MET_Read Failed" 
                         << METAIO_STREAM::endl;
@@ -1534,6 +1558,7 @@ M_Read(void)
       {
       m_AcquisitionDate[i] = ((char *)mF->value)[i];
       }
+    m_AcquisitionDate[strlen((char *)mF->value)] = '\0';
     }
 
   mF = MET_GetFieldRecord("CompressedData",  &m_Fields);
@@ -1741,7 +1766,24 @@ M_Read(void)
    while( it != end )
    {
      mF = MET_GetFieldRecord((*it)->name, &m_Fields);
-     m_UserDefinedWriteFields.push_back(mF);
+     //
+     // DON'T put the same cross-linked element from the UD readFields
+     // into the userDefined write fields more than once. That
+     // causes a double free, and an abort.
+     FieldsContainerType::iterator dup;
+     for(dup = m_UserDefinedWriteFields.begin();
+	 dup != m_UserDefinedWriteFields.end();
+	 dup++)
+       {
+       if( (*dup) == mF )
+	 {
+	 break;
+	 }
+       }
+     if(dup == m_UserDefinedWriteFields.end())
+       {
+       m_UserDefinedWriteFields.push_back(mF);
+       }
      it++;
    }
   
@@ -1863,6 +1905,29 @@ void* MetaObject
   return NULL;
 }
 
+int MetaObject
+::GetNumberOfAdditionalReadFields()
+{ 
+  return (int)(m_AdditionalReadFields.size());
+}
+
+char * MetaObject
+::GetAdditionalReadFieldName( int i )
+{ 
+  return m_AdditionalReadFields[i]->name;
+}
+
+char * MetaObject
+::GetAdditionalReadFieldValue( int i )
+{ 
+  return (char *)(m_AdditionalReadFields[i]->value);
+}
+
+int MetaObject
+::GetAdditionalReadFieldValueLength( int i )
+{ 
+  return m_AdditionalReadFields[i]->length;
+}
 
 bool MetaObject
 ::AddUserField(const char* _fieldName,MET_ValueEnumType _type,int _length,

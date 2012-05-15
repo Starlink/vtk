@@ -49,8 +49,6 @@ public:
   // Set the index (into the vertex array) of the 
   // breadth first search 'origin' vertex.
   void SetOriginVertex(vtkIdType index);
-  
-  //BTX
 
   // Description:
   // Set the breadth first search 'origin' vertex.
@@ -59,7 +57,6 @@ public:
   // an array name and value, instead of having to
   // know the specific index of the vertex.
   void SetOriginVertex(vtkStdString arrayName, vtkVariant value);
-  //ETX
   
   // Description:
   // Stores the graph vertex ids for the tree vertices in an array
@@ -67,6 +64,12 @@ public:
   vtkSetMacro(CreateGraphVertexIdArray, bool);
   vtkGetMacro(CreateGraphVertexIdArray, bool);
   vtkBooleanMacro(CreateGraphVertexIdArray, bool);
+
+  // Description:
+  // Turn on this option to reverse the edges in the graph.
+  vtkSetMacro(ReverseEdges, bool);
+  vtkGetMacro(ReverseEdges, bool);
+  vtkBooleanMacro(ReverseEdges, bool);
 
 protected:
   vtkBoostBreadthFirstSearchTree();
@@ -80,24 +83,20 @@ private:
 
   vtkIdType OriginVertexIndex;
   char* ArrayName;
-  //BTX
   vtkVariant OriginValue;
-  //ETX
   bool ArrayNameSet;
   bool CreateGraphVertexIdArray;
+  bool ReverseEdges;
   
   // Description:
   // Using the convenience function for set strings internally
   vtkSetStringMacro(ArrayName);
 
-  //BTX
-  
   // Description:
   // This method is basically a helper function to find
   // the index of a specific value within a specific array
   vtkIdType GetVertexIndex(
     vtkAbstractArray *abstract,vtkVariant value);
-  //ETX
 
   vtkBoostBreadthFirstSearchTree(const vtkBoostBreadthFirstSearchTree&);  // Not implemented.
   void operator=(const vtkBoostBreadthFirstSearchTree&);  // Not implemented.

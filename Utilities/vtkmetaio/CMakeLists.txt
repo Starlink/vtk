@@ -1,8 +1,22 @@
-IF(VTK_VERSION)
+#=============================================================================
+# MetaIO
+# Copyright 2000-2010 Insight Software Consortium
+#
+# Distributed under the OSI-approved BSD License (the "License");
+# see accompanying file Copyright.txt for details.
+#
+# This software is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the License for more information.
+#=============================================================================
+IF(VTK_SOURCE_DIR)
+
   SET(METAIO_FOR_VTK 1)
   MARK_AS_ADVANCED( METAIO_FOR_VTK )
   SET(METAIO_NAMESPACE "vtkmetaio")
-ELSE(VTK_VERSION)
+
+ELSE(VTK_SOURCE_DIR)
+
   SET(METAIO_FOR_ITK 1)
   MARK_AS_ADVANCED( METAIO_FOR_ITK )
   SET(METAIO_NAMESPACE "ITKMetaIO")
@@ -12,7 +26,7 @@ ELSE(VTK_VERSION)
     INCLUDE_DIRECTORIES(${ITK_LIBXML2_INCLUDE_DIR})
   ENDIF(ITK_USE_LIBXML2)
 
-ENDIF(VTK_VERSION)
+ENDIF(VTK_SOURCE_DIR)
 
 PROJECT( ${METAIO_NAMESPACE} )
 
@@ -101,7 +115,14 @@ ENDIF(WIN32)
 
 IF(METAIO_FOR_VTK)
   IF(NOT VTK_INSTALL_NO_LIBRARIES)
+    SET(VTK_INSTALL_RULE_ARGS)
+
+    IF(VTK_INSTALL_EXPORT_NAME)
+       LIST(APPEND VTK_INSTALL_RULE_ARGS EXPORT ${VTK_INSTALL_EXPORT_NAME})
+    ENDIF(VTK_INSTALL_EXPORT_NAME)
+
     INSTALL(TARGETS ${METAIO_NAMESPACE}
+            ${VTK_INSTALL_RULE_ARGS}
             RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} 
                     COMPONENT RuntimeLibraries
             LIBRARY DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} 
@@ -109,6 +130,10 @@ IF(METAIO_FOR_VTK)
             ARCHIVE DESTINATION ${VTK_INSTALL_LIB_DIR_CM24} 
                     COMPONENT Development
             )
+    #TODO: Install Copyright.txt
+    #INSTALL(FILES Copyright.txt
+    #        DESTINATION ${VTK_INSTALL_DOC_DIR_CM24}/vtkmetaio
+    #        COMPONENT RuntimeLibraries)
   ENDIF(NOT VTK_INSTALL_NO_LIBRARIES)
   IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     FILE(GLOB __files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
@@ -127,6 +152,7 @@ ELSE(METAIO_FOR_VTK)
               ARCHIVE DESTINATION ${ITK_INSTALL_LIB_DIR_CM24} 
                       COMPONENT Development
               )
+      #TODO: Install Copyright.txt
     ENDIF(NOT ITK_INSTALL_NO_LIBRARIES)
     IF(NOT ITK_INSTALL_NO_DEVELOPMENT)
       FILE(GLOB __files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
@@ -147,6 +173,7 @@ ELSE(METAIO_FOR_VTK)
             ARCHIVE DESTINATION ${INSTALL_LIB_DIR_CM24} 
                     COMPONENT Development
             )
+    #TODO: Install Copyright.txt
     FILE(GLOB __files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
     INSTALL(FILES ${__files}
                   DESTINATION ${INSTALL_INCLUDE_DIR_CM24}/kwMetaIO

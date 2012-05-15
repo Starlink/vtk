@@ -2240,10 +2240,7 @@ namespace vtkYoungsMaterialInterfaceCellCutInternals
       }
 
     // degenerated case
-    else
-      {
-      return make_REAL3(0,0,0);
-      }
+    return make_REAL3(0,0,0);
   }
 
 
@@ -3025,7 +3022,7 @@ namespace vtkYoungsMaterialInterfaceCellCutInternals
 } /* namespace vtkYoungsMaterialInterfaceCellCutInternals */
 
 
-// usefull to avoid numerical errors
+// useful to avoid numerical errors
 #define Clamp(x,min,max) if(x<min) x=min; else if(x>max) x=max
 
 // ------------------------------------

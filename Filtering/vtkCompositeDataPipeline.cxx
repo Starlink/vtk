@@ -87,6 +87,7 @@ vtkInformationKeyMacro(vtkCompositeDataPipeline,REQUIRES_TIME_DOWNSTREAM, Intege
 vtkInformationKeyMacro(vtkCompositeDataPipeline, COMPOSITE_DATA_META_DATA, ObjectBase);
 vtkInformationKeyMacro(vtkCompositeDataPipeline, UPDATE_COMPOSITE_INDICES, IntegerVector);
 vtkInformationKeyMacro(vtkCompositeDataPipeline, COMPOSITE_INDICES, IntegerVector);
+vtkInformationKeyMacro(vtkCompositeDataPipeline, COMPOSITE_INDEX, Integer);
 
 //----------------------------------------------------------------------------
 vtkCompositeDataPipeline::vtkCompositeDataPipeline()
@@ -667,7 +668,7 @@ void vtkCompositeDataPipeline::ExecuteSimpleAlgorithm(
         if (outObj)
           {
           compositeOutput->SetDataSet(iter, outObj);
-          outObj->Delete();
+          outObj->FastDelete();
           }
         }
       }
@@ -928,7 +929,7 @@ void vtkCompositeDataPipeline::ExecuteSimpleAlgorithmTime(
         outputInitialized = 1;
         }
       temporalOutput->SetTimeStep(k, outCopy);
-      outCopy->Delete();
+      outCopy->FastDelete();
       }
     }
 

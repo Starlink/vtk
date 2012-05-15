@@ -135,7 +135,7 @@ public:
 
   // Description:
   // We precompute some values to speed up update of the terrain.
-  // Unfortunately, they have to be manually/explicitely updated
+  // Unfortunately, they have to be manually/explicitly updated
   // when the camera or renderer size changes.
   void InitializeNodeAnalysis(int rendererSize[2]);
 
@@ -144,7 +144,7 @@ public:
   // Returns a value from 0 to 1.
   double GetNodeCoverage(vtkGeoTerrainNode* node);
   
-  // Decription:
+  // Description:
   // Whether to lock the heading a particular value,
   // or to let the heading "roam free" when performing
   // latitude and longitude changes.

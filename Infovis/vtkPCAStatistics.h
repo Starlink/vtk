@@ -13,7 +13,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2010 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
   -------------------------------------------------------------------------*/
@@ -43,6 +43,8 @@ PURPOSE.  See the above copyright notice for more information.
 #define __vtkPCAStatistics_h
 
 #include "vtkMultiCorrelativeStatistics.h"
+
+class vtkDoubleArray;
 
 class VTK_INFOVIS_EXPORT vtkPCAStatistics : public vtkMultiCorrelativeStatistics
 {
@@ -124,6 +126,29 @@ public:
   virtual void SetSpecifiedNormalization( vtkTable* );
 
   // Description:
+  // Get the eigenvalues. This function:
+  // void GetEigenvalues(int request, int i, vtkDoubleArray*);
+  // does all of the work. The other functions simply call this function with the appropriate
+  // parameters. These functions are not valid unless Update() has been called and the Derive
+  // option is turned on.
+  void GetEigenvalues(int request, vtkDoubleArray*);
+  void GetEigenvalues(vtkDoubleArray*);
+  double GetEigenvalue(int request, int i);
+  double GetEigenvalue(int i);
+
+
+  // Description:
+  // Get the eigenvectors. This function:
+  // void GetEigenvectors(int request, vtkDoubleArray* eigenvectors)
+  // does all of the work. The other functions are convenience functions that call this function
+  // with default arguments. These functions are not valid unless Update() has been called and the Derive
+  // option is turned on.
+  void GetEigenvectors(int request, vtkDoubleArray* eigenvectors);
+  void GetEigenvectors(vtkDoubleArray* eigenvectors);
+  void GetEigenvector(int i, vtkDoubleArray* eigenvector);
+  void GetEigenvector(int request, int i, vtkDoubleArray* eigenvector);
+
+  // Description:
   // This variable controls the dimensionality of output tuples in Assess mode.
   // Consider the case where you have requested a PCA on D columns.
   //
@@ -166,7 +191,6 @@ public:
   vtkSetClampMacro(FixedBasisEnergy,double,0.,1.);
   vtkGetMacro(FixedBasisEnergy,double);
 
-//BTX
   // Description:
   // A convenience method (in particular for access from other applications) to 
   // set parameter values.
@@ -174,7 +198,6 @@ public:
   virtual bool SetParameter( const char* parameter,
                              int index,
                              vtkVariant value );
-//ETX
 
 protected:
   vtkPCAStatistics();
@@ -188,12 +211,18 @@ protected:
 
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void Derive( vtkDataObject* inMeta );
+  virtual void Derive( vtkMultiBlockDataSet* inMeta );
+
+  // Description:
+  // Execute the calculations required by the Test option.
+  virtual void Test( vtkTable*,
+                     vtkMultiBlockDataSet*,
+                     vtkTable* );
 
   // Description:
   // Execute the calculations required by the Assess option.
   virtual void Assess( vtkTable*, 
-                       vtkDataObject*, 
+                       vtkMultiBlockDataSet*, 
                        vtkTable* );
 
   //BTX  

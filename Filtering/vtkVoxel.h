@@ -70,9 +70,6 @@ public:
                    int dim, double *derivs);
 
   // Description:
-  // @deprecated Replaced by vtkVoxel::InterpolateFunctions as of VTK 5.2
-  static void InterpolationFunctions(double pcoords[3], double weights[8]);
-  // Description:
   // @deprecated Replaced by vtkVoxel::InterpolateDerivs as of VTK 5.2
   static void InterpolationDerivs(double pcoords[3], double derivs[24]);
   // Description:
@@ -88,6 +85,12 @@ public:
     }
 
   // Description:
+  // Compute the interpolation functions.
+  // This static method is for convenience. Use the member function
+  // if you already have an instance of a voxel.
+  static void InterpolationFunctions(double pcoords[3], double weights[8]);
+
+  // Description:
   // Return the ids of the vertices defining edge/face (`edgeId`/`faceId').
   // Ids are related to the cell, not to the dataset.
   static int *GetEdgeArray(int edgeId);
@@ -97,12 +100,12 @@ protected:
   vtkVoxel();
   ~vtkVoxel();
 
-  vtkLine *Line;
-  vtkPixel *Pixel;
-
 private:
   vtkVoxel(const vtkVoxel&);  // Not implemented.
   void operator=(const vtkVoxel&);  // Not implemented.
+
+  vtkLine *Line;
+  vtkPixel *Pixel;
 };
 
 #endif

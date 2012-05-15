@@ -100,7 +100,7 @@
 #endif
 // for fabs()
 #include <math.h>
-// for isalnum() / isspace() / isdigit() 
+// for isalnum() / isspace() / isdigit()
 #include <ctype.h>
 
 #if VTK_FOAMFILE_OMIT_CRCCHECK
@@ -176,8 +176,8 @@ private:
     {
     enum bt
       {
-      PHYSICAL = 1, // patch, wall
-      PROCESSOR = 2, // processor
+      PHYSICAL = 1,   // patch, wall
+      PROCESSOR = 2,  // processor
       GEOMETRICAL = 0 // symmetryPlane, wedge, cyclic, empty, etc.
       };
     vtkStdString BoundaryName;
@@ -348,8 +348,6 @@ struct vtkFoamIntVectorVector
 private:
   vtkIntArray *Indices, *Body;
 
-  vtkFoamIntVectorVector();
-
 public:
   ~vtkFoamIntVectorVector()
   {
@@ -363,6 +361,10 @@ public:
     this->Indices->Register(0); // vtkDataArrays do not have ShallowCopy
     this->Body->Register(0);
   }
+  vtkFoamIntVectorVector() :
+    Indices(vtkIntArray::New()), Body(vtkIntArray::New())
+  {
+  }
   vtkFoamIntVectorVector(const int nElements, const int bodyLength) :
     Indices(vtkIntArray::New()), Body(vtkIntArray::New())
   {
@@ -370,17 +372,17 @@ public:
     this->Body->SetNumberOfValues(bodyLength);
   }
 
-  // GetSize() returns all allocated size (Size) while GetDataSize()
-  // returns actually used size (MaxId * nComponents)
-  int GetBodySize() const
-  {
-    return this->Body->GetSize();
-  }
   // note that vtkIntArray::Resize() allocates (current size + new
-  // size) bytes if current size < new size
+  // size) bytes if current size < new size until 2010-06-27
+  // cf. commit c869c3d5875f503e757b64f2fd1ec349aee859bf
   void ResizeBody(const int bodyLength)
   {
     this->Body->Resize(bodyLength);
+  }
+  int *WritePointer(const int i, const int bodyI, const int number)
+  {
+    return this->Body->WritePointer(*this->Indices->GetPointer(i) = bodyI,
+        number);
   }
   int *SetIndex(const int i, const int bodyI)
   {
@@ -389,6 +391,10 @@ public:
   void SetValue(const int bodyI, int value)
   {
     this->Body->SetValue(bodyI, value);
+  }
+  void InsertValue(const int bodyI, int value)
+  {
+    this->Body->InsertValue(bodyI, value);
   }
   const int *operator[](const int i) const
   {
@@ -774,7 +780,13 @@ private:
 public:
   // #inputMode values
   enum inputModes
-    {INPUT_MODE_MERGE, INPUT_MODE_OVERWRITE, INPUT_MODE_ERROR};
+    {
+        INPUT_MODE_MERGE,
+        INPUT_MODE_OVERWRITE,
+        INPUT_MODE_PROTECT,
+        INPUT_MODE_WARN,
+        INPUT_MODE_ERROR
+    };
 
 private:
   bool Is13Positions;
@@ -865,7 +877,43 @@ private:
     // lineNumber_ = 0;
   }
 
-  const vtkStdString ExtractPath(const vtkStdString& path) const
+  //! Return file name (part beyond last /)
+  vtkStdString ExtractName(const vtkStdString& path) const
+  {
+#if defined(_WIN32)
+    const vtkStdString pathFindSeparator = "/\\", pathSeparator = "\\";
+#else
+    const vtkStdString pathFindSeparator = "/", pathSeparator = "/";
+#endif
+    vtkStdString::size_type pos = path.find_last_of(pathFindSeparator);
+    if (pos == vtkStdString::npos)
+      {
+      // no slash
+      return path;
+      }
+    else if (pos+1 == path.size())
+      {
+      // final trailing slash
+      vtkStdString::size_type endPos = pos;
+      pos = path.find_last_of(pathFindSeparator, pos-1);
+      if (pos == vtkStdString::npos)
+        {
+        // no further slash
+        return path.substr(0, endPos);
+        }
+      else
+        {
+        return path.substr(pos + 1, endPos - pos - 1);
+        }
+      }
+    else
+      {
+      return path.substr(pos + 1, vtkStdString::npos);
+      }
+  }
+
+  //! Return directory path name (part before last /)
+  vtkStdString ExtractPath(const vtkStdString& path) const
   {
 #if defined(_WIN32)
     const vtkStdString pathFindSeparator = "/\\", pathSeparator = "\\";
@@ -873,9 +921,11 @@ private:
     const vtkStdString pathFindSeparator = "/", pathSeparator = "/";
 #endif
     const vtkStdString::size_type pos = path.find_last_of(pathFindSeparator);
-    return pos == vtkStdString::npos ? vtkStdString(".") + pathSeparator
+    return pos == vtkStdString::npos
+        ? vtkStdString(".") + pathSeparator
         : path.substr(0, pos + 1);
   }
+
 
 public:
   vtkFoamFile(const vtkStdString& casePath) :
@@ -932,6 +982,13 @@ public:
             {
             expandedPath = this->CasePath;
             wasPathSeparator = true;
+            isExpanded = true;
+            }
+          else if (variable == "FOAM_CASENAME")
+            {
+            // FOAM_CASENAME is the final directory name from CasePath
+            expandedPath += this->ExtractName(this->CasePath);
+            wasPathSeparator = false;
             isExpanded = true;
             }
           else
@@ -1221,8 +1278,8 @@ public:
       case '#':
         {
 #if VTK_FOAMFILE_RECOGNIZE_LINEHEAD
-        // placing #-directives in the middle of a line looks like
-        // valid for the genuine OF 1.5 parser
+        // the OpenFOAM #-directives can indeed be placed in the
+        // middle of a line
         if(!this->Superclass::WasNewline)
           {
           throw this->StackString()
@@ -1246,6 +1303,28 @@ public:
           this->IncludeFile(fileNameToken.ToString(),
               this->ExtractPath(this->FileName));
           }
+        else if (directiveToken == "includeIfPresent")
+          {
+          vtkFoamToken fileNameToken;
+          if (!this->Read(fileNameToken))
+            {
+            throw this->StackString() << "Unexpected EOF reading filename";
+            }
+
+          // special treatment since the file is allowed to be missing
+          const vtkStdString fullName =
+            this->ExpandPath(fileNameToken.ToString(),
+                this->ExtractPath(this->FileName));
+
+          FILE *fh = fopen(fullName.c_str(), "rb");
+          if (fh)
+            {
+            fclose(fh);
+
+            this->IncludeFile(fileNameToken.ToString(),
+                 this->ExtractPath(this->FileName));
+            }
+          }
         else if (directiveToken == "inputMode")
           {
           vtkFoamToken modeToken;
@@ -1254,7 +1333,7 @@ public:
             throw this->StackString()
             << "Unexpected EOF reading inputMode specifier";
             }
-          if (modeToken == "merge")
+          if (modeToken == "merge" || modeToken == "default")
             {
             this->InputMode = INPUT_MODE_MERGE;
             }
@@ -1262,14 +1341,26 @@ public:
             {
             this->InputMode = INPUT_MODE_OVERWRITE;
             }
-          else if (modeToken == "error" || modeToken == "default")
+          else if (modeToken == "protect")
+            {
+            // not properly supported - treat like "merge" for now
+            // this->InputMode = INPUT_MODE_PROTECT;
+            this->InputMode = INPUT_MODE_MERGE;
+            }
+          else if (modeToken == "warn")
+            {
+            // not properly supported - treat like "error" for now
+            // this->InputMode = INPUT_MODE_WARN;
+            this->InputMode = INPUT_MODE_ERROR;
+            }
+          else if (modeToken == "error")
             {
             this->InputMode = INPUT_MODE_ERROR;
             }
           else
             {
             throw this->StackString() << "Expected one of inputMode specifiers "
-            "(merge, overwrite, error, default), found " << modeToken;
+            "(merge, overwrite, protect, warn, error, default), found " << modeToken;
             }
           }
         else
@@ -1708,7 +1799,7 @@ bool vtkFoamFile::InflateNext(unsigned char *buf,
       if (this->Superclass::Z.avail_in == 0)
         {
         this->Superclass::Z.next_in = this->Superclass::Inbuf;
-        this->Superclass::Z.avail_in = static_cast<uInt>(fread(this->Superclass::Inbuf, 1, 
+        this->Superclass::Z.avail_in = static_cast<uInt>(fread(this->Superclass::Inbuf, 1,
           VTK_FOAMFILE_INBUFSIZE, this->Superclass::File));
         if (ferror(this->Superclass::File))
           {
@@ -2260,13 +2351,9 @@ public:
             throw vtkFoamError() << "List size must not be negative: size = "
             << sizeJ;
             }
-          if (bodyI + sizeJ > this->Superclass::LabelListListPtr->GetBodySize())
-            {
-            const int newSize =
-                this->Superclass::LabelListListPtr->GetBodySize() + sizeJ;
-            this->Superclass::LabelListListPtr->ResizeBody(newSize);
-            }
-          int *listI = this->Superclass::LabelListListPtr->SetIndex(i, bodyI);
+          int *listI = this->Superclass::LabelListListPtr->WritePointer(i,
+              bodyI, sizeJ);
+
           if (io.GetFormat() == vtkFoamIOobject::ASCII)
             {
             io.ReadExpecting('(');
@@ -2298,14 +2385,8 @@ public:
               throw vtkFoamError() << "Expected an integer, found "
               << currToken;
               }
-            if (bodyI >= this->LabelListListPtr->GetBodySize())
-              {
-              const int newSize =
-                  this->Superclass::LabelListListPtr->GetBodySize() + 1;
-              this->Superclass::LabelListListPtr->ResizeBody(newSize);
-              }
             this->Superclass::LabelListListPtr
-            ->SetValue(bodyI++, currToken.To<int>());
+            ->InsertValue(bodyI++, currToken.To<int>());
             }
           }
         else
@@ -2324,6 +2405,51 @@ public:
     else
       {
       throw vtkFoamError() << "Expected integer, found " << currToken;
+      }
+  }
+
+  // reads compact list of labels.
+  void ReadCompactIOLabelList(vtkFoamIOobject& io)
+  {
+    if (io.GetFormat() != vtkFoamIOobject::BINARY)
+      {
+      this->ReadLabelListList(io);
+      return;
+      }
+
+    this->Superclass::LabelListListPtr = new vtkFoamIntVectorVector;
+    this->Superclass::Type = LABELLISTLIST;
+    for(int arrayI = 0; arrayI < 2; arrayI++)
+      {
+      vtkFoamToken currToken;
+      if (!io.Read(currToken))
+        {
+        throw vtkFoamError() << "Unexpected EOF";
+        }
+      if (currToken.GetType() == vtkFoamToken::LABEL)
+        {
+        const int sizeI = currToken.To<int>();
+        if (sizeI < 0)
+          {
+          throw vtkFoamError() << "List size must not be negative: size = "
+              << sizeI;
+          }
+        if (sizeI > 0) // avoid invalid reference
+          {
+          vtkIntArray *array = (arrayI == 0
+              ? this->Superclass::LabelListListPtr->GetIndices()
+              : this->Superclass::LabelListListPtr->GetBody());
+          array->SetNumberOfValues(sizeI);
+          io.ReadExpecting('(');
+          io.Read(reinterpret_cast<unsigned char*>(array->GetPointer(0)),
+              sizeI * sizeof(int));
+          io.ReadExpecting(')');
+          }
+        }
+      else
+        {
+        throw vtkFoamError() << "Expected integer, found " << currToken;
+        }
       }
   }
 
@@ -2787,7 +2913,6 @@ public:
                 previousEntry->Read(io);
                 }
               else // INPUT_MODE_ERROR
-
                 {
                 throw vtkFoamError() << "Found duplicated entries with keyword "
                 << currToken.ToString();
@@ -4502,7 +4627,14 @@ vtkFoamIntVectorVector * vtkOpenFOAMReaderPrivate::ReadFacesFile(
   vtkFoamEntryValue dict(NULL);
   try
     {
-    dict.ReadLabelListList(io);
+    if (io.GetClassName() == "faceCompactList")
+      {
+      dict.ReadCompactIOLabelList(io);
+      }
+    else
+      {
+      dict.ReadLabelListList(io);
+      }
     }
   catch(vtkFoamError& e)
     {
@@ -4812,9 +4944,14 @@ void vtkOpenFOAMReaderPrivate::InsertCellsToGrid(
     const vtkFoamIntVectorVector *facesPoints, vtkFloatArray *pointArray,
     vtkIdTypeArray *additionalCells, vtkIntArray *cellList)
 {
-  const int maxNPoints = 128; // assume max number of points per cell
+  const int maxNPoints = 256; // assume max number of points per cell
   vtkIdList* cellPoints = vtkIdList::New();
   cellPoints->SetNumberOfIds(maxNPoints);
+  // assume max number of nPoints per face + points per cell
+  const int maxNPolyPoints = 1024;
+  vtkIdList* polyPoints = vtkIdList::New();
+  polyPoints->SetNumberOfIds(maxNPolyPoints);
+
   const int nCells = (cellList == NULL ? this->NumCells
       : cellList->GetNumberOfTuples());
   int nAdditionalPoints = 0;
@@ -5475,33 +5612,39 @@ void vtkOpenFOAMReaderPrivate::InsertCellsToGrid(
         this->NumAdditionalCells->InsertNextValue(nAdditionalCells);
         this->NumTotalAdditionalCells += nAdditionalCells;
         }
-      else // don't decompose; use VTK_CONVEX_PONIT_SET
+      else // don't decompose; use VTK_POLYHEDRON
         {
         // get first face
         const int cellFaces0 = cellFaces[0];
         const int *baseFacePoints = facePoints[cellFaces0];
         const int nBaseFacePoints = facePoints.GetSize(cellFaces0);
-        int nPoints = nBaseFacePoints;
-        if (nPoints > maxNPoints)
+        int nPoints = nBaseFacePoints, nPolyPoints = nBaseFacePoints + 1;
+        if (nPoints > maxNPoints || nPolyPoints > maxNPolyPoints)
           {
           vtkErrorMacro(<< "Too large polyhedron at cellId = " << cellId);
+          cellPoints->Delete();
+          polyPoints->Delete();
           return;
           }
+        polyPoints->SetId(0, nBaseFacePoints);
         if (this->FaceOwner->GetValue(cellFaces0) == cellId)
-          {
-          // if it is an owner face flip the points
-          // not sure if flipping is necessary but do it anyway
-          for (int j = 0; j < nBaseFacePoints; j++)
-            {
-            cellPoints->SetId(j, baseFacePoints[nBaseFacePoints - 1 - j]);
-            }
-          }
-        else
           {
           // add first face to cell points
           for (int j = 0; j < nBaseFacePoints; j++)
             {
-            cellPoints->SetId(j, baseFacePoints[j]);
+            const int pointJ = baseFacePoints[j];
+            cellPoints->SetId(j, pointJ);
+            polyPoints->SetId(j + 1, pointJ);
+            }
+          }
+        else
+          {
+          // if it is a _neighbor_ face flip the points
+          for (int j = 0; j < nBaseFacePoints; j++)
+            {
+            const int pointJ = baseFacePoints[nBaseFacePoints - 1 - j];
+            cellPoints->SetId(j, pointJ);
+            polyPoints->SetId(j + 1, pointJ);
             }
           }
 
@@ -5513,9 +5656,29 @@ void vtkOpenFOAMReaderPrivate::InsertCellsToGrid(
           const int cellFacesJ = cellFaces[j];
           const int *faceJPoints = facePoints[cellFacesJ];
           const size_t nFaceJPoints = facePoints.GetSize(cellFacesJ);
-          for (size_t k = 0; k < nFaceJPoints; k++)
+          if (nPolyPoints >= maxNPolyPoints)
             {
-            const int faceJPointK = faceJPoints[k];
+            vtkErrorMacro(<< "Too large polyhedron at cellId = " << cellId);
+            cellPoints->Delete();
+            polyPoints->Delete();
+            return;
+            }
+          polyPoints->SetId(nPolyPoints++, nFaceJPoints);
+          int pointI, delta; // must be signed
+          if (this->FaceOwner->GetValue(cellFacesJ) == cellId)
+            {
+            pointI = 0;
+            delta = 1;
+            }
+          else
+            {
+            // if it is a _neighbor_ face flip the points
+            pointI = static_cast<int>(nFaceJPoints) - 1;
+            delta = -1;
+            }
+          for (size_t k = 0; k < nFaceJPoints; k++, pointI += delta)
+            {
+            const int faceJPointK = faceJPoints[pointI];
             bool foundDup = false;
             for (int l = 0; l < nPoints; l++)
               {
@@ -5530,20 +5693,31 @@ void vtkOpenFOAMReaderPrivate::InsertCellsToGrid(
               if (nPoints >= maxNPoints)
                 {
                 vtkErrorMacro(<< "Too large polyhedron at cellId = " << cellId);
+                cellPoints->Delete();
+                polyPoints->Delete();
                 return;
                 }
               cellPoints->SetId(nPoints++, faceJPointK);
               }
+            if (nPolyPoints >= maxNPolyPoints)
+                {
+                vtkErrorMacro(<< "Too large polyhedron at cellId = " << cellId);
+                cellPoints->Delete();
+                polyPoints->Delete();
+                return;
+                }
+            polyPoints->SetId(nPolyPoints++, faceJPointK);
             }
           }
 
         // create the poly cell and insert it into the mesh
-        internalMesh->InsertNextCell(VTK_CONVEX_POINT_SET, nPoints,
-            cellPoints->GetPointer(0));
+        internalMesh->InsertNextCell(VTK_POLYHEDRON, nPoints,
+            cellPoints->GetPointer(0), nCellFaces, polyPoints->GetPointer(0));
         }
       }
     }
   cellPoints->Delete();
+  polyPoints->Delete();
 }
 
 //-----------------------------------------------------------------------------
@@ -5708,7 +5882,7 @@ vtkMultiBlockDataSet *vtkOpenFOAMReaderPrivate::MakeBoundaryMesh(
     if (startFace < 0 || nFaces < 0)
       {
       vtkErrorMacro(<<"Neither of startFace " << startFace << " nor nFaces "
-          << nFaces << " can be nagative for patch " << beI.BoundaryName.c_str());
+          << nFaces << " can be negative for patch " << beI.BoundaryName.c_str());
       return NULL;
       }
     if (previousEndFace >= 0 && previousEndFace != startFace)
@@ -7949,8 +8123,8 @@ vtkOpenFOAMReader::vtkOpenFOAMReader()
   this->CacheMesh = 1;
 
   // for decomposing polyhedra
-  this->DecomposePolyhedra = 1;
-  this->DecomposePolyhedraOld = 1;
+  this->DecomposePolyhedra = 0;
+  this->DecomposePolyhedraOld = 0;
 
   // for reading old binary lagrangian/positions format
   this->PositionsIsIn13Format = 0; // turned off by default

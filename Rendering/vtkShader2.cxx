@@ -22,7 +22,7 @@
 
 GLenum vtkShaderTypeVTKToGL[5]={
   vtkgl::VERTEX_SHADER, // VTK_SHADER_TYPE_VERTEX=0
-  vtkgl::GEOMETRY_SHADER_EXT, // VTK_SHADER_TYPE_GEOMETRY=1,
+  vtkgl::GEOMETRY_SHADER, // VTK_SHADER_TYPE_GEOMETRY=1,
   vtkgl::FRAGMENT_SHADER, // VTK_SHADER_TYPE_FRAGMENT=2,
   0, // VTK_SHADER_TYPE_TESSELLATION_CONTROL=3, not yet
   0// VTK_SHADER_TYPE_TESSELLATION_EVALUATION=4, not yet
@@ -166,11 +166,19 @@ void vtkShader2::SetContext(vtkOpenGLRenderWindow *context)
       if(this->ExtensionsLoaded)
         {
         vtkOpenGLExtensionManager *e=this->Context->GetExtensionManager();
-        this->SupportGeometryShader=
-          e->ExtensionSupported("GL_EXT_geometry_shader4")==1;
+        bool supportGeometryShaderARB=e->ExtensionSupported("GL_ARB_geometry_shader4")==1;
+        this->SupportGeometryShader=supportGeometryShaderARB
+          || e->ExtensionSupported("GL_EXT_geometry_shader4")==1;
         if(this->SupportGeometryShader)
           {
-          e->LoadExtension("GL_EXT_geometry_shader4");
+          if(supportGeometryShaderARB)
+            {
+            e->LoadExtension("GL_ARB_geometry_shader4");
+            }
+          else
+            {
+            e->LoadAsARBExtension("GL_EXT_geometry_shader4");
+            }
           }
         }
       }
@@ -297,16 +305,6 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
       assert("check: impossible_case" && 0); // impossible case
     }
   
-  os << indent << "SourceCode: ";
-  if(this->SourceCode==0)
-    {
-    os << "(none)" << endl;
-    }
-  else
-    {
-    os << this->SourceCode << endl;
-    }
-  
   os << indent << "OpenGL Id: " << this->Id << endl;
   os << indent << "Last Compile Status: ";
   if(this->LastCompileStatus)
@@ -329,7 +327,7 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << this->LastCompileLog << endl;
     }
-  
+
   os << indent << "Context: ";
   if(this->Context!=0)
     {
@@ -339,7 +337,7 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "none" << endl;
     }
-  
+
   os << indent << "UniformVariables: ";
   if(this->UniformVariables!=0)
     {
@@ -348,5 +346,15 @@ void vtkShader2::PrintSelf(ostream& os, vtkIndent indent)
   else
     {
     os << "none" << endl;
+    }
+
+  os << indent << "SourceCode: ";
+  if(this->SourceCode==0)
+    {
+    os << "(none)" << endl;
+    }
+  else
+    {
+    os << endl << this->SourceCode << endl;
     }
 }

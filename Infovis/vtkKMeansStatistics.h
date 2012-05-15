@@ -13,7 +13,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2010 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
   -------------------------------------------------------------------------*/
@@ -98,6 +98,7 @@ class vtkIdTypeArray;
 class vtkIntArray;
 class vtkDoubleArray;
 class vtkKMeansDistanceFunctor;
+class vtkMultiBlockDataSet;
 
 class VTK_INFOVIS_EXPORT vtkKMeansStatistics : public vtkStatisticsAlgorithm
 {
@@ -137,40 +138,40 @@ public:
   // Given a collection of models, calculate aggregate model
   // NB: not implemented
   virtual void Aggregate( vtkDataObjectCollection*,
-                          vtkDataObject* ) { return; };
+                          vtkMultiBlockDataSet* ) { return; };
+
+  //BTX
+  // Description:
+  // A convenience method for setting properties by name.
+  virtual bool SetParameter(
+    const char* parameter, int index, vtkVariant value );
+  //ETX
 
 protected:
   vtkKMeansStatistics();
   ~vtkKMeansStatistics();
 
   // Description:
-  // This algorithm returns a multiblock dataset containing several tables for
-  // its meta output (port OUTPUT_MODEL) instead of a single vtkTable.
-  // FillOutputPortInformation overridden accordingly.
-  virtual int FillOutputPortInformation( int port, vtkInformation* info );
-  virtual int FillInputPortInformation( int port, vtkInformation* info );
-
-  // Description:
   // Execute the calculations required by the Learn option.
   virtual void Learn( vtkTable* inData,
                       vtkTable* inParameters,
-                      vtkDataObject* outMeta );
+                      vtkMultiBlockDataSet* outMeta );
 
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void Derive( vtkDataObject* );
+  virtual void Derive( vtkMultiBlockDataSet* );
 
   // Description:
   // Execute the calculations required by the Assess option.
   virtual void Assess( vtkTable*, 
-                       vtkDataObject*, 
+                       vtkMultiBlockDataSet*, 
                        vtkTable* );
 
   // Description:
   // Execute the calculations required by the Test option.
   virtual void Test( vtkTable*,
-                     vtkDataObject*,
-                     vtkDataObject* ) { return; };
+                     vtkMultiBlockDataSet*,
+                     vtkTable* ) { return; };
 
   //BTX  
   // Description:

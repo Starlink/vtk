@@ -124,6 +124,8 @@ public:
   virtual int GetVertexIconAlignment();
   virtual void SetVertexSelectedIcon(int icon);
   virtual int GetVertexSelectedIcon();
+  virtual void SetVertexDefaultIcon(int icon);
+  virtual int GetVertexDefaultIcon();
 
   // Description:
   // Set the mode to one of
@@ -202,6 +204,9 @@ public:
   virtual void SetEdgeVisibility(bool b);
   virtual bool GetEdgeVisibility();
   vtkBooleanMacro(EdgeVisibility, bool);
+
+  void SetEdgeSelection(bool b);
+  bool GetEdgeSelection();
 
   // ------------------------------------------------------------------------
   // Vertex layout strategy
@@ -356,9 +361,7 @@ protected:
   
   virtual vtkSelection* ConvertSelection(vtkView* view, vtkSelection* sel);
 
-  //BTX
   virtual vtkUnicodeString GetHoverTextInternal(vtkSelection* sel);
-  //ETX
 
   // Description:
   // Connect inputs to internal pipeline.
@@ -421,6 +424,8 @@ protected:
   char* EdgeLayoutStrategyName;
   bool HideVertexLabelsOnInteraction;
   bool HideEdgeLabelsOnInteraction;
+
+  bool EdgeSelection;
 
 private:
   vtkRenderedGraphRepresentation(const vtkRenderedGraphRepresentation&); // Not implemented

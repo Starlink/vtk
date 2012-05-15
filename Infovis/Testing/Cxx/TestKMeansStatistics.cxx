@@ -64,8 +64,6 @@ int TestKMeansStatistics( int, char *[] )
   vtkDoubleArray* paramArray;
   const int numRuns = 5;
   const int numClustersInRun[] = { 5, 2, 3, 4, 5 };
-  //const int numRuns = 1;
-  //const int numClustersInRun[] = { 3 };
   paramCluster = vtkIdTypeArray::New();
   paramCluster->SetName( "K" );
 
@@ -101,22 +99,28 @@ int TestKMeansStatistics( int, char *[] )
     paramArray->Delete();
     }
 
-
+  // Set k-means statistics algorithm and its input data port
   vtkKMeansStatistics* haruspex = vtkKMeansStatistics::New();
+
+  // First verify that absence of input does not cause trouble
+  cout << "## Verifying that absence of input does not cause trouble... ";
+  haruspex->Update();
+  cout << "done.\n";
+
+  // Prepare first test with data
   haruspex->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, inputData );
   haruspex->SetColumnStatus( inputData->GetColumnName( 0 ) , 1 );
   haruspex->SetColumnStatus( inputData->GetColumnName( 2 ) , 1 );
   haruspex->SetColumnStatus( "Testing", 1 );
   haruspex->RequestSelectedColumns();
-
-
   haruspex->SetDefaultNumberOfClusters( 3 );
 
   cout << "## Testing with no input data:"
            << "\n";
-  // -- Test Learn Mode -- 
+  // Test Learn and Derive options
   haruspex->SetLearnOption( true );
   haruspex->SetDeriveOption( true );
+  haruspex->SetTestOption( false );
   haruspex->SetAssessOption( false );
 
   haruspex->Update();
@@ -166,9 +170,10 @@ int TestKMeansStatistics( int, char *[] )
   paramData->Dump();
   cout << "\n";
   
-  // -- Test Learn Mode -- 
+  // Test Assess option only
   haruspex->SetLearnOption( true );
   haruspex->SetDeriveOption( true );
+  haruspex->SetTestOption( false );
   haruspex->SetAssessOption( false );
 
   haruspex->Update();
@@ -225,15 +230,16 @@ int TestKMeansStatistics( int, char *[] )
     cout << "\n";
     }
 
-  // -- Test Assess Mode -- 
   cout << "=================== ASSESS ==================== " << endl;
   vtkMultiBlockDataSet* paramsTables = vtkMultiBlockDataSet::New();
   paramsTables->ShallowCopy( outputMetaDS );
 
   haruspex->SetInput( vtkStatisticsAlgorithm::INPUT_MODEL, paramsTables );
 
+  // Test Assess option only (do not recalculate nor rederive a model)
   haruspex->SetLearnOption( false );
-  haruspex->SetDeriveOption( false ); // Do not recalculate nor rederive a model
+  haruspex->SetDeriveOption( false );
+  haruspex->SetTestOption( false );
   haruspex->SetAssessOption( true );
   haruspex->Update();
   vtkTable* outputData = haruspex->GetOutput();

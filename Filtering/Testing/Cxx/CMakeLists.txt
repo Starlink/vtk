@@ -16,18 +16,22 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
   TestAMRBox.cxx
   TestInterpolationFunctions.cxx
   TestInterpolationDerivs.cxx
+  TestImageDataFindCell.cxx
   TestImageIterator.cxx
   TestGenericCell.cxx
-  TestHigherOrderCell.cxx
+  TestGraph.cxx
+  TestHigherOrderCell.cxx  
   TestPointLocators.cxx
-  TestPolyDataRemoveCell.cxx
-  TestTriangle.cxx
+  TestPolyDataRemoveCell.cxx  
   TestPolygon.cxx
+  TestTreeBFSIterator.cxx
+  TestTriangle.cxx
+
   EXTRA_INCLUDE vtkTestDriver.h
 )
 
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
-TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkFiltering)
+TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkFiltering vtkGraphics)
 
 SET (TestsToRun ${Tests})
 REMOVE (TestsToRun ${KIT}CxxTests.cxx)

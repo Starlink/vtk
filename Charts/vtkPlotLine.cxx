@@ -17,9 +17,9 @@
 
 #include "vtkContext2D.h"
 #include "vtkPen.h"
+#include "vtkRect.h"
 
 #include "vtkObjectFactory.h"
-
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkPlotLine);
@@ -54,12 +54,12 @@ bool vtkPlotLine::Paint(vtkContext2D *painter)
 }
 
 //-----------------------------------------------------------------------------
-bool vtkPlotLine::PaintLegend(vtkContext2D *painter, float rect[4])
+bool vtkPlotLine::PaintLegend(vtkContext2D *painter, const vtkRectf& rect, int)
 {
   painter->ApplyPen(this->Pen);
   painter->DrawLine(rect[0], rect[1]+0.5*rect[3],
                     rect[0]+rect[2], rect[1]+0.5*rect[3]);
-  this->Superclass::PaintLegend(painter, rect);
+  this->Superclass::PaintLegend(painter, rect, 0);
   return true;
 }
 

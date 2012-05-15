@@ -80,7 +80,7 @@
 // vtkInteractorStyleRubberBand2D::SELECT_UNION or
 // vtkInteractorStyleRubberBand2D::SELECT_NORMAL
 // - vtkCommand::AnnotationChangedEvent
-//  - GUISupport/Qt/vtkQtAnnotationView returns a pointer to a 
+//  - GUISupport/Qt/vtkQtAnnotationView returns a pointer to a
 // vtkAnnotationLayers
 // - vtkCommand::PlacePointEvent
 //  - Widgets/vtkSeedWidget returns a pointer to an int, being the current
@@ -203,21 +203,22 @@
 #define __vtkCommand_h
 
 #include "vtkObjectBase.h"
-
-class vtkObject;
+#include "vtkObject.h" // Need vtkTypeMacro
 
 // The superclass that all commands should be subclasses of
 class VTK_COMMON_EXPORT vtkCommand : public vtkObjectBase
 {
 public:
+  vtkTypeMacro(vtkCommand,vtkObjectBase);
+
   // Description:
   // Decrease the reference count (release by another object). This has
   // the same effect as invoking Delete() (i.e., it reduces the reference
   // count by 1).
   void UnRegister();
-  virtual void UnRegister(vtkObjectBase *) 
+  virtual void UnRegister(vtkObjectBase *)
     { this->UnRegister(); }
-  
+
   // Description:
   // All derived classes of vtkCommand must implement this
   // method. This is the method that actually does the work of the
@@ -229,7 +230,7 @@ public:
   // but the user can package data and pass it this
   // way. Alternatively, a derived class of vtkCommand can be used to
   // pass data.)
-  virtual void Execute(vtkObject *caller, unsigned long eventId, 
+  virtual void Execute(vtkObject *caller, unsigned long eventId,
                        void *callData) = 0;
 
   // Description:
@@ -241,29 +242,29 @@ public:
   // Description:
   // Set/Get the abort flag. If this is set to true no further
   // commands are executed.
-  void SetAbortFlag(int f)  
+  void SetAbortFlag(int f)
     { this->AbortFlag = f; }
-  int GetAbortFlag() 
+  int GetAbortFlag()
     { return this->AbortFlag; }
-  void AbortFlagOn() 
+  void AbortFlagOn()
     { this->SetAbortFlag(1); }
-  void AbortFlagOff() 
+  void AbortFlagOff()
     { this->SetAbortFlag(0); }
-  
+
   // Description:
   // Set/Get the passive observer flag. If this is set to true, this
   // indicates that this command does not change the state of the
   // system in any way. Passive observers are processed first, and
   // are not called even when another command has focus.
-  void SetPassiveObserver(int f)  
+  void SetPassiveObserver(int f)
     { this->PassiveObserver = f; }
-  int GetPassiveObserver() 
+  int GetPassiveObserver()
     { return this->PassiveObserver; }
-  void PassiveObserverOn() 
+  void PassiveObserverOn()
     { this->SetPassiveObserver(1); }
-  void PassiveObserverOff() 
+  void PassiveObserverOff()
     { this->SetPassiveObserver(0); }
-  
+
 //BTX
   // Description:
   // All the currently defined events are listed here.  Developers can
@@ -337,7 +338,7 @@ public:
     WidgetModifiedEvent,
     WidgetValueChangedEvent,
     WidgetActivateEvent,
-    ConnectionCreatedEvent, 
+    ConnectionCreatedEvent,
     ConnectionClosedEvent,
     DomainModifiedEvent,
     PropertyModifiedEvent,
@@ -359,6 +360,12 @@ public:
     LoadStateEvent,
     SaveStateEvent,
     StateChangedEvent,
+    WindowMakeCurrentEvent,
+    WindowIsCurrentEvent,
+    WindowFrameEvent,
+    HighlightEvent,
+    WindowSupportsOpenGLEvent,
+    WindowIsDirectEvent,
     UserEvent = 1000
   };
 //ETX
@@ -378,4 +385,4 @@ protected:
 };
 
 #endif /* __vtkCommand_h */
- 
+

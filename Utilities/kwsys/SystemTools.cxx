@@ -9,6 +9,13 @@
   implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the License for more information.
 ============================================================================*/
+
+#ifdef __osf__
+#  define _OSF_SOURCE
+#  define _POSIX_C_SOURCE 199506L
+#  define _XOPEN_SOURCE_EXTENDED
+#endif
+
 #include "kwsysPrivate.h"
 #include KWSYS_HEADER(RegularExpression.hxx)
 #include KWSYS_HEADER(SystemTools.hxx)
@@ -371,9 +378,7 @@ void SystemTools::GetPath(kwsys_stl::vector<kwsys_stl::string>& path, const char
     kwsys_stl::string::size_type endpos = pathEnv.find(pathSep, start);
     if(endpos != kwsys_stl::string::npos)
       {
-      kwsys_stl::string convertedPath;
-      Realpath(pathEnv.substr(start, endpos-start).c_str(), convertedPath);
-      path.push_back(convertedPath);
+      path.push_back(pathEnv.substr(start, endpos-start));
       start = endpos+1;
       }
     else
@@ -558,6 +563,14 @@ void SystemTools::ReplaceString(kwsys_stl::string& source,
 static DWORD SystemToolsMakeRegistryMode(DWORD mode,
                                          SystemTools::KeyWOW64 view)
 {
+  // only add the modes when on a system that supports Wow64.
+  static FARPROC wow64p = GetProcAddress(GetModuleHandle("kernel32"),
+                                         "IsWow64Process");
+  if(wow64p == NULL)
+    {
+    return mode;
+    }
+
   if(view == SystemTools::KeyWOW64_32)
     {
     return mode | KWSYS_ST_KEY_WOW64_32KEY;
@@ -729,10 +742,11 @@ bool SystemTools::WriteRegistryValue(const char *key, const char *value,
   
   HKEY hKey;
   DWORD dwDummy;
+  char lpClass[] = "";
   if(RegCreateKeyEx(primaryKey, 
                     second.c_str(), 
                     0, 
-                    "",
+                    lpClass,
                     REG_OPTION_NON_VOLATILE,
                     SystemToolsMakeRegistryMode(KEY_WRITE, view),
                     NULL,
@@ -1398,6 +1412,10 @@ kwsys_stl::vector<kwsys::String> SystemTools::SplitString(const char* p, char se
 {
   kwsys_stl::string path = p;
   kwsys_stl::vector<kwsys::String> paths;
+  if(path.empty())
+    {
+    return paths;
+    }
   if(isPath && path[0] == '/')
     {
     path.erase(path.begin());
@@ -1631,7 +1649,7 @@ kwsys_stl::string SystemTools::ConvertToUnixOutputPath(const char* path)
   kwsys_stl::string ret = path;
   
   // remove // except at the beginning might be a cygwin drive
-  kwsys_stl::string::size_type pos=0;
+  kwsys_stl::string::size_type pos=1;
   while((pos = ret.find("//", pos)) != kwsys_stl::string::npos)
     {
     ret.erase(pos, 1);
@@ -1715,8 +1733,7 @@ kwsys_stl::string SystemTools::ConvertToWindowsOutputPath(const char* path)
 }
 
 bool SystemTools::CopyFileIfDifferent(const char* source,
-                                      const char* destination,
-                                      bool copyPermissions)
+                                      const char* destination)
 {
   // special check for a destination that is a directory
   // FilesDiffer does not handle file to directory compare
@@ -1729,8 +1746,7 @@ bool SystemTools::CopyFileIfDifferent(const char* source,
     new_destination += SystemTools::GetFilenameName(source_name);
     if(SystemTools::FilesDiffer(source, new_destination.c_str()))
       {
-      return SystemTools::CopyFileAlways(source, destination,
-                                         copyPermissions);
+      return SystemTools::CopyFileAlways(source, destination);
       }
     else
       {
@@ -1743,7 +1759,7 @@ bool SystemTools::CopyFileIfDifferent(const char* source,
   // are different
   if(SystemTools::FilesDiffer(source, destination))
     {
-    return SystemTools::CopyFileAlways(source, destination, copyPermissions);
+    return SystemTools::CopyFileAlways(source, destination);
     }
   // at this point the files must be the same so return true
   return true;
@@ -1829,8 +1845,7 @@ bool SystemTools::FilesDiffer(const char* source,
 /**
  * Copy a file named by "source" to the file named by "destination".
  */
-bool SystemTools::CopyFileAlways(const char* source, const char* destination,
-                                 bool copyPermissions)
+bool SystemTools::CopyFileAlways(const char* source, const char* destination)
 {
   // If files are the same do not copy
   if ( SystemTools::SameFile(source, destination) )
@@ -1917,23 +1932,11 @@ bool SystemTools::CopyFileAlways(const char* source, const char* destination,
   fin.close();
   fout.close();
 
-  // More checks.
-  struct stat statSource, statDestination;
-  statSource.st_size = 12345;
-  statDestination.st_size = 12345;
-  if(stat(source, &statSource) != 0)
+  if(!fout)
     {
     return false;
     }
-  else if(stat(destination, &statDestination) != 0)
-    {
-    return false;
-    }
-  else if(statSource.st_size != statDestination.st_size)
-    {
-   return false;
-    }
-  if ( copyPermissions && perms )
+  if ( perms )
     {
     if ( !SystemTools::SetPermissions(destination, perm) )
       {
@@ -1945,15 +1948,15 @@ bool SystemTools::CopyFileAlways(const char* source, const char* destination,
 
 //----------------------------------------------------------------------------
 bool SystemTools::CopyAFile(const char* source, const char* destination,
-                            bool always, bool copyPermissions)
+                            bool always)
 {
   if(always)
     {
-    return SystemTools::CopyFileAlways(source, destination, copyPermissions);
+    return SystemTools::CopyFileAlways(source, destination);
     }
   else
     {
-    return SystemTools::CopyFileIfDifferent(source, destination, copyPermissions);
+    return SystemTools::CopyFileIfDifferent(source, destination);
     }
 }
 
@@ -1962,7 +1965,7 @@ bool SystemTools::CopyAFile(const char* source, const char* destination,
  * "destination".
  */
 bool SystemTools::CopyADirectory(const char* source, const char* destination,
-                                 bool always, bool copyPermissions)
+                                 bool always)
 {
   Directory dir;
   dir.Load(source);
@@ -1986,16 +1989,14 @@ bool SystemTools::CopyADirectory(const char* source, const char* destination,
         fullDestPath += dir.GetFile(static_cast<unsigned long>(fileNum));
         if (!SystemTools::CopyADirectory(fullPath.c_str(),
                                          fullDestPath.c_str(),
-                                         always,
-                                         copyPermissions))
+                                         always))
           {
           return false;
           }
         }
       else
         {
-        if(!SystemTools::CopyAFile(fullPath.c_str(), destination, always,
-                                   copyPermissions))
+        if(!SystemTools::CopyAFile(fullPath.c_str(), destination, always))
           {
           return false;
           }
@@ -3065,76 +3066,56 @@ kwsys_stl::string SystemTools::RelativePath(const char* local, const char* remot
   return relativePath;
 }
 
-// OK, some fun stuff to get the actual case of a given path.
-// Basically, you just need to call ShortPath, then GetLongPathName,
-// However, GetLongPathName is not implemented on windows NT and 95,
-// so we have to simulate it on those versions
 #ifdef _WIN32
-int OldWindowsGetLongPath(kwsys_stl::string const& shortPath,
-                          kwsys_stl::string& longPath  )
+static int GetCasePathName(const kwsys_stl::string & pathIn,
+                            kwsys_stl::string & casePath)
 {
-  kwsys_stl::string::size_type iFound = shortPath.rfind('/');
-  if (iFound > 1  && iFound != shortPath.npos)
+  kwsys_stl::vector<kwsys_stl::string> path_components;
+  SystemTools::SplitPath(pathIn.c_str(), path_components);
+  if(path_components[0].empty()) // First component always exists.
     {
-    // recurse to peel off components
-    //
-    if (OldWindowsGetLongPath(shortPath.substr(0, iFound), longPath) > 0)
-      {
-      longPath += '/';
-      if (shortPath[1] != '/')
-        {
-        WIN32_FIND_DATA findData;
+    // Relative paths cannot be converted.
+    casePath = "";
+    return 0;
+    }
 
-        // append the long component name to the path
-        //
-        if (INVALID_HANDLE_VALUE != ::FindFirstFile
-            (shortPath.c_str(), &findData))
-          {
-          longPath += findData.cFileName;
-          }
-        else
-          {
-          // if FindFirstFile fails, return the error code
-          //
-          longPath = "";
-          return 0;
-          }
-        }
+  // Start with root component.
+  kwsys_stl::vector<kwsys_stl::string>::size_type idx = 0;
+  casePath = path_components[idx++];
+  const char* sep = "";
+
+  // If network path, fill casePath with server/share so FindFirstFile
+  // will work after that.  Maybe someday call other APIs to get
+  // actual case of servers and shares.
+  if(path_components.size() > 2 && path_components[0] == "//")
+    {
+    casePath += path_components[idx++];
+    casePath += "/";
+    casePath += path_components[idx++];
+    sep = "/";
+    }
+
+  for(; idx < path_components.size(); idx++)
+    {
+    casePath += sep;
+    sep = "/";
+    kwsys_stl::string test_str = casePath;
+    test_str += path_components[idx];
+
+    WIN32_FIND_DATA findData;
+    HANDLE hFind = ::FindFirstFile(test_str.c_str(), &findData);
+    if (INVALID_HANDLE_VALUE != hFind)
+      {
+      casePath += findData.cFileName;
+      ::FindClose(hFind);
+      }
+    else
+      {
+      casePath = "";
+      return 0;
       }
     }
-  else
-    {
-    longPath = shortPath;
-    }
-  return (int)longPath.size();
-}
-
-
-int PortableGetLongPathName(const char* pathIn,
-                            kwsys_stl::string & longPath)
-{ 
-  HMODULE lh = LoadLibrary("Kernel32.dll");
-  if(lh)
-    {
-    FARPROC proc =  GetProcAddress(lh, "GetLongPathNameA");
-    if(proc)
-      {
-      typedef  DWORD (WINAPI * GetLongFunctionPtr) (LPCSTR,LPSTR,DWORD); 
-      GetLongFunctionPtr func = (GetLongFunctionPtr)proc;
-      char buffer[MAX_PATH+1];
-      int len = (*func)(pathIn, buffer, MAX_PATH+1);
-      if(len == 0 || len > MAX_PATH+1)
-        {
-        FreeLibrary(lh);
-        return 0;
-        }
-      longPath = buffer;
-      FreeLibrary(lh);
-      return len;
-      }
-    FreeLibrary(lh);
-    }
-  return OldWindowsGetLongPath(pathIn, longPath);
+  return (int)casePath.size();
 }
 #endif
 
@@ -3145,38 +3126,29 @@ kwsys_stl::string SystemTools::GetActualCaseForPath(const char* p)
 #ifndef _WIN32
   return p;
 #else
+  kwsys_stl::string casePath = p;
+  // make sure drive letter is always upper case
+  if(casePath.size() > 1 && casePath[1] == ':')
+    {
+    casePath[0] = toupper(casePath[0]);
+    }
+
   // Check to see if actual case has already been called
   // for this path, and the result is stored in the LongPathMap
-  SystemToolsTranslationMap::iterator i = 
-    SystemTools::LongPathMap->find(p);
+  SystemToolsTranslationMap::iterator i =
+    SystemTools::LongPathMap->find(casePath);
   if(i != SystemTools::LongPathMap->end())
     {
     return i->second;
     }
-  kwsys_stl::string shortPath;
-  if(!SystemTools::GetShortPath(p, shortPath))
-    {
-    return p;
-    }
-  kwsys_stl::string longPath;
-  int len = PortableGetLongPathName(shortPath.c_str(), longPath);
+  int len = GetCasePathName(p, casePath);
   if(len == 0 || len > MAX_PATH+1)
     {
     return p;
     }
-  // Use original path if conversion back to a long path failed.
-  if(longPath == shortPath)
-    {
-    longPath = p;
-    }
-  // make sure drive letter is always upper case
-  if(longPath.size() > 1 && longPath[1] == ':')
-    {
-    longPath[0] = toupper(longPath[0]);
-    }
-  (*SystemTools::LongPathMap)[p] = longPath;
-  return longPath;
-#endif  
+  (*SystemTools::LongPathMap)[p] = casePath;
+  return casePath;
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -3194,9 +3166,9 @@ const char* SystemTools::SplitPathRootComponent(const char* p,
       }
     c += 2;
     }
-  else if(c[0] == '/')
+  else if(c[0] == '/' || c[0] == '\\')
     {
-    // Unix path.
+    // Unix path (or Windows path w/out drive letter).
     if(root)
       {
       *root = "/";

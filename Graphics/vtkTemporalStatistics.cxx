@@ -458,7 +458,10 @@ void vtkTemporalStatistics::InitializeArray(vtkDataArray *array,
                           vtkAbstractArray::CreateArray(array->GetDataType())));
     newArray->SetName(vtkTemporalStatisticsMangleName(array->GetName(),
                                                     STANDARD_DEVIATION_SUFFIX));
-    newArray->SetNumberOfComponents(array->GetNumberOfComponents());
+        
+    newArray->SetNumberOfComponents(array->GetNumberOfComponents());   
+    newArray->CopyComponentNames( array );    
+    
     newArray->SetNumberOfTuples(array->GetNumberOfTuples());
     switch (array->GetDataType())
       {

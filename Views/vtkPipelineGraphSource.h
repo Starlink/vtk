@@ -35,7 +35,6 @@ public:
   void RemoveSink(vtkObject* object);
 
 //BTX
-
   // Description:
   // Generates a GraphViz DOT file that describes the VTK pipeline
   // terminating at the given sink.

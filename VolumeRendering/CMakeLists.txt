@@ -28,11 +28,14 @@ vtkFixedPointVolumeRayCastCompositeShadeHelper.cxx
 vtkFixedPointVolumeRayCastHelper.cxx
 vtkFixedPointVolumeRayCastMIPHelper.cxx
 vtkFixedPointVolumeRayCastMapper.cxx
+vtkVolumeRayCastSpaceLeapingImageFilter.cxx
 vtkGPUVolumeRayCastMapper.cxx
 vtkHAVSVolumeMapper.cxx
+vtkProjectedAAHexahedraMapper.cxx
 vtkProjectedTetrahedraMapper.cxx
 vtkRayCastImageDisplayHelper.cxx
 vtkRecursiveSphereDirectionEncoder.cxx
+vtkSmartVolumeMapper.cxx
 vtkSphericalDirectionEncoder.cxx
 vtkVolumeMapper.cxx
 vtkVolumeOutlineSource.cxx
@@ -63,6 +66,7 @@ vtkUnstructuredGridVolumeZSweepMapper.cxx
 SET( KitOpenGL_SRCS
   vtkOpenGLGPUVolumeRayCastMapper.cxx
   vtkOpenGLHAVSVolumeMapper.cxx   
+  vtkOpenGLProjectedAAHexahedraMapper.cxx
   vtkOpenGLProjectedTetrahedraMapper.cxx
   vtkOpenGLRayCastImageDisplayHelper.cxx
   vtkOpenGLVolumeTextureMapper2D.cxx
@@ -94,19 +98,25 @@ SET(asm_files
 # Set of GLSL source files
 # -----------------------------------------------------------------------------
 set(KIT_GLSL_SRCS
+  vtkGPUVolumeRayCastMapper_AdditiveFS
+  vtkGPUVolumeRayCastMapper_AdditiveCroppingFS
+  vtkGPUVolumeRayCastMapper_AdditiveNoCroppingFS
   vtkGPUVolumeRayCastMapper_CompositeFS
   vtkGPUVolumeRayCastMapper_CompositeMaskFS
+  vtkGPUVolumeRayCastMapper_CompositeBinaryMaskFS
   vtkGPUVolumeRayCastMapper_CompositeCroppingFS
   vtkGPUVolumeRayCastMapper_CompositeNoCroppingFS
   vtkGPUVolumeRayCastMapper_HeaderFS
   vtkGPUVolumeRayCastMapper_MIPCroppingFS
   vtkGPUVolumeRayCastMapper_MIPFS
+  vtkGPUVolumeRayCastMapper_MIPBinaryMaskFS
   vtkGPUVolumeRayCastMapper_MIPFourDependentFS
   vtkGPUVolumeRayCastMapper_MIPFourDependentCroppingFS
   vtkGPUVolumeRayCastMapper_MIPFourDependentNoCroppingFS
   vtkGPUVolumeRayCastMapper_MIPNoCroppingFS
   vtkGPUVolumeRayCastMapper_MinIPCroppingFS
   vtkGPUVolumeRayCastMapper_MinIPFS
+  vtkGPUVolumeRayCastMapper_MinIPBinaryMaskFS
   vtkGPUVolumeRayCastMapper_MinIPFourDependentFS
   vtkGPUVolumeRayCastMapper_MinIPFourDependentCroppingFS
   vtkGPUVolumeRayCastMapper_MinIPFourDependentNoCroppingFS
@@ -118,6 +128,9 @@ set(KIT_GLSL_SRCS
   vtkGPUVolumeRayCastMapper_FourComponentsFS
   vtkGPUVolumeRayCastMapper_NoShadeFS
   vtkGPUVolumeRayCastMapper_ShadeFS
+  vtkProjectedAAHexahedraMapper_VS
+  vtkProjectedAAHexahedraMapper_GS
+  vtkProjectedAAHexahedraMapper_FS
   )
 
 # Create custom commands to encode each assembly file into a C string

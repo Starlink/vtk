@@ -19,7 +19,7 @@
 // This is an implementation of vtkSQLQuery for MySQL databases.  See
 // the documentation for vtkSQLQuery for information about what the
 // methods do.
-// 
+//
 // .SECTION Bugs
 //
 // Since MySQL requires that all bound parameters be passed in a
@@ -63,6 +63,15 @@ public:
   bool Execute();
 
   // Description:
+  // Begin, commit, or roll back a transaction.
+  //
+  // Calling any of these methods will overwrite the current query text
+  // and call Execute() so any previous query text and results will be lost.
+  virtual bool BeginTransaction();
+  virtual bool CommitTransaction();
+  virtual bool RollbackTransaction();
+
+  // Description:
   // The number of fields in the query result.
   int GetNumberOfFields();
 
@@ -82,11 +91,9 @@ public:
   // Return true if there is an error on the current query.
   bool HasError();
 
-  //BTX
   // Description:
   // Return data in current row, field c
   vtkVariant DataValue(vtkIdType c);
-  //ETX
 
   // Description:
   // Get the last error text from the query
@@ -121,9 +128,8 @@ public:
   // Description:
   // Bind a string value by specifying an array and a size
   bool BindParameter(int index, const char *stringValue, size_t length);
-//BTX
   bool BindParameter(int index, const vtkStdString &string);
-//ETX
+
   // Description:
   // Bind a blob value.  Not all databases support blobs as a data
   // type.  Check vtkSQLDatabase::IsSupported(VTK_SQL_FEATURE_BLOB) to
@@ -131,11 +137,9 @@ public:
   bool BindParameter(int index, const void *data, size_t length);
   bool ClearParameterBindings();
 
-  //BTX
   // Description:
   // Escape a string for use in a query
   virtual vtkStdString EscapeString( vtkStdString src, bool addSurroundingQuotes = true );
-  //ETX
 
 protected:
   vtkMySQLQuery();

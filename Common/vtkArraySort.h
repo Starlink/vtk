@@ -2,7 +2,7 @@
 
   Program:   Visualization Toolkit
   Module:    vtkArraySort.h
-  
+
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
@@ -19,80 +19,89 @@
 
 =========================================================================*/
 
-// .NAME vtkArraySort - Controls sorting of sparse array coordinsates.
+// .NAME vtkArraySort - Controls sorting of sparse array coordinates.
 //
 // .SECTION Description
-// vtkArraySort stores an ordered set of dimensions along which the values
-// stored in a sparse array should be sorted.
+// vtkArraySort stores an ordered set of dimensions along which the
+// values stored in a sparse array should be sorted.
 //
-// Convenience constructors are provided for specifying one, two, and three
-// dimensions.  To sort along more than three dimensions, use the default
-// constructor, SetDimensions(), and operator[] to assign each dimension
-// to be sorted.
+// Convenience constructors are provided for specifying one, two, and
+// three dimensions.  To sort along more than three dimensions, use the
+// default constructor, SetDimensions(), and operator[] to assign each
+// dimension to be sorted.
 //
 // .SECTION See Also
 // vtkSparseArray
 //
 // .SECTION Thanks
-// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
+// Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National
+// Laboratories.
 
 #ifndef __vtkArraySort_h
 #define __vtkArraySort_h
 
 #include "vtkSystemIncludes.h"
-#include <vtksys/stl/vector>
+#include "vtkArrayCoordinates.h"
+#include <vector>
 
 class VTK_COMMON_EXPORT vtkArraySort
 {
 public:
+  typedef vtkArrayCoordinates::DimensionT DimensionT;
+
   // Description:
-  // Create an empty set of dimensions.  Use SetDimensions() and operator[]
-  // to populate them.
+  // Create an empty set of dimensions.  Use SetDimensions() and
+  // operator[] to populate them.
   vtkArraySort();
-  
+
   // Description:
   // Sorts an array along one dimension.
-  explicit vtkArraySort(vtkIdType i);
-  
+  explicit vtkArraySort(DimensionT i);
+
   // Description:
   // Sorts an array along two dimensions.
-  vtkArraySort(vtkIdType i, vtkIdType j);
-  
+  vtkArraySort(DimensionT i, DimensionT j);
+
   // Description:
   // Sorts an array along three dimensions.
-  vtkArraySort(vtkIdType i, vtkIdType j, vtkIdType k);
+  vtkArraySort(DimensionT i, DimensionT j, DimensionT k);
 
   // Description:
   // Return the number of dimensions for sorting.
-  vtkIdType GetDimensions() const;
+  DimensionT GetDimensions() const;
 
   // Description:
-  // Set the number of dimensions to be sorted.  Note that this method resets
-  // every to zero, so you must set every dimension explicitly using operator[]
-  // after calling SetDimensions().
-  void SetDimensions(vtkIdType dimensions);
-  
-  // Description:
-  // Returns the i-th dimension to be sorted.
-  vtkIdType& operator[](vtkIdType i);
-  
-  // Description:
-  // Returns the i-th dimension to be sorted.
-  const vtkIdType& operator[](vtkIdType i) const;  
+  // Set the number of dimensions to be sorted.  Note that this method
+  // resets every dimension to zero, so you must set every dimension
+  // explicitly using operator[] after calling SetDimensions().
+  void SetDimensions(DimensionT dimensions);
 
-  
+  // Description:
+  // Returns the i-th dimension to be sorted.
+  DimensionT& operator[](DimensionT i);
+
+  // Description:
+  // Returns the i-th dimension to be sorted.
+  const DimensionT& operator[](DimensionT i) const;
+
+
   // Description:
   // Equality comparison
   bool operator==(const vtkArraySort& rhs) const;
-  
+
   // Description:
   // Inequality comparison
   bool operator!=(const vtkArraySort& rhs) const;
-  friend ostream& operator<<(
+
+  // Description:
+  // Serialization
+  VTK_COMMON_EXPORT friend ostream& operator<<(
     ostream& stream, const vtkArraySort& rhs);
-  
+
 private:
-  vtkstd::vector<vtkIdType> Storage;
+  //BTX
+  std::vector<DimensionT> Storage;
+  //ETX
 };
 
 #endif

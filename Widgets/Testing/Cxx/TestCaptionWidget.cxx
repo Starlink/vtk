@@ -29,8 +29,6 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkCommand.h"
 #include "vtkInteractorEventRecorder.h"
-#include "vtkRegressionTestImage.h"
-#include "vtkDebugLeaks.h"
 #include "vtkTextProperty.h"
 
 const char eventLog[] =
@@ -38,7 +36,7 @@ const char eventLog[] =
 "EnterEvent 56 3 0 0 0 0 0\n"
 "MouseMoveEvent 46 5 0 0 0 0 0\n"
 "MouseMoveEvent 45 33 0 0 0 0 0\n"
-"LeftButtonPressEvent 45 33 0 0 0 0 0\n"
+"MiddleButtonPressEvent 45 33 0 0 0 0 0\n"
 "MouseMoveEvent 46 33 0 0 0 0 0\n"
 "RenderEvent 46 33 0 0 0 0 0\n"
 "MouseMoveEvent 47 33 0 0 0 0 0\n"
@@ -169,10 +167,10 @@ const char eventLog[] =
 "RenderEvent 253 30 0 0 0 0 0\n"
 "MouseMoveEvent 254 30 0 0 0 0 0\n"
 "RenderEvent 254 30 0 0 0 0 0\n"
-"LeftButtonReleaseEvent 254 30 0 0 0 0 0\n"
+"MiddleButtonReleaseEvent 254 30 0 0 0 0 0\n"
 "MouseMoveEvent 253 31 0 0 0 0 0\n"
 "MouseMoveEvent 160 43 0 0 0 0 0\n"
-"LeftButtonPressEvent 160 43 0 0 0 0 0\n"
+"MiddleButtonPressEvent 160 43 0 0 0 0 0\n"
 "MouseMoveEvent 160 44 0 0 0 0 0\n"
 "RenderEvent 160 44 0 0 0 0 0\n"
 "MouseMoveEvent 160 45 0 0 0 0 0\n"
@@ -201,11 +199,11 @@ const char eventLog[] =
 "RenderEvent 160 56 0 0 0 0 0\n"
 "MouseMoveEvent 160 57 0 0 0 0 0\n"
 "RenderEvent 160 57 0 0 0 0 0\n"
-"LeftButtonReleaseEvent 160 57 0 0 0 0 0\n"
+"MiddleButtonReleaseEvent 160 57 0 0 0 0 0\n"
 "MouseMoveEvent 159 57 0 0 0 0 0\n"
 "MouseMoveEvent 148 36 0 0 0 0 0\n"
 "MouseMoveEvent 147 36 0 0 0 0 0\n"
-"MiddleButtonPressEvent 147 36 0 0 0 0 0\n"
+"LeftButtonPressEvent 147 36 0 0 0 0 0\n"
 "MouseMoveEvent 147 37 0 0 0 0 0\n"
 "RenderEvent 147 37 0 0 0 0 0\n"
 "MouseMoveEvent 148 37 0 0 0 0 0\n"
@@ -344,7 +342,7 @@ const char eventLog[] =
 "RenderEvent 162 267 0 0 0 0 0\n"
 "MouseMoveEvent 163 267 0 0 0 0 0\n"
 "RenderEvent 163 267 0 0 0 0 0\n"
-"MiddleButtonReleaseEvent 163 267 0 0 0 0 0\n"
+"LeftButtonReleaseEvent 163 267 0 0 0 0 0\n"
 "MouseMoveEvent 164 267 0 0 0 0 0\n"
 "MouseMoveEvent 154 160 0 0 0 0 0\n"
 "RenderEvent 154 160 0 0 0 0 0\n"
@@ -363,7 +361,7 @@ const char eventLog[] =
 "MouseMoveEvent 150 159 0 0 0 0 0\n"
 "MouseMoveEvent 151 159 0 0 0 0 0\n"
 "MouseMoveEvent 152 159 0 0 0 0 0\n"
-"LeftButtonPressEvent 152 159 0 0 0 0 0\n"
+"MiddleButtonPressEvent 152 159 0 0 0 0 0\n"
 "RenderEvent 152 159 0 0 0 0 0\n"
 "MouseMoveEvent 152 158 0 0 0 0 0\n"
 "RenderEvent 152 158 0 0 0 0 0\n"
@@ -887,7 +885,7 @@ const char eventLog[] =
 "RenderEvent 64 160 0 0 0 0 0\n"
 "MouseMoveEvent 63 160 0 0 0 0 0\n"
 "RenderEvent 63 160 0 0 0 0 0\n"
-"LeftButtonReleaseEvent 63 160 0 0 0 0 0\n"
+"MiddleButtonReleaseEvent 63 160 0 0 0 0 0\n"
 "RenderEvent 63 160 0 0 0 0 0\n"
 "MouseMoveEvent 63 159 0 0 0 0 0\n"
 "RenderEvent 63 159 0 0 0 0 0\n"
@@ -900,7 +898,7 @@ const char eventLog[] =
 "RenderEvent 65 138 0 0 0 0 0\n"
   ;
 
-int TestCaptionWidget( int , char *[] )
+int TestCaptionWidget( int vtkNotUsed(argc), char *vtkNotUsed(argv)[] )
 {
   // Create the RenderWindow, Renderer and both Actors
   //
@@ -916,14 +914,13 @@ int TestCaptionWidget( int , char *[] )
 
   // Create a test pipeline
   //
-  vtkSmartPointer<vtkSphereSource> ss =
-    vtkSmartPointer<vtkSphereSource>::New();
+  vtkSmartPointer<vtkSphereSource> ss = vtkSmartPointer<vtkSphereSource>::New();
+  ss->SetCenter(100,250,500);
   ss->Update();
 
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInput(ss->GetOutput());
-  vtkSmartPointer<vtkActor> actor =
-    vtkSmartPointer<vtkActor>::New();
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
   actor->SetMapper(mapper);
 
   // Create the widget
@@ -945,8 +942,8 @@ int TestCaptionWidget( int , char *[] )
   widget->SetRepresentation(rep);
 
   // Print the widget and its representation
-  rep->Print(cout);
-  widget->Print(cout);
+  rep->Print(std::cout);
+  widget->Print(std::cout);
 
   // Add the actors to the renderer, set the background and size
   //
@@ -980,17 +977,23 @@ int TestCaptionWidget( int , char *[] )
   recorder->Off();
 #endif
 
+  cout << "Setting new caption\n";
+  rep->GetCaptionActor2D()->SetCaption("Okay the caption has now changed and the border should resize");
+  rep->Modified();
+  renWin->Render();
+
   iren->Start();
 
   double endingPosition[3];
   rep->GetAnchorPosition(endingPosition);
-  cout << "Starting position of anchor: "
+  std::cout << "Starting position of anchor: "
        << startingPosition[0] << ", "
        << startingPosition[1] << ", "
-       << startingPosition[2] << endl;
-  cout << "Ending position of anchor: "
+       << startingPosition[2] << std::endl;
+  std::cout << "Ending position of anchor: "
        << endingPosition[0] << ", "
        << endingPosition[1] << ", "
-       << endingPosition[2] << endl;
+       << endingPosition[2] << std::endl;
+
   return EXIT_SUCCESS;
 }

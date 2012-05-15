@@ -40,23 +40,26 @@ class VTK_RENDERING_EXPORT vtkQtLabelRenderStrategy : public vtkLabelRenderStrat
   vtkTypeMacro(vtkQtLabelRenderStrategy, vtkLabelRenderStrategy);
   static vtkQtLabelRenderStrategy* New();
 
-  //BTX
   // Description:
   // Compute the bounds of a label. Must be performed after the renderer is set.
-  virtual void ComputeLabelBounds(vtkTextProperty* tprop, vtkStdString label, double bds[4])
+  virtual void ComputeLabelBounds(vtkTextProperty* tprop, vtkStdString label,
+                                  double bds[4])
     { this->Superclass::ComputeLabelBounds(tprop, label, bds); }
-  virtual void ComputeLabelBounds(vtkTextProperty* tprop, vtkUnicodeString label, double bds[4]);
+  virtual void ComputeLabelBounds(vtkTextProperty* tprop, vtkUnicodeString label,
+                                  double bds[4]);
 
   // Description:
   // Render a label at a location in world coordinates.
   // Must be performed between StartFrame() and EndFrame() calls.
   virtual void RenderLabel(int x[2], vtkTextProperty* tprop, vtkStdString label)
     { this->Superclass::RenderLabel(x, tprop, label); }
-  virtual void RenderLabel(int x[2], vtkTextProperty* tprop, vtkStdString label, int maxWidth)
+  virtual void RenderLabel(int x[2], vtkTextProperty* tprop, vtkStdString label,
+                           int maxWidth)
     { this->Superclass::RenderLabel(x, tprop, label, maxWidth); }
-  virtual void RenderLabel(int x[2], vtkTextProperty* tprop, vtkUnicodeString label);
-  virtual void RenderLabel(int x[2], vtkTextProperty* tprop, vtkUnicodeString label, int maxWidth);
-  //ETX
+  virtual void RenderLabel(int x[2], vtkTextProperty* tprop,
+                           vtkUnicodeString label);
+  virtual void RenderLabel(int x[2], vtkTextProperty* tprop,
+                           vtkUnicodeString label, int maxWidth);
 
   // Description:
   // Start a rendering frame. Renderer must be set.
@@ -95,4 +98,3 @@ private:
 };
 
 #endif
-
