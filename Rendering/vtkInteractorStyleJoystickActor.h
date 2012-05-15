@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleJoystickActor.h,v $
+  Module:    vtkInteractorStyleJoystickActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleJoystickActor : public vtkInteracto
 public:
   static vtkInteractorStyleJoystickActor *New();
 
-  vtkTypeRevisionMacro(vtkInteractorStyleJoystickActor,vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleJoystickActor,vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

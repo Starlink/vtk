@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPStructuredDataReader.cxx,v $
+  Module:    vtkXMLPStructuredDataReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkXMLPStructuredDataReader, "$Revision: 1.27 $");
 
 //----------------------------------------------------------------------------
 vtkXMLPStructuredDataReader::vtkXMLPStructuredDataReader()
@@ -84,8 +83,7 @@ void vtkXMLPStructuredDataReader::ReadXMLData()
   vtkDebugMacro("Updating extent "
                 << this->UpdateExtent[0] << " " << this->UpdateExtent[1] << " "
                 << this->UpdateExtent[2] << " " << this->UpdateExtent[3] << " "
-                << this->UpdateExtent[4] << " " << this->UpdateExtent[5]
-                << "\n");  
+                << this->UpdateExtent[4] << " " << this->UpdateExtent[5]);
   
   // Prepare increments for the update extent.
   this->ComputePointDimensions(this->UpdateExtent, this->PointDimensions);
@@ -431,9 +429,14 @@ int vtkXMLPStructuredDataReader::ComputePieceSubExtents()
     //if(this->CanReadPiece(i))
       {
       // Add the exact extent provided by the piece to the splitter.
-      int extent[6];
-      this->PieceReaders[i]->UpdateInformation();
-      this->PieceReaders[i]->GetOutputAsDataSet()->GetWholeExtent(extent);
+      // BUG: This was causing all processes to read the meta-data for all
+      // pieces which is a nightmare!!! Using the this->PieceExtents information
+      // which we had already collected while reading the pvti file for
+      // determining the piece extents.
+      // int extent[6];
+      //this->PieceReaders[i]->UpdateInformation();
+      //this->PieceReaders[i]->GetOutputAsDataSet()->GetWholeExtent(extent);
+      int *extent = this->PieceExtents + 6*i;
       this->ExtentSplitter->AddExtentSource(i, 0, extent);
       }
     }

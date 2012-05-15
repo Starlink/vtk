@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTerrainContourLineInterpolator.h,v $
+  Module:    vtkTerrainContourLineInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkTerrainContourLineInterpolator,
+  vtkTypeMacro(vtkTerrainContourLineInterpolator,
                               vtkContourLineInterpolator);
   void PrintSelf(ostream& os, vtkIndent indent);
 

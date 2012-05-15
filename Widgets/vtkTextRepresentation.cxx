@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTextRepresentation.cxx,v $
+  Module:    vtkTextRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,6 @@ protected:
     
 };
 
-vtkCxxRevisionMacro(vtkTextRepresentation, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkTextRepresentation);
 
 //-------------------------------------------------------------------------

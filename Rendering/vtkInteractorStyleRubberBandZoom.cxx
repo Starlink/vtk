@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleRubberBandZoom.cxx,v $
+  Module:    vtkInteractorStyleRubberBandZoom.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkInteractorStyleRubberBandZoom, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkInteractorStyleRubberBandZoom);
 
 vtkInteractorStyleRubberBandZoom::vtkInteractorStyleRubberBandZoom()
@@ -207,13 +206,43 @@ void vtkInteractorStyleRubberBandZoom::Zoom()
   cam->SetPosition(pos);
   cam->SetFocalPoint(fp);
 
+  double zoomFactor;
   if (width > height)
     {
-    cam->Zoom(size[0] / static_cast<double>(width));
+    zoomFactor = size[0] / static_cast<double>(width);
     }
   else
     {
-    cam->Zoom(size[1] / static_cast<double>(height));
+    zoomFactor = size[1] / static_cast<double>(height);
+    }
+  if (cam->GetParallelProjection())
+    {
+    cam->Zoom(zoomFactor);
+    }
+  else
+    {
+    // In perspective mode, zoom in by moving the camera closer.  Because we are
+    // moving the camera closer, we have to be careful to try to adjust the
+    // clipping planes to best match the actual position they were in before.
+    double initialDistance = cam->GetDistance();
+    cam->Dolly(zoomFactor);
+    double finalDistance = cam->GetDistance();
+    double deltaDistance = initialDistance - finalDistance;
+    double clippingRange[2];
+    cam->GetClippingRange(clippingRange);
+    clippingRange[0] -= deltaDistance;
+    clippingRange[1] -= deltaDistance;
+    // Correct bringing clipping planes too close or behind camera.
+    if (clippingRange[1] <= 0.0)
+      {
+      clippingRange[1] = 0.001;
+      }
+    // This near plane check comes from vtkRenderer::ResetCameraClippingRange()
+    if (clippingRange[0] < 0.001*clippingRange[1])
+      {
+      clippingRange[0] = 0.001*clippingRange[1];
+      }
+    cam->SetClippingRange(clippingRange);
     }
   
   this->Interactor->Render();

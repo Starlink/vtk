@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoTerrain.cxx,v $
+  Module:    vtkGeoTerrain.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,6 +33,7 @@
 #include "vtkGeoCamera.h"
 #include "vtkGeoImageNode.h"
 #include "vtkGeoInteractorStyle.h"
+#include "vtkGeoTreeNodeCache.h"
 #include "vtkGeoSource.h"
 #include "vtkGeoTerrainNode.h"
 #include "vtkImageData.h"
@@ -61,7 +62,6 @@
 #include <vtksys/stl/utility>
 
 vtkStandardNewMacro(vtkGeoTerrain);
-vtkCxxRevisionMacro(vtkGeoTerrain, "$Revision: 1.20 $");
 vtkCxxSetObjectMacro(vtkGeoTerrain, GeoSource, vtkGeoSource);
 vtkCxxSetObjectMacro(vtkGeoTerrain, GeoCamera, vtkGeoCamera);
 //----------------------------------------------------------------------------
@@ -75,6 +75,7 @@ vtkGeoTerrain::vtkGeoTerrain()
   this->Extractor = vtkExtractSelectedFrustum::New();
   this->GeoCamera = 0;
   this->MaxLevel = 20;
+  this->Cache = vtkGeoTreeNodeCache::New();
 }
 
 //----------------------------------------------------------------------------
@@ -89,6 +90,10 @@ vtkGeoTerrain::~vtkGeoTerrain()
   if (this->Extractor)
     {
     this->Extractor->Delete();
+    }
+  if (this->Cache)
+    {
+    this->Cache->Delete();
     }
 }
 
@@ -172,7 +177,7 @@ int vtkGeoTerrain::EvaluateNode(vtkGeoTerrainNode* node)
   // Size of the sphere in view area units (0 -> 1)
   sphereViewSize = this->GeoCamera->GetNodeCoverage(node);
 
-  // Arbitrary tresholds
+  // Arbitrary thresholds
   if (sphereViewSize > 0.2)
     {
     return 1;
@@ -191,10 +196,18 @@ void vtkGeoTerrain::AddActors(
   vtkAssembly* assembly,
   vtkCollection* imageReps)
 {
+  // This method requires that the render window graphics context
+  // has been created.
+  ren->GetRenderWindow()->MakeCurrent();
+  if (!ren->GetRenderWindow()->IsCurrent())
+    {
+    return;
+    }
+
   this->InitializeNodeAnalysis(ren);
 
   // See if we have multiTexturing
-  vtkOpenGLHardwareSupport * hardware = 
+  vtkOpenGLHardwareSupport * hardware =
     vtkOpenGLRenderWindow::SafeDownCast(ren->GetRenderWindow())->GetHardwareSupport();
 
   bool multiTexturing = hardware->GetSupportsMultiTexturing();
@@ -251,7 +264,7 @@ void vtkGeoTerrain::AddActors(
     {
     vtkGeoTerrainNode* cur = s.top();
     s.pop();
-    if (cur->GetModel()->GetNumberOfCells() == 0)
+    if (!cur->HasData() || cur->GetModel()->GetNumberOfCells() == 0)
       {
       continue;
       }
@@ -262,21 +275,33 @@ void vtkGeoTerrain::AddActors(
       continue;
       }
 
+    // Mark this node as "visited" so it will be less likely to
+    // be deleted.
+    this->Cache->SendToFront(cur);
+
     // Determine whether to traverse this node's children
     int refine = this->EvaluateNode(cur);
 
     child = cur->GetChild(0);
-    if ((!child && cur->GetLevel() < this->MaxLevel && refine == 1) || cur->GetStatus() == vtkGeoTreeNode::PROCESSING)
+    if (((!child || !child->HasData()) &&
+         cur->GetLevel() < this->MaxLevel &&
+         refine == 1) || cur->GetStatus() == vtkGeoTreeNode::PROCESSING)
       {
       coll = this->GeoSource->GetRequestedNodes(cur);
       // Load children
       if (coll != NULL && coll->GetNumberOfItems() == 4)
         {
-        cur->CreateChildren();
         for (int c = 0; c < 4; ++c)
           {
           child = vtkGeoTerrainNode::SafeDownCast(coll->GetItemAsObject(c));
+          vtkGeoTerrainNode* oldChild = cur->GetChild(c);
+          if (oldChild)
+            {
+            this->Cache->RemoveNode(oldChild);
+            }
+          this->Cache->SendToFront(child);
           cur->SetChild(child, c);
+          child->SetParent(cur);
           }
         cur->SetStatus(vtkGeoTreeNode::NONE);
         }
@@ -287,10 +312,15 @@ void vtkGeoTerrain::AddActors(
         temp->DeepCopy(cur);
         this->GeoSource->RequestChildren(temp);
         }
+      if (coll)
+        {
+        coll->Delete();
+        }
       }
 
-    if (!cur->GetChild(0) || refine != 1)
+    if (!cur->GetChild(0) || !cur->GetChild(0)->HasData() || refine != 1)
       {
+
       // Find the best texture for this geometry
       llbounds[0] = cur->GetLongitudeRange()[0];
       llbounds[1] = cur->GetLongitudeRange()[1];
@@ -299,7 +329,11 @@ void vtkGeoTerrain::AddActors(
       vtkGeoImageNode* textureNode1 = textureTree1->GetBestImageForBounds(llbounds);
       if (!textureNode1)
         {
-        vtkWarningMacro(<< "could not find node for bounds: " << llbounds[0] << "," << llbounds[1] << "," << llbounds[2] << "," << llbounds[3]);
+        vtkWarningMacro(<< "could not find node for bounds: "
+                        << llbounds[0] << ","
+                        << llbounds[1] << ","
+                        << llbounds[2] << ","
+                        << llbounds[3]);
         }
       vtkGeoImageNode* textureNode2 = 0;
       if (textureTree2)
@@ -317,9 +351,11 @@ void vtkGeoTerrain::AddActors(
           {
           sameTexture = (
               !textureNode1 ||
+              actor->GetProperty()->GetNumberOfTextures() < 1 ||
               actor->GetProperty()->GetTexture(vtkProperty::VTK_TEXTURE_UNIT_0) == textureNode1->GetTexture()
             ) && (
               !textureNode2 ||
+              actor->GetProperty()->GetNumberOfTextures() < 2 ||
               actor->GetProperty()->GetTexture(vtkProperty::VTK_TEXTURE_UNIT_1) == textureNode2->GetTexture()
             );
           }
@@ -391,6 +427,54 @@ void vtkGeoTerrain::AddActors(
         }
       continue;
       }
+    // Workaround for the isse where if refinement does not happen for some reason
+    // then we don't see a tile as its visibility is turned off.
+    else
+      {
+      llbounds[0] = cur->GetLongitudeRange()[0];
+      llbounds[1] = cur->GetLongitudeRange()[1];
+      llbounds[2] = cur->GetLatitudeRange()[0];
+      llbounds[3] = cur->GetLatitudeRange()[1];
+      vtkGeoImageNode* textureNode1 = textureTree1->GetBestImageForBounds(llbounds);
+      vtkGeoImageNode* textureNode2 = 0;
+      // See if we already have an actor for this geometry
+      vtkActor* existingActor = 0;
+      for (int p = 0; p < props->GetNumberOfItems(); ++p)
+        {
+        vtkActor* actor = vtkActor::SafeDownCast(props->GetItemAsObject(p));
+        bool sameTexture = false;
+        if (multiTexturing)
+          {
+          sameTexture = (
+              !textureNode1 ||
+              actor->GetProperty()->GetNumberOfTextures() < 1 ||
+              actor->GetProperty()->GetTexture(vtkProperty::VTK_TEXTURE_UNIT_0) == textureNode1->GetTexture()
+            ) && (
+              !textureNode2 ||
+              actor->GetProperty()->GetNumberOfTextures() < 2 ||
+              actor->GetProperty()->GetTexture(vtkProperty::VTK_TEXTURE_UNIT_1) == textureNode2->GetTexture()
+            );
+          }
+        else
+          {
+          sameTexture = !textureNode1 || actor->GetTexture() == textureNode1->GetTexture();
+          }
+        if (actor && actor->GetMapper()->GetInputDataObject(0, 0) == cur->GetModel() && sameTexture)
+          {
+          existingActor = actor;
+          existingActor->VisibilityOn();
+          visibleActors++;
+
+          // Move the actor to the end of the list so it is less likely removed.
+          actor->Register(this);
+          assembly->RemovePart(actor);
+          assembly->AddPart(actor);
+          actor->Delete();
+          break;
+          }
+        }
+      }
+
     s.push(cur->GetChild(0));
     s.push(cur->GetChild(1));
     s.push(cur->GetChild(2));

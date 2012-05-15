@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIconGlyphFilter.h,v $
+  Module:    vtkIconGlyphFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ public:
 
   // Description
   static vtkIconGlyphFilter *New();
-  vtkTypeRevisionMacro(vtkIconGlyphFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkIconGlyphFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataSet.h,v $
+  Module:    vtkGenericDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ class VTK_FILTERING_EXPORT vtkGenericDataSet : public vtkDataObject
 public:
   // Description:
   // Standard VTK type and print macros.
-  vtkTypeRevisionMacro(vtkGenericDataSet,vtkDataObject);
+  vtkTypeMacro(vtkGenericDataSet,vtkDataObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -195,6 +195,23 @@ public:
   // Description:
   // Get the collection of attributes associated with this dataset.
   vtkGetObjectMacro(Attributes, vtkGenericAttributeCollection);
+
+  // Description:
+  // Returns the attributes of the data object of the specified
+  // attribute type. The type may be:
+  // <ul>
+  // <li>POINT  - Defined in vtkDataSet subclasses.
+  // <li>CELL   - Defined in vtkDataSet subclasses.
+  // <li>VERTEX - Defined in vtkGraph subclasses.
+  // <li>EDGE   - Defined in vtkGraph subclasses.
+  // <li>ROW    - Defined in vtkTable.
+  // </ul>
+  // The other attribute type, FIELD, will return NULL since
+  // field data is stored as a vtkFieldData instance, not a
+  // vtkDataSetAttributes instance. To retrieve field data, use
+  // GetAttributesAsFieldData.
+  virtual vtkDataSetAttributes* GetAttributes(int type)
+    { return this->Superclass::GetAttributes(type); }
 
   // Description:
   // Set/Get a cell tessellator if cells must be tessellated during

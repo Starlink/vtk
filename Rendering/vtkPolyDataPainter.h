@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataPainter.h,v $
+  Module:    vtkPolyDataPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ class vtkPolyData;
 class VTK_RENDERING_EXPORT vtkPolyDataPainter : public vtkPainter
 {
 public:
-  vtkTypeRevisionMacro(vtkPolyDataPainter, vtkPainter);
+  vtkTypeMacro(vtkPolyDataPainter, vtkPainter);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:

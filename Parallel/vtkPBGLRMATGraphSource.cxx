@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLRMATGraphSource.cxx,v $
+  Module:    vtkPBGLRMATGraphSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,6 @@
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/collectives/scan.hpp>
 
-vtkCxxRevisionMacro(vtkPBGLRMATGraphSource, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkPBGLRMATGraphSource);
 
 // ----------------------------------------------------------------------

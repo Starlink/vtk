@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLLight.h,v $
+  Module:    vtkOpenGLLight.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLLight : public vtkLight
 {
 public:
   static vtkOpenGLLight *New();
-  vtkTypeRevisionMacro(vtkOpenGLLight,vtkLight);
+  vtkTypeMacro(vtkOpenGLLight,vtkLight);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

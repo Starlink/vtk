@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataSource.cxx,v $
+  Module:    vtkPolyDataSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPolyDataSource, "$Revision: 1.13 $");
 
 //----------------------------------------------------------------------------
 vtkPolyDataSource::vtkPolyDataSource()

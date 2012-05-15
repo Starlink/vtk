@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLeaderActor2D.cxx,v $
+  Module:    vtkLeaderActor2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkLeaderActor2D, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkLeaderActor2D);
 
 vtkCxxSetObjectMacro(vtkLeaderActor2D,LabelTextProperty,vtkTextProperty);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFast2DLayoutStrategy.h,v $
+  Module:    vtkFast2DLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_INFOVIS_EXPORT vtkFast2DLayoutStrategy : public vtkGraphLayoutStrategy
 public:
   static vtkFast2DLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkFast2DLayoutStrategy, vtkGraphLayoutStrategy);
+  vtkTypeMacro(vtkFast2DLayoutStrategy, vtkGraphLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

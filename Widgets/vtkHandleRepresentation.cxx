@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHandleRepresentation.cxx,v $
+  Module:    vtkHandleRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkPointPlacer.h"
 
-vtkCxxRevisionMacro(vtkHandleRepresentation, "$Revision: 1.12 $");
 
 vtkCxxSetObjectMacro(vtkHandleRepresentation, PointPlacer, vtkPointPlacer );
 
@@ -136,6 +135,19 @@ void vtkHandleRepresentation::SetRenderer(vtkRenderer *ren)
   this->DisplayPosition->SetViewport(ren);
   this->WorldPosition->SetViewport(ren);
   this->Superclass::SetRenderer(ren);
+}
+
+//----------------------------------------------------------------------
+void vtkHandleRepresentation::DeepCopy(vtkProp *prop)
+{
+  vtkHandleRepresentation *rep = vtkHandleRepresentation::SafeDownCast(prop);
+  if ( rep )
+    {
+    this->SetTolerance(rep->GetTolerance());
+    this->SetActiveRepresentation(rep->GetActiveRepresentation());
+    this->SetConstrained(rep->GetConstrained());
+    }
+  this->Superclass::ShallowCopy(prop);
 }
 
 //----------------------------------------------------------------------

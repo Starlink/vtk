@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleImageFilterExample.cxx,v $
+  Module:    vtkSimpleImageFilterExample.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkSimpleImageFilterExample, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkSimpleImageFilterExample);
 
 // The switch statement in Execute will call this method with

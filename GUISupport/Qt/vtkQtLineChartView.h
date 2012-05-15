@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtLineChartView.h,v $
+  Module:    vtkQtLineChartView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,16 +27,20 @@
 #ifndef __vtkQtLineChartView_h
 #define __vtkQtLineChartView_h
 
-#include "vtkQtChartViewBase.h"
+#include "QVTKWin32Header.h"
+#include "vtkQtChartView.h"
 
 class vtkQtLineChart;
 class vtkQtChartSeriesModelCollection;
+class vtkQtChartSeriesOptions;
 
-class QVTK_EXPORT vtkQtLineChartView : public vtkQtChartViewBase
+class QVTK_EXPORT vtkQtLineChartView : public vtkQtChartView
 {
+Q_OBJECT
+
 public:
   static vtkQtLineChartView *New();
-  vtkTypeRevisionMacro(vtkQtLineChartView, vtkQtChartViewBase);
+  vtkTypeMacro(vtkQtLineChartView, vtkQtChartView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -55,13 +59,20 @@ public:
   // Description:
   // Gets the line chart series model.
   virtual vtkQtChartSeriesModelCollection* GetChartSeriesModel();
+
+  // Description:
+  // Gets the chart series layer
+  virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
   //ETX
+
+  // Description:
+  // Gets the series options.
+  virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
 
 protected:
   vtkQtLineChartView();
   ~vtkQtLineChartView();
 
-protected:
   vtkQtLineChart *LineChart;
   vtkQtChartSeriesModelCollection *LineModel;
 

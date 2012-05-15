@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridAlgorithm.cxx,v $
+  Module:    vtkUnstructuredGridAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkUnstructuredGridAlgorithm, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkUnstructuredGridAlgorithm);
 
 //----------------------------------------------------------------------------

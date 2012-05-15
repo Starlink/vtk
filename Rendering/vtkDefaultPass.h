@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDefaultPass.h,v $
+  Module:    vtkDefaultPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,15 +40,17 @@ class VTK_RENDERING_EXPORT vtkDefaultPass : public vtkRenderPass
 {
 public:
   static vtkDefaultPass *New();
-  vtkTypeRevisionMacro(vtkDefaultPass,vtkRenderPass);
+  vtkTypeMacro(vtkDefaultPass,vtkRenderPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // Call RenderOpaqueGeometry(), RenderTranslucentPolygonalGeometry(),
   // RenderVolumetricGeometry(), RenderOverlay()
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
  protected:
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLHyperOctreeReader.h,v $
+  Module:    vtkXMLHyperOctreeReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkIntArray;
 class VTK_IO_EXPORT vtkXMLHyperOctreeReader : public vtkXMLDataReader
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLHyperOctreeReader,vtkXMLDataReader);
+  vtkTypeMacro(vtkXMLHyperOctreeReader,vtkXMLDataReader);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkXMLHyperOctreeReader *New();
   

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMergeTables.cxx,v $
+  Module:    vtkMergeTables.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkStringArray.h"
 #include "vtkTable.h"
 
-vtkCxxRevisionMacro(vtkMergeTables, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkMergeTables);
 //---------------------------------------------------------------------------
 vtkMergeTables::vtkMergeTables()
@@ -200,10 +199,10 @@ int vtkMergeTables::RequestData(
     for (vtkIdType i = 0; i < toMerge->GetNumberOfValues(); i += 3)
       {
       mergeColumns->SetInputArrayToProcess(
-        0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_NONE,
+        0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_ROWS,
         toMerge->GetValue(i).c_str());
       mergeColumns->SetInputArrayToProcess(
-        1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_NONE,
+        1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_ROWS,
         toMerge->GetValue(i+1).c_str());
       mergeColumns->SetMergedColumnName(toMerge->GetValue(i+2).c_str());
       mergeColumns->Update();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusIIWriter.h,v $
+  Module:    vtkExodusIIWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,9 +67,9 @@
 #include "vtkWriter.h"
 #include "vtkSmartPointer.h" // For vtkSmartPointer
 
-#include <vtkstd/vector> // For vector
-#include <vtkstd/map> // For map
-#include <vtkstd/string> // For string
+#include <vtkstd/vector> // STL Header
+#include <vtkstd/map>    // STL Header
+#include <vtkstd/string> // STL Header
 
 class vtkModelMetadata;
 class vtkDoubleArray;
@@ -80,9 +80,9 @@ class VTK_PARALLEL_EXPORT vtkExodusIIWriter : public vtkWriter
 {
 public:
   static vtkExodusIIWriter *New ();
-  vtkTypeRevisionMacro (vtkExodusIIWriter, vtkWriter);
+  vtkTypeMacro (vtkExodusIIWriter, vtkWriter);
   void PrintSelf (ostream& os, vtkIndent indent);
- 
+
   // Description:
   // Specify the vtkModelMetadata object which contains the Exodus file
   // model information (metadata) absent in the vtkUnstructuredGrid.  If you 
@@ -103,7 +103,7 @@ public:
 
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
-  
+
   // Description:
   //   If StoreDoubles is ON, the floating point fields in the Exodus file
   //   will be double precision fields.  The default is determined by the
@@ -195,8 +195,18 @@ protected:
 
   struct Block
   {
-    Block () : ElementStartIndex (-1), OutputIndex(-1) { }
-    char *Name;
+    Block () 
+      {
+      this->Type = 0;
+      this->NumElements = 0;
+      this->ElementStartIndex = -1;
+      this->NodesPerElements = 0;
+      this->GridIndex = 0;
+      this->OutputIndex = -1;
+      this->NumAttributes = 0;
+      this->BlockAttributes = 0;
+      };
+    int Type;
     int NumElements;
     int ElementStartIndex;
     int NodesPerElements;
@@ -223,8 +233,10 @@ protected:
     int ScalarOutOffset;
     vtkstd::vector<vtkstd::string> OutNames;
   };
+  vtkstd::map<vtkstd::string, VariableInfo> GlobalVariableMap;
   vtkstd::map<vtkstd::string, VariableInfo> BlockVariableMap;
   vtkstd::map<vtkstd::string, VariableInfo> NodeVariableMap;
+  int NumberOfScalarGlobalArrays;
   int NumberOfScalarElementArrays;
   int NumberOfScalarNodeArrays;
 //ETX
@@ -280,6 +292,7 @@ protected:
   int CreateBlockVariableMetadata (vtkModelMetadata* em);
   
 //BTX
+  void ConvertVariableNames (vtkstd::map<vtkstd::string, VariableInfo>& variableMap);
   char **FlattenOutVariableNames (
             int nScalarArrays, 
             const vtkstd::map<vtkstd::string, VariableInfo>& variableMap);
@@ -308,6 +321,8 @@ protected:
   int WriteNextTimeStep ();
 
 //BTX
+  double ExtractGlobalData (const char *name, int comp, int ts);
+  int WriteGlobalData (int timestep, vtkDataArray *buffer);
   void ExtractCellData (const char *name, int comp, vtkDataArray *buffer);
   int WriteCellData (int timestep, vtkDataArray *buffer);
   void ExtractPointData (const char *name, int comp, vtkDataArray *buffer);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTable.h,v $
+  Module:    vtkTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,7 +58,7 @@ class VTK_FILTERING_EXPORT vtkTable : public vtkDataObject
 {
 public:
   static vtkTable* New();
-  vtkTypeRevisionMacro(vtkTable, vtkDataObject);
+  vtkTypeMacro(vtkTable, vtkDataObject);
   void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:
@@ -91,6 +91,11 @@ public:
   vtkIdType GetNumberOfRows();
 
   // Description:
+  // Set the number of rows in the table. Note that memory allocation might be performed
+  // as a result of this, but no memory will be released. 
+  void SetNumberOfRows(const vtkIdType );
+
+  // Description:
   // Get a row of the table as a vtkVariantArray which has one entry for each column.
   // NOTE: This version of the method is NOT thread safe.
   vtkVariantArray* GetRow(vtkIdType row);
@@ -105,7 +110,7 @@ public:
 
   // Description:
   // Insert a blank row at the end of the table.
-  vtkIdType InsertNextBlankRow();
+  vtkIdType InsertNextBlankRow(double default_num_val=0.0);
 
   // Description:
   // Insert a row specified by a vtkVariantArray.  The number of entries in the array
@@ -124,7 +129,6 @@ public:
   // Get the number of columns in the table.
   vtkIdType GetNumberOfColumns();
 
-  // Description:
   // Get the name of a column of the table.
   const char* GetColumnName(vtkIdType col);
 
@@ -186,6 +190,17 @@ public:
   // Shallow/deep copy the data from src into this object.
   virtual void ShallowCopy(vtkDataObject* src);
   virtual void DeepCopy(vtkDataObject* src);
+
+  // Description:
+  // Returns the attributes of the data object as a vtkFieldData.
+  // This returns non-null values in all the same cases as GetAttributes,
+  // in addition to the case of FIELD, which will return the field data
+  // for any vtkDataObject subclass.
+  virtual vtkFieldData* GetAttributesAsFieldData(int type);
+
+  // Description:
+  // Get the number of elements for a specific attribute type (ROW, etc.).
+  virtual vtkIdType GetNumberOfElements(int type);
 
 protected:
   vtkTable();

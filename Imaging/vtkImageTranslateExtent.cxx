@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageTranslateExtent.cxx,v $
+  Module:    vtkImageTranslateExtent.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkImageTranslateExtent, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkImageTranslateExtent);
 
 //----------------------------------------------------------------------------

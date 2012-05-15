@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBitArray.cxx,v $
+  Module:    vtkBitArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,6 @@ public:
   bool Rebuild;
 };
 
-vtkCxxRevisionMacro(vtkBitArray, "$Revision: 1.66 $");
 vtkStandardNewMacro(vtkBitArray);
 
 //----------------------------------------------------------------------------

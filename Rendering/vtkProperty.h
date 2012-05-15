@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProperty.h,v $
+  Module:    vtkProperty.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class vtkPropertyInternals;
 class VTK_RENDERING_EXPORT vtkProperty : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkProperty,vtkObject);
+  vtkTypeMacro(vtkProperty,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -258,16 +258,16 @@ public:
   // this will return null.
   vtkGetObjectMacro(ShaderProgram, vtkShaderProgram);
 
-  // Description
-  // Provide values to initialize shader variables. This is a conduit to initialize
-  // shader variables that change over time, useful for animation, gui widget inputs,
-  // etc.
-  // name - hardware name of the uniform variable
-  // numVars - number of variables being set
-  // x - values
-  virtual void AddShaderVariable(const char* name, int numVars, int* x);
-  virtual void AddShaderVariable(const char* name, int numVars, float* x);
-  virtual void AddShaderVariable(const char* name, int numVars, double* x);
+  // Description:
+  // Provide values to initialize shader variables.
+  // Useful to initialize shader variables that change over time
+  // (animation, GUI widgets inputs, etc. )
+  // - \p name - hardware name of the uniform variable
+  // - \p numVars - number of variables being set
+  // - \p x - values
+  virtual void AddShaderVariable(const char *name, int numVars, int *x);
+  virtual void AddShaderVariable(const char *name, int numVars, float *x);
+  virtual void AddShaderVariable(const char *name, int numVars, double *x);
 
   // Description:
   // Methods to provide to add shader variables from tcl.

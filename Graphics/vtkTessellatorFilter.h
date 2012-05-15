@@ -1,10 +1,10 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkTessellatorFilter.h,v $
+Module:    vtkTessellatorFilter.h
 Language:  C++
-Date:      $Date: 2007-08-30 22:51:07 $
-Version:   $Revision: 1.3 $
+Date:      $Date$
+Version:   $Revision$
 
 Copyright 2003 Sandia Corporation.
 Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
@@ -66,7 +66,7 @@ class vtkUnstructuredGrid;
 class VTK_GRAPHICS_EXPORT vtkTessellatorFilter : public vtkUnstructuredGridAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkTessellatorFilter,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkTessellatorFilter,vtkUnstructuredGridAlgorithm);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   static vtkTessellatorFilter* New();

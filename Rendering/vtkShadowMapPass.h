@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShadowMapPass.h,v $
+  Module:    vtkShadowMapPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,7 @@
 // background color/gradient/transparent color.
 // An opaque pass may have been performed right after the initialization.
 //
-// 
+//
 //
 // Its delegate is usually set to a vtkOpaquePass.
 //
@@ -58,7 +58,7 @@ class VTK_RENDERING_EXPORT vtkShadowMapPass : public vtkRenderPass
 {
 public:
   static vtkShadowMapPass *New();
-  vtkTypeRevisionMacro(vtkShadowMapPass,vtkRenderPass);
+  vtkTypeMacro(vtkShadowMapPass,vtkRenderPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -66,23 +66,25 @@ public:
   // light occluder (ie it casts shadows). This key is not mutually exclusive
   // with the RECEIVER() key.
   static vtkInformationIntegerKey *OCCLUDER();
-  
+
   // If this key exists on the Propertykeys of a prop, the prop is viewed as a
   // light/shadow receiver. This key is not mutually exclusive with the
   // OCCLUDER() key.
   static vtkInformationIntegerKey *RECEIVER();
-  
+
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
-  
+  //ETX
+
   // Description:
   // Release graphics resources and ask components to release their own
   // resources.
   // \pre w_exists: w!=0
   void ReleaseGraphicsResources(vtkWindow *w);
-  
+
   // Description:
   // Delegate for rendering the opaque polygonal geometry.
   // If it is NULL, nothing will be rendered and a warning will be emitted.
@@ -90,14 +92,22 @@ public:
   // Initial value is a NULL pointer.
   vtkGetObjectMacro(OpaquePass,vtkRenderPass);
   virtual void SetOpaquePass(vtkRenderPass *opaquePass);
-  
+
+  // Description:
+  // Delegate for rendering the opaque polygonal geometry.
+  // If it is NULL, nothing will be rendered and a warning will be emitted.
+  // It is usually set to a vtkTranslucentPass.
+  // Initial value is a NULL pointer.
+  vtkGetObjectMacro(CompositeZPass,vtkRenderPass);
+  virtual void SetCompositeZPass(vtkRenderPass *opaquePass);
+
   // Description:
   // Set/Get the number of pixels in each dimension of the shadow maps
   // (shadow maps are square). Initial value is 256. The greater the better.
   // Resolution does not have to be a power-of-two value.
   vtkSetMacro(Resolution,unsigned int);
   vtkGetMacro(Resolution,unsigned int);
-  
+
   // Description:
   // Factor used to scale the maximum depth slope of a polygon (definition
   // from OpenGL 2.1 spec section 3.5.5 "Depth Offset" page 112). This is
@@ -109,7 +119,7 @@ public:
   // Shadow Mapping by Cass Everitt). 3.1f works well with the regression test.
   vtkSetMacro(PolygonOffsetFactor,float);
   vtkGetMacro(PolygonOffsetFactor,float);
-  
+
   // Description:
   // Factor used to scale an implementation dependent constant that relates
   // to the usable resolution of the depth buffer (definition from OpenGL 2.1
@@ -123,7 +133,7 @@ public:
   // test.
   vtkSetMacro(PolygonOffsetUnits,float);
   vtkGetMacro(PolygonOffsetUnits,float);
-  
+
  protected:
   // Description:
   // Default constructor. DelegatetPass is set to NULL.
@@ -133,45 +143,48 @@ public:
   // Destructor.
   virtual ~vtkShadowMapPass();
 
+  //BTX
   // Description:
   // Build a camera from spot light parameters.
   // \pre light_exists: light!=0
-  // \pre light_is_spotlight: light->LightTypeIsSceneLight() && light->GetPositional() && light->GetConeAngle()<180.0
+  // \pre light_is_spotlight: light->GetConeAngle()<180.0
   // \pre camera_exists: camera!=0
-  void BuildCameraLight(vtkLight *light, vtkCamera *camera);
-  
+  void BuildCameraLight(vtkLight *light, double *boundingBox, vtkCamera *lcamera);
+  //ETX
+
   // Description:
   // Build the intensity map.
   void BuildSpotLightIntensityMap();
-  
+
   // Description:
   // Check if shadow mapping is supported by the current OpenGL context.
   // \pre w_exists: w!=0
   void CheckSupport(vtkOpenGLRenderWindow *w);
-  
+
   vtkRenderPass *OpaquePass;
+  vtkRenderPass *CompositeZPass;
   unsigned int Resolution;
-  
+
   float PolygonOffsetFactor;
   float PolygonOffsetUnits;
-  
+
   // Description:
   // Graphics resources.
   vtkFrameBufferObject *FrameBufferObject;
-  
+
   vtkShadowMapPassTextures *ShadowMaps;
   vtkShadowMapPassLightCameras *LightCameras;
   vtkShaderProgram2 *Program;
-  
+
   vtkTextureObject *IntensityMap;
-  
+
 //  vtkImageGaussianSource *IntensitySource;
   vtkSampleFunction *IntensitySource;
   vtkImageExport *IntensityExporter;
   vtkImplicitHalo *Halo;
-  
+
   vtkTimeStamp LastRenderTime;
-  
+
 private:
   vtkShadowMapPass(const vtkShadowMapPass&);  // Not implemented.
   void operator=(const vtkShadowMapPass&);  // Not implemented.

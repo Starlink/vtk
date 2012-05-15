@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridToPolyDataFilter.h,v $
+  Module:    vtkUnstructuredGridToPolyDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class vtkUnstructuredGrid;
 class VTK_FILTERING_EXPORT vtkUnstructuredGridToPolyDataFilter : public vtkPolyDataSource
 {
 public:
-  vtkTypeRevisionMacro(vtkUnstructuredGridToPolyDataFilter,vtkPolyDataSource);
+  vtkTypeMacro(vtkUnstructuredGridToPolyDataFilter,vtkPolyDataSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

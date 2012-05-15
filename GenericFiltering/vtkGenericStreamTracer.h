@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericStreamTracer.h,v $
+  Module:    vtkGenericStreamTracer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -79,7 +79,7 @@ class vtkGenericDataSet;
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericStreamTracer : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericStreamTracer,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGenericStreamTracer,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

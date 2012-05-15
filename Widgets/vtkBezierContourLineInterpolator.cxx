@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBezierContourLineInterpolator.cxx,v $
+  Module:    vtkBezierContourLineInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkRenderer.h"
 #include "vtkIntArray.h"
 
-vtkCxxRevisionMacro(vtkBezierContourLineInterpolator, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkBezierContourLineInterpolator);
 
 //----------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssemblyNode.cxx,v $
+  Module:    vtkAssemblyNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkAssemblyNode, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkAssemblyNode);
 
 vtkAssemblyNode::vtkAssemblyNode()

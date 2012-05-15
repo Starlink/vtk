@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConfigure.h.in,v $
+  Module:    vtkConfigure.h.in
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,14 +53,17 @@
 # define VTK_SIZEOF_LONG   @VTK_SIZEOF_LONG@
 # define VTK_SIZEOF_FLOAT  @VTK_SIZEOF_FLOAT@
 # define VTK_SIZEOF_DOUBLE @VTK_SIZEOF_DOUBLE@
+# define VTK_SIZEOF_VOID_P @VTK_SIZEOF_VOID_P@
 #else
 # define VTK_SIZEOF_CHAR   1
 # define VTK_SIZEOF_SHORT  2
 # define VTK_SIZEOF_INT    4
 # if defined(__LP64__) && __LP64__
 #  define VTK_SIZEOF_LONG  8
+#  define VTK_SIZEOF_VOID_P 8
 # else
 #  define VTK_SIZEOF_LONG  4
+#  define VTK_SIZEOF_VOID_P 4
 # endif
 # define VTK_SIZEOF_FLOAT  4
 # define VTK_SIZEOF_DOUBLE 8
@@ -141,6 +144,21 @@
 /* Whether the Boost library is being used */
 #cmakedefine VTK_USE_BOOST
 
+/* Whether Gnu R can be used */
+#cmakedefine VTK_USE_GNU_R
+
+/* Whether the Qt files are available */
+#cmakedefine VTK_USE_QT
+
+/* Whether N-way arrays are being used */
+#cmakedefine VTK_USE_N_WAY_ARRAYS
+
+/* E.g. on BlueGene and Cray there is no multithreading */
+#cmakedefine VTK_NO_PYTHON_THREADS
+
+/* Whether the real python debug library has been provided.  */
+#cmakedefine VTK_WINDOWS_PYTHON_DEBUGGABLE
+
 /*--------------------------------------------------------------------------*/
 /* VTK Versioning                                                           */
 
@@ -188,8 +206,11 @@ typedef int vtkstd_bool;
 # endif
 #endif
 
+#cmakedefine VTK_USE_FOR_SCOPE_WORKAROUND
+ 
 /* Use the common for-scope work-around when compiling a source in VTK.  */
-#if defined(VTK_IN_VTK) && !defined(VTK_NO_WORKAROUND_FOR_SCOPE)
+/* External Projects can set VTK_USE_FOR_SCOPE_WORKAROUND to get this "fix" */ 
+#if (defined(VTK_IN_VTK) && !defined(VTK_NO_WORKAROUND_FOR_SCOPE)) || defined(VTK_USE_FOR_SCOPE_WORKAROUND)
 # define VTK_WORKAROUND_FOR_SCOPE
 #endif
 #if defined(VTK_NO_FOR_SCOPE) && defined(VTK_WORKAROUND_FOR_SCOPE)
@@ -219,5 +240,9 @@ typedef int vtkstd_bool;
    typedef unsigned __int64 vtkIOStreamULL;
 # endif
 #endif
+
+/* Set the whether we have UINTPTR_T defined in support of the GNU R interface */
+#cmakedefine HAVE_VTK_UINTPTR_T
+#define VTK_R_HOME "@VTK_R_HOME@"
 
 #endif

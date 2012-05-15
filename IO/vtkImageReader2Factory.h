@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageReader2Factory.h,v $
+  Module:    vtkImageReader2Factory.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_IO_EXPORT vtkImageReader2Factory : public vtkObject
 {
 public:
   static vtkImageReader2Factory *New();
-  vtkTypeRevisionMacro(vtkImageReader2Factory,vtkObject);
+  vtkTypeMacro(vtkImageReader2Factory,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);   
   
   //Description: register a reader with the available readers.   

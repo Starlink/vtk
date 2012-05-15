@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkSectorSource.h,v $
+Module:    vtkSectorSource.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -30,7 +30,7 @@ class VTK_GRAPHICS_EXPORT vtkSectorSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSectorSource *New();
-  vtkTypeRevisionMacro(vtkSectorSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSectorSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTriangle.h,v $
+  Module:    vtkTriangle.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,12 +26,13 @@
 
 class vtkLine;
 class vtkQuadric;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkTriangle : public vtkCell
 {
 public:
   static vtkTriangle *New();
-  vtkTypeRevisionMacro(vtkTriangle,vtkCell);
+  vtkTypeMacro(vtkTriangle,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -48,7 +49,7 @@ public:
   vtkCell *GetFace(int) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
@@ -63,10 +64,14 @@ public:
   virtual double *GetParametricCoords();
 
   // Description:
+  // A convenience function to compute the area of a vtkTriangle.
+  double ComputeArea();
+
+  // Description:
   // Clip this triangle using scalar value provided. Like contouring, except
   // that it cuts the triangle to produce other triangles.
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *polys,
+            vtkIncrementalPointLocator *locator, vtkCellArray *polys,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);
@@ -115,6 +120,7 @@ public:
 
   // Description:
   // Compute the area of a triangle in 3D.
+  // See also vtkTriangle::ComputeArea()
   static double TriangleArea(double p1[3], double p2[3], double p3[3]);
 
   // Description:

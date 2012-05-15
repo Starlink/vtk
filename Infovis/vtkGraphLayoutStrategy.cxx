@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphLayoutStrategy.cxx,v $
+  Module:    vtkGraphLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 
 #include "vtkGraph.h"
 
-vtkCxxRevisionMacro(vtkGraphLayoutStrategy, "$Revision: 1.8 $");
 
 void vtkGraphLayoutStrategy::SetGraph(vtkGraph *graph)
 {
@@ -48,6 +47,7 @@ vtkGraphLayoutStrategy::vtkGraphLayoutStrategy()
 {
   this->Graph = NULL;
   this->EdgeWeightField = NULL;
+  this->WeightEdges = false;
 }
 
 vtkGraphLayoutStrategy::~vtkGraphLayoutStrategy()
@@ -55,6 +55,49 @@ vtkGraphLayoutStrategy::~vtkGraphLayoutStrategy()
   // Unregister vtk objects that were passed in
   this->SetGraph(NULL);
   this->SetEdgeWeightField(NULL);
+}
+
+void vtkGraphLayoutStrategy::SetWeightEdges(bool state)
+{
+  // This method is a cut and paste of vtkSetMacro
+  // except for the call to Initialize at the end :)
+  if (this->WeightEdges != state) 
+    {
+    this->WeightEdges = state;
+    this->Modified();
+    if(this->Graph)
+      {
+      this->Initialize();
+      }
+    }
+}
+
+void vtkGraphLayoutStrategy::SetEdgeWeightField(const char* weights)
+{
+  // This method is a cut and paste of vtkSetStringMacro
+  // except for the call to Initialize at the end :)
+  if ( this->EdgeWeightField == NULL && weights == NULL) { return;}
+  if ( this->EdgeWeightField && weights && (!strcmp(this->EdgeWeightField,weights))) { return;}
+  if (this->EdgeWeightField) { delete [] this->EdgeWeightField; }
+  if (weights)
+    {
+    size_t n = strlen(weights) + 1;
+    char *cp1 =  new char[n];
+    const char *cp2 = (weights);
+    this->EdgeWeightField = cp1;
+    do { *cp1++ = *cp2++; } while ( --n );
+    }
+   else
+    {
+    this->EdgeWeightField = NULL;
+    }
+  
+  this->Modified();
+
+  if(this->Graph)
+    {
+    this->Initialize();
+    }
 }
 
 void vtkGraphLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
@@ -65,5 +108,6 @@ void vtkGraphLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
     {
     this->Graph->PrintSelf(os, indent.GetNextIndent());
     }
+  os << indent << "WeightEdges: " << (this->WeightEdges ? "True" : "False") << endl;
   os << indent << "EdgeWeightField: " << (this->EdgeWeightField ? this->EdgeWeightField : "(none)") << endl;
 }

@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointVolumeRayCastCompositeShadeHelper.h,v $
+  Module:    vtkFixedPointVolumeRayCastCompositeShadeHelper.h
   Language:  C++
-  Date:      $Date: 2008-06-16 08:27:56 $
-  Version:   $Revision: 1.2 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) 1993-2002 Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkFixedPointVolumeRayCastCompositeShadeHelper 
 {
 public:
   static vtkFixedPointVolumeRayCastCompositeShadeHelper *New();
-  vtkTypeRevisionMacro(vtkFixedPointVolumeRayCastCompositeShadeHelper,vtkFixedPointVolumeRayCastHelper);
+  vtkTypeMacro(vtkFixedPointVolumeRayCastCompositeShadeHelper,vtkFixedPointVolumeRayCastHelper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   virtual void  GenerateImage( int threadID, 

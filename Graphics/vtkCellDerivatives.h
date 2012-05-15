@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellDerivatives.h,v $
+  Module:    vtkCellDerivatives.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@
 class VTK_GRAPHICS_EXPORT vtkCellDerivatives : public vtkDataSetAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkCellDerivatives,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkCellDerivatives,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

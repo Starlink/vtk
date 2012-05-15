@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEncodedGradientEstimator.cxx,v $
+  Module:    vtkEncodedGradientEstimator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkEncodedGradientEstimator, "$Revision: 1.2 $");
 
 vtkCxxSetObjectMacro(vtkEncodedGradientEstimator, Input, vtkImageData );
 

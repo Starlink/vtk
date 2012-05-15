@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderedAreaPicker.h,v $
+  Module:    vtkRenderedAreaPicker.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_RENDERING_EXPORT vtkRenderedAreaPicker : public vtkAreaPicker
 {
 public:
   static vtkRenderedAreaPicker *New();
-  vtkTypeRevisionMacro(vtkRenderedAreaPicker,vtkAreaPicker);
+  vtkTypeMacro(vtkRenderedAreaPicker,vtkAreaPicker);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

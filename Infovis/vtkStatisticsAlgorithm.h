@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkStatisticsAlgorithm.h,v $
+Module:    vtkStatisticsAlgorithm.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -26,11 +26,18 @@ PURPOSE.  See the above copyright notice for more information.
 // * Derive: given an input minimal statistical model, derive the full model 
 //   (e.g., descriptive statistics, quantiles, correlations, conditional
 //    probabilities).
+//   NB: It may be, or not be, a problem that a full model was not derived. For
+//   instance, when doing parallel calculations, one only wants to derive the full
+//   model after all partial calculations have completed. On the other hand, one
+//   can also directly provide a full model, that was previously calculated or
+//   guessed, and not derive a new one.
 // * Assess: given an input data set, input statistics, and some form of 
-//   threshold, assess a subset of the data set. 
+//   threshold, assess a subset of the data set.
+// * Test: perform at least one statistical test.
 // Therefore, a vtkStatisticsAlgorithm has the following vtkTable ports
-// * 2 input ports:
+// * 3 input ports:
 //   * Data (mandatory)
+//   * Parameters to the learn phase (optional)
 //   * Input model (optional) 
 // * 3 output port (called Output):
 //   * Data (annotated with assessments when the Assess option is ON).
@@ -47,82 +54,98 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkTableAlgorithm.h"
 
+class vtkDataObjectCollection;
 class vtkStdString;
 class vtkStringArray;
+class vtkVariant;
 class vtkVariantArray;
 class vtkStatisticsAlgorithmPrivate;
 
 class VTK_INFOVIS_EXPORT vtkStatisticsAlgorithm : public vtkTableAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkStatisticsAlgorithm, vtkTableAlgorithm);
+  vtkTypeMacro(vtkStatisticsAlgorithm, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
+  
+//BTX
+  // Description:
+  // enumeration values to specify input port types
+  enum InputPorts
+    {
+    INPUT_DATA = 0,         //!< Port 0 is for learn data
+    LEARN_PARAMETERS = 1,   //!< Port 1 is for learn parameters (initial guesses, etc.)
+    INPUT_MODEL = 2         //!< Port 2 is for a priori models
+    };
 
   // Description:
-  // A convenience method for setting the statistics table input.
-  // NB: This is mainly for the benefit of the VTK client/server 
-  // layer, vanilla VTKcode should use, e.g:
-  //
-  // stats_algo2->SetInputConnection( 1, stats_algo1->output() );
-  //
-  virtual void SetInputStatisticsConnection( vtkAlgorithmOutput* );
+  // enumeration values to specify output port types
+  enum OutputIndices
+    {
+    OUTPUT_DATA  = 0,       //!< Output 0 mirrors the input data, plus optional assessment columns
+    OUTPUT_MODEL = 1,       //!< Output 1 contains any generated model
+    ASSESSMENT   = 2,       //!< This is an old, deprecated name for OUTPUT_TEST.
+    OUTPUT_TEST  = 2        //!< Output 2 contains result of statistical test(s)
+    };
+//ETX
 
   // Description:
-  // Set the number of variables.
-  vtkSetMacro( NumberOfVariables, vtkIdType );
+  // A convenience method for setting learn input parameters (if one is expected or allowed).
+  // It is equivalent to calling SetInputConnection( 1, params );
+  virtual void SetLearnOptionParameterConnection( vtkAlgorithmOutput* params )
+    { this->SetInputConnection( vtkStatisticsAlgorithm::LEARN_PARAMETERS, params ); }
 
   // Description:
-  // Get the number of variables.
-  vtkGetMacro( NumberOfVariables, vtkIdType );
+  // A convenience method for setting learn input parameters (if one is expected or allowed).
+  // It is equivalent to calling SetInput( 1, params );
+  virtual void SetLearnOptionParameters( vtkDataObject* params )
+    { this->SetInput( vtkStatisticsAlgorithm::LEARN_PARAMETERS, params ); }
 
   // Description:
-  // Set the sample size.
-  vtkSetMacro( SampleSize, vtkIdType );
+  // A convenience method for setting the input model connection (if one is expected or allowed).
+  // It is equivalent to calling SetInputConnection( 2, model );
+  virtual void SetInputModelConnection( vtkAlgorithmOutput* model )
+    { this->SetInputConnection( vtkStatisticsAlgorithm::INPUT_MODEL, model ); }
 
   // Description:
-  // Get the sample size.
-  vtkGetMacro( SampleSize, vtkIdType );
+  // A convenience method for setting the input model (if one is expected or allowed).
+  // It is equivalent to calling SetInput( 2, model );
+  virtual void SetInputModel( vtkDataObject* model )
+    { this->SetInput( vtkStatisticsAlgorithm::INPUT_MODEL, model ); }
 
   // Description:
-  // Set the Learn option.
-  vtkSetMacro( Learn, bool );
+  // Set/Get the Learn option.
+  vtkSetMacro( LearnOption, bool );
+  vtkGetMacro( LearnOption, bool );
 
   // Description:
-  // Get the Learn option.
-  vtkGetMacro( Learn, bool );
+  // Set/Get the Derive option.
+  vtkSetMacro( DeriveOption, bool );
+  vtkGetMacro( DeriveOption, bool );
 
   // Description:
-  // Set the Derive option.
-  vtkSetMacro( Derive, bool );
+  // Set/Get the Assess option.
+  vtkSetMacro( AssessOption, bool );
+  vtkGetMacro( AssessOption, bool );
 
   // Description:
-  // Get the Derive option.
-  vtkGetMacro( Derive, bool );
+  // Set/Get the Test option.
+  vtkSetMacro( TestOption, bool );
+  vtkGetMacro( TestOption, bool );
 
   // Description:
-  // Set the Assess option.
-  vtkSetMacro( Assess, bool );
+  // Set/get assessment parameters.
+  virtual void SetAssessParameters( vtkStringArray* );
+  vtkGetObjectMacro(AssessParameters,vtkStringArray);
 
   // Description:
-  // Get the Assess option.
-  vtkGetMacro( Assess, bool );
-
-  // Description:
-  // Let the user know whether the full statistical model (when available) was
-  // indeed derived from the underlying minimal model.
-  // NB: It may be, or not be, a problem that a full model was not derived. For
-  // instance, when doing parallel calculations, one only wants to derive the full
-  // model after all partial calculations have completed. On the other hand, one
-  // can also directly provide a full model, that was previously calculated or
-  // guessed, and not derive a new one; in this case, IsFullModelDerived() will
-  // always return false, but this does not mean that the full model is invalid 
-  // (nor does it mean that it is valid).
-  virtual int IsFullModelDerived() {return this->FullWasDerived;}
+  // Set/get assessment names.
+  virtual void SetAssessNames( vtkStringArray* );
+  vtkGetObjectMacro(AssessNames,vtkStringArray);
 
 //BTX
   // Description:
   // Set the name of a parameter of the Assess option
-  void SetAssessParameter( vtkIdType id, vtkStdString name );
+  void SetAssessOptionParameter( vtkIdType id, vtkStdString name );
 
   // Description:
   // Get the name of a parameter of the Assess option
@@ -136,13 +159,6 @@ public:
                               vtkIdType ) = 0;
     virtual ~AssessFunctor() { }
   };
-
-  // Description:
-  // A pure virtual method to select the appropriate assessment functor.
-  virtual void SelectAssessFunctor( vtkTable* outData, 
-                                    vtkDataObject* inMeta,
-                                    vtkStringArray* rowNames,
-                                    AssessFunctor*& dfunc ) = 0;
 //ETX
 
   // Description:
@@ -172,6 +188,52 @@ public:
   // Empty the list of current requests.
   virtual void ResetRequests();
 
+  // Description:
+  // Return the number of requests.
+  // This does not include any request that is in the column-status buffer
+  // but for which RequestSelectedColumns() has not yet been called (even though
+  // it is possible this request will be honored when the filter is run -- see SetColumnStatus()
+  // for more information).
+  virtual vtkIdType GetNumberOfRequests();
+
+  // Description:
+  // Return the number of columns for a given request.
+  virtual vtkIdType GetNumberOfColumnsForRequest( vtkIdType request );
+
+  // Description:
+  // Provide the name of the \a c-th column for the \a r-th request.
+  //
+  // For the version of this routine that returns an integer,
+  // if the request or column does not exist because \a r or \a c is out of bounds,
+  // this routine returns 0 and the value of \a columnName is unspecified.
+  // Otherwise, it returns 1 and the value of \a columnName is set.
+  //
+  // For the version of this routine that returns const char*,
+  // if the request or column does not exist because \a r or \a c is out of bounds,
+  // the routine returns NULL. Otherwise it returns the column name.
+  // This version is not thread-safe.
+  virtual const char* GetColumnForRequest( vtkIdType r, vtkIdType c );
+  //BTX
+  virtual int GetColumnForRequest( vtkIdType r, vtkIdType c, vtkStdString& columnName );
+  //ETX
+
+//BTX  
+  // Description:
+  // A convenience method (in particular for access from other applications) to 
+  // set parameter values of Learn mode.
+  // Return true if setting of requested parameter name was excuted, false otherwise.
+  // NB: default method (which is sufficient for most statistics algorithms) does not
+  // have any Learn parameters to set and always returns false. 
+  virtual bool SetParameter( const char* parameter,
+                             int index,
+                             vtkVariant value );
+//ETX
+
+  // Description:
+  // Given a collection of models, calculate aggregate model
+  virtual void Aggregate( vtkDataObjectCollection*,
+                          vtkDataObject* ) = 0;
+
 protected:
   vtkStatisticsAlgorithm();
   ~vtkStatisticsAlgorithm();
@@ -185,21 +247,41 @@ protected:
     vtkInformationVector* );
 
   // Description:
-  // Execute the required calculations in the specified execution modes
-  virtual void ExecuteLearn( vtkTable*,
-                             vtkDataObject* ) = 0;
-  virtual void ExecuteDerive( vtkDataObject* ) = 0;
-  virtual void ExecuteAssess( vtkTable*,
-                              vtkDataObject*,
-                              vtkTable*,
-                              vtkDataObject* ) = 0; 
+  // Execute the calculations required by the Learn option, given some input Data
+  // NB: input parameters are unused.
+  virtual void Learn( vtkTable*,
+                      vtkTable*,
+                      vtkDataObject* ) = 0;
 
-  vtkIdType NumberOfVariables;
-  vtkIdType SampleSize;
-  bool Learn;
-  bool Derive;
-  bool Assess;
-  bool FullWasDerived;
+  // Description:
+  // Execute the calculations required by the Derive option.
+  virtual void Derive( vtkDataObject* ) = 0;
+
+  // Description:
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable*,
+                       vtkDataObject*,
+                       vtkTable* ) = 0; 
+
+  // Description:
+  // Execute the calculations required by the Test option.
+  virtual void Test( vtkTable*,
+                     vtkDataObject*,
+                     vtkDataObject* ) = 0; 
+
+  //BTX
+  // Description:
+  // A pure virtual method to select the appropriate assessment functor.
+  virtual void SelectAssessFunctor( vtkTable* outData, 
+                                    vtkDataObject* inMeta,
+                                    vtkStringArray* rowNames,
+                                    AssessFunctor*& dfunc ) = 0;
+  //ETX
+
+  bool LearnOption;
+  bool DeriveOption;
+  bool AssessOption;
+  bool TestOption;
   vtkStringArray* AssessParameters;
   vtkStringArray* AssessNames;
   vtkStatisticsAlgorithmPrivate* Internals;
@@ -210,4 +292,3 @@ private:
 };
 
 #endif
-

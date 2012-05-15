@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLActor.h,v $
+  Module:    vtkOpenGLActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ protected:
   
 public:
   static vtkOpenGLActor *New();
-  vtkTypeRevisionMacro(vtkOpenGLActor,vtkActor);
+  vtkTypeMacro(vtkOpenGLActor,vtkActor);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

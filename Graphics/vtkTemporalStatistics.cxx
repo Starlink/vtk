@@ -2,7 +2,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalStatistics.cxx,v $
+  Module:    vtkTemporalStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,6 @@
 #include <vtkstd/algorithm>
 
 //=============================================================================
-vtkCxxRevisionMacro(vtkTemporalStatistics, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkTemporalStatistics);
 
 //=============================================================================
@@ -236,8 +235,6 @@ int vtkTemporalStatistics::RequestDataObject(
   if (newOutput)
     {
     newOutput->SetPipelineInformation(outInfo);
-    this->GetOutputPortInformation(0)->Set(vtkDataObject::DATA_EXTENT_TYPE(),
-                                           newOutput->GetExtentType());
     }
 
   return 1;

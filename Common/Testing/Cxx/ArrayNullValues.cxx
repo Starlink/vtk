@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayNullValues.cxx,v $
+  Module:    ArrayNullValues.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -58,7 +58,7 @@ void VerifyType(const T& DefaultNull, const T& AlternateNull)
     }
 }
 
-int ArrayNullValues(int argc, char* argv[])
+int ArrayNullValues(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {

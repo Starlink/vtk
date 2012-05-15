@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPExodusReader.cxx,v $
+  Module:    vtkPExodusReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@
 #include "vtkCommand.h"
 
 #include "netcdf.h"
-#include "exodusII.h"
+#include "vtkExodusII.h"
 #include <sys/stat.h>
 #include <ctype.h>
 #include <vtkstd/vector>
@@ -52,7 +52,6 @@
 #define DEBUG 0
 #define vtkPExodusReaderMAXPATHLEN 2048
 
-vtkCxxRevisionMacro(vtkPExodusReader, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkPExodusReader);
 
 class vtkPExodusReaderUpdateProgress : public vtkCommand

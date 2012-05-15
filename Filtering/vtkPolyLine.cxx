@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyLine.cxx,v $
+  Module:    vtkPolyLine.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,8 +20,10 @@
 #include "vtkDoubleArray.h"
 #include "vtkLine.h"
 #include "vtkPoints.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkPolyLine, "$Revision: 1.5 $");
+#include <vtkstd/algorithm>
+
 vtkStandardNewMacro(vtkPolyLine);
 
 //----------------------------------------------------------------------------
@@ -276,12 +278,13 @@ int vtkPolyLine::EvaluatePosition(double x[3], double* closestPoint,
   double closest[3];
   double pc[3], dist2;
   int ignoreId, i, return_status, status;
-  double lineWeights[2];
+  double lineWeights[2], closestWeights[2];
 
   pcoords[1] = pcoords[2] = 0.0;
 
   return_status = 0;
-  weights[0] = 0.0;
+  subId = -1;
+  closestWeights[0] = closestWeights[1] = 0.0;  // Shut up, compiler
   for (minDist2=VTK_DOUBLE_MAX,i=0; i<this->Points->GetNumberOfPoints()-1; i++)
     {
     this->Line->Points->SetPoint(0,this->Points->GetPoint(i));
@@ -300,13 +303,16 @@ int vtkPolyLine::EvaluatePosition(double x[3], double* closestPoint,
       minDist2 = dist2;
       subId = i;
       pcoords[0] = pc[0];
-      weights[i] = lineWeights[0];
-      weights[i+1] = lineWeights[1];
+      closestWeights[0] = lineWeights[0];
+      closestWeights[1] = lineWeights[1];
       }
-    else
-      {
-      weights[i+1] = 0.0;
-      }
+    }
+
+  vtkstd::fill_n(weights, this->Points->GetNumberOfPoints(), 0.0);
+  if (subId >= 0)
+    {
+    weights[subId] = closestWeights[0];
+    weights[subId+1] = closestWeights[1];
     }
 
   return return_status;
@@ -364,7 +370,7 @@ int vtkPolyLine::CellBoundary(int subId, double pcoords[3], vtkIdList *pts)
 
 //----------------------------------------------------------------------------
 void vtkPolyLine::Contour(double value, vtkDataArray *cellScalars,
-                          vtkPointLocator *locator, vtkCellArray *verts, 
+                          vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                           vtkCellArray *lines, vtkCellArray *polys, 
                           vtkPointData *inPd, vtkPointData *outPd,
                           vtkCellData *inCd, vtkIdType cellId,
@@ -451,7 +457,7 @@ void vtkPolyLine::Derivatives(int subId, double pcoords[3], double *values,
 
 //----------------------------------------------------------------------------
 void vtkPolyLine::Clip(double value, vtkDataArray *cellScalars, 
-                       vtkPointLocator *locator, vtkCellArray *lines,
+                       vtkIncrementalPointLocator *locator, vtkCellArray *lines,
                        vtkPointData *inPd, vtkPointData *outPd,
                        vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
                        int insideOut)

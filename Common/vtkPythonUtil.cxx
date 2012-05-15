@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPythonUtil.cxx,v $
+  Module:    vtkPythonUtil.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,10 @@
 // warnings.  Python documentation says these should not be necessary.
 // We define it as a macro in case the length needs to change across
 // python versions.
-#if   PY_VERSION_HEX >= 0x02030000
+#if   PY_VERSION_HEX >= 0x02060000 // for tp_version_tag
+#define VTK_PYTHON_UTIL_SUPRESS_UNINITIALIZED \
+  0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0, 0,
+#elif   PY_VERSION_HEX >= 0x02030000
 #define VTK_PYTHON_UTIL_SUPRESS_UNINITIALIZED \
   0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,
 #elif PY_VERSION_HEX >= 0x02020000
@@ -459,6 +462,10 @@ static PyBufferProcs array_as_buffer = {
   (writebufferproc)array_getwritebuf,  /*bf_getwritebuffer*/
   (segcountproc)array_getsegcount,            /*bf_getsegcount*/
   (charbufferproc)array_getcharbuf,    /*bf_getcharbuffer*/
+  #if PY_VERSION_HEX >= 0x02060000
+   (getbufferproc)0, /* bf_getbuffer */
+   (releasebufferproc)0 /* bf_releasebuffer */
+  #endif
 #else
   (getreadbufferproc)array_getreadbuf,    /*bf_getreadbuffer*/
   (getwritebufferproc)array_getwritebuf,  /*bf_getwritebuffer*/
@@ -1607,7 +1614,7 @@ PyObject *vtkPythonGetObjectFromObject(PyObject *arg, const char *type)
       }      
     if (i <= 0)
       {
-      i = sscanf(ptrText,"%lx",(long *)&ptr);
+      i = sscanf(ptrText,"%p",&ptr);
       }
     if (i <= 0)
       {
@@ -1647,21 +1654,38 @@ void *vtkPythonUnmanglePointer(char *ptrText, int *len, const char *type)
 {
   int i; 
   void *ptr;
-  char typeCheck[128];
-  if (*len < 128)
+  char typeCheck[256];
+  typeCheck[0] = '\0';
+
+  // Do some minimal checks that it might be a swig pointer.
+  if (*len < 256 && *len > 4 && ptrText[0] == '_')
     {
-    i = sscanf(ptrText,"_%lx_%s",(long *)&ptr,typeCheck);
-    if (strcmp(type,typeCheck) == 0)
-      { // sucessfully unmangle
-      *len = 0;
-      return ptr;
+    // Verify that this is a terminated string
+    for (i = *len-1; i >= 0; --i)
+      {
+      if (ptrText[i] == '\0')
+        {
+        break;
+        }
       }
-    else if (i == 2)
-      { // mangled pointer of wrong type
-      *len = -1;
-      return NULL;
+
+    // If the string is terminated, do a full check for a swig pointer
+    if (i >= 0)
+      {
+      i = sscanf(ptrText,"_%lx_%s",(long *)&ptr,typeCheck);
+      if (strcmp(type,typeCheck) == 0)
+        { // sucessfully unmangle
+        *len = 0;
+        return ptr;
+        }
+      else if (i == 2)
+        { // mangled pointer of wrong type
+        *len = -1;
+        return NULL;
+        }
       }
     }
+
   // couldn't unmangle: return string as void pointer if it didn't look
   // like a SWIG mangled pointer
   return (void *)ptrText;
@@ -1957,6 +1981,7 @@ void vtkPythonVoidFuncArgDelete(void *arg)
 vtkPythonCommand::vtkPythonCommand()
 { 
   this->obj = NULL;
+  this->ThreadState = NULL;
 }
 
 vtkPythonCommand::~vtkPythonCommand()
@@ -1971,6 +1996,11 @@ vtkPythonCommand::~vtkPythonCommand()
 void vtkPythonCommand::SetObject(PyObject *o)
 { 
   this->obj = o; 
+}
+
+void vtkPythonCommand::SetThreadState(PyThreadState *ts)
+{ 
+  this->ThreadState = ts; 
 }
 
 void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
@@ -1994,6 +2024,15 @@ void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
 #endif
 #endif
   
+  // If a threadstate has been set using vtkPythonCommand::SetThreadState,
+  // then swap it in here.  See the email to vtk-developers@vtk.org from
+  // June 18, 2009 with subject "Py_NewInterpreter and vtkPythonCallback issue"
+  PyThreadState* prevThreadState = NULL;
+  if (this->ThreadState)
+    {
+    prevThreadState = PyThreadState_Swap(this->ThreadState);
+    }
+
   if (ptr && ptr->GetReferenceCount() > 0)
     {
     obj2 = vtkPythonGetObjectFromPointer(ptr);
@@ -2086,6 +2125,12 @@ void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
       Py_Exit(1);
       }
     PyErr_Print();
+    }
+
+  // If we did the swap near the top of this function then swap back now.
+  if (this->ThreadState)
+    {
+    PyThreadState_Swap(prevThreadState);
     }
 
 #ifndef VTK_NO_PYTHON_THREADS

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCircularLayoutStrategy.h,v $
+  Module:    vtkCircularLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_INFOVIS_EXPORT vtkCircularLayoutStrategy : public vtkGraphLayoutStrate
 public:
   static vtkCircularLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkCircularLayoutStrategy, vtkGraphLayoutStrategy);
+  vtkTypeMacro(vtkCircularLayoutStrategy, vtkGraphLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

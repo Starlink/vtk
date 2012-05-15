@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScaledTextActor.cxx,v $
+  Module:    vtkScaledTextActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkScaledTextActor.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkScaledTextActor, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkScaledTextActor);
 
 vtkScaledTextActor::vtkScaledTextActor()

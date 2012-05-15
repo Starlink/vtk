@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSightWriter.h,v $
+  Module:    vtkEnSightWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ class VTK_PARALLEL_EXPORT vtkEnSightWriter : public vtkWriter
 {
 
 public:
-  vtkTypeRevisionMacro(vtkEnSightWriter,vtkWriter);
+  vtkTypeMacro(vtkEnSightWriter,vtkWriter);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

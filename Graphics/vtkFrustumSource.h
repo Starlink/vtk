@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFrustumSource.h,v $
+  Module:    vtkFrustumSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_GRAPHICS_EXPORT vtkFrustumSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkFrustumSource *New();
-  vtkTypeRevisionMacro(vtkFrustumSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkFrustumSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -62,6 +62,10 @@ public:
   // Initial value is 1.0.
   vtkGetMacro(LinesLength,double);
   vtkSetMacro(LinesLength,double);
+  
+  // Description:
+  // Modified GetMTime because of Planes.
+  unsigned long GetMTime();
   
 protected:
   // Description:

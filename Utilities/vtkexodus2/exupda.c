@@ -42,7 +42,7 @@
 *
 * exit conditions - 
 *
-*  $Id: exupda.c,v 1.3 2009-01-16 14:32:03 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -65,7 +65,7 @@ int ex_update (int exoid)
     exerrval = status;
     sprintf(errmsg,
             "Error: failed to update file id %d",
-	    exoid);
+            exoid);
     ex_err("ex_update",errmsg,exerrval);
     return (EX_FATAL);
   }

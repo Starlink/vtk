@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCameraActor.h,v $
+  Module:    vtkCameraActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,12 +29,13 @@ class vtkCamera;
 class vtkFrustumSource;
 class vtkPolyDataMapper;
 class vtkActor;
+class vtkProperty;
 
 class VTK_RENDERING_EXPORT vtkCameraActor : public vtkProp3D
 {
 public:
   static vtkCameraActor *New();
-  vtkTypeRevisionMacro(vtkCameraActor,vtkProp3D);
+  vtkTypeMacro(vtkCameraActor,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -69,6 +70,14 @@ public:
   // Description:
   // Get the actors mtime plus consider its properties and texture if set.
   unsigned long int GetMTime();
+  
+  // Description:
+  // Get property of the internal actor.
+  vtkProperty *GetProperty();
+
+  // Description:
+  // Set property of the internal actor.
+  void SetProperty(vtkProperty *p);
   
 protected:
   vtkCameraActor();

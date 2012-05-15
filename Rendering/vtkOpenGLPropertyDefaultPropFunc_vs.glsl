@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkOpenGLPropertyDefaultPropFunc_vs.glsl,v $
+//  Module:    vtkOpenGLPropertyDefaultPropFunc_vs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -14,6 +14,8 @@
 // ============================================================================
 
 // Default vertex shader used on property.
+
+#version 110
 
 void propFuncVS()
 {

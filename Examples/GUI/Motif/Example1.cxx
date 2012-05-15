@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: Example1.cxx,v $
+  Module:    Example1.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -72,7 +72,7 @@ int main (int argc, char *argv[])
   // do the xwindow ui stuff
   XtSetLanguageProc(NULL,NULL,NULL);
   toplevel = XtVaAppInitialize(&app,"Sample",NULL,0,
-    &argc,argv,NULL, NULL);
+                               &argc,argv,NULL, static_cast<void *>(NULL));
 
   // get the display connection and give it to the renderer
   display = XtDisplay(toplevel);
@@ -85,10 +85,10 @@ int main (int argc, char *argv[])
   iren->Initialize(app);
 
   button = XtVaCreateManagedWidget("Exit",
-    xmPushButtonWidgetClass,
-    toplevel,
-    XmNwidth, 50,
-    XmNheight, 50, NULL);
+                                   xmPushButtonWidgetClass,
+                                   toplevel,
+                                   XmNwidth, 50,
+                                   XmNheight, 50, static_cast<void *>(NULL));
 
   XtRealizeWidget(toplevel);
   XtAddCallback(button,XmNactivateCallback,quit_cb,NULL);

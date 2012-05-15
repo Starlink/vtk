@@ -1,6 +1,9 @@
 from vtk import *
+import os.path
 
 data_dir = "../../../../VTKData/Data/Infovis/SQLite/"
+if not os.path.exists(data_dir):
+  data_dir = "../../../../../VTKData/Data/Infovis/SQLite/"
 sqlite_file = data_dir + "temperatures.db"
 
 # Pull the table from the database
@@ -47,7 +50,7 @@ print "# Finally, calculate correlation and linear regression:"
 cs = vtkCorrelativeStatistics()
 cs.AddInputConnection(databaseToTable.GetOutputPort())
 cs.AddColumnPair("Temp1","Temp2")
-cs.SetAssess(1)
+cs.SetAssessOption(1)
 cs.Update()
 
 cStats = cs.GetOutput(1)

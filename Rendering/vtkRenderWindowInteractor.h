@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderWindowInteractor.h,v $
+  Module:    vtkRenderWindowInteractor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -65,7 +65,7 @@ class VTK_RENDERING_EXPORT vtkRenderWindowInteractor : public vtkObject
   //ETX
 public:
   static vtkRenderWindowInteractor *New();
-  vtkTypeRevisionMacro(vtkRenderWindowInteractor,vtkObject);
+  vtkTypeMacro(vtkRenderWindowInteractor,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -191,6 +191,7 @@ public:
 
   // Description:
   // Turn on/off the automatic repositioning of lights as the camera moves.
+  // Default is On.
   vtkSetMacro(LightFollowCamera,int);
   vtkGetMacro(LightFollowCamera,int);
   vtkBooleanMacro(LightFollowCamera,int);
@@ -199,18 +200,21 @@ public:
   // Set/Get the desired update rate. This is used by vtkLODActor's to tell
   // them how quickly they need to render.  This update is in effect only
   // when the camera is being rotated, or zoomed.  When the interactor is
-  // still, the StillUpdateRate is used instead.
+  // still, the StillUpdateRate is used instead. 
+  // The default is 15.
   vtkSetClampMacro(DesiredUpdateRate,double,0.0001,VTK_LARGE_FLOAT);
   vtkGetMacro(DesiredUpdateRate,double);
 
   // Description:
   // Set/Get the desired update rate when movement has stopped.
-  // See the SetDesiredUpdateRate method.
+  // For the non-still update rate, see the SetDesiredUpdateRate method.
+  // The default is 0.0001
   vtkSetClampMacro(StillUpdateRate,double,0.0001,VTK_LARGE_FLOAT);
   vtkGetMacro(StillUpdateRate,double);
 
   // Description:
   // See whether interactor has been initialized yet.
+  // Default is 0.
   vtkGetMacro(Initialized,int);
 
   // Description:
@@ -285,7 +289,8 @@ public:
   {
     vtkDebugMacro(<< this->GetClassName() << " (" << this 
                   << "): setting EventPosition to (" << x << "," << y << ")");
-    if (this->EventPosition[0] != x || this->EventPosition[1] != y)
+    if (this->EventPosition[0] != x || this->EventPosition[1] != y ||
+        this->LastEventPosition[0] != x || this->LastEventPosition[1] != y)
       {
       this->LastEventPosition[0] = this->EventPosition[0];
       this->LastEventPosition[1] = this->EventPosition[1];
@@ -412,6 +417,16 @@ public:
   // the particular request (default versus non-default cursor shape).
   vtkObserverMediator *GetObserverMediator();
 
+  // Description:
+  // Use a 3DConnexion device. Initial value is false.
+  // If VTK is not build with the TDx option, this is no-op.
+  // If VTK is build with the TDx option, and a device is not connected,
+  // a warning is emitted.
+  // It is must be called before the first Render to be effective, otherwise
+  // it is ignored.
+  vtkSetMacro(UseTDx,bool);
+  vtkGetMacro(UseTDx,bool);
+  
 protected:
   vtkRenderWindowInteractor();
   ~vtkRenderWindowInteractor();
@@ -489,6 +504,8 @@ protected:
   // overrides. (Overrides are registered by observing StartEvent on the 
   // interactor.)
   int HandleEventLoop;
+  
+  bool UseTDx; // 3DConnexion device.
   
 private:
   vtkRenderWindowInteractor(const vtkRenderWindowInteractor&);  // Not implemented.

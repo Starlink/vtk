@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageReader2Factory.cxx,v $
+  Module:    vtkImageReader2Factory.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkImageReader2Factory.h"
 
+#include "vtkToolkits.h" // VTK_USE_METAIO
 #include "vtkBMPReader.h"
 #include "vtkGESignaReader.h"
 #include "vtkImageReader2.h"
@@ -35,7 +36,6 @@
 // until after the AvailableReaders singleton has been destroyed.
 #include "vtkFilteringInformationKeyManager.h"
 
-vtkCxxRevisionMacro(vtkImageReader2Factory, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkImageReader2Factory);
 
 class vtkImageReader2FactoryCleanup

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDEMReader.h,v $
+  Module:    vtkDEMReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_IO_EXPORT vtkDEMReader : public vtkImageAlgorithm
 {
 public:
   static vtkDEMReader *New();
-  vtkTypeRevisionMacro(vtkDEMReader,vtkImageAlgorithm);
+  vtkTypeMacro(vtkDEMReader,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleCellTessellator.cxx,v $
+  Module:    vtkSimpleCellTessellator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -371,7 +371,6 @@ static int TRIANGLE_VERTEX_STATE[3]={5,  // 1 0 1
                                      3,  // 0 1 1
                                      6}; // 1 1 0
 
-vtkCxxRevisionMacro(vtkSimpleCellTessellator, "$Revision: 1.25 $");
 vtkStandardNewMacro(vtkSimpleCellTessellator);
 //-----------------------------------------------------------------------------
 //

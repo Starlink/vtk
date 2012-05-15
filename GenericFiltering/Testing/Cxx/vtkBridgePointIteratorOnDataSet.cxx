@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBridgePointIteratorOnDataSet.cxx,v $
+  Module:    vtkBridgePointIteratorOnDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkBridgeDataSet.h"
 #include "vtkDataSet.h"
 
-vtkCxxRevisionMacro(vtkBridgePointIteratorOnDataSet, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkBridgePointIteratorOnDataSet);
 
 //-----------------------------------------------------------------------------

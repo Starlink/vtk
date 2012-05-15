@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporter.h,v $
+  Module:    vtkX3DExporter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtX3DExporter - create an x3d file
+// .NAME vtkX3DExporter - create an x3d file
 // .SECTION Description
 // vtkX3DExporter is a render window exporter which writes out the renderered
 // scene into an X3D file. X3D is an XML-based format for representation 
@@ -20,6 +20,7 @@
 // details.
 // .SECTION Thanks
 // X3DExporter is contributed by Christophe Mouton at EDF.
+
 #ifndef __vtkX3DExporter_h
 #define __vtkX3DExporter_h
 
@@ -38,7 +39,7 @@ class VTK_HYBRID_EXPORT vtkX3DExporter : public vtkExporter
 {
 public:
   static vtkX3DExporter *New();
-  vtkTypeRevisionMacro(vtkX3DExporter,vtkExporter);
+  vtkTypeMacro(vtkX3DExporter,vtkExporter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

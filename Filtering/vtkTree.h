@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTree.h,v $
+  Module:    vtkTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class VTK_FILTERING_EXPORT vtkTree : public vtkDirectedAcyclicGraph
 {
 public:
   static vtkTree *New();
-  vtkTypeRevisionMacro(vtkTree, vtkDirectedAcyclicGraph);
+  vtkTypeMacro(vtkTree, vtkDirectedAcyclicGraph);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -84,14 +84,16 @@ public:
 
   // Description:
   // Get the edge connecting the vertex to its parent.
+//BTX
   vtkEdgeType GetParentEdge(vtkIdType v);
+//ETX
 
   // Description:
   // Get the level of the vertex in the tree.  The root vertex has level 0.
   // Returns -1 if the vertex id is < 0 or greater than the number of vertices
   // in the tree.
   vtkIdType GetLevel(vtkIdType v);
-  
+
   // Description:
   // Return whether the vertex is a leaf (i.e. it has no children).
   bool IsLeaf(vtkIdType vertex);

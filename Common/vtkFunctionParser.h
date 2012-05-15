@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFunctionParser.h,v $
+  Module:    vtkFunctionParser.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -116,7 +116,7 @@ class VTK_COMMON_EXPORT vtkFunctionParser : public vtkObject
 {
 public:
   static vtkFunctionParser *New();
-  vtkTypeRevisionMacro(vtkFunctionParser, vtkObject);
+  vtkTypeMacro(vtkFunctionParser, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Decription:
@@ -249,11 +249,12 @@ protected:
   int IsElementaryOperator(int op);
   
   int GetMathFunctionNumber(int currentIndex);
+  int GetMathFunctionNumberByCheckingParenthesis( int currentIndex );
   int GetMathFunctionStringLength(int mathFunctionNumber);
   int GetMathConstantNumber(int currentIndex);
   int GetMathConstantStringLength(int mathConstantNumber);
-  int GetElementaryOperatorNumber(char op);
-  int GetOperandNumber(int currentIndex);
+  unsigned char GetElementaryOperatorNumber(char op);
+  unsigned char GetOperandNumber(int currentIndex);
   int GetVariableNameLength(int variableNumber);
   
   int DisambiguateOperators();

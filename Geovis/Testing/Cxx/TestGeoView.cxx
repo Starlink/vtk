@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestGeoView.cxx,v $
+  Module:    TestGeoView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,14 +22,14 @@
 #include "vtkCamera.h"
 #include "vtkGeoAlignedImageRepresentation.h"
 #include "vtkGeoAlignedImageSource.h"
+#include "vtkGeoEdgeStrategy.h"
 #include "vtkGeoFileImageSource.h"
 #include "vtkGeoFileTerrainSource.h"
 #include "vtkGeoGlobeSource.h"
-#include "vtkGeoGraphRepresentation.h"
-#include "vtkGeoGraphRepresentation2D.h"
 #include "vtkGeoProjection.h"
 #include "vtkGeoProjectionSource.h"
 #include "vtkGeoRandomGraphSource.h"
+#include "vtkGeoSphereTransform.h"
 #include "vtkGeoTerrain.h"
 #include "vtkGeoTerrainNode.h"
 #include "vtkGeoTerrain2D.h"
@@ -39,6 +39,7 @@
 #include "vtkGraphLayoutView.h"
 #include "vtkJPEGReader.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderedGraphRepresentation.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -48,6 +49,8 @@
 #include "vtkTIFFReader.h"
 #include "vtkViewTheme.h"
 #include "vtkViewUpdater.h"
+
+#include <vtksys/SystemTools.hxx>
 
 #define VTK_CREATE(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New();
@@ -112,11 +115,10 @@ int TestGeoView(int argc, char* argv[])
       }
     }
   // Create the geo view.
-  VTK_CREATE(vtkRenderWindow, win);
-  win->SetMultiSamples(0);
   VTK_CREATE(vtkGeoView, view);
-  view->SetupRenderWindow(win);
-  win->SetSize(400,400);
+  view->DisplayHoverTextOff();
+  view->GetRenderWindow()->SetMultiSamples(0);
+  view->GetRenderWindow()->SetSize(400,400);
 
   vtkSmartPointer<vtkGeoTerrain> terrain =
     vtkSmartPointer<vtkGeoTerrain>::New();
@@ -154,17 +156,6 @@ int TestGeoView(int argc, char* argv[])
   imageRep2->SetSource(imageSource2);
   view->AddRepresentation(imageRep2);
 
-  // Add a graph representation
-  vtkSmartPointer<vtkGeoRandomGraphSource> graphSource =
-    vtkSmartPointer<vtkGeoRandomGraphSource>::New();
-  graphSource->SetNumberOfVertices(100);
-  graphSource->StartWithTreeOn();
-  graphSource->SetNumberOfEdges(0);
-  vtkSmartPointer<vtkGeoGraphRepresentation> graphRep =
-    vtkSmartPointer<vtkGeoGraphRepresentation>::New();
-  graphRep->SetInputConnection(graphSource->GetOutputPort());
-  view->AddRepresentation(graphRep);
-
   // Serialize databases
   if (terrainSavePath.length() > 0)
     {
@@ -195,15 +186,40 @@ int TestGeoView(int argc, char* argv[])
     }
   imageRep->SetSource(imageSource);
 
-  view->Update();
+  view->ResetCamera();
+  view->GetRenderer()->GetActiveCamera()->Zoom(1.2);
 
-  //int retVal = vtkRegressionTestImage(win);
-  int retVal = vtkRegressionTestImageThreshold(win, 11);
+  // Add a graph representation
+  vtkSmartPointer<vtkGeoRandomGraphSource> graphSource =
+    vtkSmartPointer<vtkGeoRandomGraphSource>::New();
+  graphSource->SetNumberOfVertices(100);
+  graphSource->StartWithTreeOn();
+  graphSource->SetNumberOfEdges(0);
+  vtkSmartPointer<vtkRenderedGraphRepresentation> graphRep =
+    vtkSmartPointer<vtkRenderedGraphRepresentation>::New();
+  graphRep->SetInputConnection(graphSource->GetOutputPort());
+  graphRep->SetLayoutStrategyToAssignCoordinates("longitude", "latitude");
+  VTK_CREATE(vtkGeoEdgeStrategy, edgeStrategy);
+  graphRep->SetEdgeLayoutStrategy(edgeStrategy);
+  view->AddRepresentation(graphRep);
+
+  vtkViewTheme* theme = vtkViewTheme::New();
+  view->ApplyViewTheme(theme);
+  theme->Delete();
+
+  view->Render();
+
+  // BUG: Need to call it twice in order to show the imagery on the globe.
+  view->Render();
+
+  // Delay it for 2 secs.
+  vtksys::SystemTools::Delay(2000);
+  int retVal = vtkRegressionTestImageThreshold(view->GetRenderWindow(), 11);
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
     // Interact with data.
-    win->GetInteractor()->Initialize();
-    win->GetInteractor()->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
 
     retVal = vtkRegressionTester::PASSED;
     }

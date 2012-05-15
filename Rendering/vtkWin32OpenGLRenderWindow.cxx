@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkWin32OpenGLRenderWindow.cxx,v $
+Module:    vtkWin32OpenGLRenderWindow.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -32,7 +32,6 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkOpenGL.h"
 
-vtkCxxRevisionMacro(vtkWin32OpenGLRenderWindow, "$Revision: 1.162 $");
 vtkStandardNewMacro(vtkWin32OpenGLRenderWindow);
 
 #define VTK_MAX_LIGHTS 8
@@ -108,7 +107,11 @@ void vtkWin32OpenGLRenderWindow::Clean()
 
     this->CleanUpRenderers();
     
-    if (wglMakeCurrent(NULL, NULL) != TRUE) 
+    // Note: wglMakeCurrent(NULL,NULL) is valid according to the documentation
+    // and works with nVidia and ATI but not with Intel. Passing an existing
+    // device context works in any case.
+    // see VTK Bug 7119.
+    if(wglMakeCurrent(this->DeviceContext,NULL)!=TRUE) 
       {
       vtkErrorMacro("wglMakeCurrent failed in Clean(), error: " << GetLastError());
       }

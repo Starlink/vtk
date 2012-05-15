@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericAttributeCollection.h,v $
+  Module:    vtkGenericAttributeCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ public:
   
   // Description:
   // Standard type definition and print methods for a VTK class.
-  vtkTypeRevisionMacro(vtkGenericAttributeCollection,vtkObject);
+  vtkTypeMacro(vtkGenericAttributeCollection,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

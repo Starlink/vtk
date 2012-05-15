@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLProjectedTetrahedraMapper.h,v $
+  Module:    vtkOpenGLProjectedTetrahedraMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class vtkFloatArray;
 class VTK_VOLUMERENDERING_EXPORT vtkOpenGLProjectedTetrahedraMapper : public vtkProjectedTetrahedraMapper
 {
 public:
-  vtkTypeRevisionMacro(vtkOpenGLProjectedTetrahedraMapper,
+  vtkTypeMacro(vtkOpenGLProjectedTetrahedraMapper,
                        vtkProjectedTetrahedraMapper);
   static vtkOpenGLProjectedTetrahedraMapper *New();
   virtual void PrintSelf(ostream &os, vtkIndent indent);

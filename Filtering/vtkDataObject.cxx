@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkDataObject.cxx,v $
+Module:    vtkDataObject.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -15,6 +15,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkDataObject.h"
 
 #include "vtkAlgorithmOutput.h"
+#include "vtkDataSetAttributes.h"
 #include "vtkExtentTranslator.h"
 #include "vtkFieldData.h"
 #include "vtkGarbageCollector.h"
@@ -36,7 +37,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInformationVector.h"
 #include "vtkDataSetAttributes.h"
 
-vtkCxxRevisionMacro(vtkDataObject, "$Revision: 1.45 $");
 vtkStandardNewMacro(vtkDataObject);
 
 vtkCxxSetObjectMacro(vtkDataObject,Information,vtkInformation);
@@ -48,6 +48,7 @@ vtkInformationKeyMacro(vtkDataObject, DATA_EXTENT_TYPE, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_PIECE_NUMBER, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_NUMBER_OF_PIECES, Integer);
 vtkInformationKeyMacro(vtkDataObject, DATA_NUMBER_OF_GHOST_LEVELS, Integer);
+vtkInformationKeyMacro(vtkDataObject, DATA_RESOLUTION, Double);
 vtkInformationKeyMacro(vtkDataObject, DATA_TIME_STEPS, DoubleVector);
 vtkInformationKeyMacro(vtkDataObject, POINT_DATA_VECTOR, InformationVector);
 vtkInformationKeyMacro(vtkDataObject, CELL_DATA_VECTOR, InformationVector);
@@ -209,6 +210,12 @@ void vtkDataObject::PrintSelf(ostream& os, vtkIndent indent)
       {
       os << indent << "Update Ghost Level: "
          << pInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS())
+         << endl;
+      }
+    if(pInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION()))
+      {
+      os << indent << "Update Resolution: "
+         << pInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_RESOLUTION())
          << endl;
       }
     if(pInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
@@ -377,6 +384,7 @@ void vtkDataObject::Initialize()
     this->Information->Remove(DATA_NUMBER_OF_PIECES());
     this->Information->Remove(DATA_NUMBER_OF_GHOST_LEVELS());
     this->Information->Remove(DATA_TIME_STEPS());
+    this->Information->Remove(DATA_RESOLUTION());
     }
 
   this->Modified();
@@ -431,6 +439,16 @@ void vtkDataObject::CopyInformationToPipeline(vtkInformation *request,
       if (input->Has(DATA_TIME_STEPS()))
         {
         output->CopyEntry(input, DATA_TIME_STEPS());
+        }
+      }
+    }
+  if(request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()))
+    {
+    if (input)
+      {
+      if (input->Has(DATA_RESOLUTION()))
+        {
+        output->CopyEntry(input, DATA_RESOLUTION());
         }
       }
     }
@@ -975,6 +993,10 @@ void vtkDataObject::InternalDataObjectCopy(vtkDataObject *src)
     {
     this->Information->CopyEntry(src->Information, DATA_TIME_STEPS(), 1);
     }
+  if(src->Information->Has(DATA_RESOLUTION()))
+    {
+    this->Information->CopyEntry(src->Information, DATA_RESOLUTION(), 1);
+    }
   
   vtkInformation* thatPInfo = src->GetPipelineInformation();
   vtkInformation* thisPInfo = this->GetPipelineInformation();
@@ -1471,4 +1493,54 @@ const char* vtkDataObject::GetAssociationTypeAsString(int associationType)
     return NULL;
     }
   return vtkDataObject::AssociationNames[associationType];
+}
+
+//----------------------------------------------------------------------------
+vtkDataSetAttributes* vtkDataObject::GetAttributes(int type)
+{
+  return vtkDataSetAttributes::SafeDownCast(this->GetAttributesAsFieldData(type));
+}
+
+//----------------------------------------------------------------------------
+vtkFieldData* vtkDataObject::GetAttributesAsFieldData(int type)
+{
+  switch (type)
+    {
+    case FIELD:
+      return this->FieldData;
+      break;
+    }
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+int vtkDataObject::GetAttributeTypeForArray(vtkAbstractArray* arr)
+{
+  for (int i = 0; i < NUMBER_OF_ATTRIBUTE_TYPES; ++i)
+    {
+    vtkFieldData* data = this->GetAttributesAsFieldData(i);
+    if (data)
+      {
+      for (int j = 0; j < data->GetNumberOfArrays(); ++j)
+        {
+        if (data->GetAbstractArray(j) == arr)
+          {
+          return i;
+          }
+        }
+      }
+    }
+  return -1;
+}
+
+//----------------------------------------------------------------------------
+vtkIdType vtkDataObject::GetNumberOfElements(int type)
+{
+  switch (type)
+    {
+    case FIELD:
+      return this->FieldData->GetNumberOfTuples();
+      break;
+    }
+  return 0;
 }

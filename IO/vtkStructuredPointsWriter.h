@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredPointsWriter.h,v $
+  Module:    vtkStructuredPointsWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IO_EXPORT vtkStructuredPointsWriter : public vtkDataWriter
 {
 public:
   static vtkStructuredPointsWriter *New();
-  vtkTypeRevisionMacro(vtkStructuredPointsWriter,vtkDataWriter);
+  vtkTypeMacro(vtkStructuredPointsWriter,vtkDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

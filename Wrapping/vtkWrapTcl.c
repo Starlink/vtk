@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWrapTcl.c,v $
+  Module:    vtkWrapTcl.c
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -527,7 +527,7 @@ void get_args(FILE *fp, int i)
               start_arg); 
       fprintf(fp,"    temp%i = static_cast<unsigned char>(tempi);\n",i);
       break;
-    case 0x14: case 0x1A: case 0x1B: case 0x1C:
+    case 0x14: case 0x1A:
       fprintf(fp,"    if (Tcl_GetInt(interp,argv[%i],&tempi) != TCL_OK) error = 1;\n",
               start_arg); 
       fprintf(fp,"    temp%i = static_cast<unsigned int>(tempi);\n",i);
@@ -541,6 +541,11 @@ void get_args(FILE *fp, int i)
       fprintf(fp,"    if (Tcl_GetInt(interp,argv[%i],&tempi) != TCL_OK) error = 1;\n",
               start_arg); 
       fprintf(fp,"    temp%i = static_cast<unsigned long>(tempi);\n",i);
+      break;
+    case 0x1B: case 0x1C:
+      fprintf(fp,"    if (Tcl_GetInt(interp,argv[%i],&tempi) != TCL_OK) error = 1;\n",
+              start_arg); 
+      fprintf(fp,"    temp%i = static_cast<unsigned long long>(tempi);\n",i);
       break;
     case 0x303:
       fprintf(fp,"    temp%i = argv[%i];\n",i,start_arg);
@@ -642,15 +647,28 @@ void outputFunction(FILE *fp, FileInfo *data)
         (currentFunction->ArgTypes[i] != 0x14)&&
         (currentFunction->ArgTypes[i] != 0x15)&&
         (currentFunction->ArgTypes[i] != 0x16)&&
-        (currentFunction->ArgTypes[i] != 0x1A)) args_ok = 0;
+        (currentFunction->ArgTypes[i] != 0x1A)&&
+        (currentFunction->ArgTypes[i] != 0x1B))
+      {
+      args_ok = 0;
+      }
     }
-  if ((currentFunction->ReturnType % 0x10) == 0x8) args_ok = 0;
+  if ((currentFunction->ReturnType % 0x10) == 0x8)
+    {
+    args_ok = 0;
+    }
   if (((currentFunction->ReturnType % 0x1000)/0x100 != 0x3)&&
       ((currentFunction->ReturnType % 0x1000)/0x100 != 0x1)&&
-      ((currentFunction->ReturnType % 0x1000)/0x100)) args_ok = 0;
+      ((currentFunction->ReturnType % 0x1000)/0x100))
+    {
+    args_ok = 0;
+    }
   if (currentFunction->NumberOfArguments && 
       (currentFunction->ArgTypes[0] == 0x5000)
-      &&(currentFunction->NumberOfArguments != 1)) args_ok = 0;
+      &&(currentFunction->NumberOfArguments != 1))
+    {
+    args_ok = 0;
+    }
 
   /* we can't handle void * return types */
   if ((currentFunction->ReturnType % 0x1000) == 0x302) 
@@ -935,7 +953,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
   fprintf(fp,"      return TCL_ERROR;\n }\n" );
   
   fprintf(fp,"    if(argc==2) {\n" );
-  // Return a list of methods
+  /* Return a list of methods */
   fprintf(fp,"\n  Tcl_DString dString, dStringParent;\n");
   fprintf(fp,"\n  Tcl_DStringInit ( &dString );\n" );
   fprintf(fp,"\n  Tcl_DStringInit ( &dStringParent );\n" );
@@ -980,7 +998,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
             data->SuperClasses[i]);
     fprintf(fp,"    if ( SuperClassStatus == TCL_OK ) { return TCL_OK; }\n" );
     }
-  // Now we handle it ourselves
+  /* Now we handle it ourselves */
   for (k = 0; k < numberOfWrappedFunctions; k++)
     {
       currentFunction = wrappedFunctions[k];
@@ -1146,8 +1164,8 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"    }\n");
     }
 
-  // i.e. If this is vtkObjectBase (or whatever the top of the class hierarchy will be)
-  // then report the error
+  /* i.e. If this is vtkObjectBase (or whatever the top of the class hierarchy will be) */
+  /* then report the error */
   if (data->NumberOfSuperClasses == 0)
     {
     fprintf(fp,"\n  if (argc >= 2)\n    {\n");

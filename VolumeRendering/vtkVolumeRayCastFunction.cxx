@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastFunction.cxx,v $
+  Module:    vtkVolumeRayCastFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkVolumeProperty.h"
 #include "vtkVolumeRayCastMapper.h"
 
-vtkCxxRevisionMacro(vtkVolumeRayCastFunction, "$Revision: 1.1 $");
 
 // Grab everything we need for rendering now. This procedure will be called
 // during the initialization phase of ray casting. It is called once per 

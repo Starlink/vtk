@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDepthSortPolyData.h,v $
+  Module:    vtkDepthSortPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ public:
   // Instantiate object.
   static vtkDepthSortPolyData *New();
 
-  vtkTypeRevisionMacro(vtkDepthSortPolyData,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkDepthSortPolyData,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

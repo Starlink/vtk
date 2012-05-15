@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataArray.cxx,v $
+  Module:    vtkDataArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,6 @@ vtkInformationKeyMacro(vtkDataArray, PER_COMPONENT, InformationVector);
 vtkInformationKeyRestrictedMacro(vtkDataArray, COMPONENT_RANGE, DoubleVector, 2);
 vtkInformationKeyRestrictedMacro(vtkDataArray, L2_NORM_RANGE, DoubleVector, 2);
 
-vtkCxxRevisionMacro(vtkDataArray, "$Revision: 1.83 $");
 
 //----------------------------------------------------------------------------
 // Construct object with default tuple dimension (number of components) of 1.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLVolumeTextureMapper3D.h,v $
+  Module:    vtkOpenGLVolumeTextureMapper3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class vtkVolumeProperty;
 class VTK_VOLUMERENDERING_EXPORT vtkOpenGLVolumeTextureMapper3D : public vtkVolumeTextureMapper3D
 {
 public:
-  vtkTypeRevisionMacro(vtkOpenGLVolumeTextureMapper3D,vtkVolumeTextureMapper3D);
+  vtkTypeMacro(vtkOpenGLVolumeTextureMapper3D,vtkVolumeTextureMapper3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkOpenGLVolumeTextureMapper3D *New();
@@ -46,7 +46,8 @@ public:
   // Is hardware rendering supported? No if the input data is
   // more than one independent component, or if the hardware does
   // not support the required extensions
-  int IsRenderSupported(vtkVolumeProperty *);
+  int IsRenderSupported(vtkVolumeProperty *,
+                        vtkRenderer *ren);
   
 //BTX
 
@@ -93,7 +94,17 @@ protected:
   GLuint           AlphaLookupIndex;
   vtkRenderWindow *RenderWindow;
   
-  void Initialize();
+  bool SupportsCompressedTexture;
+  bool SupportsNonPowerOfTwoTextures;
+  
+  // Actual internal texture format (uncompressed vs compressed)
+  // Computed in Render()
+  int InternalAlpha; // GLint
+  int InternalLA; // GLint
+  int InternalRGB; // GLint
+  int InternalRGBA; // GLint
+  
+  void Initialize(vtkRenderer *r);
 
   virtual void RenderNV(vtkRenderer *ren, vtkVolume *vol);
   virtual void RenderFP(vtkRenderer *ren, vtkVolume *vol);
@@ -135,8 +146,9 @@ protected:
   void SetupProgramLocalsForShadingFP( vtkRenderer *ren, vtkVolume *vol );
   
   // Description:
-  // Check if we can support this texture size.
-  int IsTextureSizeSupported( int size[3] );
+  // Check if we can support this texture size for the number of components.
+  int IsTextureSizeSupported(int size[3],
+                             int components);
 
   // Description:
   // Common code for setting up interpolation / clamping on 3D textures

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLClipPlanesPainter.cxx,v $
+  Module:    vtkOpenGLClipPlanesPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLClipPlanesPainter);
-vtkCxxRevisionMacro(vtkOpenGLClipPlanesPainter, "$Revision: 1.6 $");
 #endif
 //-----------------------------------------------------------------------------
 vtkOpenGLClipPlanesPainter::vtkOpenGLClipPlanesPainter()

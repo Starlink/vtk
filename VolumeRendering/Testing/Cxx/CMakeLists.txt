@@ -13,9 +13,24 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       PreIntegrationNonIncremental.cxx
       ProjectedTetrahedraZoomIn.cxx
       TestFinalColorWindowLevel.cxx
+      TestFixedPointRayCastLightComponents.cxx
+      TestGPURayCastCompositeMaskBlend.cxx
+      TestGPURayCastCompositeMask.cxx
+      TestGPURayCastCompositeShadeMask.cxx
+      TestGPURayCastCompositeToMIP.cxx
+      TestGPURayCastCropping.cxx
+      TestGPURayCastDataTypesMinIP.cxx
+      TestGPURayCastDataTypesMIP.cxx
+      TestGPURayCastFourComponentsComposite.cxx
+      TestGPURayCastFourComponentsCompositeStreaming.cxx
+      TestGPURayCastFourComponentsMinIP.cxx
+      TestGPURayCastFourComponentsMIP.cxx
+      TestGPURayCastMIPToComposite.cxx
+      TestGPURayCastNearestDataTypesMIP.cxx
       TestHAVSVolumeMapper.cxx
       TestMinIntensityRendering.cxx
       TestProjectedTetrahedra.cxx
+      TestTM3DLightComponents.cxx
       volProt.cxx
       ZsweepConcavities.cxx
       )
@@ -23,6 +38,13 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       ExerciseUnstructuredGridRayCastMapper.cxx
       )
   ENDIF (VTK_DATA_ROOT)
+
+# Force to not enable floating point exception as we hit some exception
+# inside the OpenGL driver at vtkgl::LinkProgram() (nVidia 185.18.36).
+set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN)
+set(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "${CMAKE_TESTDRIVER_BEFORE_TESTMAIN}
+    try {")
+
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                          EXTRA_INCLUDE vtkTestDriver.h)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests} ${MyTestSupport} )

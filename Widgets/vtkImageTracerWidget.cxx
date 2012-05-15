@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageTracerWidget.cxx,v $
+  Module:    vtkImageTracerWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkImageTracerWidget, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkImageTracerWidget);
 
 vtkCxxSetObjectMacro(vtkImageTracerWidget, HandleProperty, vtkProperty);

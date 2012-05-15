@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtSQLDatabase.h,v $
+  Module:    vtkQtSQLDatabase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class QVTK_EXPORT vtkQtSQLDatabase : public vtkSQLDatabase
 {
 public:
   static vtkQtSQLDatabase* New();
-  vtkTypeRevisionMacro(vtkQtSQLDatabase, vtkSQLDatabase);
+  vtkTypeMacro(vtkQtSQLDatabase, vtkSQLDatabase);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

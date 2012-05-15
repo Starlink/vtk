@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMINCImageWriter.h,v $
+  Module:    vtkMINCImageWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -78,7 +78,7 @@ class vtkMINCImageAttributes;
 class VTK_IO_EXPORT vtkMINCImageWriter : public vtkImageWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkMINCImageWriter,vtkImageWriter);
+  vtkTypeMacro(vtkMINCImageWriter,vtkImageWriter);
 
   static vtkMINCImageWriter *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);

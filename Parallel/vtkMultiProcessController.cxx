@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiProcessController.cxx,v $
+  Module:    vtkMultiProcessController.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,14 +23,33 @@
 #include "vtkProcessGroup.h"
 #include "vtkSubCommunicator.h"
 #include "vtkToolkits.h"
+#include "vtkProcess.h"
 
 #ifdef VTK_USE_MPI
 #include "vtkMPIController.h"
 #endif
 
+#include "vtkSmartPointer.h"
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
+#include <vtkstd/list>
+#include <vtkstd/vector>
+#include <vtksys/hash_map.hxx>
+
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkMultiProcessController);
+
+//-----------------------------------------------------------------------------
+// Stores internal members that cannot or should not be exposed in the header
+// file (for example, because they use templated types).
+class vtkMultiProcessController::vtkInternal
+{
+public:
+  vtksys::hash_map<int, vtkProcessFunctionType> MultipleMethod;
+  vtksys::hash_map<int, void *> MultipleData;
+};
 
 //----------------------------------------------------------------------------
 // Helper class to contain the RMI information.  
@@ -39,7 +58,7 @@ class VTK_PARALLEL_EXPORT vtkMultiProcessControllerRMI : public vtkObject
 {
 public:
   static vtkMultiProcessControllerRMI *New(); 
-  vtkTypeRevisionMacro(vtkMultiProcessControllerRMI, vtkObject);
+  vtkTypeMacro(vtkMultiProcessControllerRMI, vtkObject);
   
   int Tag;
   vtkRMIFunctionType Function;
@@ -53,10 +72,8 @@ protected:
   void operator=(const vtkMultiProcessControllerRMI&);
 };
 
-vtkCxxRevisionMacro(vtkMultiProcessControllerRMI, "$Revision: 1.36 $");
 vtkStandardNewMacro(vtkMultiProcessControllerRMI);
 
-vtkCxxRevisionMacro(vtkMultiProcessController, "$Revision: 1.36 $");
 
 //----------------------------------------------------------------------------
 // An RMI function that will break the "ProcessRMIs" loop.
@@ -71,12 +88,20 @@ void vtkMultiProcessControllerBreakRMI(void *localArg,
   controller->SetBreakFlag(1);
 }
 
-
+// ----------------------------------------------------------------------------
+// Single method used when launching a single process.
+static void vtkMultiProcessControllerRun(vtkMultiProcessController *c,
+                                         void *arg)
+{
+  vtkProcess *p=reinterpret_cast<vtkProcess *>(arg);
+  p->SetController(c);
+  p->Execute();
+}
 
 //----------------------------------------------------------------------------
 vtkMultiProcessController::vtkMultiProcessController()
 {
-  int i;
+  this->Internal = new vtkInternal;
 
   this->RMICount = 1;
   
@@ -87,12 +112,6 @@ vtkMultiProcessController::vtkMultiProcessController()
 
   this->Communicator = 0;
   this->RMICommunicator = 0;
-  
-  for ( i = 0; i < VTK_MAX_THREADS; i++ )
-    {
-    this->MultipleMethod[i] = NULL;
-    this->MultipleData[i] = NULL;
-    }
 
   this->BreakFlag = 0;
   this->ForceDeepCopy = 1;
@@ -121,6 +140,8 @@ vtkMultiProcessController::~vtkMultiProcessController()
 
   this->RMIs->Delete();
   this->RMIs = NULL;
+
+  delete this->Internal;
 }
 
  
@@ -224,6 +245,12 @@ void vtkMultiProcessController::SetSingleMethod( vtkProcessFunctionType f,
   this->SingleData   = data;
 }
 
+// ----------------------------------------------------------------------------
+void vtkMultiProcessController::SetSingleProcessObject(vtkProcess *p)
+{
+  this->SetSingleMethod(vtkMultiProcessControllerRun,p);
+}
+
 //----------------------------------------------------------------------------
 // Set one of the user defined methods that will be run on NumberOfProcesses
 // processes when MultipleMethodExecute is called. This method should be
@@ -240,8 +267,26 @@ void vtkMultiProcessController::SetMultipleMethod( int index,
     }
   else
     {
-    this->MultipleMethod[index] = f;
-    this->MultipleData[index]   = data;
+    this->Internal->MultipleMethod[index] = f;
+    this->Internal->MultipleData[index]   = data;
+    }
+}
+
+//-----------------------------------------------------------------------------
+void vtkMultiProcessController::GetMultipleMethod(int index,
+                                                  vtkProcessFunctionType &func,
+                                                  void *&data)
+{
+  if (   this->Internal->MultipleMethod.find(index)
+      != this->Internal->MultipleMethod.end() )
+    {
+    func = this->Internal->MultipleMethod[index];
+    data = this->Internal->MultipleData[index];
+    }
+  else
+    {
+    func = NULL;
+    data = NULL;
     }
 }
 
@@ -275,6 +320,60 @@ vtkMultiProcessController *vtkMultiProcessController::CreateSubController(
   subcomm->Delete();
 
   return subcontroller;
+}
+
+//-----------------------------------------------------------------------------
+vtkMultiProcessController *vtkMultiProcessController::PartitionController(
+                                                                 int localColor,
+                                                                 int localKey)
+{
+  vtkMultiProcessController *subController = NULL;
+
+  int numProc = this->GetNumberOfProcesses();
+
+  vtkstd::vector<int> allColors(numProc);
+  this->AllGather(&localColor, &allColors[0], 1);
+
+  vtkstd::vector<int> allKeys(numProc);
+  this->AllGather(&localKey, &allKeys[0], 1);
+
+  vtkstd::vector<bool> inPartition;
+  inPartition.assign(numProc, false);
+
+  for (int i = 0; i < numProc; i++)
+    {
+    if (inPartition[i]) continue;
+    int targetColor = allColors[i];
+    vtkstd::list<int> partitionIds;     // Make sorted list, then put in group.
+    for (int j = i; j < numProc; j++)
+      {
+      if (allColors[j] != targetColor) continue;
+      inPartition[j] = true;
+      vtkstd::list<int>::iterator iter = partitionIds.begin();
+      while ((iter != partitionIds.end()) && (allKeys[*iter] <= allKeys[j]))
+        {
+        iter++;
+        }
+      partitionIds.insert(iter, j);
+      }
+    // Copy list into process group.
+    VTK_CREATE(vtkProcessGroup, group);
+    group->Initialize(this);
+    group->RemoveAllProcessIds();
+    for (vtkstd::list<int>::iterator iter = partitionIds.begin();
+         iter != partitionIds.end(); iter++)
+      {
+      group->AddProcessId(*iter);
+      }
+    // Use group to create controller.
+    vtkMultiProcessController *sc = this->CreateSubController(group);
+    if (sc)
+      {
+      subController = sc;
+      }
+    }
+
+  return subController;
 }
 
 //----------------------------------------------------------------------------

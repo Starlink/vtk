@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphereWidget2.h,v $
+  Module:    vtkSphereWidget2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -99,7 +99,7 @@ public:
 
   // Description:
   // Standard class methods for type information and printing.
-  vtkTypeRevisionMacro(vtkSphereWidget2,vtkAbstractWidget);
+  vtkTypeMacro(vtkSphereWidget2,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

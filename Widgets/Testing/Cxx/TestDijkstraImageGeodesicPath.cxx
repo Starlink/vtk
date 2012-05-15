@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestDijkstraImageGeodesicPath.cxx,v $
+  Module:    TestDijkstraImageGeodesicPath.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,12 +23,11 @@
 #include "vtkImageGradientMagnitude.h"
 #include "vtkImageMapToWindowLevelColors.h"
 #include "vtkImageShiftScale.h"
-#include "vtkInteractorEventRecorder.h"
 #include "vtkInteractorStyleImage.h"
 #include "vtkOrientedGlyphContourRepresentation.h"
 #include "vtkPNGReader.h"
 #include "vtkProperty.h"
-#include "vtkRegressionTestImage.h"
+#include "vtkTesting.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -111,6 +110,12 @@ char TestDijkstraImageGeodesicPathLog[] =
 
 int TestDijkstraImageGeodesicPath(int argc, char*argv[])
 {
+  bool followCursor = false;
+  for (int i = 0; i < argc; i++)
+    {
+    followCursor  |= (strcmp("--FollowCursor", argv[i]) == 0);
+    }  
+
   char* fname = 
     vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/fullhead15.png");
   
@@ -176,6 +181,7 @@ int TestDijkstraImageGeodesicPath(int argc, char*argv[])
 
   vtkOrientedGlyphContourRepresentation *rep = vtkOrientedGlyphContourRepresentation::New();
   contourWidget->SetRepresentation( rep );
+  contourWidget->SetFollowCursor( followCursor );
 
   rep->GetLinesProperty()->SetColor(1, 0.2, 0);
   rep->GetProperty()->SetColor(0, 0.2, 1);
@@ -211,23 +217,9 @@ int TestDijkstraImageGeodesicPath(int argc, char*argv[])
   renderer->ResetCamera();
   iren->Initialize();
 
-  vtkInteractorEventRecorder *recorder = vtkInteractorEventRecorder::New();
-  recorder->SetInteractor( iren );
-  recorder->ReadFromInputStringOn();
-  recorder->SetInputString( TestDijkstraImageGeodesicPathLog );
-  recorder->EnabledOn();
-
-  recorder->Play();
-
-  int retVal = vtkRegressionTestImageThreshold( renWin, 11 );
-  if ( retVal == vtkRegressionTester::DO_INTERACTOR )
-    {
-    iren->Start();
-    }
-  recorder->Stop();
+  vtkTesting::InteractorEventLoop( argc, argv, iren, TestDijkstraImageGeodesicPathLog );
 
   // Cleanups
-  recorder->Delete();
   contourWidget->Delete();
   placer->Delete();
   reader->Delete();
@@ -242,6 +234,6 @@ int TestDijkstraImageGeodesicPath(int argc, char*argv[])
   diffusion->Delete();
   colorMap->Delete();
   
-  return !retVal;
+  return EXIT_SUCCESS;
 }
 

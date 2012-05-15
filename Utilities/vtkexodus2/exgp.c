@@ -51,7 +51,7 @@
 *
 * revision history - 
 *
-*  $Id: exgp.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -162,7 +162,7 @@ int ex_get_prop (int   exoid,
      exerrval = EX_BADPARAM;
      sprintf(errmsg,
        "Warning: %s property %s not defined in file id %d",
-	     ex_name_of_object(obj_type), prop_name, exoid);
+             ex_name_of_object(obj_type), prop_name, exoid);
      ex_err("ex_get_prop",errmsg,exerrval);
      return (EX_WARN);
    }

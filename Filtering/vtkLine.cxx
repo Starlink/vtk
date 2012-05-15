@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLine.cxx,v $
+  Module:    vtkLine.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,10 +19,9 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkLine, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkLine);
 
 //----------------------------------------------------------------------------
@@ -50,7 +49,7 @@ int vtkLine::EvaluatePosition(double x[3], double* closestPoint,
   double a1[3], a2[3];
 
   subId = 0;
-  pcoords[1] = pcoords[2] = 0.0;
+  pcoords[0] = pcoords[1] = pcoords[2] = 0.0;
 
   this->Points->GetPoint(0, a1);
   this->Points->GetPoint(1, a2);
@@ -199,7 +198,7 @@ static VERT_CASES vertCases[4]= {
 
 //----------------------------------------------------------------------------
 void vtkLine::Contour(double value, vtkDataArray *cellScalars, 
-                      vtkPointLocator *locator, vtkCellArray *verts, 
+                      vtkIncrementalPointLocator *locator, vtkCellArray *verts, 
                       vtkCellArray *vtkNotUsed(lines), 
                       vtkCellArray *vtkNotUsed(polys), 
                       vtkPointData *inPd, vtkPointData *outPd,
@@ -764,7 +763,7 @@ static LINE_CASES lineCases[] = {
 // Clip this line using scalar value provided. Like contouring, except
 // that it cuts the line to produce other lines.
 void vtkLine::Clip(double value, vtkDataArray *cellScalars, 
-                   vtkPointLocator *locator, vtkCellArray *lines,
+                   vtkIncrementalPointLocator *locator, vtkCellArray *lines,
                    vtkPointData *inPd, vtkPointData *outPd,
                    vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
                    int insideOut)

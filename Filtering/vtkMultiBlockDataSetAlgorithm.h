@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiBlockDataSetAlgorithm.h,v $
+  Module:    vtkMultiBlockDataSetAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_FILTERING_EXPORT vtkMultiBlockDataSetAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkMultiBlockDataSetAlgorithm *New();
-  vtkTypeRevisionMacro(vtkMultiBlockDataSetAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkMultiBlockDataSetAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

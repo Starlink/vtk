@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoostKruskalMinimumSpanningTree.cxx,v $
+Module:    vtkBoostKruskalMinimumSpanningTree.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -40,12 +40,10 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTree.h"
 
 #include <boost/graph/kruskal_min_spanning_tree.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostKruskalMinimumSpanningTree, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkBoostKruskalMinimumSpanningTree);
 
 // Constructor/Destructor

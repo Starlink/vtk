@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWinCEOpenGLRenderWindow.cxx,v $
+  Module:    vtkWinCEOpenGLRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkOpenGLPolyDataMapper.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkWinCEOpenGLRenderWindow, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkWinCEOpenGLRenderWindow);
 
 #define VTK_MAX_LIGHTS 8

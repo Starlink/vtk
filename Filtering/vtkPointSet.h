@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointSet.h,v $
+  Module:    vtkPointSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkPointLocator;
 class VTK_FILTERING_EXPORT vtkPointSet : public vtkDataSet
 {
 public:
-  vtkTypeRevisionMacro(vtkPointSet,vtkDataSet);
+  vtkTypeMacro(vtkPointSet,vtkDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -51,14 +51,16 @@ public:
   vtkIdType GetNumberOfPoints();
   double *GetPoint(vtkIdType ptId) {return this->Points->GetPoint(ptId);};
   void GetPoint(vtkIdType ptId, double x[3]) {this->Points->GetPoint(ptId,x);};
-  vtkIdType FindPoint(double x[3]);
+  virtual vtkIdType FindPoint(double x[3]);
   vtkIdType FindPoint(double x, double y, double z) {
     return this->vtkDataSet::FindPoint(x, y, z);};
-  vtkIdType FindCell(double x[3], vtkCell *cell, vtkIdType cellId, double tol2,
-               int& subId, double pcoords[3], double *weights);
-  vtkIdType FindCell(double x[3], vtkCell *cell, vtkGenericCell *gencell,
-               vtkIdType cellId, double tol2, int& subId,
-               double pcoords[3], double *weights);
+  virtual vtkIdType FindCell(double x[3], vtkCell *cell, vtkIdType cellId,
+                             double tol2, int& subId, double pcoords[3],
+                             double *weights);
+  virtual vtkIdType FindCell(double x[3], vtkCell *cell,
+                             vtkGenericCell *gencell, vtkIdType cellId,
+                             double tol2, int& subId, double pcoords[3],
+                             double *weights);
 
   // Description:
   // Get MTime which also considers its vtkPoints MTime.
@@ -107,6 +109,9 @@ protected:
 
   virtual void ReportReferences(vtkGarbageCollector*);
 private:
+
+  void Cleanup();
+
   vtkPointSet(const vtkPointSet&);  // Not implemented.
   void operator=(const vtkPointSet&);  // Not implemented.
 };

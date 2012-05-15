@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeContourFilter.cxx,v $
+  Module:    vtkHyperOctreeContourFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,6 +43,7 @@
 #include <assert.h>
 #include <vtkstd/set>
 #include "vtkBitArray.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include "vtkHyperOctreePointsGrabber.h"
 
@@ -78,7 +79,7 @@ class vtkHyperOctreeContourPointsGrabber : public vtkHyperOctreePointsGrabber
 public:
   static vtkHyperOctreeContourPointsGrabber *New();
   
-  vtkTypeRevisionMacro(vtkHyperOctreeContourPointsGrabber,vtkHyperOctreePointsGrabber);
+  vtkTypeMacro(vtkHyperOctreeContourPointsGrabber,vtkHyperOctreePointsGrabber);
   
   void PrintSelf(ostream& os, vtkIndent indent);
   
@@ -153,7 +154,6 @@ private:
   void operator=(const vtkHyperOctreeContourPointsGrabber&);    // Not implemented.
 };
   
-vtkCxxRevisionMacro(vtkHyperOctreeContourFilter, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkHyperOctreeContourFilter);
 
 //----------------------------------------------------------------------------
@@ -1234,7 +1234,7 @@ double vtkHyperOctreeContourFilter::ComputePointValue(int ptIndices[3])
 //----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkHyperOctreeContourFilter::SetLocator(vtkPointLocator *locator)
+void vtkHyperOctreeContourFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator)
     {
@@ -1287,7 +1287,6 @@ int vtkHyperOctreeContourFilter::FillInputPortInformation(int,
 }
 
 
-vtkCxxRevisionMacro(vtkHyperOctreeContourPointsGrabber, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkHyperOctreeContourPointsGrabber);
 
 //-----------------------------------------------------------------------------

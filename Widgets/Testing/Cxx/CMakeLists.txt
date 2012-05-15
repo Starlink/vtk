@@ -13,39 +13,43 @@ SET(MyTests
 #  TestAffineWidget.cxx
   TestAngleWidget2D.cxx
   TestAngleWidget3D.cxx
-#  TestBalloonWidget.cxx
+  TestBalloonWidget.cxx
 #  TestBorderWidget.cxx
 #  TestCameraWidget.cxx
-#  TestCaptionWidget.cxx
-#  TestCheckerboardWidget.cxx
+  TestCaptionWidget.cxx
+  TestCheckerboardWidget.cxx
   TestContourWidget2.cxx
-#  TestDistanceWidget.cxx
+  TestDistanceWidget.cxx
   TestHandleWidget.cxx
 #  TestHandleWidget2D.cxx
   TestImplicitPlaneWidget.cxx
   TestImplicitPlaneWidget2.cxx
+  TestImplicitPlaneWidget2b.cxx
 #  TestLogoWidget.cxx
   TestOrientationMarkerWidget.cxx
 #  TestPlaybackWidget.cxx
-#  TestRectilinearWipeWidget.cxx
-#  TestSeedWidget.cxx
+  TestRectilinearWipeWidget.cxx
+  TestSeedWidget.cxx
   TestSliderWidget.cxx
   TestSliderWidget2D.cxx
-#  TestTextWidget.cxx
+  TestTextWidget.cxx
   TerrainPolylineEditor.cxx
   TestDijkstraGraphGeodesicPath.cxx
   TestParallelopipedWidget.cxx
+  TestSeedWidgetNonUniformRepresentations.cxx
   )
 
 IF (VTK_DATA_ROOT)
   # add tests that require data
   SET(MyTests ${MyTests}
     ImagePlaneWidget.cxx
+    TestBiDimensionalWidget.cxx
     TestDijkstraImageGeodesicPath.cxx
     TestImageActorContourWidget.cxx
 #    TestConstrainedHandleWidget.cxx
     TestSurfaceConstrainedHandleWidget.cxx
     TestPolygonalRepresentationHandleWidget.cxx
+    TestPolygonalHandleRepresentations.cxx
     TestSphereHandleWidget.cxx
 #    TestFocalPlaneContour.cxx
 #    TestOrientedGlyphContour.cxx
@@ -65,8 +69,7 @@ IF (VTK_DATA_ROOT)
 ENDIF (VTK_DATA_ROOT)
 
 
-CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
-                       EXTRA_INCLUDE vtkTestDriver.h)
+INCLUDE(${VTK_SOURCE_DIR}/Rendering/vtkTestingObjectFactory.cmake)
 
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
 TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkWidgets)
@@ -76,6 +79,7 @@ REMOVE( TestsToRun
    TestHandleWidget.cxx
    TerrainPolylineEditor.cxx
    TestDijkstraGraphGeodesicPath.cxx
+   TestRectilinearWipeWidget.cxx
    )
 
 # Add all the tests
@@ -113,6 +117,49 @@ IF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
          -T ${VTK_BINARY_DIR}/Testing/Temporary
          -D ${VTK_DATA_ROOT}
          -V Baseline/${KIT}/TestDijkstraGraphGeodesicPath.png)
+
+  ADD_TEST( TestRectilinearWipeWidget0 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         0
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget0.png)
+  ADD_TEST( TestRectilinearWipeWidget1 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         1
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget1.png)
+  ADD_TEST( TestRectilinearWipeWidget2 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         2
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget2.png)
+  ADD_TEST( TestRectilinearWipeWidget3 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         3
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget3.png)
+  ADD_TEST( TestRectilinearWipeWidget4 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         4
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget4.png)
+  ADD_TEST( TestRectilinearWipeWidget5 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         5
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget5.png)
+  ADD_TEST( TestRectilinearWipeWidget6 ${CXX_TEST_PATH}/${KIT}CxxTests 
+         TestRectilinearWipeWidget
+         6
+         -T ${VTK_BINARY_DIR}/Testing/Temporary
+         -D ${VTK_DATA_ROOT}
+         -V Baseline/${KIT}/TestRectilinearWipeWidget6.png)
 ENDIF(VTK_DATA_ROOT AND VTK_USE_DISPLAY)
 
 

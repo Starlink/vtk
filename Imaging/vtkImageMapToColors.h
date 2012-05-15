@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMapToColors.h,v $
+  Module:    vtkImageMapToColors.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IMAGING_EXPORT vtkImageMapToColors : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageMapToColors *New();
-  vtkTypeRevisionMacro(vtkImageMapToColors,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageMapToColors,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

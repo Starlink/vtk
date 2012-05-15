@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommand.h,v $
+  Module:    vtkCommand.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -76,12 +76,12 @@
 //  - Views/vtkView returns NULL
 //  - Views/vtkDataRepresentation returns a pointer to a vtkSelection
 //  - Rendering/vtkInteractorStyleRubberBand2D returns an array of 5 unsigned
-// int values (startPosition[2],endPosition[2], and selection type
-// {SELECT_UNION|SELECT_NORMAL})
-//  - Rendering/vtkInteractorStyleRubberBand3D returns an array of 5 unsigned
-// int values (startPosition[2],endPosition[2], and selection type
-// {SELECT_UNION|SELECT_NORMAL})
-//  - Graphics/vtkSelectionLink returns NULL
+// integers (p1x, p1y, p2x, p2y, mode), where mode is
+// vtkInteractorStyleRubberBand2D::SELECT_UNION or
+// vtkInteractorStyleRubberBand2D::SELECT_NORMAL
+// - vtkCommand::AnnotationChangedEvent
+//  - GUISupport/Qt/vtkQtAnnotationView returns a pointer to a 
+// vtkAnnotationLayers
 // - vtkCommand::PlacePointEvent
 //  - Widgets/vtkSeedWidget returns a pointer to an int, being the current
 // handle number
@@ -158,6 +158,10 @@
 //  - Rendering/vtkRenderer returns a pointer to itself
 // - vtkCommand::ResetCameraClippingRangeEvent
 //  - Rendering/vtkRenderer returns a pointer to itself
+// - vtkCommand::ActiveCameraEvent
+//  - Rendering/vtkRenderer returns a pointer to the active camera
+// - vtkCommand::CreateCameraEvent
+//  - Rendering/vtkRenderer returns a pointer to the created camera
 // - vtkCommand::EnterEvent
 //  - most of the objects return NULL
 //  - GUISupport/Qt/QVTKWidget returns a QEvent*
@@ -166,6 +170,8 @@
 //  - GUISupport/Qt/QVTKWidget returns a QEvent*
 // - vtkCommand::RenderWindowMessageEvent
 //  - Rendering/vtkWin32OpenGLRenderWindow return a pointer to a UINT message
+// - vtkCommand::ComputeVisiblePropBoundsEvent
+//  - Rendering/vtkRenderer returns a pointer to itself
 // - QVTKWidget::ContextMenuEvent
 //  - GUISupport/Qt/QVTKWidget returns a QContextMenuEvent*
 // - QVTKWidget::DragEnterEvent
@@ -182,6 +188,12 @@
 //  - A pointer to a double value between 0.0 and 1.0
 // - vtkCommand::VolumeMapperComputeGradientsProgressEvent
 //  - A pointer to a double value between 0.0 and 1.0
+// - vtkCommand::TDxMotionEvent (TDx=3DConnexion)
+//  - A vtkTDxMotionEventInfo*
+// - vtkCommand::TDxButtonPressEvent
+//  - A int* being the number of the button
+// - vtkCommand::TDxButtonReleaseEvent
+//  - A int* being the number of the button
 //
 // .SECTION See Also
 // vtkObject vtkCallbackCommand vtkOldStyleCallbackCommand
@@ -288,6 +300,8 @@ public:
     MouseMoveEvent,
     MouseWheelForwardEvent,
     MouseWheelBackwardEvent,
+    ActiveCameraEvent,
+    CreateCameraEvent,
     ResetCameraEvent,
     ResetCameraClippingRangeEvent,
     ModifiedEvent,
@@ -331,11 +345,20 @@ public:
     RegisterEvent,
     UnRegisterEvent,
     UpdateInformationEvent,
+    AnnotationChangedEvent,
     SelectionChangedEvent,
     UpdatePropertyEvent,
     ViewProgressEvent,
     UpdateDataEvent,
     CurrentChangedEvent,
+    ComputeVisiblePropBoundsEvent,
+    TDxMotionEvent, // 3D Connexion device event
+    TDxButtonPressEvent, // 3D Connexion device event
+    TDxButtonReleaseEvent, // 3D Connexion device event
+    HoverEvent,
+    LoadStateEvent,
+    SaveStateEvent,
+    StateChangedEvent,
     UserEvent = 1000
   };
 //ETX

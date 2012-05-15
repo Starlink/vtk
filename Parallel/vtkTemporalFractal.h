@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkTemporalFractal.h,v $
+  Module:    vtkTemporalFractal.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_PARALLEL_EXPORT vtkTemporalFractal : public vtkTemporalDataSetAlgorith
 {
 public:
   static vtkTemporalFractal *New();
-  vtkTypeRevisionMacro(vtkTemporalFractal,vtkTemporalDataSetAlgorithm);
+  vtkTypeMacro(vtkTemporalFractal,vtkTemporalDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

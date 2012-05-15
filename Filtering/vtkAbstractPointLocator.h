@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractPointLocator.h,v $
+  Module:    vtkAbstractPointLocator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class vtkIdList;
 class VTK_FILTERING_EXPORT vtkAbstractPointLocator : public vtkLocator
 {
 public:
-  vtkTypeRevisionMacro(vtkAbstractPointLocator,vtkLocator);
+  vtkTypeMacro(vtkAbstractPointLocator,vtkLocator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

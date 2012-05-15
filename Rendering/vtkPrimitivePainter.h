@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPrimitivePainter.h,v $
+  Module:    vtkPrimitivePainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkUnsignedCharArray;
 class VTK_RENDERING_EXPORT vtkPrimitivePainter : public vtkPolyDataPainter
 {
 public:
-  vtkTypeRevisionMacro(vtkPrimitivePainter, vtkPolyDataPainter);
+  vtkTypeMacro(vtkPrimitivePainter, vtkPolyDataPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

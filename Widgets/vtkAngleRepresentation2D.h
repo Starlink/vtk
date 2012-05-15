@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAngleRepresentation2D.h,v $
+  Module:    vtkAngleRepresentation2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ public:
 
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkAngleRepresentation2D,vtkAngleRepresentation);
+  vtkTypeMacro(vtkAngleRepresentation2D,vtkAngleRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

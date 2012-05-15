@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGaussianCubeReader.h,v $
+  Module:    vtkGaussianCubeReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IO_EXPORT vtkGaussianCubeReader : public vtkMoleculeReaderBase
 {
 public:
   static vtkGaussianCubeReader *New();
-  vtkTypeRevisionMacro(vtkGaussianCubeReader,vtkMoleculeReaderBase);
+  vtkTypeMacro(vtkGaussianCubeReader,vtkMoleculeReaderBase);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkGetObjectMacro(Transform,vtkTransform);

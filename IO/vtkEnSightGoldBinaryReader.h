@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSightGoldBinaryReader.h,v $
+  Module:    vtkEnSightGoldBinaryReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ class VTK_IO_EXPORT vtkEnSightGoldBinaryReader : public vtkEnSightReader
 {
 public:
   static vtkEnSightGoldBinaryReader *New();
-  vtkTypeRevisionMacro(vtkEnSightGoldBinaryReader, vtkEnSightReader);
+  vtkTypeMacro(vtkEnSightGoldBinaryReader, vtkEnSightReader);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
  
 protected:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayDiagonalMatrixSource.cxx,v $
+  Module:    ArrayDiagonalMatrixSource.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -35,7 +35,7 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayDiagonalMatrixSource(int argc, char* argv[])
+int ArrayDiagonalMatrixSource(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -47,7 +47,8 @@ int ArrayDiagonalMatrixSource(int argc, char* argv[])
     source->SetSubDiagonal(-0.5);
     source->Update();
 
-    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(source->GetOutput()->GetArray());
+    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(
+      source->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     
     cout << "sparse diagonal matrix:\n";
     vtkPrintMatrixFormat(cout, sparse_array);
@@ -66,7 +67,8 @@ int ArrayDiagonalMatrixSource(int argc, char* argv[])
     source->SetArrayType(vtkDiagonalMatrixSource::DENSE);
     source->Update();
 
-    vtkDenseArray<double>* const dense_array = vtkDenseArray<double>::SafeDownCast(source->GetOutput()->GetArray());
+    vtkDenseArray<double>* const dense_array = vtkDenseArray<double>::SafeDownCast(
+      source->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
 
     cout << "dense diagonal matrix:\n";
     vtkPrintMatrixFormat(cout, dense_array);

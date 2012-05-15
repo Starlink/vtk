@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformInterpolator.h,v $
+  Module:    vtkTransformInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -61,7 +61,7 @@ class vtkTransformList;
 class VTK_RENDERING_EXPORT vtkTransformInterpolator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkTransformInterpolator, vtkObject);
+  vtkTypeMacro(vtkTransformInterpolator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

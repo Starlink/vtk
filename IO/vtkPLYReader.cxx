@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPLYReader.cxx,v $
+  Module:    vtkPLYReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include <ctype.h>
 #include <stddef.h>
 
-vtkCxxRevisionMacro(vtkPLYReader, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkPLYReader);
 
 
@@ -283,6 +282,17 @@ int vtkPLYReader::RequestData(
   vtkPLY::ply_close (ply);
 
   return 1;
+}
+
+int vtkPLYReader::CanReadFile(const char *filename)
+{
+  FILE *fd = fopen(filename, "rb");
+  if (!fd) return 0;
+
+  char line[16];
+  fgets(line, 16, fd);
+  fclose(fd);
+  return (strncmp(line, "ply", 3) == 0);
 }
 
 void vtkPLYReader::PrintSelf(ostream& os, vtkIndent indent)

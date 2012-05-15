@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDBReader.h,v $
+  Module:    vtkPDBReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_IO_EXPORT vtkPDBReader : public vtkMoleculeReaderBase
 {
 public:
-  vtkTypeRevisionMacro(vtkPDBReader,vtkMoleculeReaderBase);
+  vtkTypeMacro(vtkPDBReader,vtkMoleculeReaderBase);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkPDBReader *New();

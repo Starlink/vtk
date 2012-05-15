@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWin32ProcessOutputWindow.cxx,v $
+  Module:    vtkWin32ProcessOutputWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 # define _MAX_PATH 4096
 #endif
 
-vtkCxxRevisionMacro(vtkWin32ProcessOutputWindow, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkWin32ProcessOutputWindow);
 
 extern "C" int vtkEncodedArrayWin32OutputWindowProcessWrite(const char* fname);

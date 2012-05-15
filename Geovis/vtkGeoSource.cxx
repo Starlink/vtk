@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoSource.cxx,v $
+  Module:    vtkGeoSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -72,7 +72,6 @@ public:
   vtksys_stl::vector<int> ThreadIds;
 };
 
-vtkCxxRevisionMacro(vtkGeoSource, "$Revision: 1.6 $");
 vtkGeoSource::vtkGeoSource()
 {
   this->InputSet = vtkCollection::New();
@@ -137,6 +136,7 @@ void vtkGeoSource::ShutDown()
       this->Threader->TerminateThread(*iter);
       }
     this->Implementation->ThreadIds.clear();
+    this->Implementation->OutputMap.clear();
     }
   this->Initialized = false;
 }
@@ -149,6 +149,11 @@ vtkCollection* vtkGeoSource::GetRequestedNodes(vtkGeoTreeNode* node)
   if (this->Implementation->OutputMap.count(p) > 0)
     {
     c = this->Implementation->OutputMap[p];
+    if (c)
+      {
+      c->Register(0);
+      this->Implementation->OutputMap[p] = 0;
+      }
     }
   this->OutputSetLock->Unlock();
 

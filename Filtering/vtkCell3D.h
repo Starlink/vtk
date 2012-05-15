@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCell3D.h,v $
+  Module:    vtkCell3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class vtkDoubleArray;
 class VTK_FILTERING_EXPORT vtkCell3D : public vtkCell
 {
 public:
-  vtkTypeRevisionMacro(vtkCell3D,vtkCell);
+  vtkTypeMacro(vtkCell3D,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -54,7 +54,7 @@ public:
   virtual void GetFacePoints(int faceId, int* &pts) = 0;
 
   void Contour(double value, vtkDataArray *cellScalars, 
-               vtkPointLocator *locator, vtkCellArray *verts, 
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
@@ -71,7 +71,7 @@ public:
   // be invoked on both the output cell and point data. The cellId refers to
   // the cell from which the cell data is copied.)  (Satisfies vtkCell API.)
   virtual void Clip(double value, vtkDataArray *cellScalars, 
-                    vtkPointLocator *locator, vtkCellArray *connectivity,
+                    vtkIncrementalPointLocator *locator, vtkCellArray *connectivity,
                     vtkPointData *inPd, vtkPointData *outPd,
                     vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd, 
                     int insideOut);

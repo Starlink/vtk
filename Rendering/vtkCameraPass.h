@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCameraPass.h,v $
+  Module:    vtkCameraPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,13 +35,15 @@ class VTK_RENDERING_EXPORT vtkCameraPass : public vtkRenderPass
 {
 public:
   static vtkCameraPass *New();
-  vtkTypeRevisionMacro(vtkCameraPass,vtkRenderPass);
+  vtkTypeMacro(vtkCameraPass,vtkRenderPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
   // Description:
   // Release graphics resources and ask components to release their own

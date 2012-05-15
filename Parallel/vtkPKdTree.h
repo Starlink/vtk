@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPKdTree.h,v $
+  Module:    vtkPKdTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class vtkKdNode;
 class VTK_PARALLEL_EXPORT vtkPKdTree : public vtkKdTree
 {
 public:
-  vtkTypeRevisionMacro(vtkPKdTree, vtkKdTree);
+  vtkTypeMacro(vtkPKdTree, vtkKdTree);
 
 
   void PrintSelf(ostream& os, vtkIndent indent);
@@ -131,6 +131,16 @@ public:
   //    If the k-d tree has not yet been built, the regions
   //    will be assigned after BuildLocator executes.
   int AssignRegionsContiguous();
+
+  // Description:
+  // Returns the region assignment map where index is the region and value is
+  // the processes id for that region.
+  const int* GetRegionAssignmentMap()
+    { return this->RegionAssignmentMap; }
+
+  // Description:
+  /// Returns the number of regions in the region assignment map.
+  vtkGetMacro(RegionAssignmentMapLength, int);
 
   // Description:
   //    Writes the list of region IDs assigned to the specified
@@ -238,16 +248,20 @@ public:
                                         vtkIntArray *orderedList));
 
   // Description:
-  // Return a list of all process in order from front to back given a
+  // Return a list of all processes in order from front to back given a
   // vector direction of projection.  Use this to do visibility sorts
-  // in parallel projection mode.
+  // in parallel projection mode. `orderedList' will be resized to the number
+  // of processes. The return value is the number of processes.
+  // \pre orderedList_exists: orderedList!=0
   int ViewOrderAllProcessesInDirection(const double directionOfProjection[3],
                                        vtkIntArray *orderedList);
 
   // Description:
   // Return a list of all processes in order from front to back given a
   // camera position.  Use this to do visibility sorts in perspective
-  // projection mode.
+  // projection mode. `orderedList' will be resized to the number
+  // of processes. The return value is the number of processes.
+  // \pre orderedList_exists: orderedList!=0
   int ViewOrderAllProcessesFromPosition(const double cameraPosition[3],
                                         vtkIntArray *orderedList);
 

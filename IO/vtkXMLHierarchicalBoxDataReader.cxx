@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkXMLHierarchicalBoxDataReader.cxx,v $
+  Module:    vtkXMLHierarchicalBoxDataReader.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkXMLHierarchicalBoxDataReader, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkXMLHierarchicalBoxDataReader);
 
 //----------------------------------------------------------------------------
@@ -200,6 +199,14 @@ void vtkXMLHierarchicalBoxDataReader::ReadComposite(vtkXMLDataElement* element,
         {
         vtkWarningMacro("Missing amr box for level " << level << ",  dataset " << index);
         }
+
+      int dimensionality = 3;
+      if (!datasetXML->GetScalarAttribute("dimensionality", dimensionality))
+        {
+        // default.
+        dimensionality = 3;
+        }
+      amrBox.SetDimensionality(dimensionality);
 
       vtkSmartPointer<vtkUniformGrid> childDS = 0;
       if (this->ShouldReadDataSet(dataSetIndex))

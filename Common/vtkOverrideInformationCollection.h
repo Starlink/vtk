@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOverrideInformationCollection.h,v $
+  Module:    vtkOverrideInformationCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_COMMON_EXPORT vtkOverrideInformationCollection : public vtkCollection
 {
 public:
-  vtkTypeRevisionMacro(vtkOverrideInformationCollection,vtkCollection);
+  vtkTypeMacro(vtkOverrideInformationCollection,vtkCollection);
   static vtkOverrideInformationCollection *New();
 
   // Description:

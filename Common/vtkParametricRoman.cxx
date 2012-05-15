@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricRoman.cxx,v $
+  Module:    vtkParametricRoman.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkParametricRoman, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkParametricRoman);
 
 //----------------------------------------------------------------------------

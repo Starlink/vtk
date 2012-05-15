@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataSetAlgorithm.h,v $
+  Module:    vtkCompositeDataSetAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_FILTERING_EXPORT vtkCompositeDataSetAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkCompositeDataSetAlgorithm *New();
-  vtkTypeRevisionMacro(vtkCompositeDataSetAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkCompositeDataSetAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -11,7 +11,10 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     FrustumClip.cxx
     RGrid.cxx
     TestAppendSelection.cxx
+#    TestAppendPolyData.cxx #pending a bug fix
     TestAssignAttribute.cxx
+    TestBSPTree.cxx
+    TestDensifyPolyData.cxx
     TestClipHyperOctree.cxx
     TestConvertSelection.cxx
     TestDelaunay2D.cxx
@@ -20,13 +23,33 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     TestHyperOctreeContourFilter.cxx
     TestHyperOctreeCutter.cxx
     TestHyperOctreeDual.cxx
-#    TestHyperOctreeSurfaceFilter.cxx
+    TestHyperOctreeSurfaceFilter.cxx
     TestHyperOctreeToUniformGrid.cxx
     TestPolyDataPointSampler.cxx
     TestSelectEnclosedPoints.cxx
+    TestTessellatedBoxSource.cxx
     TestTessellator.cxx
     TestUncertaintyTubeFilter.cxx
     )
+
+  # Add Matlab Engine and Matlab Mex related tests.
+  IF(VTK_USE_MATLAB_MEX)
+    INCLUDE(${MATLAB_MEX_USE_FILE})
+    SET(MyTests ${MyTests}
+      TestMatlabEngineInterface.cxx
+      TestMatlabEngineFilter.cxx
+    )
+  ENDIF(VTK_USE_MATLAB_MEX)
+
+  # Add Gnu R interface related files.
+  IF(VTK_USE_GNU_R)
+    SET(MyTests ${MyTests}
+      TestRRandomTableSource.cxx
+      TestRCalculatorFilter.cxx
+      TestRInterface.cxx
+      )
+  ENDIF(VTK_USE_GNU_R)
+
   IF (VTK_DATA_ROOT)
     # add tests that require data
     SET(MyTests ${MyTests}
@@ -34,11 +57,12 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       BoxClipTetrahedra.cxx
       BoxClipTriangulateAndInterpolate.cxx
       TestActor2DTextures.cxx
+      TestGradientAndVorticity.cxx
       TestHierarchicalBoxPipeline.cxx
       TestIconGlyphFilterGravity.cxx
+      TestIncrementalOctreePointLocator.cxx
       TestMultiBlock.cxx
       TestQuadraturePoints.cxx
-      TestQuadraturePointStatistics.cxx
       TestUnstructuredGridGeometryFilter.cxx
       UnstructuredGridGradients.cxx
       UnstructuredGridCellGradients.cxx
@@ -60,8 +84,11 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
   IF (VTK_USE_PARALLEL)
-    TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkParallel)
+    TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkParallel ${OPENGL_gl_LIBRARY})
   ENDIF (VTK_USE_PARALLEL)
+  IF (VTK_USE_GNU_R OR VTK_USE_MATLAB_MEX)
+    TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkInfovis)
+  ENDIF (VTK_USE_GNU_R OR VTK_USE_MATLAB_MEX)
   SET (TestsToRun ${Tests})
   REMOVE (TestsToRun ${KIT}CxxTests.cxx)
 
@@ -79,3 +106,18 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     ENDIF (VTK_DATA_ROOT)
   ENDFOREACH (test) 
 ENDIF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
+
+IF (VTK_WRAP_JAVA)
+   ADD_EXECUTABLE(TestJavaProgrammableFilter TestJavaProgrammableFilter.cxx)
+   ADD_TEST(TestJavaProgrammableFilter
+     ${CXX_TEST_PATH}/TestJavaProgrammableFilter
+     -j ${LIBRARY_OUTPUT_PATH}/vtk.jar
+     -cp ${LIBRARY_OUTPUT_PATH}/vtk.jar
+     -class vtk/SampleAlgorithm
+      )
+  TARGET_LINK_LIBRARIES(TestJavaProgrammableFilter
+    vtkGraphicsJava
+    ${JAVA_AWT_LIBRARY}
+    ${JAVA_JVM_LIBRARY}
+    )
+ENDIF (VTK_WRAP_JAVA)

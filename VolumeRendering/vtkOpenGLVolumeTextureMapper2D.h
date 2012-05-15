@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLVolumeTextureMapper2D.h,v $
+  Module:    vtkOpenGLVolumeTextureMapper2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_VOLUMERENDERING_EXPORT vtkOpenGLVolumeTextureMapper2D : public vtkVolumeTextureMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkOpenGLVolumeTextureMapper2D,vtkVolumeTextureMapper2D);
+  vtkTypeMacro(vtkOpenGLVolumeTextureMapper2D,vtkVolumeTextureMapper2D);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   static vtkOpenGLVolumeTextureMapper2D *New();

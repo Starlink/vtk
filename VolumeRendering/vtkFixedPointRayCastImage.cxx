@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointRayCastImage.cxx,v $
+  Module:    vtkFixedPointRayCastImage.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkFixedPointRayCastImage.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkFixedPointRayCastImage, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkFixedPointRayCastImage);
 
 // Construct a new vtkFixedPointRayCastImage with default values

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetAttributes.h,v $
+  Module:    vtkDataSetAttributes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ public:
   // Construct object with copying turned on for all data.
   static vtkDataSetAttributes *New();
   
-  vtkTypeRevisionMacro(vtkDataSetAttributes,vtkFieldData);
+  vtkTypeMacro(vtkDataSetAttributes,vtkFieldData);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -608,12 +608,22 @@ public:
     void InitializeFieldList(vtkDataSetAttributes* dsa);
     void IntersectFieldList(vtkDataSetAttributes* dsa);
 
+    // Description:
+    // Similar to IntersectFieldList() except that it builds a union of the
+    // array list. To determine the active attributes, it still, however, takes
+    // an intersection.
+    // WARNING!!!-IntersectFieldList() and UnionFieldList() should not be
+    // intermixed. 
+    void UnionFieldList(vtkDataSetAttributes* dsa);
+
     //Determine whether data is available
     int IsAttributePresent(int attrType); //true/false attributes specified
     
     // Accessor methods.
     int GetNumberOfFields() { return this->NumberOfFields; }
     int GetFieldIndex(int i) { return this->FieldIndices[i]; }
+    const char* GetFieldName(int i) { return this->Fields[i]; }
+    int GetFieldComponents(int i) { return this->FieldComponents[i]; }
     int GetDSAIndex(int index, int i) { return this->DSAIndices[index][i]; }
     
     friend class vtkDataSetAttributes;
@@ -622,10 +632,13 @@ public:
     FieldList(const FieldList&) {} //prevent these methods from being used
     void operator=(const FieldList&) {}
 
+    void SetFieldIndex(int i, int index)
+      { this->FieldIndices[i] = index; }
   private:
     void SetField(int index, vtkAbstractArray *da);
     void RemoveField(const char *name);
     void ClearFields();
+    void GrowBy(unsigned int delta);
 
     int NumberOfFields; //the number of fields (including five named attributes)
     // These keep track of what is common across datasets. The first

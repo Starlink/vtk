@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeContourFilter.h,v $
+  Module:    vtkHyperOctreeContourFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@
 #include "vtkContourValues.h" // Needed for inline methods
 #include "vtkCutter.h" // for VTK_SORT_BY_VALUE
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkHyperOctree;
 class vtkOrderedTriangulator;
 class vtkTetra;
@@ -65,7 +65,7 @@ class vtkBitArray;
 class VTK_GRAPHICS_EXPORT vtkHyperOctreeContourFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkHyperOctreeContourFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeContourFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -148,8 +148,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By default, 
   // an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is
@@ -179,7 +179,7 @@ protected:
   void ContourNode1D();
   
   vtkContourValues *ContourValues;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
  
   vtkIdList *CellPts; // for 2D case
   

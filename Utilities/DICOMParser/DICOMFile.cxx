@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   DICOMParser
-  Module:    $RCSfile: DICOMFile.cxx,v $
+  Module:    DICOMFile.cxx
   Language:  C++
-  Date:      $Date: 2008-03-19 20:22:17 $
-  Version:   $Revision: 1.13 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) 2003 Matt Turek
   All rights reserved.
@@ -112,7 +112,7 @@ void DICOMFile::Close()
 
 long DICOMFile::Tell() 
 {
-  long loc = InputStream.tellg();
+  long loc = static_cast<long>(InputStream.tellg());
   // dicom_stream::cout << "Tell: " << loc << dicom_stream::endl;
   return loc;
 }
@@ -147,7 +147,7 @@ void DICOMFile::SkipToStart()
 
 void DICOMFile::Read(void* ptr, long nbytes) 
 {
-  InputStream.read((char*)ptr, nbytes);
+  InputStream.read(static_cast<char*>(ptr), nbytes);
   // dicom_stream::cout << (char*) ptr << dicom_stream::endl;
 }
 
@@ -155,7 +155,7 @@ doublebyte DICOMFile::ReadDoubleByte()
 {
   doublebyte sh = 0;
   int sz = sizeof(doublebyte);
-  this->Read((char*)&(sh),sz); 
+  this->Read(reinterpret_cast<char*>(&sh),sz); 
   if (PlatformIsBigEndian) 
     {
     sh = swap2(sh);
@@ -167,7 +167,7 @@ doublebyte DICOMFile::ReadDoubleByteAsLittleEndian()
 {
   doublebyte sh = 0;
   int sz = sizeof(doublebyte);
-  this->Read((char*)&(sh),sz); 
+  this->Read(reinterpret_cast<char*>(&sh),sz); 
   if (PlatformIsBigEndian)
     {
     sh = swap2(sh);
@@ -179,10 +179,10 @@ quadbyte DICOMFile::ReadQuadByte()
 {
   quadbyte sh;
   int sz = sizeof(quadbyte);
-  this->Read((char*)&(sh),sz);
+  this->Read(reinterpret_cast<char*>(&sh),sz);
   if (PlatformIsBigEndian) 
     {
-    sh = swap4(sh);
+    sh = static_cast<quadbyte>(swap4(static_cast<uint>(sh)));
     }
   return(sh);
 }
@@ -195,10 +195,10 @@ quadbyte DICOMFile::ReadNBytes(int len)
     case 1:
       char ch;
       this->Read(&ch,1);  //from Image
-      ret =(quadbyte) ch;
+      ret =static_cast<quadbyte>(ch);
       break;
     case 2:
-      ret =(quadbyte) ReadDoubleByte();
+      ret =static_cast<quadbyte>(ReadDoubleByte());
       break;
     case 4:
       ret = ReadQuadByte();

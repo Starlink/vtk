@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPrimitivePainter.cxx,v $
+  Module:    vtkPrimitivePainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 #include "vtkGLSLShaderDeviceAdapter2.h"
 #include "vtkOpenGLProperty.h"
 
-vtkCxxRevisionMacro(vtkPrimitivePainter, "$Revision: 1.11 $");
 //---------------------------------------------------------------------------
 vtkPrimitivePainter::vtkPrimitivePainter()
 {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkCarbonRenderWindow.cxx,v $
+Module:    vtkCarbonRenderWindow.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -29,7 +29,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include <math.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCarbonRenderWindow, "$Revision: 1.77 $");
 vtkStandardNewMacro(vtkCarbonRenderWindow);
 
 //----------------------------------------------------------------------------
@@ -323,6 +322,24 @@ void vtkCarbonRenderWindow::DestroyWindow()
     aglDestroyContext(this->ContextId);
     this->ContextId = NULL;
     }
+  
+  // remove event filters if we have them
+  if(this->RegionEventHandler)
+    {
+    RemoveEventHandler(this->RegionEventHandler);
+    DisposeEventHandlerUPP(this->RegionEventHandlerUPP);
+    this->RegionEventHandler = 0;
+    this->RegionEventHandlerUPP = 0;
+    }
+
+  if (this->RootWindow && this->OwnWindow)
+    {
+    DisposeWindow(this->RootWindow);
+    this->RootWindow = 0;
+    this->WindowId = 0;
+    }
+
+  this->Mapped = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -410,6 +427,12 @@ bool vtkCarbonRenderWindow::IsCurrent()
 void vtkCarbonRenderWindow::SetForceMakeCurrent()
 {
   this->ForceMakeCurrent = 1;
+}
+
+// --------------------------------------------------------------------------
+int vtkCarbonRenderWindow::IsDirect()
+{
+  return 1;
 }
 
 // --------------------------------------------------------------------------
@@ -836,19 +859,6 @@ void vtkCarbonRenderWindow::Finalize(void)
 
   this->DestroyWindow();
 
-  // remove event filters if we have them
-  if(this->RegionEventHandler)
-    {
-    RemoveEventHandler(this->RegionEventHandler);
-    DisposeEventHandlerUPP(this->RegionEventHandlerUPP);
-    this->RegionEventHandler = 0;
-    this->RegionEventHandlerUPP = 0;
-    }
-
-  if (this->RootWindow && this->OwnWindow)
-    {
-    DisposeWindow(this->RootWindow);
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1192,7 +1202,7 @@ void vtkCarbonRenderWindow::HideCursor()
     return;
     }
   this->CursorHidden = 1;
-  HideCursor();
+  CGDisplayHideCursor(CGMainDisplayID());
 }
 
 //----------------------------------------------------------------------------
@@ -1203,7 +1213,7 @@ void vtkCarbonRenderWindow::ShowCursor()
     return;
     }
   this->CursorHidden = 0;
-  ShowCursor();
+  CGDisplayShowCursor(CGMainDisplayID());
 }
 
 OSStatus vtkCarbonRenderWindow::RegionEventProcessor(EventHandlerCallRef, 

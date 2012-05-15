@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterXMLWriter.cxx,v $
+  Module:    vtkX3DExporterXMLWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen, Kristian Sons
   All rights reserved.
@@ -45,7 +45,6 @@ class vtkX3DExporterXMLNodeInfoStack: public vtkX3DExporterXMLNodeInfoStackBase
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkX3DExporterXMLWriter);
-vtkCxxRevisionMacro(vtkX3DExporterXMLWriter, "$Revision: 1.6 $");
 //-----------------------------------------------------------------------------
 vtkX3DExporterXMLWriter::~vtkX3DExporterXMLWriter()
 {

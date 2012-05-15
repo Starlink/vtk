@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFastNumericConversion.h,v $
+  Module:    vtkFastNumericConversion.h
   
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -76,7 +76,7 @@ class VTK_COMMON_EXPORT vtkFastNumericConversion : public vtkObject
 {
 public:
   static vtkFastNumericConversion *New();
-  vtkTypeRevisionMacro(vtkFastNumericConversion, vtkObject);
+  vtkTypeMacro(vtkFastNumericConversion, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

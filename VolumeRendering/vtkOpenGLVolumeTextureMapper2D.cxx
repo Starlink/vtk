@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLVolumeTextureMapper2D.cxx,v $
+  Module:    vtkOpenGLVolumeTextureMapper2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLVolumeTextureMapper2D, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkOpenGLVolumeTextureMapper2D);
 #endif
 
@@ -89,6 +88,9 @@ void vtkOpenGLVolumeTextureMapper2D::Render(vtkRenderer *ren, vtkVolume *vol)
   glMatrixMode( GL_MODELVIEW );
   glPushMatrix();
   glMultMatrixd(matrix->Element[0]);
+
+  // Make sure that culling is turned off
+  glDisable( GL_CULL_FACE );
 
   // Turn lighting off - the polygon textures already have illumination
   glDisable( GL_LIGHTING );

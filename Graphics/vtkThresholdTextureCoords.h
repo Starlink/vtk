@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThresholdTextureCoords.h,v $
+  Module:    vtkThresholdTextureCoords.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_GRAPHICS_EXPORT vtkThresholdTextureCoords : public vtkDataSetAlgorithm
 {
 public:
   static vtkThresholdTextureCoords *New();
-  vtkTypeRevisionMacro(vtkThresholdTextureCoords,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkThresholdTextureCoords,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBiconnectedComponents.cxx,v $
+  Module:    vtkBoostBiconnectedComponents.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,6 @@
 #include "vtkGraph.h"
 #include "vtkBoostGraphAdapter.h"
 #include <boost/graph/biconnected_components.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/version.hpp>
 #include <vtksys/stl/vector>
 #include <vtksys/stl/utility>
@@ -41,7 +40,6 @@ using namespace boost;
 using vtksys_stl::vector;
 using vtksys_stl::pair;
 
-vtkCxxRevisionMacro(vtkBoostBiconnectedComponents, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkBoostBiconnectedComponents);
 
 vtkBoostBiconnectedComponents::vtkBoostBiconnectedComponents()
@@ -64,7 +62,7 @@ int vtkBoostBiconnectedComponents::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkUndirectedGraph *input = vtkUndirectedGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUndirectedGraph *output = vtkUndirectedGraph::SafeDownCast(

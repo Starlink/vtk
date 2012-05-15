@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelHierarchyIterator.h,v $
+  Module:    vtkLabelHierarchyIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,8 +25,9 @@
 #ifndef __vtkLabelHierarchyIterator_h
 #define __vtkLabelHierarchyIterator_h
 
-
 #include "vtkObject.h"
+#include "vtkStdString.h" // for std string
+#include "vtkUnicodeString.h" // for unicode string
 
 class vtkIdTypeArray;
 class vtkLabelHierarchy;
@@ -35,7 +36,7 @@ class vtkPolyData;
 class VTK_RENDERING_EXPORT vtkLabelHierarchyIterator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchyIterator,vtkObject);
+  vtkTypeMacro(vtkLabelHierarchyIterator,vtkObject);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:
@@ -62,12 +63,34 @@ public:
   virtual void GetSize( double sz[2] );
 
   // Description:
+  // Retrieves the current label maximum width in world coordinates.
+  virtual void GetBoundedSize( double sz[2] );
+
+  // Description:
   // Retrieves the current label type.
   virtual int GetType();
+
+  //BTX
+  // Description:
+  // Retrieves the current label string.
+  virtual vtkStdString GetLabel();
+
+  // Description:
+  // Retrieves the current label as a unicode string.
+  virtual vtkUnicodeString GetUnicodeLabel();
+  //ETX
+
+  // Description:
+  // Retrieves the current label orientation.
+  virtual double GetOrientation();
 
   // Description:
   // Retrieves the current label id.
   virtual vtkIdType GetLabelId() { return -1; }
+
+  // Description:
+  // Get the label hierarchy associated with the current label.
+  vtkGetObjectMacro(Hierarchy, vtkLabelHierarchy);
 
   // Description:
   // Sets a polydata to fill with geometry representing

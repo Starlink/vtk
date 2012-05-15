@@ -1,27 +1,19 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtView.h,v $
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
+  Module:    vtkQtView.h
 
 =========================================================================*/
 /*-------------------------------------------------------------------------
-  Copyright 2008 Sandia Corporation.
+  Copyright 2009 Sandia Corporation.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 // .NAME vtkQtView - Superclass for Qt widget-based views.
 //
 // .SECTION Description
-// This superclass provides common api to integrate a Qt widget into
-// the VTK view framework. Not much here yet, but in the future there
+// This abstract superclass provides common api to integrate a Qt widget 
+// into the VTK view framework. Not much here yet, but in the future there
 // could be methods around selection, event-handling, drag-and-drop, etc.
 //
 
@@ -32,22 +24,39 @@
 #include "QVTKWin32Header.h"
 #include "vtkView.h"
 
-class QWidget;
+#include <QObject>
 
-class QVTK_EXPORT vtkQtView : public vtkView
+class QVTK_EXPORT vtkQtView : public QObject, public vtkView
 {
+Q_OBJECT
 public:
-  static vtkQtView *New();
-  vtkTypeRevisionMacro(vtkQtView, vtkView);
+
+  vtkTypeMacro(vtkQtView, vtkView);
   void PrintSelf(ostream& os, vtkIndent indent);
       
   // Description:
-  // Set and get the underlying Qt widget.
-  // Subclasses should call SetWidget() with their own QWidget.
-  // Alternatively, it is convenient to setup your widget in
-  // designer and then pass it to SetWidget().
-  virtual void SetWidget(QWidget*);
-  virtual QWidget* GetWidget();
+  // Get the main container of this view (a  QWidget).
+  // The application typically places the view with a call
+  // to GetWidget(): something like this
+  // this->ui->box->layout()->addWidget(this->View->GetWidget());
+  virtual QWidget* GetWidget()=0;
+
+  // Description:
+  // Calls QApplication::processEvents().  This is useful if you are using QWidgets
+  // but have not called QApplication::exec because you don't want to give control
+  // to the Qt event loop.  See also ProcessQtEventsNoUserEvents().
+  virtual void ProcessQtEvents();
+
+  // Description:
+  // Calls QApplication::processEvents(QEventLoop::ExcludeUserInputEvents).
+  // See also ProcessQtEvents().
+  virtual void ProcessQtEventsNoUserInput();
+
+  // Description:
+  // Save an image.  Uses QPixmap::grab and QPixmap::save.  The image format will
+  // be determined from the filename.  Qt's image format support may vary, usually
+  // bmp, jpg, ppm, or png is a safe choice.  Returns false if there was a failure.
+  virtual bool SaveImage(const char* fileName);
   
 protected:
   vtkQtView();
@@ -57,9 +66,6 @@ private:
   vtkQtView(const vtkQtView&);  // Not implemented.
   void operator=(const vtkQtView&);  // Not implemented.
   
-  // Description:
-  // Pointer to the qt widget
-  QWidget *Widget;
 };
 
 #endif

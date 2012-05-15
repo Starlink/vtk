@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitSelectionLoop.cxx,v $
+  Module:    vtkImplicitSelectionLoop.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPoints.h"
 #include "vtkPolygon.h"
 
-vtkCxxRevisionMacro(vtkImplicitSelectionLoop, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkImplicitSelectionLoop);
 vtkCxxSetObjectMacro(vtkImplicitSelectionLoop, Loop,vtkPoints);
 

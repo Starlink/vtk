@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPythonUtil.h,v $
+  Module:    vtkPythonUtil.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -181,9 +181,11 @@ public:
   static vtkPythonCommand *New() { return new vtkPythonCommand; };
 
   void SetObject(PyObject *o);
+  void SetThreadState(PyThreadState *ts);
   void Execute(vtkObject *ptr, unsigned long eventtype, void *CallData);
  
   PyObject *obj;
+  PyThreadState *ThreadState;
 protected:
   vtkPythonCommand();
   ~vtkPythonCommand(); 

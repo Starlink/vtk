@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSeedRepresentation.h,v $
+  Module:    vtkSeedRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ public:
 
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkSeedRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkSeedRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -101,6 +101,10 @@ public:
   virtual int CreateHandle( double e[2] ); //returns the id of the seed created
   virtual void RemoveLastHandle(); //delete last handle created
   virtual void RemoveActiveHandle();
+
+  // Description:
+  // Remove the nth handle.
+  virtual void RemoveHandle( int n );
 
   // Description:
   // These are methods that satisfy vtkWidgetRepresentation's API.

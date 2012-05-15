@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFreeTypeUtilities.h,v $
+  Module:    vtkFreeTypeUtilities.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,7 +60,7 @@ public:
 class VTK_RENDERING_EXPORT vtkFreeTypeUtilities : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkFreeTypeUtilities, vtkObject);
+  vtkTypeMacro(vtkFreeTypeUtilities, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

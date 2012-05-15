@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTerrainContourLineInterpolator.cxx,v $
+  Module:    vtkTerrainContourLineInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkCellArray.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkTerrainContourLineInterpolator, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkTerrainContourLineInterpolator);
 
 //----------------------------------------------------------------------

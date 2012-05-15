@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitPlaneWidget.cxx,v $
+  Module:    vtkImplicitPlaneWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,6 @@
 #include "vtkTransform.h"
 #include "vtkTubeFilter.h"
 
-vtkCxxRevisionMacro(vtkImplicitPlaneWidget, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkImplicitPlaneWidget);
 
 //----------------------------------------------------------------------------

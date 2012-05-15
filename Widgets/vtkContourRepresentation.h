@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContourRepresentation.h,v $
+  Module:    vtkContourRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@
 #define __vtkContourRepresentation_h
 
 #include "vtkWidgetRepresentation.h"
-#include <vtkstd/vector> // Required for vector
+#include <vtkstd/vector> // STL Header; Required for vector
 
 class vtkContourLineInterpolator;
 class vtkPointPlacer;
@@ -75,6 +75,7 @@ public:
   double        WorldPosition[3];
   double        WorldOrientation[9];
   double        NormalizedDisplayPosition[2];
+  int           Selected;
   vtkstd::vector<vtkContourRepresentationPoint*> Points;
 };
 
@@ -82,6 +83,19 @@ class vtkContourRepresentationInternals
 {
 public:
   vtkstd::vector<vtkContourRepresentationNode*> Nodes;
+  void ClearNodes()
+  {
+    for(unsigned int i=0;i<this->Nodes.size();i++)
+      {
+      for (unsigned int j=0;j<this->Nodes[i]->Points.size();j++)
+        {
+        delete this->Nodes[i]->Points[j];
+        }
+      this->Nodes[i]->Points.clear();
+      delete this->Nodes[i];
+      }
+    this->Nodes.clear(); 
+  }   
 };
 //ETX
 
@@ -93,12 +107,13 @@ class VTK_WIDGETS_EXPORT vtkContourRepresentation : public vtkWidgetRepresentati
 public:
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkContourRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkContourRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Add a node at a specific world position. Returns 0 if the
   // node could not be added, 1 otherwise.
+  virtual int AddNodeAtWorldPosition( double x, double y, double z);
   virtual int AddNodeAtWorldPosition( double worldPos[3] );
   virtual int AddNodeAtWorldPosition( double worldPos[3],
                                       double worldOrient[9] );
@@ -140,6 +155,13 @@ public:
   virtual int SetActiveNodeToDisplayPosition( int pos[2] );
   virtual int SetActiveNodeToDisplayPosition( int X, int Y );
   
+  // Description:
+  // Set/Get whether the active or nth node is selected. 
+  virtual int ToggleActiveNodeSelected();
+  virtual int GetActiveNodeSelected();
+  virtual int GetNthNodeSelected(int);
+  virtual int SetNthNodeSelected(int);
+
   // Description:
   // Get the world position of the active node. Will return
   // 0 if there is no active node, or 1 otherwise.
@@ -242,7 +264,11 @@ public:
   // Delete the nth node. Return 1 on success or 0 if n
   // is out of range.
   virtual int DeleteNthNode( int n );
-
+  
+  // Description:
+  // Delete all nodes. 
+  virtual void ClearAllNodes();
+  
   // Description:
   // Given a specific X, Y pixel location, add a new node 
   // on the contour at this location. 
@@ -328,6 +354,13 @@ public:
   vtkBooleanMacro( ClosedLoop, int );
   
   // Description:
+  // A flag to indicate whether to show the Selected nodes
+  // Default is to set it to false.
+  virtual void SetShowSelectedNodes(int);
+  vtkGetMacro( ShowSelectedNodes, int );
+  vtkBooleanMacro( ShowSelectedNodes, int );
+
+  // Description:
   // Get the points in this contour as a vtkPolyData. 
   //BTX
   virtual vtkPolyData* GetContourRepresentationAsPolyData() = 0;
@@ -337,6 +370,7 @@ public:
   // Get the nodes and not the intermediate points in this 
   // contour as a vtkPolyData.
   void GetNodePolyData( vtkPolyData* poly );
+ 
 
 protected:
   vtkContourRepresentation();
@@ -353,6 +387,9 @@ protected:
   
   int CurrentOperation;
   int ClosedLoop;
+
+  // A flag to indicate whether to show the Selected nodes
+  int                   ShowSelectedNodes;
   
   vtkContourRepresentationInternals *Internal;
 

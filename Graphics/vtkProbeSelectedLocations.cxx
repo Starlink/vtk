@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProbeSelectedLocations.cxx,v $
+  Module:    vtkProbeSelectedLocations.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkUnstructuredGrid.h"
 
 vtkStandardNewMacro(vtkProbeSelectedLocations);
-vtkCxxRevisionMacro(vtkProbeSelectedLocations, "$Revision: 1.2 $");
 //----------------------------------------------------------------------------
 vtkProbeSelectedLocations::vtkProbeSelectedLocations()
 {

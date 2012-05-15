@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGaussianBlurPass.cxx,v $
+  Module:    vtkGaussianBlurPass.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,10 +37,10 @@
 #include "vtkPixelBufferObject.h"
 #include "vtkPixelBufferObject.h"
 #include "vtkImageExtractComponents.h"
+#include "vtkCamera.h"
+#include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkGaussianBlurPass, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGaussianBlurPass);
-vtkCxxSetObjectMacro(vtkGaussianBlurPass,DelegatePass,vtkRenderPass);
 
 extern const char *vtkGaussianBlurPassShader_fs;
 
@@ -48,21 +48,17 @@ extern const char *vtkGaussianBlurPassShader_fs;
 // ----------------------------------------------------------------------------
 vtkGaussianBlurPass::vtkGaussianBlurPass()
 {
-  this->DelegatePass=0;
-  
   this->FrameBufferObject=0;
   this->Pass1=0;
   this->Pass2=0;
   this->BlurProgram=0;
+  this->Supported=false;
+  this->SupportProbed=false;
 }
 
 // ----------------------------------------------------------------------------
 vtkGaussianBlurPass::~vtkGaussianBlurPass()
 {
-  if(this->DelegatePass!=0)
-    {
-      this->DelegatePass->Delete();
-    }
   if(this->FrameBufferObject!=0)
     {
     vtkErrorMacro(<<"FrameBufferObject should have been deleted in ReleaseGraphicsResources().");
@@ -85,16 +81,6 @@ vtkGaussianBlurPass::~vtkGaussianBlurPass()
 void vtkGaussianBlurPass::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-  
-  os << indent << "DelegatePass:";
-  if(this->DelegatePass!=0)
-    {
-    this->DelegatePass->PrintSelf(os,indent);
-    }
-  else
-    {
-    os << "(none)" <<endl;
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -111,34 +97,73 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
   
   if(this->DelegatePass!=0)
     {
-    // Test for Hardware support. If not supported, just render the delegate.
-    bool supported=vtkFrameBufferObject::IsSupported(r->GetRenderWindow());
-    
-    if(!supported)
+    if(!this->SupportProbed)
       {
-      vtkErrorMacro("FBOs are not supported by the context. Cannot blur the image.");
-      }
-    if(supported)
-      {
-      supported=vtkTextureObject::IsSupported(r->GetRenderWindow());
+      this->SupportProbed=true;
+      // Test for Hardware support. If not supported, just render the delegate.
+      bool supported=vtkFrameBufferObject::IsSupported(r->GetRenderWindow());
+      
       if(!supported)
         {
-        vtkErrorMacro("Texture Objects are not supported by the context. Cannot blur the image.");
+        vtkErrorMacro("FBOs are not supported by the context. Cannot blur the image.");
         }
-      }
-    
-    if(supported)
-      {
-      supported=
-        vtkShaderProgram2::IsSupported(static_cast<vtkOpenGLRenderWindow *>(
-                                         r->GetRenderWindow()));
-      if(!supported)
+      if(supported)
         {
-        vtkErrorMacro("GLSL is not supported by the context. Cannot blur the image.");
+        supported=vtkTextureObject::IsSupported(r->GetRenderWindow());
+        if(!supported)
+          {
+          vtkErrorMacro("Texture Objects are not supported by the context. Cannot blur the image.");
+          }
         }
+      
+      if(supported)
+        {
+        supported=
+          vtkShaderProgram2::IsSupported(static_cast<vtkOpenGLRenderWindow *>(
+                                           r->GetRenderWindow()));
+        if(!supported)
+          {
+          vtkErrorMacro("GLSL is not supported by the context. Cannot blur the image.");
+          }
+        }
+      
+      if(supported)
+        {
+        // FBO extension is supported. Is the specific FBO format supported?
+        if(this->FrameBufferObject==0)
+          {
+          this->FrameBufferObject=vtkFrameBufferObject::New();
+          this->FrameBufferObject->SetContext(r->GetRenderWindow());
+          }
+        if(this->Pass1==0)
+          {
+          this->Pass1=vtkTextureObject::New();
+          this->Pass1->SetContext(r->GetRenderWindow());
+          }
+        this->Pass1->Create2D(64,64,4,VTK_UNSIGNED_CHAR,false);
+        this->FrameBufferObject->SetColorBuffer(0,this->Pass1);
+        this->FrameBufferObject->SetNumberOfRenderTargets(1);
+        this->FrameBufferObject->SetActiveBuffer(0);
+        this->FrameBufferObject->SetDepthBufferNeeded(true);
+        
+        GLint savedCurrentDrawBuffer;
+        glGetIntegerv(GL_DRAW_BUFFER,&savedCurrentDrawBuffer);
+        supported=this->FrameBufferObject->StartNonOrtho(64,64,false);
+        if(!supported)
+          {
+          vtkErrorMacro("The requested FBO format is not supported by the context. Cannot blur the image.");
+          }
+        else
+          {
+          this->FrameBufferObject->UnBind();
+          glDrawBuffer(static_cast<GLenum>(savedCurrentDrawBuffer));
+          }
+        }
+      
+      this->Supported=supported;
       }
     
-    if(!supported)
+    if(!this->Supported)
       {
       this->DelegatePass->Render(s);
       this->NumberOfRenderedProps+=
@@ -151,70 +176,33 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
     
     // 1. Create a new render state with an FBO.
     
-    int width=0;
-    int height=0;
-      
-    vtkFrameBufferObject *fbo=s->GetFrameBuffer();
-    if(fbo==0)
-      {
-      r->GetTiledSize(&width,&height);
-      }
-    else
-      {
-      int size[2];
-      fbo->GetLastSize(size);
-      width=size[0];
-      height=size[1];
-      }
+    int width;
+    int height;
+    int size[2];
+    s->GetWindowSize(size);
+    width=size[0];
+    height=size[1];
     
     const int extraPixels=2; // two on each side, as the kernel is 5x5
     
     int w=width+extraPixels*2;
     int h=height+extraPixels*2;
     
-    vtkRenderState s2(r);
-    s2.SetPropArrayAndCount(s->GetPropArray(),s->GetPropArrayCount());
+    if(this->Pass1==0)
+      {
+      this->Pass1=vtkTextureObject::New();
+      this->Pass1->SetContext(r->GetRenderWindow());
+      }
     
     if(this->FrameBufferObject==0)
       {
       this->FrameBufferObject=vtkFrameBufferObject::New();
       this->FrameBufferObject->SetContext(r->GetRenderWindow());
       }
-    s2.SetFrameBuffer(this->FrameBufferObject);
     
-    if(this->Pass1==0)
-      {
-      this->Pass1=vtkTextureObject::New();
-      this->Pass1->SetContext(this->FrameBufferObject->GetContext());
-      }
-    
-    if(this->Pass1->GetWidth()!=static_cast<unsigned int>(w) ||
-       this->Pass1->GetHeight()!=static_cast<unsigned int>(h))
-      {
-      this->Pass1->Create2D(w,h,4,VTK_UNSIGNED_CHAR,false);
-      }
-    
-    this->FrameBufferObject->SetColorBuffer(0,this->Pass1);
-    this->FrameBufferObject->SetDepthBufferNeeded(true);
-    this->FrameBufferObject->StartNonOrtho(w,h,false);
-    
-#ifdef VTK_GAUSSIAN_BLUR_PASS_DEBUG
-    cout << "gauss finish0" << endl;
-    glFinish();
-#endif
-    
-    // 2. Delegate render in FBO
-    glEnable(GL_DEPTH_TEST);
-    this->DelegatePass->Render(&s2);
-    this->NumberOfRenderedProps+=
-      this->DelegatePass->GetNumberOfRenderedProps();
-    
-    
-#ifdef VTK_GAUSSIAN_BLUR_PASS_DEBUG
-    cout << "gauss finish1" << endl;
-    glFinish();
-#endif
-    
+    this->RenderDelegate(s,width,height,w,h,this->FrameBufferObject,
+                         this->Pass1);
+
 #ifdef VTK_GAUSSIAN_BLUR_PASS_DEBUG
     // Save first pass in file for debugging.
     vtkPixelBufferObject *pbo=this->Pass1->Download();
@@ -266,7 +254,9 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
     if(this->Pass2->GetWidth()!=static_cast<unsigned int>(w) ||
        this->Pass2->GetHeight()!=static_cast<unsigned int>(h))
       {
-      this->Pass2->Create2D(w,h,4,VTK_UNSIGNED_CHAR,false);
+      this->Pass2->Create2D(static_cast<unsigned int>(w),
+                            static_cast<unsigned int>(h),4,
+                            VTK_UNSIGNED_CHAR,false);
       }
     
     this->FrameBufferObject->SetColorBuffer(0,this->Pass2);
@@ -311,7 +301,7 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
       
       // restore some state.
       this->FrameBufferObject->UnBind();
-      glDrawBuffer(savedDrawBuffer);
+      glDrawBuffer(static_cast<GLenum>(savedDrawBuffer));
       return;
       }
     
@@ -320,7 +310,7 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
       static_cast<vtkOpenGLRenderWindow *>(r->GetRenderWindow())->GetTextureUnitManager();
     
     int sourceId=tu->Allocate();
-    vtkgl::ActiveTexture(vtkgl::TEXTURE0+sourceId);
+    vtkgl::ActiveTexture(vtkgl::TEXTURE0+static_cast<GLenum>(sourceId));
     this->Pass1->Bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -418,7 +408,7 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
     
     this->FrameBufferObject->UnBind();
     
-    glDrawBuffer(savedDrawBuffer);
+    glDrawBuffer(static_cast<GLenum>(savedDrawBuffer));
     
     // to2 is the source
     
@@ -449,37 +439,9 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
     glDisable(GL_LIGHTING);
     glDisable(GL_SCISSOR_TEST);
     
-    // Viewport transformation for 1:1 'pixel=texel=data' mapping.
-    // Note this note enough for 1:1 mapping, because depending on the
-    // primitive displayed (point,line,polygon), the rasterization rules
-    // are different.
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, width, 0.0, height, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glViewport(0, 0, width, height);
-    
-    // Render quad 0,width-1,0,height-1 in original FB
-    int minX=0;
-    int maxX=width-1;
-    int minY=0;
-    int maxY=height-1;
-   
-    // skip 2 first and 2 last extra texel.
-    float minXTexCoord=static_cast<float>(extraPixels)/w;
-    float minYTexCoord=static_cast<float>(extraPixels)/h;
-    
-    glBegin(GL_QUADS);
-    glTexCoord2f(minXTexCoord,minYTexCoord);
-    glVertex2f(minX, minY);
-    glTexCoord2f(1.0-minXTexCoord, minYTexCoord);
-    glVertex2f(maxX+1, minY);
-    glTexCoord2f(1.0-minXTexCoord, 1.0-minYTexCoord);
-    glVertex2f(maxX+1, maxY+1);
-    glTexCoord2f(minXTexCoord, 1.0-minYTexCoord);
-    glVertex2f(minX, maxY+1);
-    glEnd();
+    this->Pass2->CopyToFrameBuffer(extraPixels,extraPixels,
+                                   w-1-extraPixels,h-1-extraPixels,
+                                   0,0,width,height);
     
     this->Pass2->UnBind();
     tu->Free(sourceId);
@@ -506,10 +468,8 @@ void vtkGaussianBlurPass::Render(const vtkRenderState *s)
 void vtkGaussianBlurPass::ReleaseGraphicsResources(vtkWindow *w)
 {
   assert("pre: w_exists" && w!=0);
-  if(this->DelegatePass!=0)
-    {
-    this->DelegatePass->ReleaseGraphicsResources(w);
-    }
+  
+  this->Superclass::ReleaseGraphicsResources(w);
   
   if(this->BlurProgram!=0)
     {

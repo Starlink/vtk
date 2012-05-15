@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaFreeTypeTextMapper.h,v $
+  Module:    vtkMesaFreeTypeTextMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class FTFont;
 class VTK_RENDERING_EXPORT vtkMesaFreeTypeTextMapper : public vtkTextMapper
 {
 public:
-  vtkTypeRevisionMacro(vtkMesaFreeTypeTextMapper,vtkTextMapper);
+  vtkTypeMacro(vtkMesaFreeTypeTextMapper,vtkTextMapper);
   static vtkMesaFreeTypeTextMapper *New();
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 

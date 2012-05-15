@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBSPCuts.cxx,v $
+  Module:    vtkBSPCuts.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #pragma warning ( disable : 4100 )
 #endif
 
-vtkCxxRevisionMacro(vtkBSPCuts, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkBSPCuts);
 
 //----------------------------------------------------------------------------

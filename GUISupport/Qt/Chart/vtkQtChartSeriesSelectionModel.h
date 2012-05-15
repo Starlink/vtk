@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesSelectionModel.h,v $
+  Module:    vtkQtChartSeriesSelectionModel.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -205,10 +205,8 @@ public slots:
   //@}
 
 private:
-  /// \brief
-  ///   Trims the selection to ranges valid for the model.
-  /// \param list The selection to limit.
-  void limitSelection(vtkQtChartSeriesSelection &list);
+  /// Trims the selection to ranges valid for the model.
+  void limitSelection();
 
 private:
   /// Stores the series selection.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStackedChartView.h,v $
+  Module:    vtkQtStackedChartView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,17 +20,21 @@
 #ifndef _vtkQtStackedChartView_h
 #define _vtkQtStackedChartView_h
 
-#include "vtkQtChartViewBase.h"
+#include "QVTKWin32Header.h"
+#include "vtkQtChartView.h"
+#include <QPointer>
 
 class vtkQtStackedChart;
 class vtkQtChartSeriesModelCollection;
+class vtkQtChartSeriesOptions;
 
-
-class QVTK_EXPORT vtkQtStackedChartView : public vtkQtChartViewBase
+class QVTK_EXPORT vtkQtStackedChartView : public vtkQtChartView
 {
+Q_OBJECT
+
 public:
   static vtkQtStackedChartView *New();
-  vtkTypeRevisionMacro(vtkQtStackedChartView, vtkQtChartViewBase);
+  vtkTypeMacro(vtkQtStackedChartView, vtkQtChartView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -55,8 +59,16 @@ public:
   virtual void AddChartSelectionHandlers(vtkQtChartMouseSelection* selector);
 
   // Description:
+  // Gets the chart series layer
+  virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
+
+  // Description:
   // Gets the stacked chart series model.
   virtual vtkQtChartSeriesModelCollection* GetChartSeriesModel();
+
+  // Description:
+  // Gets the stacked chart series options.
+  virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
   //ETX
 
 protected:

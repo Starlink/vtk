@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestLabeledGeoView2D.cxx,v $
+  Module:    TestLabeledGeoView2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkGeoAlignedImageRepresentation.h"
 #include "vtkGeoFileImageSource.h"
 #include "vtkGeoFileTerrainSource.h"
-#include "vtkGeoGraphRepresentation2D.h"
 #include "vtkGeoProjectionSource.h"
 #include "vtkGeoRandomGraphSource.h"
 #include "vtkGeoTerrain2D.h"
@@ -33,6 +32,7 @@
 #include "vtkJPEGReader.h"
 #include "vtkPolyData.h"
 #include "vtkRegressionTestImage.h"
+#include "vtkRenderedGraphRepresentation.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -50,9 +50,8 @@ int TestLabeledGeoView2D(int argc, char* argv[])
   vtkStdString imageFile = fname;
 
   // Create the view
-  vtkSmartPointer<vtkRenderWindow> win = vtkSmartPointer<vtkRenderWindow>::New();
   vtkSmartPointer<vtkGeoView2D> view = vtkSmartPointer<vtkGeoView2D>::New();
-  view->SetupRenderWindow(win);
+  view->DisplayHoverTextOff();
 
   // Create the terrain
   vtkSmartPointer<vtkGeoTerrain2D> terrain =
@@ -79,22 +78,25 @@ int TestLabeledGeoView2D(int argc, char* argv[])
   imageSource->Initialize();
   imageRep->SetSource(imageSource);
   view->AddRepresentation(imageRep);
+  view->SetLabelPlacementModeToNoOverlap();
 
   vtkSmartPointer<vtkGeoRandomGraphSource> graphSource = 
     vtkSmartPointer<vtkGeoRandomGraphSource>::New();
-  graphSource->SetNumberOfVertices(500);
-  vtkSmartPointer<vtkGeoGraphRepresentation2D> graphRep = 
-    vtkSmartPointer<vtkGeoGraphRepresentation2D>::New();
-
+  graphSource->SetNumberOfVertices(1000);
+  graphSource->SetNumberOfEdges(0);
+  vtkSmartPointer<vtkRenderedGraphRepresentation> graphRep = 
+    vtkSmartPointer<vtkRenderedGraphRepresentation>::New();
   graphRep->SetInputConnection(graphSource->GetOutputPort());
   graphRep->SetVertexLabelArrayName("latitude");
-  graphRep->SetUseLabelHierarchy(true);
+  graphRep->SetColorVerticesByArray(true);
+  graphRep->SetVertexColorArrayName("longitude");
   graphRep->SetVertexLabelVisibility(true);
+  graphRep->SetLayoutStrategyToAssignCoordinates("longitude", "latitude");
   
   view->AddRepresentation(graphRep);
 
   // Set up the viewport
-  win->SetSize(600, 600);
+  view->GetRenderWindow()->SetSize(600, 600);
   vtkSmartPointer<vtkGeoTerrainNode> root =
     vtkSmartPointer<vtkGeoTerrainNode>::New();
   terrainSource->FetchRoot(root);
@@ -108,15 +110,15 @@ int TestLabeledGeoView2D(int argc, char* argv[])
   double scaley = (bounds[3] - bounds[2])/2.0;
   double scale = (scalex > scaley) ? scalex : scaley;
   
-  view->GetRenderer()->ResetCamera();
+  view->ResetCamera();
   view->GetRenderer()->GetActiveCamera()->SetParallelScale(scale);
 
-  view->Update();
-  int retVal = vtkRegressionTestImage(win);
+  view->Render();
+  int retVal = vtkRegressionTestImage(view->GetRenderWindow());
   if (retVal == vtkRegressionTester::DO_INTERACTOR)
     {
-    win->GetInteractor()->Initialize();
-    win->GetInteractor()->Start();
+    view->GetInteractor()->Initialize();
+    view->GetInteractor()->Start();
     }
 
   terrainSource->ShutDown();

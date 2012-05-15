@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPiecewiseFunctionShiftScale.cxx,v $
+  Module:    vtkPiecewiseFunctionShiftScale.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPiecewiseFunction.h"
 
-vtkCxxRevisionMacro(vtkPiecewiseFunctionShiftScale, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPiecewiseFunctionShiftScale);
 
 vtkPiecewiseFunctionShiftScale::vtkPiecewiseFunctionShiftScale()

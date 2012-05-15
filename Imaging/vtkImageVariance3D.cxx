@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageVariance3D.cxx,v $
+  Module:    vtkImageVariance3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageVariance3D, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkImageVariance3D);
 
 //----------------------------------------------------------------------------

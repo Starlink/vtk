@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTexture.cxx,v $
+  Module:    vtkTexture.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkTexture, "$Revision: 1.61 $");
 vtkCxxSetObjectMacro(vtkTexture, LookupTable, vtkScalarsToColors);
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -37,6 +36,7 @@ vtkTexture::vtkTexture()
   this->Interpolate = 0;
   this->EdgeClamp = 0;
   this->Quality = VTK_TEXTURE_QUALITY_DEFAULT;
+  this->PremultipliedAlpha = false;
 
   this->LookupTable = NULL;
   this->MappedScalars = NULL;
@@ -140,6 +140,7 @@ void vtkTexture::PrintSelf(ostream& os, vtkIndent indent)
     }
   os << indent << "MapColorScalarsThroughLookupTable: " << 
     (this->MapColorScalarsThroughLookupTable  ? "On\n" : "Off\n");
+  os << indent << "PremultipliedAlpha: " << (this->PremultipliedAlpha ? "On\n" : "Off\n");
 
   if ( this->GetInput() )
     {

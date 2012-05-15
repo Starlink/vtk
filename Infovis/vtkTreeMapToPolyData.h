@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeMapToPolyData.h,v $
+  Module:    vtkTreeMapToPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_INFOVIS_EXPORT vtkTreeMapToPolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkTreeMapToPolyData *New();
-  vtkTypeRevisionMacro(vtkTreeMapToPolyData,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkTreeMapToPolyData,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

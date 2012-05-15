@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLRepresentationPainter.h,v $
+  Module:    vtkOpenGLRepresentationPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_RENDERING_EXPORT vtkOpenGLRepresentationPainter :
 {
 public:
   static vtkOpenGLRepresentationPainter* New();
-  vtkTypeRevisionMacro(vtkOpenGLRepresentationPainter, vtkRepresentationPainter);
+  vtkTypeMacro(vtkOpenGLRepresentationPainter, vtkRepresentationPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

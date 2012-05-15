@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectWriter.h,v $
+  Module:    vtkDataObjectWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_IO_EXPORT vtkDataObjectWriter : public vtkWriter
 {
 public:
   static vtkDataObjectWriter *New();
-  vtkTypeRevisionMacro(vtkDataObjectWriter,vtkWriter);
+  vtkTypeMacro(vtkDataObjectWriter,vtkWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCaptionRepresentation.h,v $
+  Module:    vtkCaptionRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ public:
 
   // Description:
   // Standard VTK class methods.
-  vtkTypeRevisionMacro(vtkCaptionRepresentation,vtkBorderRepresentation);
+  vtkTypeMacro(vtkCaptionRepresentation,vtkBorderRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

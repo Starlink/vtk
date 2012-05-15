@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericRenderWindowInteractor.h,v $
+  Module:    vtkGenericRenderWindowInteractor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkGenericRenderWindowInteractor : public vtkRenderWi
 {
 public:
   static vtkGenericRenderWindowInteractor *New();
-  vtkTypeRevisionMacro(vtkGenericRenderWindowInteractor,vtkRenderWindowInteractor);
+  vtkTypeMacro(vtkGenericRenderWindowInteractor,vtkRenderWindowInteractor);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

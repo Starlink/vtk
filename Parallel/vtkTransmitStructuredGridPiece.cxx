@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransmitStructuredGridPiece.cxx,v $
+  Module:    vtkTransmitStructuredGridPiece.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkStructuredGrid.h"
 #include "vtkDoubleArray.h"
 
-vtkCxxRevisionMacro(vtkTransmitStructuredGridPiece, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkTransmitStructuredGridPiece);
 
 vtkCxxSetObjectMacro(vtkTransmitStructuredGridPiece,Controller,

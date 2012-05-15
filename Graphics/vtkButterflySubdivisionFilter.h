@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkButterflySubdivisionFilter.h,v $
+  Module:    vtkButterflySubdivisionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@ public:
   // Description:
   // Construct object with NumberOfSubdivisions set to 1.
   static vtkButterflySubdivisionFilter *New();
-  vtkTypeRevisionMacro(vtkButterflySubdivisionFilter,vtkInterpolatingSubdivisionFilter);
+  vtkTypeMacro(vtkButterflySubdivisionFilter,vtkInterpolatingSubdivisionFilter);
 
 protected:
   vtkButterflySubdivisionFilter () {};

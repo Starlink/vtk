@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataIterator.cxx,v $
+  Module:    vtkCompositeDataIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,8 +26,8 @@ public:
   // over the composite dataset.
   class vtkIterator
     {
-    vtkSmartPointer<vtkDataObject> DataObject;
-    vtkSmartPointer<vtkCompositeDataSet> CompositeDataSet;
+    vtkDataObject* DataObject;
+    vtkCompositeDataSet* CompositeDataSet;
 
     vtkCompositeDataSetInternals::Iterator Iter;
     vtkCompositeDataSetInternals::ReverseIterator ReverseIter;
@@ -273,7 +273,6 @@ public:
 };
 
 vtkStandardNewMacro(vtkCompositeDataIterator);
-vtkCxxRevisionMacro(vtkCompositeDataIterator, "$Revision: 1.8 $");
 //----------------------------------------------------------------------------
 vtkCompositeDataIterator::vtkCompositeDataIterator()
 {

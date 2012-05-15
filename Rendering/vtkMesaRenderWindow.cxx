@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaRenderWindow.cxx,v $
+  Module:    vtkMesaRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,5 +25,3 @@
 #define vtkOpenGLRenderWindow vtkMesaRenderWindow
 #include "vtkOpenGLRenderWindow.cxx"
 #undef vtkOpenGLRenderWindow
-
-vtkCxxRevisionMacro(vtkMesaRenderWindow, "$Revision: 1.31 $");

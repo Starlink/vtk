@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestPBGLPedigrees.cxx,v $
+  Module:    TestPBGLPedigrees.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,6 +35,7 @@
 #include "vtkVariant.h"
 #include "vtkVariantArray.h"
 
+#include <boost/graph/use_mpi.hpp>
 #include <boost/graph/distributed/mpi_process_group.hpp>
 
 #define VTK_CREATE(type, name) \

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusIIReader.cxx,v $
+  Module:    vtkExodusIIReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@
 
 #include "vtksys/RegularExpression.hxx"
 
-#include "exodusII.h"
+#include "vtkExodusII.h"
 #include <stdio.h>
 #include <stdlib.h> /* for free() */
 #include <string.h> /* for memset() */
@@ -210,70 +210,22 @@ extern "C" { typedef int (*vtkExodusIIGetMapFunc)( int, int* ); }
 
 // --------------------------------------------------- PRIVATE CLASS DECLARATION
 #include "vtkExodusIIReaderPrivate.h"
+#include "vtkExodusIIReaderVariableCheck.h"
 
 // ----------------------------------------------------------- UTILITY ROUTINES
-static int glomIntegrationPointElementDimension( vtkStdString& eleType )
-{
-  vtksys::RegularExpression reQuad( "[Qq][Uu][Aa][Dd]" );
-  vtksys::RegularExpression reHex( "[Hh][Ee][Xx]" );
-  vtksys::RegularExpression reTet( "[Tt][Ee][Tt]" );
-  vtksys::RegularExpression reTri( "[Tt][Rr][Ii]" );
-  vtksys::RegularExpression reWedge( "[Ww][Ee][Dd][Gg][Ee]" );
-  vtksys::RegularExpression rePyramid( "[Pp][Yy][Rr]" );
-  if ( reHex.find( eleType ) )
-    return 3;
-  else if ( reTet.find( eleType ) )
-    return 3;
-  else if ( reWedge.find( eleType ) )
-    return 3;
-  else if ( rePyramid.find( eleType ) )
-    return 3;
-  else if ( reQuad.find( eleType ) )
-    return 2;
-  else if ( reTri.find( eleType ) )
-    return 2;
-  
-  return -1;
-}
 
-static int glomTruthTabMatch( int num_obj, int num_vars, int* truth_tab, 
-                              vtkExodusIIReaderPrivate::ArrayInfoType& ainfo )
+// This function exists because FORTRAN ordering sucks.
+static void extractTruthForVar( int num_obj, int num_vars, const int* truth_tab, int var, vtkstd::vector<int>& truth )
 {
-  // This returns 1 when all objects have the same values
-  // in truth_tab for all original variable indices in
-  // ainfo (and 0 otherwise).
-  // It creates an entry in ainfo.ObjectTruth for each object
-  // based on the values in truth_tab.
-  int num_comp = (int)ainfo.OriginalIndices.size();
-  if ( num_comp < 1 )
-    return 0;
+  truth.clear();
 
   int obj;
-  int ttObj; // truth table entry for variable idx on object obj.
-  int idx = ainfo.OriginalIndices[0] - 1;
+  int ttObj; // truth table entry for variable var on object obj.
   for ( obj = 0; obj < num_obj; ++obj )
     {
-    ttObj = truth_tab[ idx + obj * num_vars ];
-    ainfo.ObjectTruth.push_back( ttObj );
+    ttObj = truth_tab[ var + obj * num_vars ];
+    truth.push_back( ttObj );
     }
-  if ( num_comp < 2 )
-    return 1;
-
-  int comp;
-  for ( comp = 1; comp < num_comp; ++comp )
-    {
-    // Get truth table entry for 0-th variable of object obj:
-    for ( obj = 0; obj < num_obj; ++obj )
-      {
-      if ( truth_tab[ ainfo.OriginalIndices[comp] - 1 + obj * num_vars ] != 
-           truth_tab[ idx                             + obj * num_vars ] )
-        {
-        // At least one object has a different truth table entry for variable ii.
-        return 0;
-        }
-      }
-    }
-  return 1; // All objects define variable ii over the same subset of objects.
 }
 
 static void printBlock( ostream& os, vtkIndent indent, int btyp, 
@@ -374,7 +326,6 @@ void vtkExodusIIReaderPrivate::ArrayInfoType::Reset()
 }
 
 // ------------------------------------------------------- PRIVATE CLASS MEMBERS
-vtkCxxRevisionMacro(vtkExodusIIReaderPrivate,"$Revision: 1.75 $");
 vtkStandardNewMacro(vtkExodusIIReaderPrivate);
 vtkCxxSetObjectMacro(vtkExodusIIReaderPrivate, Parser, vtkExodusIIReaderParser);
 
@@ -392,10 +343,13 @@ vtkExodusIIReaderPrivate::vtkExodusIIReaderPrivate()
   this->TimeStep = 0;
   this->HasModeShapes = 0;
   this->ModeShapeTime = -1.;
+  this->AnimateModeShapes = 1;
 
   this->GenerateObjectIdArray = 1;
   this->GenerateGlobalElementIdArray = 0;
   this->GenerateGlobalNodeIdArray = 0;
+  this->GenerateImplicitElementIdArray = 0;
+  this->GenerateImplicitNodeIdArray = 0;
   this->GenerateGlobalIdArray = 0;
   this->GenerateFileIdArray = 0;
   this->FileId = 0;
@@ -418,6 +372,8 @@ vtkExodusIIReaderPrivate::vtkExodusIIReaderPrivate()
 
   this->SIL = vtkMutableDirectedGraph::New();
 
+  this->ProducedFastPathOutput = false;
+
   memset( (void*)&this->ModelParameters, 0, sizeof(this->ModelParameters) );
 }
 
@@ -438,362 +394,104 @@ vtkExodusIIReaderPrivate::~vtkExodusIIReaderPrivate()
 }
 
 //-----------------------------------------------------------------------------
-int vtkExodusIIReaderPrivate::VerifyIntegrationPointGlom(
-  int nn, char** np, vtksys::RegularExpression& re,
-  vtkStdString& field, vtkStdString& ele )
-{ 
-  vtkstd::vector<vtkstd::vector<int> > gpId;
-  int max[3] = { 0, 0, 0 };
-  int dim = glomIntegrationPointElementDimension( ele );
-  for ( int i = 0; i < nn; ++i )
-    {
-    gpId.push_back( vtkstd::vector<int>() );
-    re.find( np[i] );
-    vtkStdString gpIdStr = re.match(3);
-    int d = 0;
-    for ( vtkStdString::iterator it = gpIdStr.begin(); it != gpIdStr.end(); ++it, ++d )
-      {
-      gpId[i].push_back( *it - '0' );
-      }
-    if ( dim < 0 )
-      {
-      dim = d; 
-      if ( dim > 3 )
-        {
-        vtkWarningMacro( "Field \"" << np[i] << "\" has integration dimension " 
-                          << d << " > 3." );
-        return false;
-        }
-      }
-    else if ( dim != d )
-      {
-      vtkWarningMacro( "Field \"" << np[i] << "\" has integration dimension " 
-                        << d << " != " << dim << "." );
-      return false;
-      }
-    else
-      {
-      for ( int j = 0; j < dim; ++j )
-        if ( gpId[i][j] > max[j] )
-          max[j] = gpId[i][j];
-      }
-    }
-#ifdef VTK_DBG_GLOM
-  cout << "  Integration points are " << dim << "-dimensional.\n";
-  for ( int i = 0; i < dim; ++i )
-    {
-    cout << "    " << (max[i]+1) << " integration points along " 
-         << char('r' + i) << ".\n";
-    }
-#endif // VTK_DBG_GLOM
-  int npt = 1;
-  for ( int i = 0; i < dim; ++i )
-    {
-    npt *= max[i] + 1;
-    }
-  bool bad = false;
-  if ( npt != nn )
-    {
-    vtkWarningMacro( "Field \"" << field.c_str() << "\" has " << nn <<
-      " entries, but I expected " << npt << " given the integration order." );
-    bad = true;
-    }
-  int e;
-  int ef = -1;
-  int cnt;
-  bool found; 
-  if ( dim == 2 )
-    {
-    for ( int r = 0; r <= max[0]; ++r )
-      { 
-      for ( int s = 0; s <= max[1]; ++s )
-        {
-        found = false;
-        cnt = 0;
-        for ( e = 0; e < nn; ++e )
-          {
-          if ( gpId[e][0] == r && gpId[e][1] == s )
-            {
-            found = true;
-            ef = e;
-            ++cnt;
-            }
-          }
-        if ( !found )
-          {
-          vtkWarningMacro( "Field \"" << field.c_str() <<
-            "\" is missing Gauss point (" << r << ", " << s << ")." );
-          }
-        else if ( cnt > 1 )
-          {
-          vtkWarningMacro( "Field \"" << field.c_str() << "\" has " << (cnt-1) <<
-            " duplicate(s) of Gauss point (" << r << ", " << s << ")." );
-          }
-        else if ( npt == nn && (ef != s + r * (max[1]+1) ) )
-          {
-          vtkWarningMacro( "Field \"" << field.c_str() <<
-            "\" has misplaced Gauss point (" << r << ", " << s << ")." );
-          bad = true;
-          }
-        }
-      }
-    }
-  else if ( dim == 3 )
-    {
-    for ( int r = 0; r <= max[0]; ++r )
-      { 
-      for ( int s = 0; s <= max[1]; ++s )
-        { 
-        for ( int t = 0; t <= max[2]; ++t )
-          {
-          found = false;
-          cnt = 0;
-          for ( e = 0; e < nn; ++e )
-            {
-            if ( gpId[e][0] == r && gpId[e][1] == s && gpId[e][2] == t )
-              {
-              found = true;
-              ef = e;
-              ++cnt;
-              }
-            }
-          if ( !found )
-            {
-            vtkWarningMacro( "Field \"" << field.c_str() 
-              << "\" is missing Gauss point (" << r << ", " << s << ", " 
-              << t << ")." );
-            bad = true;
-            }
-          else if ( cnt > 1 )
-            {
-            vtkWarningMacro( "Field \"" << field.c_str() << "\" has " << (cnt-1) 
-             << " duplicate(s) of Gauss point (" << r << ", " << s << ", " 
-             << t << ")." );
-            bad = true;
-            }
-          else if ( npt == nn && (ef != t + (max[2]+1) * ( s + r * (max[1]+1) )) )
-            {
-            vtkWarningMacro( "Field \"" << field.c_str() <<
-              "\" has misplaced Gauss point (" << r << ", " << s << ", " << 
-              t << ")." );
-            bad = true;
-            }
-          }
-        }
-      }
-    }
-  return ! bad;
-}
-
-//-----------------------------------------------------------------------------
 void vtkExodusIIReaderPrivate::GlomArrayNames( int objtyp, 
                                                int num_obj, 
                                                int num_vars, 
                                                char** var_names, 
                                                int* truth_tab )
 {
-  vtksys::RegularExpression reTensor( "(.*)[XxYyZz][XxYyZz]$" );
-  vtksys::RegularExpression reVector( "(.*)[XxYyZz]$" );
-  vtksys::RegularExpression reVector2( "(.*)_[RrZz]$" );
-  vtksys::RegularExpression reGaussP( "(.*)_([^_]*)_GP([0-9]+)$" );
-
   // Clear out existing array names since we are re-reading them in.
   this->ArrayInfo[objtyp].clear();
 
-  ArrayInfoType ainfo;
-  for ( int i = 0; i < num_vars; ++i )
+  // Create some objects that try to glom names together in different ways.
+  const char endRZ[] = "RZ";
+  const char endV2[] = "xy";
+  const char endV3[] = "xYz";
+  const char endST23[] = "XXYYZZXYXZYZ";
+  const char endST34[] = "XXXYYYZZZWWWXXYXXZXXWXYYXYZXYWXZZXZWXWWYYZYYWYZZYZWYWWZZWZWW";
+
+  vtkExodusIIReaderScalarCheck* scalar = new vtkExodusIIReaderScalarCheck;
+  //vtkExodusIIReaderVectorCheck* vecx2 = new vtkExodusIIReaderVectorCheck( endV2, 2 );
+  //vtkExodusIIReaderVectorCheck* vecx3 = new vtkExodusIIReaderVectorCheck( endV3, 3 );
+  //vtkExodusIIReaderVectorCheck* vecrz = new vtkExodusIIReaderVectorCheck( endRZ, 2 );
+  vtkExodusIIReaderTensorCheck* vecx2 = new vtkExodusIIReaderTensorCheck( endV2, 2, 1, 2 );
+  vtkExodusIIReaderTensorCheck* vecx3 = new vtkExodusIIReaderTensorCheck( endV3, 3, 1, 3 );
+  vtkExodusIIReaderTensorCheck* vecrz = new vtkExodusIIReaderTensorCheck( endRZ, 2, 1, 2 );
+  vtkExodusIIReaderTensorCheck* ten23 = new vtkExodusIIReaderTensorCheck( endST23, 6, 2, 3 );
+  vtkExodusIIReaderTensorCheck* ten34 = new vtkExodusIIReaderTensorCheck( endST34, 20, 3, 4 );
+  vtkExodusIIReaderIntPointCheck* intpt = new vtkExodusIIReaderIntPointCheck;
+  typedef vtkstd::vector<vtkExodusIIReaderVariableCheck*> glomVec;
+  glomVec glommers;
+  glommers.push_back( scalar );
+  glommers.push_back( vecx2 );
+  glommers.push_back( vecx3 );
+  glommers.push_back( vecrz );
+  glommers.push_back( ten23 );
+  glommers.push_back( ten34 );
+  glommers.push_back( intpt );
+  glomVec::iterator glommer;
+  typedef vtkstd::vector<vtkExodusIIReaderPrivate::ArrayInfoType> varVec;
+  varVec arrays;
+  vtkstd::vector<int> tmpTruth;
+  // Advance through the variable names.
+  for ( int i = 0; i < num_vars; ++ i )
     {
-    char* srcName = var_names[i];
-    bool didGlom = true;
-    ainfo.Source = vtkExodusIIReaderPrivate::Result;
-
-    if ( reTensor.find( srcName ) )
+    // Prepare all the glommers with the next unused variable name
+    extractTruthForVar( num_obj, num_vars, truth_tab, i, tmpTruth );
+    bool stop = true;
+    for ( glommer = glommers.begin(); glommer != glommers.end(); ++ glommer )
       {
-      if ( i + 1  < num_vars )
+      if ( (*glommer)->Start( var_names[i], &tmpTruth[0], num_obj ) )
         {
-        int ii = i;
-        int sl = (int)strlen(var_names[i]) - 2;
-        while ( ii < num_vars )
-          {
-          if ( ! reTensor.find( var_names[ii] ) || 
-               strncmp( var_names[ii], var_names[i], sl ) )
-            break;
-          ainfo.OriginalNames.push_back( var_names[ii] );
-          ainfo.OriginalIndices.push_back( ii + 1 );
-          ++ii;
-          }
-        ainfo.Components = ii - i;
-        if ( ! ainfo.Components || 
-             ! glomTruthTabMatch( num_obj, num_vars, truth_tab, ainfo ) )
-          {
-          didGlom = false;
-          }
-        else
-          {
-          reTensor.find( srcName );
-          //cout << "Tensor \"" << reTensor.match(1) << "\" has " 
-          //     << (ii-i) << " components\n";
-          ainfo.Name = reTensor.match(1);
-          ainfo.GlomType = vtkExodusIIReaderPrivate::SymmetricTensor;
-          ainfo.Status = 0;
-          ainfo.StorageType = VTK_DOUBLE;
-          this->GetInitialObjectArrayStatus(objtyp, &ainfo);
-          this->ArrayInfo[ objtyp ].push_back( ainfo );
-          i = ii - 1; // advance to end of glom
-          }
-        ainfo.Reset();
-        }
-      else
-        {
-        didGlom = false;
+        stop = false;
         }
       }
-    else if ( reVector.find( srcName ) || reVector2.find( srcName ) )
+    int j = i + 1;
+    // If any glommers can continue accepting names, give them more names until no more can accept names
+    while ( j < num_vars && ! stop )
       {
-      int vecPattern = 0; // default to XYZ name
-      if ( i+1 < num_vars )
+      stop = true;
+      for ( glommer = glommers.begin(); glommer != glommers.end(); ++ glommer )
         {
-        int sli = (int)strlen(var_names[i]) - 1;
-        int ii = i;
-        const char xyzEndings[] = "XYZ";
-        const char rzEndings[] = "RZ";
-        const char* endings = toupper( var_names[i][sli] ) == 'R' ? rzEndings : xyzEndings;
-        int numEndings = static_cast<int>( strlen( endings ) );
-        if ( endings == rzEndings ) vecPattern = 1;
-        while ( ii < num_vars && ( ii - i < numEndings ) )
+        if ( (*glommer)->Add( var_names[j], &tmpTruth[0] ) )
           {
-          int slii = ii == i ? sli : (int)strlen(var_names[ii]) - 1;
-          // Require the strings to be identical except for the 
-          // final XYZ or RZ at the end.
-          if ( slii != sli ||
-               toupper(var_names[ii][slii]) != endings[ii-i] || 
-               strncmp( var_names[ii], var_names[i], slii ) )
-            {
-            break;
-            }
-          ainfo.OriginalNames.push_back( var_names[ii] );
-          ainfo.OriginalIndices.push_back( ii + 1 );
-          ++ii;
+          stop = false;
           }
-        ainfo.Components = ii - i;
-        if ( ainfo.Components < 2 || 
-             ! glomTruthTabMatch( num_obj, num_vars, truth_tab, ainfo ) )
-          {
-          didGlom = false;
-          }
-        else
-          {
-          //cout << "Vector \"" << reVector.match(1) << "\" has " 
-          //     << (ii - i) << " components\n";
-          switch ( vecPattern )
-            {
-          case 1:
-            ainfo.Name = reVector2.match(1);
-            break;
-          case 0:
-          default:
-            ainfo.Name = reVector.match(1);
-            break;
-            }
-          ainfo.GlomType = ainfo.Components == 2 ? 
-                           vtkExodusIIReaderPrivate::Vector2 
-                           : vtkExodusIIReaderPrivate::Vector3;
-          ainfo.Status = 0;
-          ainfo.StorageType = VTK_DOUBLE;
-          this->GetInitialObjectArrayStatus(objtyp, &ainfo);
-          this->ArrayInfo[ objtyp ].push_back( ainfo );
-          i = ii - 1; // advance to end of glom
-          }
-        ainfo.Reset();
         }
-      else
+      ++ j;
+      }
+    // Find longest glom that worked. (The scalar glommer always works with Length() 1.)
+    unsigned int longestGlom = 0;
+    glomVec::iterator longestGlommer = glommers.end();
+    for ( glommer = glommers.begin(); glommer != glommers.end(); ++ glommer )
+      {
+      if ( (*glommer)->Length() > longestGlom )
         {
-        didGlom = false;
+        longestGlom = static_cast<unsigned int>( (*glommer)->Length() );
+        longestGlommer = glommer;
         }
       }
-    else if ( reGaussP.find( srcName ) )
+    if ( longestGlommer != glommers.end() )
       {
-      if ( i + 1  < num_vars )
-        {
-        int ii = i;
-        vtkStdString field = reGaussP.match( 1 );
-        vtkStdString ele = reGaussP.match( 2 );
-
-        while ( ii < num_vars && 
-                reGaussP.find( var_names[ii] ) && 
-                (reGaussP.match( 1 ) == field) && 
-                (reGaussP.match( 2 ) == ele) )
-          {
-          ainfo.OriginalNames.push_back( var_names[ii] );
-          ainfo.OriginalIndices.push_back( ii + 1 );
-          ++ii;
-          }
-        ainfo.Components = ii - i;
-        // Check that the names are consistent (i.e., there aren't missing  
-        // Gauss points, they all have the same dim, etc.)
-        if ( this->VerifyIntegrationPointGlom( ii - i, var_names + i, reGaussP, field, ele ) &&
-             glomTruthTabMatch( num_obj, num_vars, truth_tab, ainfo ) )
-          {
-          //cout << "Gauss Points for \"" << field << "\" on " << ele 
-          //     << "-shaped elements has " << (ii-i) << " components\n";
-          ainfo.Name = field;
-          ainfo.GlomType = vtkExodusIIReaderPrivate::IntegrationPoint;
-          ainfo.Status = 0;
-          ainfo.StorageType = VTK_DOUBLE;
-          this->GetInitialObjectArrayStatus(objtyp, &ainfo);
-          this->ArrayInfo[ objtyp ].push_back( ainfo );
-          i = ii - 1; // advance to end of glom
-          }
-        else
-          {
-          ainfo.Reset();
-          for ( ; i < ii; ++i )
-            {
-            //cout << "Scalar \"" << var_names[i] << "\"\n";
-            ainfo.Name = var_names[i];
-            ainfo.Source = Result;
-            ainfo.Components = 1;
-            ainfo.OriginalIndices.push_back( i + 1 );
-            ainfo.OriginalNames.push_back( var_names[i] );
-            ainfo.GlomType = vtkExodusIIReaderPrivate::Scalar;
-            ainfo.StorageType = VTK_DOUBLE;
-            ainfo.Status = 0;
-            // fill in ainfo.ObjectTruth:
-            glomTruthTabMatch( num_obj, num_vars, truth_tab, ainfo ); 
-            this->GetInitialObjectArrayStatus(objtyp, &ainfo);
-            this->ArrayInfo[ objtyp ].push_back( ainfo );
-            }
-          }
-        ainfo.Reset();
-        }
-      else
-        {
-        didGlom = false;
-        }
-      }
-    else
-      {
-      didGlom = false;
-      }
-
-    if ( ! didGlom )
-      {
-      //cout << "Scalar \"" << srcName << "\"\n";
-      ainfo.Name = srcName;
-      ainfo.Source = Result;
-      ainfo.Components = 1;
-      ainfo.OriginalIndices.push_back( i + 1 );
-      ainfo.OriginalNames.push_back( var_names[i] );
-      ainfo.GlomType = vtkExodusIIReaderPrivate::Scalar;
-      ainfo.StorageType = VTK_DOUBLE;
-      ainfo.Status = 0;
-      // fill in ainfo.ObjectTruth:
-      glomTruthTabMatch( num_obj, num_vars, truth_tab, ainfo ); 
-      this->GetInitialObjectArrayStatus(objtyp, &ainfo);
-      this->ArrayInfo[ objtyp ].push_back( ainfo );
-      ainfo.Reset();
+      i += (*longestGlommer)->Accept( this->ArrayInfo[objtyp], i, this, objtyp ) - 1; // the ++i takes care of length 1
       }
     }
+
+  // Now see what the gloms were.
+  /*
+  for ( varVec::iterator it = this->ArrayInfo[objtyp].begin(); it != this->ArrayInfo[objtyp].end(); ++ it )
+    {
+    cout << "Name: \"" << it->Name.c_str() << "\" (" << it->Components << ")\n";
+    }
+    */
+
+  delete scalar;
+  delete vecx2;
+  delete vecx3;
+  delete vecrz;
+  delete ten23;
+  delete ten34;
+  delete intpt;
 }
 
 //-----------------------------------------------------------------------------
@@ -1044,7 +742,7 @@ int vtkExodusIIReaderPrivate::AssembleOutputProceduralArrays(
       }
     }
 
-  if ( this->GenerateGlobalElementIdArray )
+  if ( this->GenerateGlobalElementIdArray && ! OBJTYPE_IS_SET( otyp ) )
     {
     // This retrieves the first new-style map, or if that is not present,
     // the solitary old-style map (which always exists but may be
@@ -1084,6 +782,34 @@ int vtkExodusIIReaderPrivate::AssembleOutputProceduralArrays(
       ped->FastDelete();
 
       status -= 4;
+      }
+    }
+
+  if ( this->GenerateImplicitElementIdArray )
+    {
+    // This retrieves the old style map if it is a parallel data set.  The old 
+    // style map stores the global implicit id if parallel.  Otherwise it 
+    // generates the implicit id.
+    vtkExodusIICacheKey key( -1, vtkExodusIIReader::IMPLICIT_ELEMENT_ID, otyp, obj );
+    vtkDataArray* arr = this->GetCacheOrRead( key );
+    if ( arr )
+      {
+      cd->AddArray( arr );
+      }
+
+    }
+
+  if ( this->GenerateImplicitNodeIdArray )
+    {
+    // This retrieves the old style map if it is a parallel data set.  The old 
+    // style map stores the global implicit id if parallel.  Otherwise it 
+    // generates the implicit id.
+    vtkExodusIICacheKey key( -1, vtkExodusIIReader::IMPLICIT_NODE_ID, otyp, obj );
+    vtkDataArray* arr = this->GetCacheOrRead( key );
+    vtkPointData* pd = output->GetPointData();
+    if ( arr )
+      {
+      pd->AddArray( arr );
       }
     }
 
@@ -1400,6 +1126,28 @@ void vtkExodusIIReaderPrivate::InsertBlockCells(
     return;
     }
 
+  vtkIntArray* ent = 0;
+  if ( binfo->PointsPerCell == 0 )
+    {
+    int arrId;
+    if (conn_type == vtkExodusIIReader::ELEM_BLOCK_ELEM_CONN) 
+      {
+      arrId = 0;
+      }
+    else 
+      {
+      arrId = 1;
+      }
+    ent = vtkIntArray::SafeDownCast( 
+                    this->GetCacheOrRead( vtkExodusIICacheKey( -1, vtkExodusIIReader::ENTITY_COUNTS, obj, arrId ) ) );
+    if ( ! ent ) 
+      {
+      vtkErrorMacro( "Entity used 0 points per cell, but didn't return poly_hedra correctly" );
+      binfo->Status = 0;
+      return;
+      }
+    }
+
   vtkIntArray* arr;
   arr = vtkIntArray::SafeDownCast( this->GetCacheOrRead( vtkExodusIICacheKey( -1, conn_type, obj, 0 ) ) );
   if ( ! arr )
@@ -1417,15 +1165,21 @@ void vtkExodusIIReaderPrivate::InsertBlockCells(
 
     for ( int i = 0; i < binfo->Size; ++i )
       {
-      for ( int p = 0; p < binfo->PointsPerCell; ++p )
+      int entitiesPerCell = binfo->PointsPerCell;
+      if ( ent != 0) 
+        {
+        entitiesPerCell = ent->GetValue (i);
+        cellIds.resize( entitiesPerCell );
+        }
+      for ( int p = 0; p < entitiesPerCell; ++p )
         {
         cellIds[p] = this->GetSqueezePointId( binfo, srcIds[p] );
         //cout << " " << srcIds[p] << "(" << cellIds[p] << ")";
         }
       //cout << "\n";
       //cout << " " <<
-      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, binfo->PointsPerCell, &cellIds[0] );
-      srcIds += binfo->PointsPerCell;
+      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, entitiesPerCell, &cellIds[0] );
+      srcIds += entitiesPerCell;
       }
       //cout << "\n";
     }
@@ -1438,22 +1192,33 @@ void vtkExodusIIReaderPrivate::InsertBlockCells(
 
     for ( int i = 0; i < binfo->Size; ++i )
       {
-      for ( int p = 0; p < binfo->PointsPerCell; ++p )
+      int entitiesPerCell = binfo->PointsPerCell;
+      if ( ent != 0) 
+        {
+        entitiesPerCell = ent->GetValue (i);
+        cellIds.resize( entitiesPerCell );
+        }
+      for ( int p = 0; p < entitiesPerCell; ++p )
         {
         cellIds[p] = srcIds[p];
         //cout << " " << srcIds[p];
         }
       //cout << "\n";
-      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, binfo->PointsPerCell, &cellIds[0] );
-      srcIds += binfo->PointsPerCell;
+      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, entitiesPerCell, &cellIds[0] );
+      srcIds += entitiesPerCell;
       }
 #else // VTK_USE_64BIT_IDS
     vtkIdType* srcIds = (vtkIdType*) arr->GetPointer( 0 );
 
     for ( int i = 0; i < binfo->Size; ++i )
       {
-      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, binfo->PointsPerCell, srcIds );
-      srcIds += binfo->PointsPerCell;
+      int entitiesPerCell = binfo->PointsPerCell;
+      if ( ent != 0) 
+        {
+        entitiesPerCell = ent->GetValue (i);
+        }
+      binfo->CachedConnectivity->InsertNextCell( binfo->CellType, entitiesPerCell, srcIds );
+      srcIds += entitiesPerCell;
       //for ( int k = 0; k < binfo->PointsPerCell; ++k )
         //cout << " " << srcIds[k];
       //cout << "\n";
@@ -2025,7 +1790,8 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
       for ( c = 0; c < ainfop->Components; ++c )
         {
         vtkIdType N = arr->GetNumberOfTuples();
-        tmpVal[c].resize( N );
+        tmpVal[c].resize( N+1 ); // + 1 to avoid errors when N == 0.
+                                 // BUG #8746.
         if ( ex_get_var( exoid, key.Time + 1, static_cast<ex_entity_type>( key.ObjectType ),
             ainfop->OriginalIndices[c], oinfop->Id, arr->GetNumberOfTuples(),
             &tmpVal[c][0] ) < 0)
@@ -2141,6 +1907,83 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
     memcpy( gloIds, srcIds, sizeof(vtkIdType) * bsinfop->Size );
     arr = iarr;
     }
+  else if ( key.ObjectType == vtkExodusIIReader::IMPLICIT_ELEMENT_ID )
+    {
+    // Yes, the next 2 statements are an intentional misuse of key
+    // fields reserved for the ObjectId and ArrayId (since ObjectType
+    // is used to signal that we want IDs instead of a field value).
+    int otypidx = this->GetObjectTypeIndexFromObjectType( key.ObjectId );
+    int obj = key.ArrayId;
+    BlockSetInfoType* bsinfop = (BlockSetInfoType*) this->GetObjectInfo( otypidx, obj );
+
+    vtkExodusIICacheKey ckey( -1, -1, 0, 0 );
+    vtkIdType mapSize;
+    int nMaps;
+    switch ( key.ObjectId )
+      {
+    case vtkExodusIIReader::EDGE_BLOCK:
+      ckey.ObjectType = vtkExodusIIReader::EDGE_ID;
+      mapSize = this->ModelParameters.num_edge;
+      nMaps = this->ModelParameters.num_edge_maps;
+      break;
+    case vtkExodusIIReader::FACE_BLOCK:
+      ckey.ObjectType = vtkExodusIIReader::FACE_ID;
+      mapSize = this->ModelParameters.num_face;
+      nMaps = this->ModelParameters.num_face_maps;
+      break;
+    case vtkExodusIIReader::ELEM_BLOCK:
+    default:
+      ckey.ObjectType = vtkExodusIIReader::ELEMENT_ID;
+      mapSize = this->ModelParameters.num_elem;
+      nMaps = this->ModelParameters.num_elem_maps;
+      break;
+      }
+    vtkIdTypeArray* src = vtkIdTypeArray::New ();
+    src->SetNumberOfComponents( 1 );
+    src->SetNumberOfTuples( mapSize );
+    if (nMaps > 0) // FIXME correctly detect parallel
+      {
+#ifdef VTK_USE_64BIT_IDS
+        vtkstd::vector<int> tmpMap( src->GetNumberOfTuples() );
+        if ( ex_get_id_map( exoid, static_cast<ex_entity_type>( ckey.ObjectType ), &tmpMap[0] ) < 0 )
+          {
+          vtkErrorMacro( "Could not read elem num map for global implicit id" );
+          src->Delete();
+          return 0;
+          }
+        else
+          {
+          for ( vtkIdType i = 0; i < src->GetNumberOfTuples(); ++i )
+            {
+            src->SetValue( i, tmpMap[i] );
+            }
+          }
+#else
+        if ( ex_get_id_map( exoid, static_cast<ex_entity_type>( ckey.ObjectType ), (int*)src->GetPointer( 0 ) ) < 0 )
+          {
+          vtkErrorMacro( "Could not read elem num map for global implicit id" );
+          src->Delete();
+          return 0;
+          }
+#endif // VTK_USE_64BIT_IDS
+      }
+    else // single file, just make the implicit index explicit
+      {
+      for (vtkIdType i = 0; i < src->GetNumberOfTuples (); i ++)
+        {
+        src->SetValue (i, i + 1);
+        }
+      }
+    vtkIdTypeArray* iarr = vtkIdTypeArray::New();
+    iarr->SetName( vtkExodusIIReader::GetImplicitElementIdArrayName() );
+    iarr->SetNumberOfComponents( 1 );
+    iarr->SetNumberOfTuples( bsinfop->Size );
+    vtkIdType* gloIds = iarr->GetPointer( 0 );
+    vtkIdType* srcIds = src->GetPointer( bsinfop->FileOffset - 1 );
+    memcpy( gloIds, srcIds, sizeof(vtkIdType) * bsinfop->Size );
+    arr = iarr;
+    src->Delete ();
+    }
   else if ( key.ObjectType == vtkExodusIIReader::GLOBAL_NODE_ID )
     { // subset the NODE_ID array choosing only entries for nodes in output grid (using PointMap)
     // Yes, the next 2 statements are an intentional misuse of key
@@ -2170,6 +2013,71 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
       {
       arr = src;
       }
+    }
+  else if ( key.ObjectType == vtkExodusIIReader::IMPLICIT_NODE_ID )
+    { // subset the NODE_ID array choosing only entries for nodes in output grid (using PointMap)
+    // Yes, the next 2 statements are an intentional misuse of key
+    // fields reserved for the ObjectId and ArrayId (since ObjectType
+    // is used to signal that we want IDs instead of a field value).
+    int otypidx = this->GetObjectTypeIndexFromObjectType( key.ObjectId );
+    int obj = key.ArrayId;
+    BlockSetInfoType* bsinfop = (BlockSetInfoType*) this->GetObjectInfo( otypidx, obj );
+    vtkIdTypeArray* src = vtkIdTypeArray::New ();
+    src->SetNumberOfComponents( 1 );
+    src->SetNumberOfTuples( this->ModelParameters.num_nodes );
+    if (this->ModelParameters.num_node_maps > 0) // FIXME correctly detect parallel
+      {
+#ifdef VTK_USE_64BIT_IDS
+        vtkstd::vector<int> tmpMap( src->GetNumberOfTuples() );
+        if ( ex_get_id_map( exoid, (ex_entity_type)( vtkExodusIIReader::NODE_MAP ), &tmpMap[0] ) < 0 )
+          {
+          vtkErrorMacro( "Could not read node num map for global implicit id" );
+          src->Delete();
+          return 0;
+          }
+        else
+          {
+          for ( vtkIdType i = 0; i < src->GetNumberOfTuples(); ++i )
+            {
+            src->SetValue( i, tmpMap[i] );
+            }
+          }
+#else
+        if ( ex_get_id_map( exoid, (ex_entity_type)( vtkExodusIIReader::NODE_MAP ), (int*)src->GetPointer( 0 ) ) < 0 )
+          {
+          vtkErrorMacro( "Could not node node num map for global implicit id" );
+          src->Delete();
+          return 0;
+          }
+#endif // VTK_USE_64BIT_IDS
+      }
+    else // single file, just make the implicit index explicit
+      {
+      for (vtkIdType i = 0; i < src->GetNumberOfTuples (); i ++)
+        {
+        src->SetValue (i, i + 1);
+        }
+      }
+    if ( this->SqueezePoints && src )
+      {
+      vtkIdTypeArray* iarr = vtkIdTypeArray::New();
+      iarr->SetName( vtkExodusIIReader::GetImplicitNodeIdArrayName() );
+      iarr->SetNumberOfComponents( 1 );
+      iarr->SetNumberOfTuples( bsinfop->NextSqueezePoint );
+      vtkIdType* gloIds = iarr->GetPointer( 0 );
+      vtkIdType* srcIds = src->GetPointer( 0 );
+      vtkstd::map<vtkIdType,vtkIdType>::iterator it;
+      for ( it = bsinfop->PointMap.begin(); it != bsinfop->PointMap.end(); ++ it )
+        {
+        gloIds[it->second] = srcIds[it->first];
+        }
+      arr = iarr;
+      }
+    else
+      {
+      arr = src;
+      }
+    src->Delete ();
     }
   else if (
     key.ObjectType == vtkExodusIIReader::ELEMENT_ID ||
@@ -2254,6 +2162,33 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
       "with a single vtkDataArray. Who told you to call this routine to get it?"
       );
     }
+  else if ( key.ObjectType == vtkExodusIIReader::ENTITY_COUNTS )
+    {
+    int ctypidx;
+    if (key.ArrayId == 0) 
+      {
+      ctypidx = 0;
+      }
+    else
+      {
+      ctypidx = 1;
+      }    
+    int otypidx = conn_obj_idx_cvt[ctypidx];
+    int otyp = obj_types[ otypidx ];
+    BlockInfoType* binfop = (BlockInfoType*) this->GetObjectInfo( otypidx, key.ObjectId );
+    vtkIntArray* iarr = vtkIntArray::New();
+    iarr->SetNumberOfComponents (1);
+    iarr->SetNumberOfTuples (binfop->Size);
+    if ( ex_get_entity_count_per_polyhedra ( exoid, static_cast<ex_entity_type>( otyp ), binfop->Id, 
+                                             iarr->GetPointer(0)) < 0 )
+      {
+      vtkErrorMacro( "Unable to read " << binfop->Id << " (index " << key.ObjectId <<
+        ") entity count per polyhedra" );
+      iarr->Delete();
+      iarr = 0;
+      }
+    arr = iarr;
+    }
   else if (
     key.ObjectType == vtkExodusIIReader::ELEM_BLOCK_ELEM_CONN ||
     key.ObjectType == vtkExodusIIReader::FACE_BLOCK_CONN ||
@@ -2267,8 +2202,15 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
     BlockInfoType* binfop = (BlockInfoType*) this->GetObjectInfo( otypidx, key.ObjectId );
 
     vtkIntArray* iarr = vtkIntArray::New();
-    iarr->SetNumberOfComponents( binfop->BdsPerEntry[0] );
-    iarr->SetNumberOfTuples( binfop->Size );
+    if (binfop->CellType == VTK_POLYGON)
+      {
+      iarr->SetNumberOfValues (binfop->BdsPerEntry[0]);
+      }
+    else
+      {
+      iarr->SetNumberOfComponents( binfop->BdsPerEntry[0] );
+      iarr->SetNumberOfTuples( binfop->Size );
+      }
     
     if ( ex_get_conn( exoid, static_cast<ex_entity_type>( otyp ), binfop->Id, iarr->GetPointer(0), 0, 0 ) < 0 )
       {
@@ -2317,6 +2259,74 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
         }
       ptr += binfop->BdsPerEntry[0] - binfop->PointsPerCell;
       }
+    else if (binfop->CellType == VTK_QUADRATIC_WEDGE)
+      {
+      int k;
+      int itmp[3];
+      for ( c = 0; c < iarr->GetNumberOfTuples(); ++c )
+        {
+        for (k = 0; k < 9; ++k, ++ptr)
+          *ptr = *ptr - 1;
+
+        for (k = 0; k < 3; ++k, ++ptr)
+          {
+          itmp[k] = *ptr;
+          *ptr = ptr[3] - 1;
+          }
+
+        for (k = 0; k < 3; ++k, ++ptr)
+          {
+          *ptr = itmp[k] - 1;
+          }
+        }
+      ptr += binfop->BdsPerEntry[0] - binfop->PointsPerCell;
+      }
+    /*
+    else if (binfop->CellType == VTK_POLYGON)
+      {
+      int arrId;
+      if (key.ObjectType == vtkExodusIIReader::ELEM_BLOCK_ELEM_CONN) 
+        {
+        arrId = 0;
+        }
+      else 
+        {
+        arrId = 1;
+        }
+      vtkIntArray* ent;
+      ent = vtkIntArray::SafeDownCast( 
+                      this->GetCacheOrRead( 
+                              vtkExodusIICacheKey( -1, vtkExodusIIReader::ENTITY_COUNTS, 
+                                                  key.ObjectId, arrId ) ) );
+      if ( ! ent ) 
+        {
+        vtkErrorMacro("Entity used 0 points per cell, but didn't return poly_hedra correctly");
+        iarr = 0;
+        }
+      else 
+        {
+        // reverse each polygon's winding order.
+        for ( c = 0; c < binfop->Size; c ++ )
+          {
+          int *nptr = ptr + ent->GetValue (c);
+          int *eptr = nptr - 1;
+          while ( eptr >= ptr )
+            {
+            *eptr = *eptr - 1;
+            *ptr = *ptr - 1;
+  
+            int tmp = *eptr;
+            *eptr = *ptr;
+            *ptr = tmp; 
+  
+            ptr ++;
+            eptr --;
+            }
+          ptr = nptr;
+          }
+        }
+      }
+      */
     else
       {
       for ( c = 0; c <= iarr->GetMaxId(); ++c, ++ptr )
@@ -2493,7 +2503,7 @@ vtkDataArray* vtkExodusIIReaderPrivate::GetCacheOrRead( vtkExodusIICacheKey key 
     if ( displ )
       {
       double* coords = darr->GetPointer( 0 );
-      if ( this->HasModeShapes )
+      if ( this->HasModeShapes && this->AnimateModeShapes )
         {
         for ( vtkIdType idx = 0; idx < displ->GetNumberOfTuples(); ++idx )
           {
@@ -2872,6 +2882,8 @@ void vtkExodusIIReaderPrivate::DetermineVtkCellType( BlockInfoType& binfo )
     { binfo.CellType=VTK_QUADRATIC_TETRA;          binfo.PointsPerCell = 10; }
   else if ((elemType.substr(0,3) == "TET") &&      (binfo.BdsPerEntry[0] == 11))
     { binfo.CellType=VTK_QUADRATIC_TETRA;          binfo.PointsPerCell = 10; }
+  else if ((elemType.substr(0,3) == "WED") &&      (binfo.BdsPerEntry[0] == 15))
+    { binfo.CellType=VTK_QUADRATIC_WEDGE;          binfo.PointsPerCell = 15; }
   else if ((elemType.substr(0,3) == "HEX") &&      (binfo.BdsPerEntry[0] == 20))
     { binfo.CellType=VTK_QUADRATIC_HEXAHEDRON;     binfo.PointsPerCell = 20; }
   else if ((elemType.substr(0,3) == "HEX") &&      (binfo.BdsPerEntry[0] == 21))
@@ -2904,6 +2916,11 @@ void vtkExodusIIReaderPrivate::DetermineVtkCellType( BlockInfoType& binfo )
   else if (elemType.substr(0,3) == "PYR") { binfo.CellType = VTK_PYRAMID;    binfo.PointsPerCell = 5; }
   else if (elemType.substr(0,3) == "WED") { binfo.CellType = VTK_WEDGE;      binfo.PointsPerCell = 6; }
   else if (elemType.substr(0,3) == "HEX") { binfo.CellType = VTK_HEXAHEDRON; binfo.PointsPerCell = 8; }
+  else if (elemType.substr(0,3) == "NSI" || elemType.substr(0,3) == "NFA") 
+    { 
+    binfo.CellType = VTK_POLYGON;
+    binfo.PointsPerCell = 0;
+    }
   else if ((elemType.substr(0,3) == "SHE") && (binfo.BdsPerEntry[0] == 3))
     { binfo.CellType = VTK_TRIANGLE;           binfo.PointsPerCell = 3; }
   else if ((elemType.substr(0,3) == "SHE") && (binfo.BdsPerEntry[0] == 4))
@@ -3349,6 +3366,7 @@ void vtkExodusIIReader::PrintSelf( ostream& os, vtkIndent indent )
   os << indent << "PackExodusModelOntoOutput: " << (this->PackExodusModelOntoOutput ? "ON" : "OFF" ) << "\n";
   os << indent << "ExodusModel: " << this->ExodusModel << "\n";
   os << indent << "SILUpdateStamp: " << this->SILUpdateStamp << "\n";
+  os << indent << "ProducedFastPathOutput: " << this->ProducedFastPathOutput << "\n";
   if ( this->Metadata )
     {
     os << indent << "Metadata:\n";
@@ -3400,6 +3418,7 @@ void vtkExodusIIReaderPrivate::PrintData( ostream& os, vtkIndent indent )
   os << indent << "TimeStep: " << this->TimeStep << "\n";
   os << indent << "HasModeShapes: " << this->HasModeShapes << "\n";
   os << indent << "ModeShapeTime: " << this->ModeShapeTime << "\n";
+  os << indent << "AnimateModeShapes: " << this->AnimateModeShapes << "\n";
 
   // Print nodal variables
   if ( this->ArrayInfo[ vtkExodusIIReader::NODAL ].size() > 0 )
@@ -3499,6 +3518,11 @@ int vtkExodusIIReaderPrivate::OpenFile( const char* filename )
     return 0;
     }
 
+  int numNodesInFile;
+  char dummyChar;
+  float dummyFloat;
+  ex_inquire(this->Exoid, EX_INQ_NODES, &numNodesInFile, &dummyFloat, &dummyChar); 
+ 
   return 1;
 }
 
@@ -4640,7 +4664,7 @@ int vtkExodusIIReaderPrivate::RequestData( vtkIdType timeStep, vtkMultiBlockData
 
   // Pack temporal data onto output field data arrays if fast path.
   // option is available:
-  this->AssembleArraysOverTime(output);
+  this->ProducedFastPathOutput = (this->AssembleArraysOverTime(output) != 0);
 
   // Finally, generate the decorations for edge and face fields.
   this->AssembleOutputEdgeDecorations();
@@ -4811,6 +4835,8 @@ void vtkExodusIIReaderPrivate::ResetSettings()
 {
   this->GenerateGlobalElementIdArray = 0;
   this->GenerateGlobalNodeIdArray = 0;
+  this->GenerateImplicitElementIdArray = 0;
+  this->GenerateImplicitNodeIdArray = 0;
   this->GenerateGlobalIdArray = 0;
   this->GenerateObjectIdArray = 1;
   this->GenerateFileIdArray = 0;
@@ -4820,6 +4846,7 @@ void vtkExodusIIReaderPrivate::ResetSettings()
 
   this->HasModeShapes = 0;
   this->ModeShapeTime = -1.;
+  this->AnimateModeShapes = 1;
 
   this->SqueezePoints = 1;
 
@@ -5325,7 +5352,6 @@ vtkDataArray* vtkExodusIIReaderPrivate::FindDisplacementVectors( int timeStep )
 
 // -------------------------------------------------------- PUBLIC CLASS MEMBERS
 
-vtkCxxRevisionMacro(vtkExodusIIReader,"$Revision: 1.75 $");
 vtkStandardNewMacro(vtkExodusIIReader);
 vtkCxxSetObjectMacro(vtkExodusIIReader,Metadata,vtkExodusIIReaderPrivate);
 vtkCxxSetObjectMacro(vtkExodusIIReader,ExodusModel,vtkExodusModel);
@@ -5344,6 +5370,7 @@ vtkExodusIIReader::vtkExodusIIReader()
   this->ExodusModel = 0;
   this->DisplayType = 0;
   this->SILUpdateStamp = -1;
+  this->ProducedFastPathOutput = false;
 
   this->SetNumberOfInputPorts( 0 );
 }
@@ -5555,6 +5582,7 @@ int vtkExodusIIReader::RequestData(
   vtkInformationVector** vtkNotUsed(inputVector),
   vtkInformationVector* outputVector )
 {
+  this->ProducedFastPathOutput = false;
   if ( ! this->FileName || ! this->Metadata->OpenFile( this->FileName ) )
     {
     vtkErrorMacro( "Unable to open file \"" << (this->FileName ? this->FileName : "(null)") << "\" to read data" );
@@ -5604,7 +5632,7 @@ int vtkExodusIIReader::RequestData(
       //cout << "Requested value: " << requestedTimeSteps[0] << " Step: " << this->TimeStep << endl;
       output->GetInformation()->Set( vtkDataObject::DATA_TIME_STEPS(), steps + this->TimeStep, 1 );
       }
-    else
+    else if (this->GetAnimateModeShapes())
       {
       // Let the metadata know the time value so that the Metadata->RequestData call below will generate
       // the animated mode shape properly.
@@ -5644,6 +5672,7 @@ int vtkExodusIIReader::RequestData(
 
   //cout << "Requesting step " << timeStep << " for output " << output << "\n";
   this->Metadata->RequestData( timeStep, output );
+  this->ProducedFastPathOutput = this->Metadata->ProducedFastPathOutput;
 
   // Restore previous fastpath values so we don't respond to old pipeline requests
   if ( haveFastPath )
@@ -5653,6 +5682,7 @@ int vtkExodusIIReader::RequestData(
     this->SetFastPathIdType( oldFastPathIdType );
     delete [] oldFastPathIdType;
     }
+
 
   return 1;
 }
@@ -5665,6 +5695,12 @@ int vtkExodusIIReader::GetGenerateGlobalElementIdArray() { return this->Metadata
 
 void vtkExodusIIReader::SetGenerateGlobalNodeIdArray( int x ) { this->Metadata->SetGenerateGlobalNodeIdArray( x ); }
 int vtkExodusIIReader::GetGenerateGlobalNodeIdArray() { return this->Metadata->GetGenerateGlobalNodeIdArray(); }
+
+void vtkExodusIIReader::SetGenerateImplicitElementIdArray( int x ) { this->Metadata->SetGenerateImplicitElementIdArray( x ); }
+int vtkExodusIIReader::GetGenerateImplicitElementIdArray() { return this->Metadata->GetGenerateImplicitElementIdArray(); }
+
+void vtkExodusIIReader::SetGenerateImplicitNodeIdArray( int x ) { this->Metadata->SetGenerateImplicitNodeIdArray( x ); }
+int vtkExodusIIReader::GetGenerateImplicitNodeIdArray() { return this->Metadata->GetGenerateImplicitNodeIdArray(); }
 
 void vtkExodusIIReader::SetGenerateFileIdArray( int x ) { this->Metadata->SetGenerateFileIdArray( x ); }
 int vtkExodusIIReader::GetGenerateFileIdArray() { return this->Metadata->GetGenerateFileIdArray(); }
@@ -5736,6 +5772,16 @@ double vtkExodusIIReader::GetModeShapeTime()
   return this->Metadata->GetModeShapeTime();
 }
 
+void vtkExodusIIReader::SetAnimateModeShapes(int flag)
+{
+  this->Metadata->SetAnimateModeShapes(flag);
+}
+
+int vtkExodusIIReader::GetAnimateModeShapes()
+{
+  return this->Metadata->GetAnimateModeShapes();
+}
+
 void vtkExodusIIReader::SetEdgeFieldDecorations( int d )
 {
   this->Metadata->SetEdgeFieldDecorations( d );
@@ -5804,6 +5850,8 @@ int vtkExodusIIReader::GetObjectTypeFromName( const char* name )
   else if ( tname == "node set cell" ) return NODE_SET_CONN; 
   else if ( tname == "nodal coordinates" ) return NODAL_COORDS; 
   else if ( tname == "object id" ) return OBJECT_ID; 
+  else if ( tname == "implicit element id" ) return IMPLICIT_ELEMENT_ID;
+  else if ( tname == "implicit node id" ) return IMPLICIT_NODE_ID;
   else if ( tname == "global element id" ) return GLOBAL_ELEMENT_ID; 
   else if ( tname == "global node id" ) return GLOBAL_NODE_ID; 
   else if ( tname == "element id" ) return ELEMENT_ID; 
@@ -5847,6 +5895,8 @@ const char* vtkExodusIIReader::GetObjectTypeName( int otyp )
   case NODE_SET_CONN: return "node set cell";
   case NODAL_COORDS: return "nodal coordinates";
   case OBJECT_ID: return "object id";
+  case IMPLICIT_ELEMENT_ID: return "implicit element id";
+  case IMPLICIT_NODE_ID: return "implicit node id";
   case GLOBAL_ELEMENT_ID: return "global element id";
   case GLOBAL_NODE_ID: return "global node id";
   case ELEMENT_ID: return "element id";
@@ -6539,11 +6589,16 @@ void vtkExodusIIReader::AdvertiseTimeSteps( vtkInformation* outInfo )
       this->TimeStepRange[0] = 0; this->TimeStepRange[1] = nTimes - 1;
       }
     }
-  else
+  else if (this->GetAnimateModeShapes())
     {
     outInfo->Remove( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
     static double timeRange[] = { 0, 1 };
     outInfo->Set( vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2 );
+    }
+  else
+    {
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
     }
 
   // Advertise to downstream filters that this reader supports a fast-path

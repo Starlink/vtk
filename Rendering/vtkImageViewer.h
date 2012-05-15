@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageViewer.h,v $
+  Module:    vtkImageViewer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_RENDERING_EXPORT vtkImageViewer : public vtkObject
 public:
   static vtkImageViewer *New();
   
-  vtkTypeRevisionMacro(vtkImageViewer,vtkObject);
+  vtkTypeMacro(vtkImageViewer,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

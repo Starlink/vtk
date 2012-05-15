@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendCompositeDataLeaves.h,v $
+  Module:    vtkAppendCompositeDataLeaves.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_GRAPHICS_EXPORT vtkAppendCompositeDataLeaves : public vtkCompositeData
 public:
   static vtkAppendCompositeDataLeaves* New();
 
-  vtkTypeRevisionMacro(vtkAppendCompositeDataLeaves,vtkCompositeDataSetAlgorithm);
+  vtkTypeMacro(vtkAppendCompositeDataLeaves,vtkCompositeDataSetAlgorithm);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:

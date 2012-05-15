@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRTAnalyticSource.h,v $
+  Module:    vtkRTAnalyticSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_IMAGING_EXPORT vtkRTAnalyticSource : public vtkImageAlgorithm
 {
 public:
   static vtkRTAnalyticSource *New();
-  vtkTypeRevisionMacro(vtkRTAnalyticSource,vtkImageAlgorithm);
+  vtkTypeMacro(vtkRTAnalyticSource,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

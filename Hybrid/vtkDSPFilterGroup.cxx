@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDSPFilterGroup.cxx,v $
+  Module:    vtkDSPFilterGroup.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include <vtkstd/vector>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkDSPFilterGroup, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkDSPFilterGroup);
 
 

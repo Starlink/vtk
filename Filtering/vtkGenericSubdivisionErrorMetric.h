@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericSubdivisionErrorMetric.h,v $
+  Module:    vtkGenericSubdivisionErrorMetric.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class VTK_FILTERING_EXPORT vtkGenericSubdivisionErrorMetric : public vtkObject
 public:  
   // Description:
   // Standard VTK type and error macros.
-  vtkTypeRevisionMacro(vtkGenericSubdivisionErrorMetric,vtkObject);
+  vtkTypeMacro(vtkGenericSubdivisionErrorMetric,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
  
   // Description:

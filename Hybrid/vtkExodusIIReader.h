@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusIIReader.h,v $
+  Module:    vtkExodusIIReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_HYBRID_EXPORT vtkExodusIIReader : public vtkMultiBlockDataSetAlgorithm
 {
 public:
   static vtkExodusIIReader *New();
-  vtkTypeRevisionMacro(vtkExodusIIReader,vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkExodusIIReader,vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -87,6 +87,14 @@ public:
   vtkGetMacro(TimeStep, int);
 
   // Description:
+  // Convenience method to set the mode-shape which is same as
+  // this->SetTimeStep(val-1);
+  void SetModeShape(int val)
+    {
+    this->SetTimeStep(val-1);
+    }
+
+  // Description:
   // Returns the available range of valid integer time steps.
   vtkGetVector2Macro(TimeStepRange,int);
   vtkSetVector2Macro(TimeStepRange,int);
@@ -113,6 +121,14 @@ public:
   virtual void SetGenerateGlobalNodeIdArray( int g );
   int GetGenerateGlobalNodeIdArray();
   vtkBooleanMacro(GenerateGlobalNodeIdArray, int);
+
+  virtual void SetGenerateImplicitElementIdArray( int g );
+  int GetGenerateImplicitElementIdArray();
+  vtkBooleanMacro(GenerateImplicitElementIdArray, int);
+
+  virtual void SetGenerateImplicitNodeIdArray( int g );
+  int GetGenerateImplicitNodeIdArray();
+  vtkBooleanMacro(GenerateImplicitNodeIdArray, int);
 
   virtual void SetGenerateFileIdArray( int f );
   int GetGenerateFileIdArray();
@@ -174,6 +190,8 @@ public:
     NODE_SET_CONN = 89,        //!< node set connectivity
     NODAL_COORDS = 88,         //!< raw nodal coordinates (not the "squeezed" version)
     OBJECT_ID = 87,            //!< object id (old BlockId) array
+    IMPLICIT_ELEMENT_ID = 108, //!< the implicit global index of each element given by exodus
+    IMPLICIT_NODE_ID = 107,    //!< the implicit global index of each node given by exodus
     GLOBAL_ELEMENT_ID = 86,    //!< element id array extracted for a particular block (yes, this is a bad name)
     GLOBAL_NODE_ID = 85,       //!< nodal id array extracted for a particular block (yes, this is a bad name)
     ELEMENT_ID = 84,           //!< element id map (old-style elem_num_map or first new-style elem map) array
@@ -183,7 +201,8 @@ public:
     FACE_BLOCK_ATTRIB = 80,    //!< a face block attribute array (time-constant scalar per element)
     EDGE_BLOCK_ATTRIB = 79,    //!< an edge block attribute array (time-constant scalar per element)
     FACE_ID = 105,             //!< face id map (old-style face_num_map or first new-style face map) array
-    EDGE_ID = 106              //!< edge id map (old-style edge_num_map or first new-style edge map) array
+    EDGE_ID = 106,             //!< edge id map (old-style edge_num_map or first new-style edge map) array
+    ENTITY_COUNTS = 109        //!< polyhedra per-entity count ex_get_block returns the sum for polyhedra
   };
   /// Ways to decorate edge and face variables.
   enum DecorationType {
@@ -197,18 +216,21 @@ public:
   static int GetGlobalElementID( vtkDataSet *data, int localID );
   static int GetGlobalElementID ( vtkDataSet *data, int localID, 
       int searchType );
+  static const char* GetImplicitElementIdArrayName() { return "ImplicitElementId"; }
 
   static const char* GetGlobalFaceIdArrayName() { return "GlobalFaceId"; }
   static const char* GetPedigreeFaceIdArrayName() { return "PedigreeFaceId"; }
   static int GetGlobalFaceID( vtkDataSet *data, int localID );
   static int GetGlobalFaceID ( vtkDataSet *data, int localID, 
       int searchType );
+  static const char* GetImplicitFaceIdArrayName() { return "ImplicitFaceId"; }
 
   static const char* GetGlobalEdgeIdArrayName() { return "GlobalEdgeId"; }
   static const char* GetPedigreeEdgeIdArrayName() { return "PedigreeEdgeId"; }
   static int GetGlobalEdgeID( vtkDataSet *data, int localID );
   static int GetGlobalEdgeID ( vtkDataSet *data, int localID, 
       int searchType );
+  static const char* GetImplicitEdgeIdArrayName() { return "ImplicitEdgeId"; }
 
   // Description:
   // Extra point data array that can be generated.  By default, this array
@@ -220,6 +242,7 @@ public:
   static int GetGlobalNodeID( vtkDataSet *data, int localID );
   static int GetGlobalNodeID( vtkDataSet *data, int localID, 
       int searchType );
+  static const char* GetImplicitNodeIdArrayName() { return "ImplicitNodeId"; }  
 
   // Description:
   // Geometric locations can include displacements.  By default, 
@@ -249,6 +272,16 @@ public:
   // added to the vertex coordinates.
   virtual void SetModeShapeTime( double phase );
   double GetModeShapeTime();
+
+  // Description:
+  // If this flag is on (the default) and HasModeShapes is also on, then this
+  // reader will report a continuous time range [0,1] and animate the
+  // displacements in a periodic sinusoid.  If this flag is off and
+  // HasModeShapes is on, this reader ignores time.  This flag has no effect if
+  // HasModeShapes is off.
+  virtual void SetAnimateModeShapes(int flag);
+  int GetAnimateModeShapes();
+  vtkBooleanMacro(AnimateModeShapes, int);
 
   // Description:
   // FIXME
@@ -697,6 +730,11 @@ public:
   // Every time the SIL is updated a this will return a different value.
   vtkGetMacro(SILUpdateStamp, int);
 
+  // Description:
+  // HACK: Used by vtkPExodusIIReader to tell is the reader produced a valid
+  // fast path output.
+  vtkGetMacro(ProducedFastPathOutput, bool);
+
 protected:
   vtkExodusIIReader();
   ~vtkExodusIIReader();
@@ -760,7 +798,7 @@ protected:
   int ExodusModelMetadata;
 
   int SILUpdateStamp;
-
+  bool ProducedFastPathOutput;
 private:
   vtkExodusIIReader(const vtkExodusIIReader&); // Not implemented
   void operator=(const vtkExodusIIReader&); // Not implemented

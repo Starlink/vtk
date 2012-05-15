@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDistributedGraphHelper.cxx,v $
+  Module:    vtkDistributedGraphHelper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,6 @@ vtkInformationKeyMacro(vtkDistributedGraphHelper, DISTRIBUTEDEDGEIDS, Integer);
 //----------------------------------------------------------------------------
 // class vtkDistributedGraphHelper
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkDistributedGraphHelper, "$Revision: 1.7 $");
 
 //----------------------------------------------------------------------------
 void vtkDistributedGraphHelper::PrintSelf(ostream& os, vtkIndent indent)

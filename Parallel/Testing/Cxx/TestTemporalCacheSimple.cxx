@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTemporalCacheSimple.cxx,v $
+  Module:    TestTemporalCacheSimple.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class vtkTemporalSphereSource : public vtkSphereSource {
 
 public:
   static vtkTemporalSphereSource *New();
-  vtkTypeRevisionMacro(vtkTemporalSphereSource, vtkSphereSource);
+  vtkTypeMacro(vtkTemporalSphereSource, vtkSphereSource);
 
   // Description:
   // Set/Get the time value at which to get the value.
@@ -84,7 +84,6 @@ public:
   vtkstd::vector<double> TimeStepValues;
 };
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkTemporalSphereSource, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkTemporalSphereSource);
 //----------------------------------------------------------------------------
 vtkTemporalSphereSource::vtkTemporalSphereSource()

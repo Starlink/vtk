@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCachedStreamingDemandDrivenPipeline.cxx,v $
+  Module:    vtkCachedStreamingDemandDrivenPipeline.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkInformationVector.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkCachedStreamingDemandDrivenPipeline, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkCachedStreamingDemandDrivenPipeline);
 
 

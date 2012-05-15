@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkSQLDatabase.h,v $
+Module:    vtkSQLDatabase.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -54,6 +54,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkStdString.h" // Because at least one method returns a vtkStdString
 
+class vtkInformationObjectBaseKey;
 class vtkSQLDatabaseSchema;
 class vtkSQLQuery;
 class vtkStringArray;
@@ -79,7 +80,7 @@ class vtkStringArray;
 class VTK_IO_EXPORT vtkSQLDatabase : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkSQLDatabase, vtkObject);
+  vtkTypeMacro(vtkSQLDatabase, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -204,6 +205,15 @@ public:
   static void RegisterCreateFromURLCallback(CreateFunction callback);
   static void UnRegisterCreateFromURLCallback(CreateFunction callback);
   static void UnRegisterAllCreateFromURLCallbacks();
+
+  // Description:
+  // Stores the database class pointer as an information key. This is currently
+  // used to store database pointers as part of 'data on demand' data objects.
+  // For example: The application may have a table/tree/whatever of documents, 
+  // the data structure is storing the meta-data but not the full text. Further 
+  // down the pipeline algorithms or views may want to retrieve additional 
+  // information (full text)for specific documents.
+  static vtkInformationObjectBaseKey* DATABASE();
 
 //BTX
 protected:

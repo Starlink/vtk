@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkContingencyStatistics.h,v $
+Module:    vtkContingencyStatistics.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -25,14 +25,8 @@ PURPOSE.  See the above copyright notice for more information.
 // following functionalities, depending on the execution mode it is executed in:
 // * Learn: calculate contigency tables and corresponding discrete bivariate
 //   probability distribution. 
-//   More precisely, ExecuteLearn calculates the sums; if \p finalize
-//   is set to true (default), the final statistics are calculated with the 
-//   function CalculateFromSums. Otherwise, only raw sums are output; this 
-//   option is made for efficient parallel calculations.
-//   Note that CalculateFromSums is a static function, so that it can be used
-//   directly with no need to instantiate a vtkContingencyStatistics object.
 // * Assess: given two columns of interest with the same number of entries as
-//   input in port 0, and a corresponding bivariate probability distribution,
+//   input in port INPUT_DATA, and a corresponding bivariate probability distribution,
 //  
 // .SECTION Thanks
 // Thanks to Philippe Pebay and David Thompson from Sandia National Laboratories 
@@ -43,36 +37,75 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkBivariateStatisticsAlgorithm.h"
 
+class vtkMultiBlockDataSet;
 class vtkStringArray;
 class vtkTable;
+class vtkVariant;
 
 class VTK_INFOVIS_EXPORT vtkContingencyStatistics : public vtkBivariateStatisticsAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkContingencyStatistics, vtkBivariateStatisticsAlgorithm);
+  vtkTypeMacro(vtkContingencyStatistics, vtkBivariateStatisticsAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkContingencyStatistics* New();
 
-//BTX  
   // Description:
-  // Provide the appropriate assessment functor.
-  virtual void SelectAssessFunctor( vtkTable* outData, 
-                                    vtkDataObject* inMeta,
-                                    vtkStringArray* rowNames,
-                                    AssessFunctor*& dfunc );
-//ETX
+  // Given a collection of models, calculate aggregate model
+  // NB: not implemented
+  virtual void Aggregate( vtkDataObjectCollection*,
+                          vtkDataObject* ) { return; };
 
 protected:
   vtkContingencyStatistics();
   ~vtkContingencyStatistics();
 
   // Description:
+  // This algorithm accepts and returns a multiblock dataset containing several tables for
+  // its meta input/output instead of a single vtkTable.
+  // FillInputPortInformation/FillOutputPortInformation are overridden accordingly.
+  virtual int FillInputPortInformation( int port, vtkInformation* info );
+  virtual int FillOutputPortInformation( int port, vtkInformation* info );
+
+  // Description:
   // Execute the calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
-                             vtkDataObject* outMeta );
+  virtual void Learn( vtkTable* inData,
+                      vtkTable* inParameters,
+                      vtkDataObject* outMeta );
+
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void ExecuteDerive( vtkDataObject* );
+  virtual void Derive( vtkDataObject* );
+
+  // Description:
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable* inData,
+                       vtkDataObject* inMeta,
+                       vtkTable* outData ); 
+  
+  // Description:
+  // Execute the calculations required by the Test option.
+  virtual void Test( vtkTable* inData,
+                     vtkDataObject* inMeta,
+                     vtkDataObject* outMeta ); 
+
+//BTX  
+  // Description:
+  // Provide the appropriate assessment functor.
+  // This one does nothing because the API is not sufficient for tables indexed
+  // by a separate summary table.
+  virtual void SelectAssessFunctor( vtkTable* outData, 
+                                    vtkDataObject* inMeta,
+                                    vtkStringArray* rowNames,
+                                    AssessFunctor*& dfunc );
+  // Description:
+  // Provide the appropriate assessment functor.
+  // This one is the one that is actually used.
+  virtual void SelectAssessFunctor( vtkTable* outData,
+                                    vtkMultiBlockDataSet* inMeta,
+                                    vtkIdType pairKey,
+                                    vtkStringArray* rowNames,
+                                    AssessFunctor*& dfunc );
+//ETX
 
 private:
   vtkContingencyStatistics(const vtkContingencyStatistics&); // Not implemented

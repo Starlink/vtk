@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoxClipDataSet.cxx,v $
+  Module:    vtkBoxClipDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,13 +33,13 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkBoxClipDataSet, "$Revision: 1.24 $");
 vtkStandardNewMacro(vtkBoxClipDataSet);
 
-vtkCxxSetObjectMacro(vtkBoxClipDataSet, Locator, vtkPointLocator)
+vtkCxxSetObjectMacro(vtkBoxClipDataSet, Locator, vtkIncrementalPointLocator)
 
 //----------------------------------------------------------------------------
 vtkBoxClipDataSet::vtkBoxClipDataSet()
@@ -176,7 +176,7 @@ int vtkBoxClipDataSet::RequestData(vtkInformation *vtkNotUsed(request),
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -1074,6 +1074,7 @@ void vtkBoxClipDataSet::CellGrid(vtkIdType typeobj, vtkIdType npts,
 
     case VTK_TRIANGLE: // 5
     case VTK_QUADRATIC_TRIANGLE:
+    case VTK_BIQUADRATIC_TRIANGLE:
       newCellArray->InsertNextCell(ptstriangle, triPassThrough);
       break;
 
@@ -1838,7 +1839,7 @@ void vtkBoxClipDataSet::CreateTetra(vtkIdType npts, const vtkIdType *cellIds,
 //
 void vtkBoxClipDataSet::ClipBox(vtkPoints *newPoints,
                                 vtkGenericCell *cell,
-                                vtkPointLocator *locator,
+                                vtkIncrementalPointLocator *locator,
                                 vtkCellArray *tets,
                                 vtkPointData *inPD,
                                 vtkPointData *outPD,
@@ -2039,8 +2040,8 @@ void vtkBoxClipDataSet::ClipBox(vtkPoints *newPoints,
           p1 = v_tetra[verts[0]];
           p2 = v_tetra[verts[1]];
 
-          if ( (p1[cutInd] <= value && value <= p2[cutInd]) ||
-               (p2[cutInd] <= value && value <= p1[cutInd]) )
+          if ( (p1[cutInd] < value && value < p2[cutInd]) ||
+               (p2[cutInd] < value && value < p1[cutInd]) )
             {
             deltaScalar = p2[cutInd] - p1[cutInd];
 
@@ -2059,11 +2060,6 @@ void vtkBoxClipDataSet::ClipBox(vtkPoints *newPoints,
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 :
             (value - pedg1[cutInd]) / deltaScalar );
-
-            if ( t == 0.0 || t == 1.0 )
-              {
-              continue;
-              }
 
             for (j=0; j<3; j++)
               {
@@ -2314,7 +2310,7 @@ void vtkBoxClipDataSet::ClipBox(vtkPoints *newPoints,
 //
 void vtkBoxClipDataSet::ClipHexahedron(vtkPoints *newPoints,
                                        vtkGenericCell *cell,
-                                       vtkPointLocator *locator, 
+                                       vtkIncrementalPointLocator *locator, 
                                        vtkCellArray *tets,
                                        vtkPointData *inPD, 
                                        vtkPointData *outPD,
@@ -2520,7 +2516,7 @@ void vtkBoxClipDataSet::ClipHexahedron(vtkPoints *newPoints,
           p2 = v_tetra[verts[1]];
           double s1 = p[verts[0]];
           double s2 = p[verts[1]];    
-          if ( (s1 * s2) <=0)
+          if ( (s1 * s2) < 0)
             {
             deltaScalar = s2 - s1;
           
@@ -2540,20 +2536,11 @@ void vtkBoxClipDataSet::ClipHexahedron(vtkPoints *newPoints,
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 : ( - s1) / deltaScalar );
       
-            if ( t == 0.0 )
-              {
-              continue;
-              }
-            else if ( t == 1.0 )
-              {
-              continue;
-              }
-      
             for (j=0; j<3; j++)
               {
               x[j]  = pedg1[j]  + t*(pedg2[j] - pedg1[j]);
               }
-      
+
             // Incorporate point into output and interpolate edge data as necessary
             edges_inter = edges_inter * 10 + (edgeNum+1);
 
@@ -2790,7 +2777,7 @@ void vtkBoxClipDataSet::ClipHexahedron(vtkPoints *newPoints,
 // 
 void vtkBoxClipDataSet::ClipBoxInOut(vtkPoints *newPoints,
                                      vtkGenericCell *cell,
-                                     vtkPointLocator *locator, 
+                                     vtkIncrementalPointLocator *locator, 
                                      vtkCellArray **tets,
                                      vtkPointData *inPD, 
                                      vtkPointData *outPD,
@@ -3000,8 +2987,8 @@ void vtkBoxClipDataSet::ClipBoxInOut(vtkPoints *newPoints,
           p1 = v_tetra[verts[0]];
           p2 = v_tetra[verts[1]];
   
-          if ( (p1[cutInd] <= value && value <= p2[cutInd]) || 
-               (p2[cutInd] <= value && value <= p1[cutInd]) )
+          if ( (p1[cutInd] < value && value < p2[cutInd]) || 
+               (p2[cutInd] < value && value < p1[cutInd]) )
             {
             deltaScalar = p2[cutInd] - p1[cutInd];
       
@@ -3020,15 +3007,6 @@ void vtkBoxClipDataSet::ClipBoxInOut(vtkPoints *newPoints,
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 :
                 (value - pedg1[cutInd]) / deltaScalar );
-      
-            if ( t == 0.0 )
-              {
-              continue;
-              }
-            else if ( t == 1.0 )
-              {
-              continue;
-              }
       
             for (j=0; j<3; j++)
               {
@@ -3342,7 +3320,7 @@ void vtkBoxClipDataSet::ClipBoxInOut(vtkPoints *newPoints,
 //
 void vtkBoxClipDataSet::ClipHexahedronInOut(vtkPoints *newPoints,
                                             vtkGenericCell *cell,
-                                            vtkPointLocator *locator, 
+                                            vtkIncrementalPointLocator *locator, 
                                             vtkCellArray **tets,
                                             vtkPointData *inPD, 
                                             vtkPointData *outPD,
@@ -3563,7 +3541,7 @@ void vtkBoxClipDataSet::ClipHexahedronInOut(vtkPoints *newPoints,
           p2 = v_tetra[verts[1]];
           double s1 = p[verts[0]];
           double s2 = p[verts[1]];    
-          if ( (s1 * s2) <=0)
+          if ( (s1 * s2) < 0)
             {
             deltaScalar = s2 - s1;
               
@@ -3583,11 +3561,6 @@ void vtkBoxClipDataSet::ClipHexahedronInOut(vtkPoints *newPoints,
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 :
                   ( - s1) / deltaScalar );
-          
-            if ( t == 0.0 || t == 1.0 )
-              {
-              continue;
-              }
           
             for (j=0; j<3; j++)
               {
@@ -3893,7 +3866,7 @@ void vtkBoxClipDataSet::ClipHexahedronInOut(vtkPoints *newPoints,
 //-------------------------------------------------------
 void vtkBoxClipDataSet::ClipBox2D(vtkPoints *newPoints,
                                   vtkGenericCell *cell,
-                                  vtkPointLocator *locator, 
+                                  vtkIncrementalPointLocator *locator, 
                                   vtkCellArray *tets,
                                   vtkPointData *inPD, 
                                   vtkPointData *outPD,
@@ -4062,8 +4035,8 @@ void vtkBoxClipDataSet::ClipBox2D(vtkPoints *newPoints,
           p1 = v_triangle[verts[0]];
           p2 = v_triangle[verts[1]];
 
-          if ( (p1[cutInd] <= value && value <= p2[cutInd]) || 
-               (p2[cutInd] <= value && value <= p1[cutInd]) )
+          if ( (p1[cutInd] < value && value < p2[cutInd]) || 
+               (p2[cutInd] < value && value < p1[cutInd]) )
             {
             deltaScalar = p2[cutInd] - p1[cutInd];
 
@@ -4081,11 +4054,6 @@ void vtkBoxClipDataSet::ClipBox2D(vtkPoints *newPoints,
 
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 : (value - pedg1[cutInd]) / deltaScalar );
-
-            if ( t == 0.0 || t == 1.0 )
-              {
-              continue;
-              }
 
             for (j=0; j<3; j++)
               {
@@ -4236,7 +4204,7 @@ void vtkBoxClipDataSet::ClipBox2D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipBoxInOut2D(vtkPoints *newPoints,
                                        vtkGenericCell *cell,
-                                       vtkPointLocator *locator, 
+                                       vtkIncrementalPointLocator *locator, 
                                        vtkCellArray **tets,
                                        vtkPointData *inPD, 
                                        vtkPointData *outPD,
@@ -4418,8 +4386,8 @@ void vtkBoxClipDataSet::ClipBoxInOut2D(vtkPoints *newPoints,
           p1 = v_triangle[verts[0]];
           p2 = v_triangle[verts[1]];
   
-          if ( (p1[cutInd] <= value && value <= p2[cutInd]) || 
-               (p2[cutInd] <= value && value <= p1[cutInd]) )
+          if ( (p1[cutInd] < value && value < p2[cutInd]) || 
+               (p2[cutInd] < value && value < p1[cutInd]) )
             {
             deltaScalar = p2[cutInd] - p1[cutInd];
       
@@ -4437,15 +4405,6 @@ void vtkBoxClipDataSet::ClipBoxInOut2D(vtkPoints *newPoints,
       
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 : (value - pedg1[cutInd]) / deltaScalar );
-      
-            if ( t == 0.0 )
-              {
-              continue;
-              }
-            else if ( t == 1.0 )
-              {
-              continue;
-              }
       
             for (j=0; j<3; j++)
               {
@@ -4649,7 +4608,7 @@ void vtkBoxClipDataSet::ClipBoxInOut2D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipHexahedron2D(vtkPoints *newPoints,
                                          vtkGenericCell *cell,
-                                         vtkPointLocator *locator, 
+                                         vtkIncrementalPointLocator *locator, 
                                          vtkCellArray *tets,
                                          vtkPointData *inPD, 
                                          vtkPointData *outPD,
@@ -4819,7 +4778,7 @@ void vtkBoxClipDataSet::ClipHexahedron2D(vtkPoints *newPoints,
             p2 = v_triangle[verts[1]];
             double s1 = p[verts[0]];
             double s2 = p[verts[1]];    
-            if ( (s1 * s2) <=0)
+            if ( (s1 * s2) < 0)
               {
               deltaScalar = s2 - s1;
             
@@ -4838,11 +4797,6 @@ void vtkBoxClipDataSet::ClipHexahedron2D(vtkPoints *newPoints,
 
               // linear interpolation
               t = ( deltaScalar == 0.0 ? 0.0 : ( - s1) / deltaScalar );
-        
-              if ( t == 0.0 || t == 1.0 )
-                {
-                continue;
-                }
         
               for (j=0; j<3; j++)
                 {
@@ -4996,7 +4950,7 @@ void vtkBoxClipDataSet::ClipHexahedron2D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipHexahedronInOut2D(vtkPoints *newPoints,
                                               vtkGenericCell *cell,
-                                              vtkPointLocator *locator, 
+                                              vtkIncrementalPointLocator *locator, 
                                               vtkCellArray **tets,
                                               vtkPointData *inPD, 
                                               vtkPointData *outPD,
@@ -5179,7 +5133,7 @@ void vtkBoxClipDataSet::ClipHexahedronInOut2D(vtkPoints *newPoints,
           p2 = v_triangle[verts[1]];
           double s1 = p[verts[0]];
           double s2 = p[verts[1]];    
-          if ( (s1 * s2) <=0)
+          if ( (s1 * s2) < 0)
             {
             deltaScalar = s2 - s1;
           
@@ -5198,11 +5152,6 @@ void vtkBoxClipDataSet::ClipHexahedronInOut2D(vtkPoints *newPoints,
       
             // linear interpolation
             t = ( deltaScalar == 0.0 ? 0.0 : ( - s1) / deltaScalar );
-      
-            if ( t == 0.0 || t == 1.0)
-              {
-              continue;
-              }
       
             for (j=0; j<3; j++)
               {
@@ -5405,7 +5354,7 @@ void vtkBoxClipDataSet::ClipHexahedronInOut2D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipBox1D(vtkPoints *newPoints,
                                   vtkGenericCell *cell,
-                                  vtkPointLocator *locator, 
+                                  vtkIncrementalPointLocator *locator, 
                                   vtkCellArray *lines,
                                   vtkPointData *inPD, 
                                   vtkPointData *outPD,
@@ -5625,7 +5574,7 @@ void vtkBoxClipDataSet::ClipBox1D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipBoxInOut1D(vtkPoints *newPoints,
                                        vtkGenericCell *cell,
-                                       vtkPointLocator *locator, 
+                                       vtkIncrementalPointLocator *locator, 
                                        vtkCellArray **lines,
                                        vtkPointData *inPD, 
                                        vtkPointData *outPD,
@@ -5862,7 +5811,7 @@ void vtkBoxClipDataSet::ClipBoxInOut1D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipHexahedron1D(vtkPoints *newPoints,
                                          vtkGenericCell *cell,
-                                         vtkPointLocator *locator, 
+                                         vtkIncrementalPointLocator *locator, 
                                          vtkCellArray *lines,
                                          vtkPointData *inPD, 
                                          vtkPointData *outPD,
@@ -6062,7 +6011,7 @@ void vtkBoxClipDataSet::ClipHexahedron1D(vtkPoints *newPoints,
 
 void vtkBoxClipDataSet::ClipHexahedronInOut1D(vtkPoints *newPoints,
                                               vtkGenericCell *cell,
-                                              vtkPointLocator *locator, 
+                                              vtkIncrementalPointLocator *locator, 
                                               vtkCellArray **lines,
                                               vtkPointData *inPD, 
                                               vtkPointData *outPD,
@@ -6278,7 +6227,7 @@ void vtkBoxClipDataSet::ClipHexahedronInOut1D(vtkPoints *newPoints,
 //-----------------------------------------------------------------------------
 
 void vtkBoxClipDataSet::ClipBox0D(vtkGenericCell *cell,
-                                  vtkPointLocator *locator, 
+                                  vtkIncrementalPointLocator *locator, 
                                   vtkCellArray *verts,
                                   vtkPointData *inPD, 
                                   vtkPointData *outPD,
@@ -6340,7 +6289,7 @@ void vtkBoxClipDataSet::ClipBox0D(vtkGenericCell *cell,
 //-----------------------------------------------------------------------------
 
 void vtkBoxClipDataSet::ClipBoxInOut0D(vtkGenericCell *cell,
-                                       vtkPointLocator *locator, 
+                                       vtkIncrementalPointLocator *locator, 
                                        vtkCellArray **verts,
                                        vtkPointData *inPD, 
                                        vtkPointData *outPD,
@@ -6410,7 +6359,7 @@ void vtkBoxClipDataSet::ClipBoxInOut0D(vtkGenericCell *cell,
 //-----------------------------------------------------------------------------
 
 void vtkBoxClipDataSet::ClipHexahedron0D(vtkGenericCell *cell,
-                                         vtkPointLocator *locator, 
+                                         vtkIncrementalPointLocator *locator, 
                                          vtkCellArray *verts,
                                          vtkPointData *inPD, 
                                          vtkPointData *outPD,
@@ -6481,7 +6430,7 @@ void vtkBoxClipDataSet::ClipHexahedron0D(vtkGenericCell *cell,
 //-----------------------------------------------------------------------------
 
 void vtkBoxClipDataSet::ClipHexahedronInOut0D(vtkGenericCell *cell,
-                                              vtkPointLocator *locator, 
+                                              vtkIncrementalPointLocator *locator, 
                                               vtkCellArray **verts,
                                               vtkPointData *inPD, 
                                               vtkPointData *outPD,

@@ -4,6 +4,9 @@ SUBDIRS(kwsys)
 # Build third-party utilities.
 
 VTK_THIRD_PARTY_SUBDIR(ZLIB vtkzlib)
+IF(VTK_USE_GL2PS)
+  VTK_THIRD_PARTY_SUBDIR(GL2PS vtkgl2ps)
+ENDIF(VTK_USE_GL2PS)
 VTK_THIRD_PARTY_SUBDIR(JPEG vtkjpeg)
 VTK_THIRD_PARTY_SUBDIR(PNG  vtkpng)
 VTK_THIRD_PARTY_SUBDIR(TIFF vtktiff)
@@ -13,6 +16,10 @@ VTK_THIRD_PARTY_SUBDIR(LIBXML2 vtklibxml2)
 VTK_THIRD_PARTY_SUBDIR(DICOMParser DICOMParser)
 VTK_THIRD_PARTY_SUBDIR(MATERIALLIBRARY MaterialLibrary)
 VTK_THIRD_PARTY_SUBDIR(LIBPROJ4 vtklibproj4)
+VTK_THIRD_PARTY_SUBDIR(MRMPI mrmpi)
+IF(VTK_USE_OGGTHEORA_ENCODER)
+  VTK_THIRD_PARTY_SUBDIR(OGGTHEORA vtkoggtheora)
+ENDIF(VTK_USE_OGGTHEORA_ENCODER)
 
 # Force build options for verdict
 SET( VERDICT_USE_FLOAT OFF CACHE BOOL "VTK requires doubles" FORCE )
@@ -47,6 +54,17 @@ ENDIF(VTK_INCLUDE_NEED_TCL)
 
 SUBDIRS(EncodeString)
 
+IF(VTK_USE_PARALLEL)
+  # vtkParallel uses source hashes during network handshakes.
+  SUBDIRS(HashSource)
+  
+  # helper classes for vtkVPICReader
+  VTK_THIRD_PARTY_SUBDIR(VPIC VPIC)
+  
+  # helper classes for vtkPCosmoReader and vtkPCosmoHaloFinder
+  VTK_THIRD_PARTY_SUBDIR(Cosmo Cosmo)
+ENDIF(VTK_USE_PARALLEL)
+
 IF(VTK_USE_RENDERING)
   SUBDIRS(ftgl ParseOGLExt)
 ENDIF(VTK_USE_RENDERING)
@@ -58,9 +76,11 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtk_jpeg.h
     vtk_png.h
     vtk_zlib.h
+    vtk_gl2ps.h
     vtk_tiff.h
     vtk_freetype.h
     vtk_libxml2.h
+    vtk_oggtheora.h
     DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
     COMPONENT Development
     )

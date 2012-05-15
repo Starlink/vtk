@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointData.h,v $
+  Module:    vtkPointData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_FILTERING_EXPORT vtkPointData : public vtkDataSetAttributes
 public:
   static vtkPointData *New();
 
-  vtkTypeRevisionMacro(vtkPointData,vtkDataSetAttributes);
+  vtkTypeMacro(vtkPointData,vtkDataSetAttributes);
   void PrintSelf(ostream& os, vtkIndent indent);
   void NullPoint(vtkIdType ptId);
 

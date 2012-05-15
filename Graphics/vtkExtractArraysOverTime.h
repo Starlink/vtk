@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractArraysOverTime.h,v $
+  Module:    vtkExtractArraysOverTime.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractArraysOverTime : public vtkMultiBlockDataSet
 {
 public:
   static vtkExtractArraysOverTime *New();
-  vtkTypeRevisionMacro(vtkExtractArraysOverTime, vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkExtractArraysOverTime, vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

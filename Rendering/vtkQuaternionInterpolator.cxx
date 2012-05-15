@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuaternionInterpolator.cxx,v $
+  Module:    vtkQuaternionInterpolator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkMath.h"
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkQuaternionInterpolator, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkQuaternionInterpolator);
 
 //----------------------------------------------------------------------------

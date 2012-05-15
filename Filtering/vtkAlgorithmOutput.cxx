@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAlgorithmOutput.cxx,v $
+  Module:    vtkAlgorithmOutput.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkAlgorithmOutput, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkAlgorithmOutput);
 
 //----------------------------------------------------------------------------

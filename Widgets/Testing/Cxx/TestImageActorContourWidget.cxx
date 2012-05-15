@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestImageActorContourWidget.cxx,v $
+  Module:    TestImageActorContourWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -72,6 +72,7 @@
 #include "vtkCamera.h"
 #include "vtkInteractorEventRecorder.h"
 #include "vtkTestUtilities.h"
+#include "vtkTesting.h"
 #include "vtkRenderWindow.h"
 #include "vtkRegressionTestImage.h"
 #include "vtkProperty.h"
@@ -800,21 +801,28 @@ public:
   static vtkSliderCallback2 *New() 
     { return new vtkSliderCallback2; }
   void SetImageViewer(vtkImageViewer2 *viewer)
-    { m_Viewer =  viewer; }
+    { this->Viewer =  viewer; }
   virtual void Execute(vtkObject *caller, unsigned long , void* )
     {
       vtkSliderWidget *slider = static_cast<vtkSliderWidget *>(caller);
       vtkSliderRepresentation *sliderRepres = static_cast<vtkSliderRepresentation *>(slider->GetRepresentation());
       int pos = static_cast<int>(sliderRepres->GetValue());
 
-    m_Viewer->SetSlice(pos);
+    this->Viewer->SetSlice(pos);
     }
 protected:
-  vtkImageViewer2 *m_Viewer;
+  vtkImageViewer2 *Viewer;
 };
 
 int TestImageActorContourWidget(int argc, char *argv[])
 {
+  bool disableReplay = false, followCursor = false;
+  for (int i = 0; i < argc; i++)
+    {
+    disableReplay |= (strcmp("--DisableReplay", argv[i]) == 0);
+    followCursor  |= (strcmp("--FollowCursor", argv[i]) == 0);
+    }  
+
   char* fname = vtkTestUtilities::ExpandDataFileName(argc, argv, "Data/headsq/quarter");
 
   vtkVolume16Reader* v16 = vtkVolume16Reader::New();
@@ -840,22 +848,24 @@ int TestImageActorContourWidget(int argc, char *argv[])
   shifter->Update();
 
   
-  vtkImageViewer2 *ImageViewer = vtkImageViewer2::New();
-  ImageViewer->SetInput(shifter->GetOutput());
-  ImageViewer->SetColorLevel(127);
-  ImageViewer->SetColorWindow(255);
+  vtkImageViewer2 *imageViewer = vtkImageViewer2::New();
+  imageViewer->SetInput(shifter->GetOutput());
+  imageViewer->SetColorLevel(127);
+  imageViewer->SetColorWindow(255);
 
   vtkRenderWindowInteractor *iren = vtkRenderWindowInteractor::New();
-  ImageViewer->SetupInteractor(iren);
+  imageViewer->SetupInteractor(iren);
+  imageViewer->GetRenderWindow()->SetMultiSamples(0);
+  imageViewer->GetRenderWindow()->SetSize(500, 500);
 
-  ImageViewer->Render();
-  ImageViewer->GetRenderer()->ResetCamera();
+  imageViewer->Render();
+  imageViewer->GetRenderer()->ResetCamera();
 
-  ImageViewer->Render();    
+  imageViewer->Render();    
   
   vtkSliderRepresentation2D *SliderRepres = vtkSliderRepresentation2D::New();
-  int min = ImageViewer->GetSliceMin();
-  int max = ImageViewer->GetSliceMax();
+  int min = imageViewer->GetSliceMin();
+  int max = imageViewer->GetSliceMax();
   SliderRepres->SetMinimumValue(min);
   SliderRepres->SetMaximumValue(max);
   SliderRepres->SetValue(static_cast<int>((min + max) / 2));
@@ -881,10 +891,10 @@ int TestImageActorContourWidget(int argc, char *argv[])
   SliderWidget->SetEnabled(true);
   
   vtkSliderCallback2 *SliderCb = vtkSliderCallback2::New();
-  SliderCb->SetImageViewer(ImageViewer);
+  SliderCb->SetImageViewer(imageViewer);
   SliderWidget->AddObserver(vtkCommand::InteractionEvent, SliderCb);  
 
-  ImageViewer->SetSlice(static_cast<int>(SliderRepres->GetValue()));
+  imageViewer->SetSlice(static_cast<int>(SliderRepres->GetValue()));
 
   vtkContourWidget *ContourWidget = vtkContourWidget::New();
 
@@ -893,7 +903,7 @@ int TestImageActorContourWidget(int argc, char *argv[])
   ContourWidget->SetRepresentation(rep);
   
   vtkImageActorPointPlacer * imageActorPointPlacer = vtkImageActorPointPlacer::New();
-  imageActorPointPlacer->SetImageActor(ImageViewer->GetImageActor());
+  imageActorPointPlacer->SetImageActor(imageViewer->GetImageActor());
   rep->SetPointPlacer(imageActorPointPlacer);
   rep->GetProperty()->SetColor(0,1,0);
 
@@ -901,10 +911,11 @@ int TestImageActorContourWidget(int argc, char *argv[])
   rep->Delete();
 
   ContourWidget->SetInteractor(iren);
+  ContourWidget->SetFollowCursor( followCursor );
   ContourWidget->SetEnabled(true);
   ContourWidget->ProcessEventsOn();
 
-  ImageViewer->GetRenderWindow()->SetSize(500, 500);
+  imageViewer->GetRenderWindow()->SetSize(500, 500);
 
   // record events
   vtkInteractorEventRecorder *recorder = vtkInteractorEventRecorder::New();
@@ -916,14 +927,19 @@ int TestImageActorContourWidget(int argc, char *argv[])
   // render the image
   //
   iren->Initialize();
-  ImageViewer->Render();
-  recorder->Play();
+  imageViewer->Render();
+
+  if (!disableReplay)
+    {
+    recorder->EnabledOn();
+    recorder->Play();
+    }
 
   // Remove the observers so we can go interactive. Without this the "-I"
   // testing option fails.
   recorder->Off();
 
-  int retVal = vtkRegressionTestImage( ImageViewer->GetRenderWindow() );
+  int retVal = vtkRegressionTestImage( imageViewer->GetRenderWindow() );
   if ( retVal == vtkRegressionTester::DO_INTERACTOR)
     {
     iren->Start();
@@ -934,7 +950,7 @@ int TestImageActorContourWidget(int argc, char *argv[])
   SliderCb->Delete();
   ContourWidget->Delete();
   v16->Delete();
-  ImageViewer->Delete();
+  imageViewer->Delete();
   shifter->Delete();
   SliderWidget->Delete();
   iren->Delete();

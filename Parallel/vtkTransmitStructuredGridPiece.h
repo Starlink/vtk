@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransmitStructuredGridPiece.h,v $
+  Module:    vtkTransmitStructuredGridPiece.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_PARALLEL_EXPORT vtkTransmitStructuredGridPiece : public vtkStructuredG
 {
 public:
   static vtkTransmitStructuredGridPiece *New();
-  vtkTypeRevisionMacro(vtkTransmitStructuredGridPiece, vtkStructuredGridAlgorithm);
+  vtkTypeMacro(vtkTransmitStructuredGridPiece, vtkStructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkContourGrid.cxx,v $
+  Module:    vtkContourGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,17 +21,18 @@
 #include "vtkFloatArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSimpleScalarTree.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkCutter.h"
+#include "vtkMergePoints.h"
+#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkContourGrid, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkContourGrid);
 
 // Construct object with initial range (0,1) and single contour value
@@ -99,7 +100,7 @@ void vtkContourGridExecute(vtkContourGrid *self, vtkDataSet *input,
 {
   vtkIdType cellId, i;
   int abortExecute=0;
-  vtkPointLocator *locator = self->GetLocator();
+  vtkIncrementalPointLocator *locator = self->GetLocator();
   vtkIdList *cellPts;
   vtkCell *cell;
   double range[2];
@@ -329,7 +330,7 @@ int vtkContourGrid::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkUnstructuredGrid *input = vtkUnstructuredGrid::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -378,7 +379,7 @@ int vtkContourGrid::RequestData(
 
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkContourGrid::SetLocator(vtkPointLocator *locator)
+void vtkContourGrid::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

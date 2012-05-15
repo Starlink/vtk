@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWrapPython.c,v $
+  Module:    vtkWrapPython.c
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -382,8 +382,11 @@ void do_return(FILE *fp)
 #endif
     case 0x3:   
       {
-      fprintf(fp,"    return PyString_FromStringAndSize((char *)&temp%i,1);\n",
-              MAX_ARGS);
+      fprintf(fp,"    char temp%iString[2];\n"
+                 "    temp%iString[0] = temp%i;\n"
+                 "    temp%iString[1] = \'\\0\';\n"
+                 "    return PyString_FromStringAndSize(temp%iString,1);\n",
+              MAX_ARGS, MAX_ARGS, MAX_ARGS, MAX_ARGS, MAX_ARGS);
       break;
       }
     }
@@ -486,9 +489,11 @@ char *get_format_string()
         result[currPos] = 'i'; currPos++; break;
 #endif
 #ifdef PY_LONG_LONG
+      case 0x1B: case 0x1C:
       case 0xB: case 0xC:
         result[currPos] = 'L'; currPos++; break;
 #else
+      case 0x1B: case 0x1C:
       case 0xB: case 0xC:
         result[currPos] = 'l'; currPos++; break;
 #endif
@@ -1415,6 +1420,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"    Py_INCREF(temp1);\n");
     fprintf(fp,"    vtkPythonCommand *cbc = vtkPythonCommand::New();\n");
     fprintf(fp,"    cbc->SetObject(temp1);\n");
+    fprintf(fp,"    cbc->SetThreadState(PyThreadState_Get());\n");
     fprintf(fp,"    temp20 = op->AddObserver(temp0,cbc);\n");
     fprintf(fp,"    cbc->Delete();\n");
     fprintf(fp,"    return PyInt_FromLong((long)temp20);\n");
@@ -1431,6 +1437,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(fp,"    Py_INCREF(temp1);\n");
     fprintf(fp,"    vtkPythonCommand *cbc = vtkPythonCommand::New();\n");
     fprintf(fp,"    cbc->SetObject(temp1);\n");
+    fprintf(fp,"    cbc->SetThreadState(PyThreadState_Get());\n");
     fprintf(fp,"    temp20 = op->AddObserver(temp0,cbc,temp2);\n");
     fprintf(fp,"    cbc->Delete();\n");
     fprintf(fp,"    return PyInt_FromLong((long)temp20);\n");

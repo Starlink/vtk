@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMagnitude.h,v $
+  Module:    vtkImageMagnitude.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_IMAGING_EXPORT vtkImageMagnitude : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageMagnitude *New();
-  vtkTypeRevisionMacro(vtkImageMagnitude,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageMagnitude,vtkThreadedImageAlgorithm);
 
 protected:
   vtkImageMagnitude();

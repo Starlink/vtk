@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShepardMethod.h,v $
+  Module:    vtkShepardMethod.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@
 class VTK_IMAGING_EXPORT vtkShepardMethod : public vtkImageAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkShepardMethod,vtkImageAlgorithm);
+  vtkTypeMacro(vtkShepardMethod,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

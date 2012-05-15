@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBiQuadraticQuadraticHexahedron.cxx,v $
+  Module:    vtkBiQuadraticQuadraticHexahedron.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,6 @@
 #include "vtkPoints.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkBiQuadraticQuadraticHexahedron, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkBiQuadraticQuadraticHexahedron);
 
 //----------------------------------------------------------------------------
@@ -388,7 +387,7 @@ int vtkBiQuadraticQuadraticHexahedron::CellBoundary(int subId, double pcoords[3]
 //----------------------------------------------------------------------------
 void vtkBiQuadraticQuadraticHexahedron::Contour(double value,
                                      vtkDataArray* cellScalars,
-                                     vtkPointLocator* locator,
+                                     vtkIncrementalPointLocator* locator,
                                      vtkCellArray *verts,
                                      vtkCellArray* lines,
                                      vtkCellArray* polys,
@@ -590,7 +589,7 @@ void vtkBiQuadraticQuadraticHexahedron::Derivatives(int vtkNotUsed(subId),
 // except that it cuts the hex to produce tetrahedra.
 void vtkBiQuadraticQuadraticHexahedron::Clip(double value,
                                   vtkDataArray* cellScalars,
-                                  vtkPointLocator* locator, vtkCellArray* tets,
+                                  vtkIncrementalPointLocator* locator, vtkCellArray* tets,
                                   vtkPointData* inPd, vtkPointData* outPd,
                                   vtkCellData* inCd, vtkIdType cellId,
                                   vtkCellData* outCd, int insideOut)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMILVideoSource.cxx,v $
+  Module:    vtkMILVideoSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <ctype.h>
 #include <string.h>
 
-vtkCxxRevisionMacro(vtkMILVideoSource, "$Revision: 1.24 $");
 vtkStandardNewMacro(vtkMILVideoSource);
 
 //----------------------------------------------------------------------------

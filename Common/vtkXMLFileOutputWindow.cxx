@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLFileOutputWindow.cxx,v $
+  Module:    vtkXMLFileOutputWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkXMLFileOutputWindow.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkXMLFileOutputWindow, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkXMLFileOutputWindow);
 
 void vtkXMLFileOutputWindow::Initialize() 

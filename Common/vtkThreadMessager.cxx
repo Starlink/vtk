@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThreadMessager.cxx,v $
+  Module:    vtkThreadMessager.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 # include "vtkWindows.h"
 #endif
 
-vtkCxxRevisionMacro(vtkThreadMessager, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkThreadMessager);
 
 vtkThreadMessager::vtkThreadMessager()

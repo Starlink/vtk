@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProcessStatistics.cxx,v $
+  Module:    vtkProcessStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkProcessStatistics.h"
 
-vtkCxxRevisionMacro(vtkProcessStatistics, "$Revision: 1.13 $");
 
 #ifndef _WIN32
 #include <sys/procfs.h>

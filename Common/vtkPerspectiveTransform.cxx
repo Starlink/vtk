@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPerspectiveTransform.cxx,v $
+  Module:    vtkPerspectiveTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 
 #include <stdlib.h>
 
-vtkCxxRevisionMacro(vtkPerspectiveTransform, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkPerspectiveTransform);
 
 //----------------------------------------------------------------------------

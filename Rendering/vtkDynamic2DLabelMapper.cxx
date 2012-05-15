@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDynamic2DLabelMapper.cxx,v $
+  Module:    vtkDynamic2DLabelMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,17 +29,21 @@
 #include "vtkGraph.h"
 #include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
+#include "vtkIntArray.h"
 #include "vtkKdTree.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkRenderer.h"
+#include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
 #include "vtkStringArray.h"
 #include "vtkTextMapper.h"
 #include "vtkTextProperty.h"
 #include "vtkTimerLog.h"
+#include "vtkTypeTraits.h"
+#include "vtkUnicodeStringArray.h"
 #include "vtkViewport.h"
 
 #include <vtksys/ios/fstream>
@@ -51,7 +55,6 @@ using vtksys_ios::ofstream;
 # define SNPRINTF snprintf
 #endif
 
-vtkCxxRevisionMacro(vtkDynamic2DLabelMapper, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkDynamic2DLabelMapper);
 
 //----------------------------------------------------------------------------
@@ -63,10 +66,11 @@ vtkDynamic2DLabelMapper::vtkDynamic2DLabelMapper()
   this->LabelHeight = NULL;
   this->Cutoff = NULL;
   
-  this->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "priority");
+  this->SetInputArrayToProcess(1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "priority");
   this->ReversePriority = false;
   this->LabelHeightPadding = 50;
   this->LabelWidthPadding = 10;
+  this->ReferenceScale = 1.0;
 
   // Set new default property
   vtkTextProperty* prop = vtkTextProperty::New();
@@ -105,7 +109,7 @@ vtkDynamic2DLabelMapper::~vtkDynamic2DLabelMapper()
 //----------------------------------------------------------------------------
 void vtkDynamic2DLabelMapper::SetPriorityArrayName(const char* name)
 {
-  this->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, name);
+  this->SetInputArrayToProcess(1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, name);
 }
 
 //----------------------------------------------------------------------------
@@ -124,6 +128,7 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
   vtkAbstractArray *abstractData;
   vtkDataArray *numericData;
   vtkStringArray *stringData;
+  vtkUnicodeStringArray* uStringData;
   vtkDataObject *input = this->GetExecutive()->GetInputData(0, 0);
 
   if ( ! input )
@@ -132,7 +137,7 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
     return;
     }
 
-  vtkTextProperty *tprop = this->LabelTextProperty;
+  vtkTextProperty *tprop = this->GetLabelTextProperty();
   if (!tprop)
     {
     vtkErrorMacro(<<"Need text property to render labels");
@@ -143,6 +148,7 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
 
   // Input might have changed
   input = this->GetExecutive()->GetInputData(0, 0);
+
   vtkDataSet *dsInput = vtkDataSet::SafeDownCast(input);
   vtkGraph *gInput = vtkGraph::SafeDownCast(input);
   if (!dsInput && !gInput)
@@ -153,19 +159,28 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
   vtkDataSetAttributes *pd = 
     dsInput ? dsInput->GetPointData() : gInput->GetVertexData();
 
+  // If no labels we are done
+  vtkIdType numItems = dsInput ? dsInput->GetNumberOfPoints() : gInput->GetNumberOfVertices();
+  if (numItems == 0)
+    {
+    return;
+    }
+
   // Check to see whether we have to rebuild everything
   if ( this->GetMTime() > this->BuildTime || 
-       input->GetMTime() > this->BuildTime ||
-       tprop->GetMTime() > this->BuildTime)
+       input->GetMTime() > this->BuildTime)
     {
     vtkDebugMacro(<<"Rebuilding labels");
 
+    vtkIntArray *typeArr = vtkIntArray::SafeDownCast(
+      this->GetInputAbstractArrayToProcess(0, input));
 
     // figure out what to label, and if we can label it
     pointIdLabels = 0;
     abstractData = NULL;
     numericData = NULL;
     stringData = NULL;
+    uStringData = NULL;
     switch (this->LabelMode)
       {
       case VTK_LABEL_IDS:
@@ -216,6 +231,7 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
         }
       numericData = vtkDataArray::SafeDownCast(abstractData);
       stringData = vtkStringArray::SafeDownCast(abstractData);
+      uStringData = vtkUnicodeStringArray::SafeDownCast(abstractData);
       }; break;
       }
 
@@ -234,6 +250,10 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
                       this->LabeledComponent : numComp - 1);
         numComp = 1;
         }
+      }
+    else if ( uStringData )
+      {
+      vtkWarningMacro( "Unicode string arrays are not adequately supported by the vtkDynamic2DLabelMapper.  Unicode strings will be converted to vtkStdStrings for rendering.");
       }
     else if ( !stringData )
       {
@@ -273,6 +293,8 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
           {
           case VTK_VOID: FormatString = "0x%x"; break;
 
+          // dont use vtkTypeTraits::ParseFormat for character types as parse formats
+          // aren't the same as print formats for these types.
           case VTK_BIT:
           case VTK_SHORT:
           case VTK_UNSIGNED_SHORT:
@@ -286,21 +308,32 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
             FormatString = "%c"; break;
 
           case VTK_LONG:
+            FormatString = vtkTypeTraits<long>::ParseFormat(); break;
           case VTK_UNSIGNED_LONG:
-          case VTK_ID_TYPE:
-            FormatString = "%ld"; break;
+            FormatString = vtkTypeTraits<unsigned long>::ParseFormat(); break;
 
+          case VTK_ID_TYPE:
+            FormatString = vtkTypeTraits<vtkIdType>::ParseFormat(); break;
+
+#if defined(VTK_TYPE_USE_LONG_LONG)
           case VTK_LONG_LONG:
+            FormatString = vtkTypeTraits<long long>::ParseFormat(); break;
           case VTK_UNSIGNED_LONG_LONG:
+            FormatString = vtkTypeTraits<unsigned long long>::ParseFormat(); break;
+#endif
+
+#if defined(VTK_TYPE_USE___INT64)
           case VTK___INT64:
+            FormatString = vtkTypeTraits<__int64>::ParseFormat(); break;
           case VTK_UNSIGNED___INT64:
-            FormatString = "%lld"; break;
+            FormatString = vtkTypeTraits<unsigned __int64>::ParseFormat(); break;
+#endif
 
           case VTK_FLOAT:
-            FormatString = "%f"; break;
+            FormatString = vtkTypeTraits<float>::ParseFormat(); break;
 
           case VTK_DOUBLE:
-            FormatString = "%g"; break;
+            FormatString = vtkTypeTraits<double>::ParseFormat(); break;
 
           default:
             FormatString = "BUG - UNKNOWN DATA FORMAT"; break;
@@ -309,6 +342,10 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
       else if (stringData)
         {
         FormatString = ""; // we'll use vtkStdString::operator+ instead of sprintf
+        }
+      else if (uStringData)
+        {
+        FormatString = "unicode"; // we'll use vtkStdString::operator+ instead of sprintf
         }
       else
         {
@@ -401,7 +438,14 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
           // we'll sidestep a lot of sprintf nonsense.
           if (this->LabelFormat == NULL)
             {
-            ResultString = stringData->GetValue(i);
+            if( uStringData )
+              {
+              ResultString = uStringData->GetValue(i).utf8_str();
+              }
+            else
+              {
+              ResultString = stringData->GetValue(i);
+              }
             }
           else // the user specified a label format
             {
@@ -413,7 +457,19 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
         } // done creating string 
 
       this->TextMappers[i]->SetInput(ResultString.c_str());
-      this->TextMappers[i]->SetTextProperty(tprop);
+
+      // Find the correct property type
+      int type = 0;
+      if (typeArr)
+        {
+        type = typeArr->GetValue(i);
+        }
+      vtkTextProperty* prop = this->GetLabelTextProperty(type);
+      if (!prop)
+        {
+        prop = this->GetLabelTextProperty(0);
+        }
+      this->TextMappers[i]->SetTextProperty(prop);
       }
 
     this->BuildTime.Modified();
@@ -505,7 +561,7 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
       }
     
     // If the array is found, sort it and rearrange the corresponding index array.
-    vtkAbstractArray* inputArr = this->GetInputAbstractArrayToProcess(0, input);
+    vtkAbstractArray* inputArr = this->GetInputAbstractArrayToProcess(1, input);
     if (inputArr)
       {
       // Don't sort the original array, instead make a copy.
@@ -572,7 +628,11 @@ void vtkDynamic2DLabelMapper::RenderOpaqueGeometry(vtkViewport *viewport,
   //
 
   // Determine the current scale
-  double scale = this->GetCurrentScale(viewport) / this->ReferenceScale;    
+  double scale = 1.0;
+  if (this->ReferenceScale != 0.0)
+    {
+    scale = this->GetCurrentScale(viewport) / this->ReferenceScale;    
+    }
 
   for (i = 0; i < this->NumberOfLabels; i++)
     {
@@ -634,16 +694,21 @@ void vtkDynamic2DLabelMapper::RenderOverlay(vtkViewport *viewport,
   vtkIdType numPts = dsInput ? dsInput->GetNumberOfPoints() : gInput->GetNumberOfVertices();
 
   // Determine the current scale
-  double scale = this->GetCurrentScale(viewport) / this->ReferenceScale;
-
-  vtkTimerLog* timer = vtkTimerLog::New();
-  timer->StartTimer();
+  double scale = 1.0;
+  if (this->ReferenceScale != 0.0)
+    {
+    scale = this->GetCurrentScale(viewport) / this->ReferenceScale;
+    }
 
   if ( ! input )
     {
     vtkErrorMacro(<<"Need input data to render labels (1)");
     return;
     }
+  
+  vtkTimerLog* timer = vtkTimerLog::New();
+  timer->StartTimer();
+  
   for (i=0; i<this->NumberOfLabels && i<numPts; i++)
     {
     if (dsInput)

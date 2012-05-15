@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtTimePointUtility.h,v $
+  Module:    vtkQtTimePointUtility.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@
 class QVTK_EXPORT vtkQtTimePointUtility : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkQtTimePointUtility,vtkObject);
+  vtkTypeMacro(vtkQtTimePointUtility,vtkObject);
 
   static QDateTime TimePointToQDateTime(vtkTypeUInt64 time);
   static vtkTypeUInt64 QDateTimeToTimePoint(QDateTime time);  

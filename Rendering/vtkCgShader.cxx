@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCgShader.cxx,v $
+  Module:    vtkCgShader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,6 +33,7 @@
 #include "vtkOpenGLTexture.h"
 #include "vtkProperty.h"
 #include "vtkRenderer.h"
+#include "vtkWindow.h"
 #include "vtkXMLDataElement.h"
 #include "vtkXMLShader.h"
 
@@ -154,7 +155,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCgShader, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkCgShader);
 
 //-----------------------------------------------------------------------------
@@ -171,13 +171,16 @@ vtkCgShader::~vtkCgShader()
 }
 
 //-----------------------------------------------------------------------------
-void vtkCgShader::ReleaseGraphicsResources(vtkWindow*)
+void vtkCgShader::ReleaseGraphicsResources(vtkWindow* window)
 {
-  if (cgIsContext(this->Internals->Context))
+  if (window &&
+    window->GetMapped() &&
+    cgIsContext(this->Internals->Context))
     {
     // This will also destroy any programs contained in the context.
     cgDestroyContext(this->Internals->Context);
     }
+  this->Internals->Context = 0;
 }
 
 //-----------------------------------------------------------------------------

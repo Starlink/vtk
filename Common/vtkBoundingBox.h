@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoundingBox.h,v $
+Module:    vtkBoundingBox.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -148,6 +148,11 @@ public:
   double GetDiagonalLength() const;
 
   // Description:
+  // Expand the Box by delta on each side, the box will grow by
+  // 2*delta in x,y and z
+  void Inflate(double delta);
+
+  // Description:
   // Returns 1 if the bounds have been set and 0 if the box is in its
   // initialized state which is an inverted state
   int IsValid() const;
@@ -193,7 +198,7 @@ inline double vtkBoundingBox::GetBound(int i) const
   // If i is odd then when are returning a part of the max bounds
   // else part of the min bounds is requested.  The exact component
   // needed is i /2 (or i right shifted by 1
-  return ((i | 0x1) ? this->MaxPnt[i>>1] : this->MinPnt[i>>1]);
+  return ((i & 0x1) ? this->MaxPnt[i>>1] : this->MinPnt[i>>1]);
 }
 
 inline const double *vtkBoundingBox::GetMinPoint() const

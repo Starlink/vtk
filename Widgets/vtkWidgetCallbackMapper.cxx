@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWidgetCallbackMapper.cxx,v $
+  Module:    vtkWidgetCallbackMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkObjectFactory.h"
 #include <vtkstd/map>
 
-vtkCxxRevisionMacro(vtkWidgetCallbackMapper, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkWidgetCallbackMapper);
 
 

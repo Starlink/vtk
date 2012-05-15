@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkPCAStatistics.h,v $
+Module:    vtkPCAStatistics.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -47,7 +47,7 @@ PURPOSE.  See the above copyright notice for more information.
 class VTK_INFOVIS_EXPORT vtkPCAStatistics : public vtkMultiCorrelativeStatistics
 {
 public:
-  vtkTypeRevisionMacro(vtkPCAStatistics,vtkMultiCorrelativeStatistics);
+  vtkTypeMacro(vtkPCAStatistics,vtkMultiCorrelativeStatistics);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
   static vtkPCAStatistics* New();
 
@@ -166,23 +166,35 @@ public:
   vtkSetClampMacro(FixedBasisEnergy,double,0.,1.);
   vtkGetMacro(FixedBasisEnergy,double);
 
+//BTX
+  // Description:
+  // A convenience method (in particular for access from other applications) to 
+  // set parameter values.
+  // Return true if setting of requested parameter name was excuted, false otherwise.
+  virtual bool SetParameter( const char* parameter,
+                             int index,
+                             vtkVariant value );
+//ETX
+
 protected:
   vtkPCAStatistics();
   ~vtkPCAStatistics();
 
   // Description:
   // This algorithm accepts a vtkTable containing normalization values for
-  // its third input (port 2).
+  // its fourth input (port 3).
   // We override FillInputPortInformation to indicate this.
   virtual int FillInputPortInformation( int port, vtkInformation* info );
 
   // Description:
   // Execute the calculations required by the Derive option.
-  virtual void ExecuteDerive( vtkDataObject* inMeta );
+  virtual void Derive( vtkDataObject* inMeta );
 
   // Description:
-  // Execute the calculations required by the Derive option.
-  virtual void ExecuteAssess( vtkTable*, vtkDataObject*, vtkTable*, vtkDataObject* );
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable*, 
+                       vtkDataObject*, 
+                       vtkTable* );
 
   //BTX  
   // Description:

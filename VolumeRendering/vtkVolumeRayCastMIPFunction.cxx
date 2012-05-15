@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastMIPFunction.cxx,v $
+  Module:    vtkVolumeRayCastMIPFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkVolumeRayCastMIPFunction, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkVolumeRayCastMIPFunction);
 
 // This is the templated function that actually casts a ray and computes

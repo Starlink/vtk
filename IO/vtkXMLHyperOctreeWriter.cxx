@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLHyperOctreeWriter.cxx,v $
+  Module:    vtkXMLHyperOctreeWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,6 @@
 #undef  vtkOffsetsManager_DoNotInclude
 
 
-vtkCxxRevisionMacro(vtkXMLHyperOctreeWriter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkXMLHyperOctreeWriter);
 
 //----------------------------------------------------------------------------

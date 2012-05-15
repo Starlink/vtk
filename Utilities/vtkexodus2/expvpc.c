@@ -42,14 +42,14 @@
 *       int     num_g   global variable count
 *       int     num_n   nodal variable count
 *       int     num_e   element variable count
-*       int     num_elem_blk            number of element blocks
+*       int     num_elem_blk            number of element blocks (unused)
 *       int*    elem_var_tab            element variable truth table array
 *
 * exit conditions - 
 *
 * revision history - 
 *
-*  $Id: expvpc.c,v 1.6 2009-01-16 20:52:13 utkarsh Exp $
+*  Id
 *****************************************************************************/
 
 #include <stdlib.h>
@@ -73,7 +73,7 @@ int ex_put_concat_var_param (int   exoid,
                              int   num_g,
                              int   num_n,
                              int   num_e,
-                             int   num_elem_blk,
+                             int   num_elem_blk, /* unused */
                              int  *elem_var_tab)
 {
   (void)num_elem_blk;

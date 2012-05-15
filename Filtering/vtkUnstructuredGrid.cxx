@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGrid.cxx,v $
+  Module:    vtkUnstructuredGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,6 +18,7 @@
 #include "vtkCellData.h"
 #include "vtkCellLinks.h"
 #include "vtkConvexPointSet.h"
+#include "vtkCubicLine.h"
 #include "vtkEmptyCell.h"
 #include "vtkGenericCell.h"
 #include "vtkHexahedron.h"
@@ -55,8 +56,8 @@
 #include "vtkBiQuadraticQuad.h"
 #include "vtkBiQuadraticQuadraticWedge.h"
 #include "vtkBiQuadraticQuadraticHexahedron.h"
+#include "vtkBiQuadraticTriangle.h"
 
-vtkCxxRevisionMacro(vtkUnstructuredGrid, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkUnstructuredGrid);
 
 vtkUnstructuredGrid::vtkUnstructuredGrid ()
@@ -90,6 +91,8 @@ vtkUnstructuredGrid::vtkUnstructuredGrid ()
   this->QuadraticLinearWedge = NULL;
   this->BiQuadraticQuadraticWedge = NULL;
   this->BiQuadraticQuadraticHexahedron = NULL;
+  this->BiQuadraticTriangle = NULL; 
+  this->CubicLine = NULL;
   
   this->ConvexPointSet = NULL;
   this->EmptyCell = NULL;
@@ -152,7 +155,8 @@ void vtkUnstructuredGrid::Allocate (vtkIdType numCells, int extSize)
 //----------------------------------------------------------------------------
 vtkUnstructuredGrid::~vtkUnstructuredGrid()
 {
-  vtkUnstructuredGrid::Initialize();
+  this->Cleanup();
+
   if(this->Vertex)
     {
     this->Vertex->Delete();
@@ -269,7 +273,15 @@ vtkUnstructuredGrid::~vtkUnstructuredGrid()
     {
     this->BiQuadraticQuadraticHexahedron->Delete ();
     }
-
+  if(this->BiQuadraticTriangle)
+    {
+    this->BiQuadraticTriangle->Delete ();
+    }
+  if(this->CubicLine)
+    {
+    this->CubicLine->Delete ();
+    }
+  
   if(this->ConvexPointSet)
     {
     this->ConvexPointSet->Delete();
@@ -359,10 +371,8 @@ void vtkUnstructuredGrid::CopyStructure(vtkDataSet *ds)
 }
 
 //----------------------------------------------------------------------------
-void vtkUnstructuredGrid::Initialize()
+void vtkUnstructuredGrid::Cleanup()
 {
-  vtkPointSet::Initialize();
-
   if ( this->Connectivity )
     {
     this->Connectivity->UnRegister(this);
@@ -386,6 +396,14 @@ void vtkUnstructuredGrid::Initialize()
     this->Locations->UnRegister(this);
     this->Locations = NULL;
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkUnstructuredGrid::Initialize()
+{
+  vtkPointSet::Initialize();
+
+  this->Cleanup();
 
   if(this->Information)
     {
@@ -643,6 +661,20 @@ vtkCell *vtkUnstructuredGrid::GetCell(vtkIdType cellId)
         this->BiQuadraticQuadraticHexahedron = vtkBiQuadraticQuadraticHexahedron::New();
         }
       cell = this->BiQuadraticQuadraticHexahedron;
+      break;
+    case VTK_BIQUADRATIC_TRIANGLE:
+      if(!this->BiQuadraticTriangle)
+        {
+        this->BiQuadraticTriangle = vtkBiQuadraticTriangle::New();
+        }
+      cell = this->BiQuadraticTriangle;
+      break;
+    case VTK_CUBIC_LINE:
+      if(!this->CubicLine)
+        {
+        this->CubicLine = vtkCubicLine::New();
+        }
+      cell = this->CubicLine;
       break;
 
     case VTK_CONVEX_POINT_SET:

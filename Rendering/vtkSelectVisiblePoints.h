@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSelectVisiblePoints.h,v $
+  Module:    vtkSelectVisiblePoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,11 +45,12 @@
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkRenderer;
+class vtkMatrix4x4;
 
 class VTK_RENDERING_EXPORT vtkSelectVisiblePoints : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkSelectVisiblePoints,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSelectVisiblePoints,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -98,6 +99,16 @@ public:
   vtkGetMacro(Tolerance,double);
 
   // Description:
+  // Requires the renderer to be set. Populates the composite perspective transform
+  // and returns a pointer to the Z-buffer (that must be deleted) if getZbuff is set.
+  float * Initialize(bool getZbuff);
+
+  // Description:
+  // Tests if a point x is being occluded or not against the Z-Buffer array passed in by
+  // zPtr. Call Initialize before calling this method.
+  bool IsPointOccluded(const double x[], float *zPtr);
+
+  // Description:
   // Return MTime also considering the renderer.
   unsigned long GetMTime();
 
@@ -109,9 +120,11 @@ protected:
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
   vtkRenderer *Renderer;
+  vtkMatrix4x4 *CompositePerspectiveTransform;
 
   int SelectionWindow;
   int Selection[4];
+  int InternalSelection[4];
   int SelectInvisible;
   double Tolerance;
 

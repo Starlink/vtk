@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericGeometryFilter.cxx,v $
+  Module:    vtkGenericGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,11 +38,11 @@
 #include "vtkGenericAttributeCollection.h"
 #include "vtkGenericAttribute.h"
 #include "vtkGenericCellTessellator.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkGenericGeometryFilter, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkGenericGeometryFilter);
 
-vtkCxxSetObjectMacro(vtkGenericGeometryFilter,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkGenericGeometryFilter,Locator,vtkIncrementalPointLocator);
 //----------------------------------------------------------------------------
 // Construct with all types of clipping turned off.
 vtkGenericGeometryFilter::vtkGenericGeometryFilter()
@@ -288,7 +288,7 @@ int vtkGenericGeometryFilter::RequestData(
       }
     }
   
-  vtkPointLocator *locator = 0;
+  vtkIncrementalPointLocator *locator = 0;
   if ( this->Merging )
     {
     if ( this->Locator == NULL )

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalPolyDataMapper.h,v $
+  Module:    vtkHierarchicalPolyDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_RENDERING_EXPORT vtkHierarchicalPolyDataMapper : public vtkCompositePo
 
 public:
   static vtkHierarchicalPolyDataMapper *New();
-  vtkTypeRevisionMacro(vtkHierarchicalPolyDataMapper, vtkCompositePolyDataMapper);
+  vtkTypeMacro(vtkHierarchicalPolyDataMapper, vtkCompositePolyDataMapper);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

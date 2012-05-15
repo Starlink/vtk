@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPIGroup.h,v $
+  Module:    vtkMPIGroup.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_PARALLEL_EXPORT vtkMPIGroup : public vtkObject
 
 public:
 
-  vtkTypeRevisionMacro( vtkMPIGroup,vtkObject);
+  vtkTypeMacro( vtkMPIGroup,vtkObject);
   
   // Description:
   // Construct a vtkMPIGroup with the following initial state:

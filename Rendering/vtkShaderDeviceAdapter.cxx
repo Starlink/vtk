@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShaderDeviceAdapter.cxx,v $
+  Module:    vtkShaderDeviceAdapter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkShaderProgram.h"
 
-vtkCxxRevisionMacro(vtkShaderDeviceAdapter, "Revision: 1.0$");
 
 //---------------------------------------------------------------------------
 vtkShaderDeviceAdapter::vtkShaderDeviceAdapter()

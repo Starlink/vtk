@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFocalPlanePointPlacer.cxx,v $
+  Module:    vtkFocalPlanePointPlacer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPlaneCollection.h"
 #include "vtkRenderer.h"
 
-vtkCxxRevisionMacro(vtkFocalPlanePointPlacer, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkFocalPlanePointPlacer);
 
 

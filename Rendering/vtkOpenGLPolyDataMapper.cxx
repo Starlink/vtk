@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLPolyDataMapper.cxx,v $
+  Module:    vtkOpenGLPolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,6 @@
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper, "$Revision: 1.109 $");
 vtkStandardNewMacro(vtkOpenGLPolyDataMapper);
 #endif
 
@@ -87,12 +86,12 @@ vtkOpenGLPolyDataMapper::~vtkOpenGLPolyDataMapper()
 // the display list if any.
 void vtkOpenGLPolyDataMapper::ReleaseGraphicsResources(vtkWindow *win)
 {
-  if (this->ListId && win)
+  if (this->ListId && win && win->GetMapped())
     {
     win->MakeCurrent();
     glDeleteLists(this->ListId,1);
-    this->ListId = 0;
     }
+  this->ListId = 0;
   this->LastWindow = NULL; 
   // We may not want to do this here.
   if (this->InternalColorTexture)

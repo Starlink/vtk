@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalInterpolatedVelocityField.h,v $
+  Module:    vtkTemporalInterpolatedVelocityField.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -64,7 +64,7 @@ class vtkCachingInterpolatedVelocityField;
 class VTK_PARALLEL_EXPORT vtkTemporalInterpolatedVelocityField : public vtkFunctionSet
 {
 public:
-  vtkTypeRevisionMacro(vtkTemporalInterpolatedVelocityField,vtkFunctionSet);
+  vtkTypeMacro(vtkTemporalInterpolatedVelocityField,vtkFunctionSet);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -111,11 +111,11 @@ public:
 
   // Description:
   // If an interpolation was successful, we can retrieve the last computed
-  // value from here.
+  // value from here. Initial value is (0.0,0.0,0.0)
   vtkGetVector3Macro(LastGoodVelocity,double);
 
   // Description:
-  // Get the most recent weight between 0->1 from T1->T2
+  // Get the most recent weight between 0->1 from T1->T2. Initial value is 0.
   vtkGetMacro(CurrentWeight,double);
   
   bool InterpolatePoint(vtkPointData *outPD1, 

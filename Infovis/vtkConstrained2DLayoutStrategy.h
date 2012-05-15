@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConstrained2DLayoutStrategy.h,v $
+  Module:    vtkConstrained2DLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ class VTK_INFOVIS_EXPORT vtkConstrained2DLayoutStrategy : public vtkGraphLayoutS
 public:
   static vtkConstrained2DLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkConstrained2DLayoutStrategy, vtkGraphLayoutStrategy);
+  vtkTypeMacro(vtkConstrained2DLayoutStrategy, vtkGraphLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

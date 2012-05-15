@@ -6,6 +6,8 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   IF (VTK_DATA_ROOT)
     FOREACH ( tfile 
       dem
+      NetCDFReader
+      NetCDFCFSphericalCoords
       TestAVSucdReader
       TestGAMBITReader
       TestImageWriters

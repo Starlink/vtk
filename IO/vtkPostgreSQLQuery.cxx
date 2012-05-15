@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPostgreSQLQuery.cxx,v $
+  Module:    vtkPostgreSQLQuery.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,6 @@ void ConvertFromNetworkOrder(T &target, const char *rawBytes)
 
 // ----------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkPostgreSQLQuery, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkPostgreSQLQuery);
 
 // ----------------------------------------------------------------------

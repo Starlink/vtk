@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMatricizeArray.cxx,v $
+  Module:    vtkMatricizeArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -32,7 +32,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // vtkMatricizeArray
 
-vtkCxxRevisionMacro(vtkMatricizeArray, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkMatricizeArray);
 
 vtkMatricizeArray::vtkMatricizeArray() :
@@ -56,7 +55,14 @@ int vtkMatricizeArray::RequestData(
   vtkInformationVector* outputVector)
 {
   vtkArrayData* const input = vtkArrayData::GetData(inputVector[0]);
-  vtkSparseArray<double>* const input_array = vtkSparseArray<double>::SafeDownCast(input->GetArray());
+  if(input->GetNumberOfArrays() != 1)
+    {
+    vtkErrorMacro(<< "vtkMatricizeArray requires vtkArrayData containing exactly one array as input.");
+    return 0;
+    }
+    
+  vtkSparseArray<double>* const input_array = vtkSparseArray<double>::SafeDownCast(
+    input->GetArray(static_cast<vtkIdType>(0)));
   if(!input_array)
     {
     vtkErrorMacro(<< "vtkMatricizeArray requires a vtkSparseArray<double> as input.");
@@ -75,7 +81,7 @@ int vtkMatricizeArray::RequestData(
   const vtkArrayExtents input_extents = input_array->GetExtents();
   vtkArrayExtents output_extents(0, 0);
   output_extents[0] = input_extents[this->SliceDimension];
-  output_extents[1] = input_extents.GetSize() / input_extents[this->SliceDimension];
+  output_extents[1] = vtkArrayRange(0, input_extents.GetSize() / input_extents[this->SliceDimension].GetSize());
   output_array->Resize(output_extents);
 
   // "Map" every non-null element in the input array to its position in the output array.
@@ -95,7 +101,7 @@ int vtkMatricizeArray::RequestData(
     else
       {
       strides[i] = stride;
-      stride *= input_extents[i];
+      stride *= input_extents[i].GetSize();
       }
     }
     
@@ -111,14 +117,15 @@ int vtkMatricizeArray::RequestData(
     new_coordinates[0] = coordinates[this->SliceDimension];
 
     for(vtkIdType i = 0; i != coordinates.GetDimensions(); ++i)
-      temp[i] = coordinates[i] * strides[i];
+      temp[i] = (coordinates[i] - input_extents[i].GetBegin()) * strides[i];
     new_coordinates[1] = vtkstd::accumulate(temp.begin(), temp.end(), 0);
 
     output_array->AddValue(new_coordinates, input_array->GetValueN(n));
     }
 
   vtkArrayData* const output = vtkArrayData::GetData(outputVector);
-  output->SetArray(output_array);
+  output->ClearArrays();
+  output->AddArray(output_array);
   output_array->Delete();
 
   return 1;

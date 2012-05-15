@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLWriter.h,v $
+  Module:    vtkXMLWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class OffsetsManagerArray; // array of OffsetsManagerGroup
 class VTK_IO_EXPORT vtkXMLWriter : public vtkAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLWriter,vtkAlgorithm);
+  vtkTypeMacro(vtkXMLWriter,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
  
   //BTX
@@ -109,7 +109,27 @@ public:
   // before writing to the file.  Default is a vtkZLibDataCompressor.
   virtual void SetCompressor(vtkDataCompressor*);
   vtkGetObjectMacro(Compressor, vtkDataCompressor);
-  
+
+//BTX
+  enum CompressorType
+    {
+    NONE,
+    ZLIB
+    };
+//ETX
+
+  // Description:
+  // Convenience functions to set the compressor to certain known types.
+  void SetCompressorType(int compressorType);
+  void SetCompressorTypeToNone()
+    {
+    this->SetCompressorType(NONE);
+    }
+  void SetCompressorTypeToZLib()
+    {
+    this->SetCompressorType(ZLIB);
+    }
+
   // Description:
   // Get/Set the block size used in compression.  When reading, this
   // controls the granularity of how much extra information must be

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMandelbrotSource.h,v $
+  Module:    vtkImageMandelbrotSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IMAGING_EXPORT vtkImageMandelbrotSource : public vtkImageAlgorithm
 {
 public:
   static vtkImageMandelbrotSource *New();
-  vtkTypeRevisionMacro(vtkImageMandelbrotSource,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageMandelbrotSource,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);   
   
   // Description:
@@ -84,7 +84,9 @@ public:
 
   // Description:
   // The maximum number of cycles run to see if the value goes over 2
-  vtkSetClampMacro(MaximumNumberOfIterations, unsigned short, 1, 5000);
+  vtkSetClampMacro(MaximumNumberOfIterations, unsigned short,
+                   static_cast<unsigned short>(1),
+                   static_cast<unsigned short>(5000));
   vtkGetMacro(MaximumNumberOfIterations, unsigned short);
 
   // Description:

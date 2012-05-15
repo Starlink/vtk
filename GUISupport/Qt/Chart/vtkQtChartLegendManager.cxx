@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartLegendManager.cxx,v $
+  Module:    vtkQtChartLegendManager.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,6 +34,7 @@
 #include "vtkQtChartLegendModel.h"
 #include "vtkQtChartSeriesLayer.h"
 #include "vtkQtChartSeriesModel.h"
+#include "vtkQtChartSeriesOptions.h"
 
 #include <QList>
 #include <QPixmap>
@@ -68,6 +69,7 @@ vtkQtChartLegendManager::vtkQtChartLegendManager(QObject *parentObject)
 
 vtkQtChartLegendManager::~vtkQtChartLegendManager()
 {
+  delete this->Internal;
 }
 
 void vtkQtChartLegendManager::setChartArea(vtkQtChartArea *area)
@@ -167,8 +169,6 @@ void vtkQtChartLegendManager::insertLayer(int index, vtkQtChartLayer *chart)
         SLOT(changeModel(vtkQtChartSeriesModel *, vtkQtChartSeriesModel *)));
     this->connect(seriesLayer, SIGNAL(modelSeriesChanged(int, int)),
         this, SLOT(updateModelEntries(int, int)));
-    this->connect(seriesLayer, SIGNAL(modelSeriesVisibilityChanged(int, bool)),
-        this, SLOT(updateSeriesVisibility(int, bool)));
 
     vtkQtChartSeriesModel *model = seriesLayer->getModel();
     if(model)
@@ -188,9 +188,7 @@ void vtkQtChartLegendManager::insertLayer(int index, vtkQtChartLayer *chart)
         {
         int start = this->getLegendIndex(seriesLayer);
         vtkQtChartLegendModel *legend = this->Legend->getModel();
-        legend->startModifyingData();
         this->insertLegendEntries(legend, start, seriesLayer, model, 0, last);
-        legend->finishModifyingData();
         }
       }
     }
@@ -245,7 +243,10 @@ void vtkQtChartLegendManager::setLayerVisible(vtkQtChartLayer *chart,
       int index = this->getLegendIndex(seriesLayer);
 
       // Set the legend entry visibility.
-      this->Legend->setEntriesVisible(index, index + last, visible);
+      for (int cc=index; cc <= index+last; cc++)
+        {
+        this->Legend->getModel()->setVisible(cc, visible);
+        }
       }
     }
 }
@@ -268,6 +269,10 @@ void vtkQtChartLegendManager::changeModel(vtkQtChartSeriesModel *previous,
     // Remove the previous model's series.
     if(previous)
       {
+      // Disconnect from the model signals.
+      this->disconnect(previous, 0, this, 0);
+
+      // Remove the model's series from the legend model.
       last = previous->getNumberOfSeries() - 1;
       if(last >= 0)
         {
@@ -278,6 +283,17 @@ void vtkQtChartLegendManager::changeModel(vtkQtChartSeriesModel *previous,
     // Add series for the current model.
     if(current)
       {
+      // Listen for model changes.
+      this->connect(current, SIGNAL(modelAboutToBeReset()),
+          this, SLOT(removeModelEntries()));
+      this->connect(current, SIGNAL(modelReset()),
+          this, SLOT(insertModelEntries()));
+      this->connect(current, SIGNAL(seriesInserted(int, int)),
+          this, SLOT(insertModelEntries(int, int)));
+      this->connect(current, SIGNAL(seriesAboutToBeRemoved(int, int)),
+          this, SLOT(removeModelEntries(int, int)));
+
+      // Add the model's series to the legend.
       last = current->getNumberOfSeries() - 1;
       if(last >= 0)
         {
@@ -286,21 +302,6 @@ void vtkQtChartLegendManager::changeModel(vtkQtChartSeriesModel *previous,
       }
 
     legend->finishModifyingData();
-    }
-}
-
-void vtkQtChartLegendManager::updateSeriesVisibility(int series, bool visible)
-{
-  // Get the chart layer from the sender.
-  vtkQtChartSeriesLayer *chart =
-      qobject_cast<vtkQtChartSeriesLayer *>(this->sender());
-  if(chart)
-    {
-    // Determine the starting index for the layer series.
-    int index = this->getLegendIndex(chart);
-
-    // Set the legend entry visibility.
-    this->Legend->setEntryVisible(index + series, visible);
     }
 }
 
@@ -317,12 +318,21 @@ void vtkQtChartLegendManager::updateModelEntries(int first, int last)
       // Determine the starting index for the layer series.
       int index = this->getLegendIndex(chart);
 
+
+
       // Update the icon and text for the given series.
       vtkQtChartLegendModel *legend = this->Legend->getModel();
       for(int i = first; i <= last; i++)
         {
-        legend->setText(index + i, model->getSeriesName(i).toString());
+        QString label = chart->getSeriesOptions(i)->getLabel();
+        if (label.isNull())
+          {
+          label = model->getSeriesName(i).toString();
+          }
+        legend->setText(index + i, label);
         legend->setIcon(index + i, chart->getSeriesIcon(i));
+        legend->setVisible(index+i, 
+          chart->getSeriesOptions(i)->isVisible());
         }
       }
     }
@@ -341,9 +351,7 @@ void vtkQtChartLegendManager::insertModelEntries()
       vtkQtChartSeriesLayer *chart = 0;
       int index = this->getLegendIndex(model, &chart);
       vtkQtChartLegendModel *legend = this->Legend->getModel();
-      legend->startModifyingData();
       this->insertLegendEntries(legend, index, chart, model, 0, last);
-      legend->finishModifyingData();
       }
     }
 }
@@ -358,9 +366,7 @@ void vtkQtChartLegendManager::insertModelEntries(int first, int last)
     vtkQtChartSeriesLayer *chart = 0;
     int index = this->getLegendIndex(model, &chart);
     vtkQtChartLegendModel *legend = this->Legend->getModel();
-    legend->startModifyingData();
     this->insertLegendEntries(legend, index, chart, model, first, last);
-    legend->finishModifyingData();
     }
 }
 
@@ -456,11 +462,24 @@ void vtkQtChartLegendManager::insertLegendEntries(
     vtkQtChartLegendModel *legend, int index, vtkQtChartSeriesLayer *chart,
     vtkQtChartSeriesModel *model, int first, int last)
 {
+  legend->startModifyingData();
   for(int i = first; i <= last; i++)
     {
+
+    // First try to get the series label from the chart series options.
+    // If the chart series options don't have a label set then we'll
+    // resort to using the series name.
+    QString seriesLabel = chart->getSeriesOptions(i)->getLabel();
+    if (seriesLabel.isNull())
+      {
+      seriesLabel = model->getSeriesName(i).toString();
+      }
+
     legend->insertEntry(index + i, chart->getSeriesIcon(i),
-        model->getSeriesName(i).toString());
+        seriesLabel,
+        chart->getSeriesOptions(i)->isVisible());
     }
+  legend->finishModifyingData();
 }
 
 void vtkQtChartLegendManager::removeLegendEntries(

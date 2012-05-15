@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPCorrelativeStatistics.cxx,v $
+  Module:    vtkPCorrelativeStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkVariant.h"
 
 vtkStandardNewMacro(vtkPCorrelativeStatistics);
-vtkCxxRevisionMacro(vtkPCorrelativeStatistics, "$Revision: 1.2 $");
 vtkCxxSetObjectMacro(vtkPCorrelativeStatistics, Controller, vtkMultiProcessController);
 //-----------------------------------------------------------------------------
 vtkPCorrelativeStatistics::vtkPCorrelativeStatistics()
@@ -48,7 +47,8 @@ void vtkPCorrelativeStatistics::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------
-void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
+void vtkPCorrelativeStatistics::Learn( vtkTable* inData,
+                                              vtkTable* inParameters,
                                               vtkDataObject* outMetaDO )
 {
   vtkTable* outMeta = vtkTable::SafeDownCast( outMetaDO ); 
@@ -58,7 +58,7 @@ void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
     } 
 
   // First calculate correlative statistics on local data set
-  this->Superclass::ExecuteLearn( inData, outMeta );
+  this->Superclass::Learn( inData, inParameters, outMeta );
 
   vtkIdType nRow = outMeta->GetNumberOfRows();
   if ( ! nRow )
@@ -76,9 +76,13 @@ void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
 
   // Now get ready for parallel calculations
   vtkCommunicator* com = this->Controller->GetCommunicator();
+  if ( ! com )
+    {
+    vtkErrorMacro("No parallel communicator.");
+    }
   
   // (All) gather all sample sizes
-  int n_l = this->SampleSize;
+  int n_l = outMeta->GetValueByName( 0, "Cardinality" ).ToInt(); // Cardinality
   int* n_g = new int[np];
   com->AllGather( &n_l, n_g, 1 ); 
   
@@ -106,7 +110,7 @@ void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
     for ( int i = 1; i < np; ++ i )
       {
       int ns_l = n_g[i];
-      ns += ns_l;
+      int N = ns + ns_l; 
 
       int o = 5 * i;
       double meanX_part = M_g[o];
@@ -115,26 +119,30 @@ void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
       double mom2Y_part = M_g[o + 3];
       double momXY_part = M_g[o + 4];
       
+      double invN = 1. / static_cast<double>( N );
+
       double deltaX = meanX_part - meanX;
-      double deltaX_sur_n = deltaX / static_cast<double>( ns );
+      double deltaX_sur_N = deltaX * invN;
 
       double deltaY = meanY_part - meanY;
-      double deltaY_sur_n = deltaY / static_cast<double>( ns );
+      double deltaY_sur_N = deltaY * invN;
 
       int prod_ns = ns * ns_l;
  
       mom2X += mom2X_part 
-        + prod_ns * deltaX * deltaX_sur_n;
+        + prod_ns * deltaX * deltaX_sur_N;
 
       mom2Y += mom2Y_part 
-        + prod_ns * deltaY * deltaY_sur_n;
+        + prod_ns * deltaY * deltaY_sur_N;
 
       momXY += momXY_part 
-        + prod_ns * deltaX * deltaY_sur_n;
+        + prod_ns * deltaX * deltaY_sur_N;
 
-      meanX += ns_l * deltaX_sur_n;
+      meanX += ns_l * deltaX_sur_N;
 
-      meanY += ns_l * deltaY_sur_n;
+      meanY += ns_l * deltaY_sur_N;
+
+      ns = N;
       }
 
     outMeta->SetValueByName( r, "Mean X", meanX );
@@ -144,7 +152,7 @@ void vtkPCorrelativeStatistics::ExecuteLearn( vtkTable* inData,
     outMeta->SetValueByName( r, "M XY", momXY );
 
     // Set global statistics
-    this->SampleSize = ns;
+    outMeta->SetValueByName( r, "Cardinality", ns );
 
     // Clean-up
     delete [] M_g;

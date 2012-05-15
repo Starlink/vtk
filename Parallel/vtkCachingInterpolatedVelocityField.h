@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCachingInterpolatedVelocityField.h,v $
+  Module:    vtkCachingInterpolatedVelocityField.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,7 @@ class IVFCacheList : public vtkstd::vector< IVFDataSetInfo > {};
 class VTK_PARALLEL_EXPORT vtkCachingInterpolatedVelocityField : public vtkFunctionSet
 {
 public:
-  vtkTypeRevisionMacro(vtkCachingInterpolatedVelocityField,vtkFunctionSet);
+  vtkTypeMacro(vtkCachingInterpolatedVelocityField,vtkFunctionSet);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

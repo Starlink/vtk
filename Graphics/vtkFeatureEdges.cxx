@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFeatureEdges.cxx,v $
+  Module:    vtkFeatureEdges.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,8 +28,8 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkPointData.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkFeatureEdges, "$Revision: 1.75 $");
 vtkStandardNewMacro(vtkFeatureEdges);
 
 // Construct object with feature angle = 30; all types of edges, except 
@@ -64,7 +64,7 @@ int vtkFeatureEdges::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -373,7 +373,7 @@ void vtkFeatureEdges::CreateDefaultLocator()
 
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkFeatureEdges::SetLocator(vtkPointLocator *locator)
+void vtkFeatureEdges::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

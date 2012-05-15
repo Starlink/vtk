@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIVExporter.cxx,v $
+  Module:    vtkIVExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,6 @@
 #include "vtkTransform.h"
 #include "vtkUnsignedCharArray.h"
 
-vtkCxxRevisionMacro(vtkIVExporter, "$Revision: 1.63 $");
 vtkStandardNewMacro(vtkIVExporter);
 
 vtkIVExporter::vtkIVExporter()
@@ -190,7 +189,7 @@ void vtkIVExporter::WriteALight(vtkLight *aLight, FILE *fp)
   
   pos = aLight->GetPosition();
   focus = aLight->GetFocalPoint();
-  color = aLight->GetColor();
+  color = aLight->GetDiffuseColor();
 
   dir[0] = focus[0] - pos[0];
   dir[1] = focus[1] - pos[1];

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLBreadthFirstSearch.cxx,v $
+  Module:    vtkPBGLBreadthFirstSearch.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,19 +46,19 @@
 #include "vtkStringArray.h"
 #include "vtkUndirectedGraph.h"
 
+#include <boost/graph/use_mpi.hpp>   // must precede all pbgl includes
 #include <boost/graph/breadth_first_search.hpp>
 #include <boost/graph/distributed/breadth_first_search.hpp>
-#include <boost/parallel/algorithm.hpp>
+#include <boost/graph/parallel/algorithm.hpp>
 #include <boost/graph/visitors.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLBreadthFirstSearch, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkPBGLBreadthFirstSearch);
 
 // Redefine the bfs visitor, the only visitor we
@@ -230,7 +230,7 @@ int vtkPBGLBreadthFirstSearch::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

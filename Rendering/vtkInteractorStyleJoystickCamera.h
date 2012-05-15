@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleJoystickCamera.h,v $
+  Module:    vtkInteractorStyleJoystickCamera.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleJoystickCamera : public vtkInteract
 {
 public:
   static vtkInteractorStyleJoystickCamera *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleJoystickCamera,vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleJoystickCamera,vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

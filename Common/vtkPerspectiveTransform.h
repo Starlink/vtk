@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPerspectiveTransform.h,v $
+  Module:    vtkPerspectiveTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ class VTK_COMMON_EXPORT vtkPerspectiveTransform : public vtkHomogeneousTransform
 {
  public:
   static vtkPerspectiveTransform *New();
-  vtkTypeRevisionMacro(vtkPerspectiveTransform,vtkHomogeneousTransform);
+  vtkTypeMacro(vtkPerspectiveTransform,vtkHomogeneousTransform);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

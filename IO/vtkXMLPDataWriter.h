@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPDataWriter.h,v $
+  Module:    vtkXMLPDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class vtkCallbackCommand;
 class VTK_IO_EXPORT vtkXMLPDataWriter : public vtkXMLWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLPDataWriter,vtkXMLWriter);
+  vtkTypeMacro(vtkXMLPDataWriter,vtkXMLWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

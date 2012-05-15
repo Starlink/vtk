@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericClip.h,v $
+  Module:    vtkGenericClip.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,14 +62,14 @@
 
 class vtkImplicitFunction;
 
-class vtkPointLocator;
 class vtkPointData;
 class vtkCellData;
+class vtkIncrementalPointLocator;
 
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericClip : public vtkUnstructuredGridAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericClip,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkGenericClip,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -134,8 +134,8 @@ public:
   // Description:
   // Specify a spatial locator for merging points. By default, an
   // instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified. The 
@@ -162,7 +162,7 @@ protected:
   
   vtkImplicitFunction *ClipFunction;
   
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   int InsideOut;
   double Value;
   int GenerateClipScalars;

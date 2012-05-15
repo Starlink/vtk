@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkDepthPeeling_fs.glsl,v $
+//  Module:    vtkDepthPeeling_fs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -15,6 +15,8 @@
 
 // 
 // Fragment shader used by the depth peeling algorithm.
+
+#version 110
 
 #extension GL_ARB_texture_rectangle: enable
 

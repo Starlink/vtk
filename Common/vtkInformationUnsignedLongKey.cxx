@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationUnsignedLongKey.cxx,v $
+  Module:    vtkInformationUnsignedLongKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkInformationUnsignedLongKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationUnsignedLongKey::vtkInformationUnsignedLongKey(const char* name, const char* location):

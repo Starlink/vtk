@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSocket.cxx,v $
+  Module:    vtkSocket.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,6 @@
 # pragma warn -8012 /* signed/unsigned comparison */
 #endif
 
-vtkCxxRevisionMacro(vtkSocket, "$Revision: 1.3 $");
 //-----------------------------------------------------------------------------
 vtkSocket::vtkSocket()
 {

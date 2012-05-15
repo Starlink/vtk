@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeRenderManager.h,v $
+  Module:    vtkCompositeRenderManager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class vtkFloatArray;
 class VTK_PARALLEL_EXPORT vtkCompositeRenderManager : public vtkParallelRenderManager
 {
 public:
-  vtkTypeRevisionMacro(vtkCompositeRenderManager, vtkParallelRenderManager);
+  vtkTypeMacro(vtkCompositeRenderManager, vtkParallelRenderManager);
   static vtkCompositeRenderManager *New();
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalInterpolatedVelocityField.cxx,v $
+  Module:    vtkTemporalInterpolatedVelocityField.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 #include <vtkstd/vector>
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkTemporalInterpolatedVelocityField, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkTemporalInterpolatedVelocityField);
 //---------------------------------------------------------------------------
 vtkTemporalInterpolatedVelocityField::vtkTemporalInterpolatedVelocityField()
@@ -34,7 +33,12 @@ vtkTemporalInterpolatedVelocityField::vtkTemporalInterpolatedVelocityField()
   this->NumIndepVars     = 4; // x, y, z, t
   this->ivf[0] = vtkSmartPointer<vtkCachingInterpolatedVelocityField>::New();
   this->ivf[1] = vtkSmartPointer<vtkCachingInterpolatedVelocityField>::New();
+  this->LastGoodVelocity[0]=0.0;
+  this->LastGoodVelocity[1]=0.0;
+  this->LastGoodVelocity[2]=0.0;
+  this->CurrentWeight=0.0; 
 }
+
 //---------------------------------------------------------------------------
 vtkTemporalInterpolatedVelocityField::~vtkTemporalInterpolatedVelocityField()
 {

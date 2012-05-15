@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeProMapper.h,v $
+  Module:    vtkVolumeProMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -88,7 +88,7 @@ class vtkTimerLog;
 class VTK_VOLUME_PRO_MAPPER_EXPORT vtkVolumeProMapper : public vtkVolumeMapper
 {
 public:
-  vtkTypeRevisionMacro(vtkVolumeProMapper,vtkVolumeMapper);
+  vtkTypeMacro(vtkVolumeProMapper,vtkVolumeMapper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaCoincidentTopologyResolutionPainter.h,v $
+  Module:    vtkMesaCoincidentTopologyResolutionPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@ class VTK_RENDERING_EXPORT vtkMesaCoincidentTopologyResolutionPainter :
 {
 public:
   static vtkMesaCoincidentTopologyResolutionPainter* New();
-  vtkTypeRevisionMacro(vtkMesaCoincidentTopologyResolutionPainter,
+  vtkTypeMacro(vtkMesaCoincidentTopologyResolutionPainter,
     vtkCoincidentTopologyResolutionPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 

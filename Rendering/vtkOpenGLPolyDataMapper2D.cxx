@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLPolyDataMapper2D.cxx,v $
+  Module:    vtkOpenGLPolyDataMapper2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,14 +31,13 @@
 #include "vtkToolkits.h"  // for VTK_USE_GL2PS
 
 #ifdef VTK_USE_GL2PS
-#include "gl2ps.h"
+#include "vtk_gl2ps.h"
 #include "vtkGL2PSExporter.h"
 #endif // VTK_USE_GL2PS
 
 #include <math.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLPolyDataMapper2D, "$Revision: 1.59 $");
 vtkStandardNewMacro(vtkOpenGLPolyDataMapper2D);
 #endif
 
@@ -327,6 +326,36 @@ void vtkOpenGLPolyDataMapper2D::RenderOverlay(vtkViewport* viewport,
   for (aPrim->InitTraversal(); aPrim->GetNextCell(npts,pts); cellNum++)
     {
     glBegin(GL_LINE_STRIP);
+    for (j = 0; j < npts; j++)
+      {
+      if (c)
+        {
+        if (cellScalars)
+          {
+          rgba = c->GetPointer(4*cellNum);
+          }
+        else
+          {
+          rgba = c->GetPointer(4*pts[j]);
+          }
+        glColor4ubv(rgba);
+        }
+      if (t)
+        {
+        glTexCoord2dv(t->GetTuple(pts[j]));
+        }  
+      // this is done to work around an OpenGL bug, otherwise we could just
+      // call glVertex2dv
+      dptr = p->GetPoint(pts[j]);
+      glVertex3d(dptr[0],dptr[1],0);
+      }
+    glEnd();
+    }
+
+  aPrim = input->GetStrips();
+  for (aPrim->InitTraversal(); aPrim->GetNextCell(npts,pts); cellNum++)
+    {
+    glBegin(GL_TRIANGLE_STRIP);
     for (j = 0; j < npts; j++)
       {
       if (c)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableAttributeDataFilter.h,v $
+  Module:    vtkProgrammableAttributeDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -79,7 +79,7 @@ class VTK_GRAPHICS_EXPORT vtkProgrammableAttributeDataFilter : public vtkDataSet
 {
 public:
   static vtkProgrammableAttributeDataFilter *New();
-  vtkTypeRevisionMacro(vtkProgrammableAttributeDataFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkProgrammableAttributeDataFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

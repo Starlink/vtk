@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRotationFilter.cxx,v $
+  Module:    vtkRotationFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkMath.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkRotationFilter, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkRotationFilter);
 
 //---------------------------------------------------------------------------
@@ -66,7 +65,7 @@ int vtkRotationFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(

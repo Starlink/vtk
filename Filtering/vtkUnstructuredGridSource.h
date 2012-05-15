@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridSource.h,v $
+  Module:    vtkUnstructuredGridSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class vtkUnstructuredGrid;
 class VTK_FILTERING_EXPORT vtkUnstructuredGridSource : public vtkSource
 {
 public:
-  vtkTypeRevisionMacro(vtkUnstructuredGridSource,vtkSource);
+  vtkTypeMacro(vtkUnstructuredGridSource,vtkSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

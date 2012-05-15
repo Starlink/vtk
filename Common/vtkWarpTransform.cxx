@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpTransform.cxx,v $
+  Module:    vtkWarpTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkWarpTransform.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkWarpTransform, "$Revision: 1.11 $");
 
 //----------------------------------------------------------------------------
 void vtkWarpTransform::PrintSelf(ostream& os, vtkIndent indent)

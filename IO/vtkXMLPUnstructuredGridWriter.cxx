@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPUnstructuredGridWriter.cxx,v $
+  Module:    vtkXMLPUnstructuredGridWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 
-vtkCxxRevisionMacro(vtkXMLPUnstructuredGridWriter, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkXMLPUnstructuredGridWriter);
 
 //----------------------------------------------------------------------------

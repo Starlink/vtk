@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollapseGraph.cxx,v $
+  Module:    vtkCollapseGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -73,7 +73,6 @@ static void BuildGraph(vtkGraph* input_graph, const vtkstd::vector<vtkIdType>& v
 ///////////////////////////////////////////////////////////////////////////////////
 // vtkCollapseGraph
 
-vtkCxxRevisionMacro(vtkCollapseGraph, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCollapseGraph);
 
 vtkCollapseGraph::vtkCollapseGraph()

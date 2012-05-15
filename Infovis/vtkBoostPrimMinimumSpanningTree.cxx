@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBoostPrimMinimumSpanningTree.cxx,v $
+Module:    vtkBoostPrimMinimumSpanningTree.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -39,12 +39,10 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkTree.h"
 
 #include <boost/graph/prim_minimum_spanning_tree.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostPrimMinimumSpanningTree, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkBoostPrimMinimumSpanningTree);
 
 // Constructor/Destructor

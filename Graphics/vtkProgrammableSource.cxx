@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableSource.cxx,v $
+  Module:    vtkProgrammableSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkProgrammableSource, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkProgrammableSource);
 
 // Construct programmable filter with empty execute method.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPOVExporter.cxx,v $
+  Module:    vtkPOVExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 /*=========================================================================
 
   Program:   VTK/ParaView Los Alamos National Laboratory Modules (PVLANL)
-  Module:    $RCSfile: vtkPOVExporter.cxx,v $
+  Module:    vtkPOVExporter.cxx
 
 Copyright (c) 2007, Los Alamos National Security, LLC
 
@@ -83,7 +83,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkPOVExporter, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkPOVExporter);
 
 //Can't use printf("%d", a_vtkIdType) because vtkIdType is not always int.
@@ -284,7 +283,7 @@ void vtkPOVExporter::WriteLight(vtkLight *light)
   fprintf(this->FilePtr, "\t<%f, %f, %f>\n", 
           position[0], position[1], position[2]);
   
-  double *color = light->GetColor();
+  double *color = light->GetDiffuseColor();
   fprintf(this->FilePtr, "\tcolor <%f, %f, %f>*%f\n", 
           color[0], color[1], color[2],
           light->GetIntensity());

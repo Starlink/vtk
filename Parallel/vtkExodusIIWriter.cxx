@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusIIWriter.cxx,v $
+  Module:    vtkExodusIIWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,17 +38,16 @@
 #include "vtkCellArray.h"
 #include "vtkFloatArray.h"
 #include "vtkArrayIteratorIncludes.h"
+#include "vtkToolkits.h" // for VTK_USE_PARALLEL
 
 #ifdef VTK_USE_PARALLEL
 #include "vtkMultiProcessController.h"
 #endif
 
-#include <netcdf.h>
-#include <exodusII.h>
+#include <vtkExodusII.h>
 #include <time.h>
 #include <ctype.h>
 
-vtkCxxRevisionMacro (vtkExodusIIWriter, "$Revision: 1.37 $");
 vtkStandardNewMacro (vtkExodusIIWriter);
 vtkCxxSetObjectMacro (vtkExodusIIWriter, ModelMetadata, vtkModelMetadata);
 
@@ -82,6 +81,10 @@ vtkExodusIIWriter::vtkExodusIIWriter ()
   this->PassDoubles = 1;
 
   this->BlockElementVariableTruthTable = 0;
+
+  this->LocalNodeIdMap = 0;
+  this->LocalElementIdMap = 0;
+
 }
 
 vtkExodusIIWriter::~vtkExodusIIWriter ()
@@ -233,16 +236,20 @@ int vtkExodusIIWriter::RequestData (
   this->WriteData ();
 
   this->CurrentTimeIndex ++;
-
   if (this->CurrentTimeIndex >= this->NumberOfTimeSteps)
     {
-    this->CurrentTimeIndex = 0;
     this->CloseExodusFile ();
+    this->CurrentTimeIndex = 0;
     if (this->WriteAllTimeSteps)
       {
       // Tell the pipeline to start looping.
       request->Set(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 0);
       }
+    }
+  // still close out the file after each step written.
+  if (!this->WriteAllTimeSteps)
+    {
+    this->CloseExodusFile ();
     }
 
   return 1;
@@ -260,13 +267,18 @@ void vtkExodusIIWriter::WriteData ()
       "vtkExodusIIWriter::WriteData Unable to flatten hierarchy");
     return;
     }
+  if (this->FlattenedInput.size () != this->NewFlattenedInput.size ())
+    {
+    newHierarchy = true;
+    }
 
   // Copies over the new results data in the new objects
   this->FlattenedInput = this->NewFlattenedInput;
+
   this->RemoveGhostCells ();
 
   // move check parameters up here and then if there's a change, new file.
-  if (!newHierarchy)
+  if (this->WriteAllTimeSteps && !newHierarchy)
     {
     if (!this->WriteNextTimeStep ())
       {
@@ -486,12 +498,12 @@ int vtkExodusIIWriter::CreateNewExodusFile()
   int compWordSize= (this->PassDoubles ? sizeof(double) : sizeof(float));
   int IOWordSize = (this->StoreDoubles ? sizeof(double) : sizeof(float));
 
+
   if (this->NumberOfProcesses == 1)
     {
     if (this->CurrentTimeIndex == 0) 
       {
       this->fid = ex_create(this->FileName, EX_CLOBBER, &compWordSize, &IOWordSize);
-
       if (fid <= 0) 
         {
         vtkErrorMacro (
@@ -518,12 +530,12 @@ int vtkExodusIIWriter::CreateNewExodusFile()
     char *myFileName = new char [1024];
     if (this->CurrentTimeIndex == 0) 
       {
-      sprintf(myFileName, "%s.%04d", this->FileName, this->MyRank);
+      sprintf(myFileName, "%s.%d.%d", this->FileName, this->NumberOfProcesses, this->MyRank);
       }
     else 
       {
-      sprintf(myFileName, "%s_%06d.%04d", 
-          this->FileName, this->CurrentTimeIndex, this->MyRank);
+      sprintf(myFileName, "%s_%06d.%d.%d", 
+          this->FileName, this->CurrentTimeIndex, this->NumberOfProcesses, this->MyRank);
       }
     this->fid = ex_create(myFileName, EX_CLOBBER, &compWordSize, &IOWordSize);
     if (fid <= 0) 
@@ -779,8 +791,7 @@ int vtkExodusIIWriter::CheckInputArrays ()
             {
             // Parallel apps must have a global list of all block IDs, plus a
             // list of block IDs for each cell.
-            vtkErrorMacro(<< "Can't proceed without metadata.  Go back and request metadata from reader.");
-            return 0;
+            vtkWarningMacro(<< "Attempting to proceed without metadata");
             }
           }    
         }
@@ -831,7 +842,7 @@ int vtkExodusIIWriter::CheckInputArrays ()
 
     // Trying to find global node id
     da = pd->GetGlobalIds();
-    if (this->WriteOutGlobalNodeIdArray && da)
+    if (da)
       {
       vtkIdTypeArray *ia = vtkIdTypeArray::SafeDownCast(da);
       if (!ia)
@@ -856,7 +867,7 @@ int vtkExodusIIWriter::CheckInputArrays ()
 }
 
 int vtkExodusIIWriter::ConstructBlockInfoMap ()
-{        
+{
   // The elements in the input may not be in order by block, but we must
   // write element IDs and element variables out to the Exodus file in
   // order by block.  Create a mapping if necessary, for an ordering by
@@ -892,12 +903,12 @@ int vtkExodusIIWriter::ConstructBlockInfoMap ()
       {
       vtkstd::map<int, Block>::iterator iter = 
         this->BlockInfoMap.find (this->BlockIdList[i]->GetValue (j));
+                                 // shift by 1 in case there's a 0  This was removed because it changes the user supplied block ids in the metadata.
       if (iter == this->BlockInfoMap.end ())
         {
         this->CellToElementOffset[i][j] = 0;
-        Block& b = this->BlockInfoMap[this->BlockIdList[i]->GetValue (j)];
-        b.Name = vtkExodusIIWriter::GetCellTypeName (
-            this->FlattenedInput[i]->GetCellType (j));
+        Block& b = this->BlockInfoMap[this->BlockIdList[i]->GetValue (j)];//CLM
+        b.Type = this->FlattenedInput[i]->GetCellType (j);
         b.NumElements = 1;
         b.ElementStartIndex = 0;
         b.NodesPerElements = this->FlattenedInput[i]->GetCell (j)->GetNumberOfPoints ();
@@ -914,17 +925,59 @@ int vtkExodusIIWriter::ConstructBlockInfoMap ()
         // TODO we should be able to deal with this, not just error out
         if (iter->second.GridIndex != i)
           {
-          vtkErrorMacro ("Block ids are not unique across the hierarchy");
-          return 0;
+          vtkWarningMacro ("Block ids are not unique across the hierarchy ");
           }
 
         this->CellToElementOffset[i][j] = iter->second.NumElements;
-
         iter->second.NumElements ++;
         }
       }
     }
-  
+
+  // if we're multiprocess we need to make sure the block info map matches
+  if (this->NumberOfProcesses > 1)
+    {
+    int maxId = -1;
+    vtkstd::map<int, Block>::const_iterator iter;
+    for (iter = this->BlockInfoMap.begin (); iter != this->BlockInfoMap.end (); iter ++)
+      {
+      if (iter->first > maxId)
+        {
+        maxId = iter->first;
+        } 
+      }
+    vtkMultiProcessController *c = vtkMultiProcessController::GetGlobalController();
+    int globalMaxId;
+    c->AllReduce (&maxId, &globalMaxId, 1, vtkCommunicator::MAX_OP);
+    maxId = globalMaxId;
+    for (int i = 1; i <= maxId; i ++)
+      {
+      Block &b = this->BlockInfoMap[i]; // ctor called (init all to 0/-1) if not preset
+      int globalType;
+      c->AllReduce (&b.Type, &globalType, 1, vtkCommunicator::MAX_OP);
+      if (b.Type != 0 && b.Type != globalType)
+        {
+        vtkWarningMacro (
+          << "The type associated with ID's across processors doesn't match");
+        }
+      else
+        {
+        b.Type = globalType;
+        }
+      int globalNodes;
+      c->AllReduce (&b.NodesPerElements, &globalNodes, 1, vtkCommunicator::MAX_OP);
+      if (b.NodesPerElements != 0 && b.NodesPerElements != globalNodes)
+        {
+        vtkWarningMacro (
+          << "NodesPerElements associated with ID's across processors doesn't match");
+        } 
+      else
+        {
+        b.NodesPerElements = globalNodes;
+        }
+      }
+    }
+
   // Find the ElementStartIndex and the output order
   vtkstd::map<int, Block>::iterator iter;
   int runningCount = 0;
@@ -946,19 +999,63 @@ int vtkExodusIIWriter::ConstructBlockInfoMap ()
 int vtkExodusIIWriter::ConstructVariableInfoMaps ()
 {
   // Create the variable info maps.
+  this->NumberOfScalarGlobalArrays = 0;
   this->NumberOfScalarElementArrays = 0;
   this->NumberOfScalarNodeArrays = 0;
   this->BlockVariableMap.clear ();
   this->NodeVariableMap.clear ();
   for (size_t i = 0; i < this->FlattenedInput.size (); i ++)
     {
+    vtkFieldData *fd = this->FlattenedInput[i]->GetFieldData ();
+    for (int j = 0; j < fd->GetNumberOfArrays (); j ++) 
+      {
+      const char *name = fd->GetArray (j)->GetName ();
+      if (name == 0) 
+        {
+        vtkWarningMacro ("Array in input field data has Null name, cannot output it");
+        continue;
+        }
+      vtkstd::string upper (name);
+      this->StringUppercase(upper);
+      if (strncmp(upper.c_str (),"QA_RECORD",9) == 0)
+        {
+        continue;
+        }
+      if (strncmp(upper.c_str (),"INFO_RECORD",11) == 0)
+        {
+        continue;
+        }
+      if (strncmp(upper.c_str (),"ELEMENTBLOCKIDS",15) == 0)
+        {
+        continue;
+        }
+      int numComp = fd->GetArray(j)->GetNumberOfComponents ();
+      vtkstd::map<vtkstd::string, VariableInfo>::const_iterator iter = 
+        this->GlobalVariableMap.find (name);
+      if (iter == this->GlobalVariableMap.end ())
+        {
+        VariableInfo &info = this->GlobalVariableMap[name];
+        info.NumComponents = numComp;
+        info.OutNames.resize (info.NumComponents);
+        info.ScalarOutOffset = this->NumberOfScalarGlobalArrays;
+        this->NumberOfScalarGlobalArrays += numComp;
+        }
+      else if (iter->second.NumComponents != numComp)
+        {
+        vtkErrorMacro (
+          "Disagreement in the hierarchy for the number of components in " << 
+          name);
+        return 0;
+        }
+      }
+
     vtkCellData *cd = this->FlattenedInput[i]->GetCellData();
     for (int j = 0; j < cd->GetNumberOfArrays(); j ++) 
       {
       const char *name = cd->GetArray(j)->GetName ();
       if (name == 0)
         {
-        vtkErrorMacro ("Array in input has Null name, cannot proceed");
+        vtkWarningMacro ("Array in input cell data has Null name, cannot output it");
         continue;
         }
       vtkstd::string upper (name);
@@ -1005,7 +1102,7 @@ int vtkExodusIIWriter::ConstructVariableInfoMaps ()
       const char *name = pd->GetArray(j)->GetName ();
       if (name == 0)
         {
-        vtkErrorMacro ("Array in input has Null name, cannot proceed");
+        vtkWarningMacro ("Array in input point data has Null name, cannot output it");
         continue;
         }
       vtkstd::string upper (name);
@@ -1258,7 +1355,7 @@ int vtkExodusIIWriter::CreateBlockIdMetadata(vtkModelMetadata *em)
     {
     int index = iter->second.OutputIndex;
     blockIds[index] = iter->first;
-    blockNames[index] = iter->second.Name;
+    blockNames[index] = vtkExodusIIWriter::GetCellTypeName (iter->second.Type);
     numElements[index] = iter->second.NumElements;
     numNodesPerElement[index] = iter->second.NodesPerElements;
     numAttributes[index] = 0;
@@ -1274,9 +1371,17 @@ int vtkExodusIIWriter::CreateBlockIdMetadata(vtkModelMetadata *em)
 //----------------------------------------------------------------------------
 int vtkExodusIIWriter::CreateBlockVariableMetadata (vtkModelMetadata *em)
 {
-  size_t narrays = this->BlockVariableMap.size ();
-  char **nms = NULL;
+  size_t narrays = this->GlobalVariableMap.size ();
   char **flattenedNames = NULL;
+  if (narrays > 0) 
+    {
+    flattenedNames = vtkExodusIIWriter::FlattenOutVariableNames(
+                   this->NumberOfScalarGlobalArrays, this->GlobalVariableMap);
+    em->SetGlobalVariableNames (this->NumberOfScalarGlobalArrays, flattenedNames);
+    }
+
+  narrays = this->BlockVariableMap.size ();
+  char **nms = NULL;
   if (narrays > 0)
     {
     nms = new char * [narrays];
@@ -1334,6 +1439,7 @@ int vtkExodusIIWriter::CreateBlockVariableMetadata (vtkModelMetadata *em)
   return 1;
 }
 
+
 //----------------------------------------------------------------------------
 int vtkExodusIIWriter::ParseMetadata ()
 {
@@ -1356,69 +1462,9 @@ int vtkExodusIIWriter::ParseMetadata ()
     iter->second.BlockAttributes = att + attIdx[n];
     }
 
-  vtkstd::map<vtkstd::string, VariableInfo>::iterator varIter;
-  // Element output variable names
-  for (varIter = this->BlockVariableMap.begin ();
-       varIter != this->BlockVariableMap.end ();
-       varIter ++)
-    {
-    int numComp = varIter->second.NumComponents;
-    if (numComp == 1)
-      {
-      varIter->second.OutNames[0] = vtkstd::string (varIter->first);
-      continue;
-      }
-    else
-      {
-      for (int component = 0; component < numComp; component ++)
-        {
-        char *name = em->FindOriginalElementVariableName(
-                        varIter->first.c_str (), component);
-        if (name)
-          {
-          varIter->second.OutNames[component] = vtkstd::string (name);
-          }
-        else
-          {
-          varIter->second.OutNames[component] = 
-                  CreateNameForScalarArray (varIter->first.c_str (), 
-                                            component, 
-                                            numComp);
-          }
-        }
-      }
-    }
-
-  // Node output variable names
-  for (varIter = this->NodeVariableMap.begin ();
-       varIter != this->NodeVariableMap.end ();
-       varIter ++)
-    {
-    int numComp = varIter->second.NumComponents;
-    if (numComp == 1)
-      {
-      varIter->second.OutNames[0] = varIter->first;
-      continue;
-      }
-    else
-      {
-      for (int component = 0; component < numComp; component ++)
-        {
-        char *name = em->FindOriginalNodeVariableName(
-                        varIter->first.c_str (), component);
-        if (name)
-          {
-          varIter->second.OutNames[component] = vtkstd::string (name);
-          }
-        else
-          {
-          varIter->second.OutNames[component] = 
-                  CreateNameForScalarArray (
-                         varIter->first.c_str (), component, numComp);
-          }
-        }
-      }
-    }
+  this->ConvertVariableNames (this->GlobalVariableMap);
+  this->ConvertVariableNames (this->BlockVariableMap);
+  this->ConvertVariableNames (this->NodeVariableMap);
   return 1;
 }
 
@@ -1432,7 +1478,6 @@ int vtkExodusIIWriter::WriteInitializationParameters()
   int nssets = em->GetNumberOfSideSets();
   char *title = em->GetTitle();
   int numBlocks = em->GetNumberOfBlocks();
-
   int rc = ex_put_init(this->fid, title, dim, this->NumPoints, this->NumCells, 
                        numBlocks, nnsets, nssets);
   return rc >= 0;
@@ -1555,7 +1600,6 @@ int vtkExodusIIWriter::WriteGlobalPointIds()
     {
     return 1;
     }
-
   int *copyOfIds = new int [this->NumPoints];
   int index = 0;
   for (size_t i = 0; i < this->FlattenedInput.size (); i ++)
@@ -1615,7 +1659,6 @@ int vtkExodusIIWriter::WriteBlockInformation()
     if (numElts > 0)
       {
       connectivity[outputIndex] = new int [numElts * numNodes];
-
       if (numAtts > 0)
         {
         if (this->PassDoubles)
@@ -1637,14 +1680,22 @@ int vtkExodusIIWriter::WriteBlockInformation()
   for (size_t i = 0; i < this->FlattenedInput.size (); i ++)
     {
     vtkCellArray *ca = this->FlattenedInput[i]->GetCells();
-    vtkIdType *ptIds = ca->GetPointer ();
+    vtkIdType *ptIds = 0;
+    if (ca)
+      { 
+      ptIds = ca->GetPointer ();
+      }
     vtkIdTypeArray *loca = this->FlattenedInput[i]->GetCellLocationsArray();
-    vtkIdType *loc = loca->GetPointer(0);
+    vtkIdType *loc = 0;
+    if (loca)
+      {
+      loc = loca->GetPointer(0);
+      }
 
     int ncells = this->FlattenedInput[i]->GetNumberOfCells();
     for (int j = 0; j < ncells; j++)
       {
-      int blockId = this->BlockIdList[i]->GetValue(j);
+      int blockId = this->BlockIdList[i]->GetValue(j);//CLM
       int blockOutIndex = this->BlockInfoMap[blockId].OutputIndex;
 
       int nodesPerElement = this->BlockInfoMap[blockId].NodesPerElements;
@@ -1654,6 +1705,13 @@ int vtkExodusIIWriter::WriteBlockInformation()
       // the block connectivity array
       vtkIdType ptListIdx = loc[j];
       vtkIdType npts = ptIds[ptListIdx++];
+      if (npts != nodesPerElement)
+        {
+        vtkWarningMacro (
+          << "The nodes per element doesn't match (" << npts << " and " 
+          << nodesPerElement << "), data will not be written correctly");
+        }
+
       for (vtkIdType p=0; p<npts; p++)
         {
         int ExodusPointId = pointOffset + (int) ptIds[ptListIdx++] + 1;
@@ -1690,15 +1748,17 @@ int vtkExodusIIWriter::WriteBlockInformation()
        blockIter != this->BlockInfoMap.end ();
        blockIter ++)
     {
+    char *name = vtkExodusIIWriter::GetCellTypeName (blockIter->second.Type);
     rc = ex_put_elem_block(this->fid, blockIter->first, 
-                blockIter->second.Name, 
+                name,
                 blockIter->second.NumElements,
                 blockIter->second.NodesPerElements, 
                 blockIter->second.NumAttributes);
-
+    delete [] name;
     if (rc < 0)
       {
-      break;
+      vtkErrorMacro (<< "Problem adding block with id " << blockIter->first);
+      continue;
       }
 
     if (blockIter->second.NumElements > 0)
@@ -1708,7 +1768,8 @@ int vtkExodusIIWriter::WriteBlockInformation()
 
       if (rc < 0)
         {
-        break;
+        vtkErrorMacro (<< "Problem writing connectivity " << blockIter->first);
+        continue;
         }
 
       if (blockIter->second.NumAttributes != 0)
@@ -1728,7 +1789,7 @@ int vtkExodusIIWriter::WriteBlockInformation()
 
         if (rc < 0)
           {
-          break;
+          continue;
           }
         }
       }
@@ -1794,9 +1855,46 @@ int vtkExodusIIWriter::WriteVariableArrayNames()
   //     their original names if we have those.
   //  2. For the element variables, create the element/block truth table.
 
-  // CELL (ELEMENT) VARIABLES
+  // GLOBAL VARIABLES
   const char **outputArrayNames;
-  if (this->NumberOfScalarElementArrays > 0)
+  if (this->NumberOfScalarGlobalArrays > 0)
+    {
+    outputArrayNames = new const char * [this->NumberOfScalarGlobalArrays];
+    vtkstd::map<vtkstd::string, VariableInfo>::const_iterator iter;
+    for (iter = this->GlobalVariableMap.begin (); 
+         iter != this->GlobalVariableMap.end (); 
+         iter ++)
+      {
+      int off = iter->second.ScalarOutOffset;
+      for (int j=0; j< iter->second.NumComponents; j++)
+        {
+        outputArrayNames[off + j] = iter->second.OutNames[j].c_str ();
+        }
+      }
+
+    rc = ex_put_var_param(this->fid, "G", this->NumberOfScalarGlobalArrays);
+    if (rc < 0)
+      {
+      vtkErrorMacro(<< 
+        "vtkExodusIIWriter::WriteVariableArrayNames cell variables");
+      return 0;
+      }
+
+    rc = ex_put_var_names(this->fid, "G", this->NumberOfScalarGlobalArrays, 
+                          (char **)outputArrayNames);
+                          // This should be treating this read only... hopefully
+    if (rc < 0)
+      {
+      vtkErrorMacro(<< 
+        "vtkExodusIIWriter::WriteVariableArrayNames cell variables");
+      return 0;
+      }
+
+    delete [] outputArrayNames;
+    }
+
+  // CELL (ELEMENT) VARIABLES
+  if (this->NumberOfScalarElementArrays > 0 && this->NumCells > 0)
     {
     outputArrayNames = new const char * [this->NumberOfScalarElementArrays];
     
@@ -1845,7 +1943,7 @@ int vtkExodusIIWriter::WriteVariableArrayNames()
     }
 
   // POINT (NODE) VARIABLES
-  if (this->NumberOfScalarNodeArrays > 0)
+  if (this->NumberOfScalarNodeArrays > 0 && this->NumPoints > 0)
     {
     outputArrayNames = new const char * [this->NumberOfScalarNodeArrays];
   
@@ -1920,6 +2018,33 @@ int vtkExodusIIWriter::WriteVariableArrayNames()
 }
 
 //----------------------------------------------------------------------------
+void vtkExodusIIWriter::ConvertVariableNames(
+             vtkstd::map<vtkstd::string, VariableInfo>& variableMap)
+{
+  vtkstd::map<vtkstd::string, VariableInfo>::iterator varIter;
+  // Global output variable names 
+  for (varIter = variableMap.begin ();
+       varIter != variableMap.end ();
+       varIter ++)
+    {
+    int numComp = varIter->second.NumComponents;
+    if (numComp == 1)
+      {
+      varIter->second.OutNames[0] = vtkstd::string (varIter->first);
+      }
+    else
+      {
+      for (int component = 0; component < numComp; component ++)
+        {
+        varIter->second.OutNames[component] = 
+                CreateNameForScalarArray (varIter->first.c_str (), 
+                                          component, 
+                                          numComp);
+        }
+      }
+    }
+}
+
 char **vtkExodusIIWriter::FlattenOutVariableNames(
              int nScalarArrays, 
              const vtkstd::map<vtkstd::string, VariableInfo>& variableMap)
@@ -2340,7 +2465,7 @@ int vtkExodusIIWriter::WriteSideSetInformation()
         {
         ssSize[i]++;
 
-        idBuf[nextId] = lid;
+        idBuf[nextId] = lid+1;
         sideBuf[nextId] = sides[j];
 
         nextId++;
@@ -2408,7 +2533,7 @@ int vtkExodusIIWriter::BlockVariableTruthValue(int blockIdx, int varIdx)
     }
   else
     {
-    vtkErrorMacro(<< "vtkExodusIIWriter::BlockVariableTruthValue invalid index");
+    vtkWarningMacro(<< "vtkExodusIIWriter::BlockVariableTruthValue invalid index");
     }
 
   return tt;
@@ -2518,6 +2643,35 @@ double vtkExodusIIWriterGetComponent (iterT* it, vtkIdType ind)
 }
 
 //----------------------------------------------------------------------------
+double vtkExodusIIWriter::ExtractGlobalData (const char *name, int comp, int ts)
+{
+  double ret = 0.0;
+  for (size_t i = 0; i < this->FlattenedInput.size (); i ++)
+    {
+    // find the first block that matches this global data.  Assumes it's global.
+    vtkDataArray *da = this->FlattenedInput[i]->GetFieldData ()->GetArray (name);
+    if (da)
+      {
+      int numTup = da->GetNumberOfTuples ();
+      if (numTup == 1)
+        {
+        ret = da->GetComponent (0, comp);
+        }
+      // Exodus doesn't support multiple tuples on the global values.
+      // But the ExodusIIReader reads all timesteps into the field array 
+      // at every time step.  This will assume that if we have multiple tuples
+      // in the array they are from an exodus file so we'll output them 
+      // back as expected on another read.  Not perfect...
+      else if (ts < numTup) 
+        {
+        ret = da->GetComponent (ts, comp);
+        }
+      }
+    }
+  return ret;
+}
+
+//----------------------------------------------------------------------------
 void vtkExodusIIWriter::ExtractCellData (const char *name, int comp, 
                                          vtkDataArray *buffer)
 {
@@ -2536,7 +2690,7 @@ void vtkExodusIIWriter::ExtractCellData (const char *name, int comp,
                 this->BlockInfoMap.find (this->BlockIdList[i]->GetValue (j));
         if (blockIter == this->BlockInfoMap.end ())
           {
-          vtkErrorMacro ("vtkExodusIIWriter: The block id map has come out of sync");
+          vtkWarningMacro ("vtkExodusIIWriter: The block id map has come out of sync");
           continue;
           }
         int index = blockIter->second.ElementStartIndex + 
@@ -2560,7 +2714,7 @@ void vtkExodusIIWriter::ExtractCellData (const char *name, int comp,
                 this->BlockInfoMap.find (this->BlockIdList[i]->GetValue (j));
         if (blockIter == this->BlockInfoMap.end ())
           {
-          vtkErrorMacro ("vtkExodusIIWriter: The block id map has come out of sync");
+          vtkWarningMacro ("vtkExodusIIWriter: The block id map has come out of sync");
           continue;
           }
         int index = blockIter->second.ElementStartIndex + 
@@ -2606,6 +2760,47 @@ void vtkExodusIIWriter::ExtractPointData (const char *name, int comp,
         }
       }
     }
+}
+
+//----------------------------------------------------------------------------
+int vtkExodusIIWriter::WriteGlobalData (int timestep, vtkDataArray *buffer)
+{
+  vtkstd::map<vtkstd::string, VariableInfo>::const_iterator varIter;
+  buffer->Initialize ();
+  buffer->SetNumberOfComponents (1);
+  buffer->SetNumberOfTuples (this->NumberOfScalarGlobalArrays);
+  for (varIter = this->GlobalVariableMap.begin ();
+       varIter != this->GlobalVariableMap.end ();
+       varIter ++)
+    {
+    const char *nameIn = varIter->first.c_str ();
+    int numComp = varIter->second.NumComponents;
+    for (int component = 0; component < numComp; component ++)
+      {
+      double val = this->ExtractGlobalData (nameIn, component, timestep);
+      int varOutIndex = varIter->second.ScalarOutOffset + component;
+      buffer->SetComponent (varOutIndex, 0, val);
+      }
+    }
+  int rc;
+  if (buffer->IsA ("vtkDoubleArray"))
+    {
+    vtkDoubleArray *da = vtkDoubleArray::SafeDownCast (buffer);
+    rc = ex_put_glob_vars (this->fid, timestep + 1, 
+                  this->NumberOfScalarGlobalArrays, da->GetPointer (0));
+    }
+  else /* (buffer->IsA ("vtkFloatArray")) */
+    {
+    vtkFloatArray *fa = vtkFloatArray::SafeDownCast (buffer);
+    rc = ex_put_glob_vars (this->fid, timestep + 1, 
+                  this->NumberOfScalarGlobalArrays, fa->GetPointer (0));
+    }
+  if (rc < 0)
+    {
+    vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep glob vars");
+    return 0;
+    }
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -2668,6 +2863,10 @@ int vtkExodusIIWriter::WriteCellData (int timestep, vtkDataArray *buffer)
 //----------------------------------------------------------------------------
 int vtkExodusIIWriter::WritePointData (int timestep, vtkDataArray *buffer)
 {
+  if (this->NumPoints == 0)
+    {
+    return 1;
+    }
   vtkstd::map<vtkstd::string, VariableInfo>::const_iterator varIter;
   for (varIter = this->NodeVariableMap.begin ();
        varIter != this->NodeVariableMap.end ();
@@ -2721,7 +2920,8 @@ int vtkExodusIIWriter::WriteNextTimeStep()
     rc = ex_put_time(this->fid, ts + 1, &dtsv);
     if (rc < 0)
       {
-      vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep time step values");
+      vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep time step values" 
+                    << " fid " << this->fid << " ts " << ts + 1 << " tsv " << tsv);
       return 0;
       }
     buffer = vtkDoubleArray::New ();
@@ -2731,13 +2931,18 @@ int vtkExodusIIWriter::WriteNextTimeStep()
     rc = ex_put_time(this->fid, ts + 1, &tsv);
     if (rc < 0)
       {
-      vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep time step values");
+      vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep time step values" 
+                    << " fid " << this->fid << " ts " << ts + 1 << " tsv " << tsv);
       return 0;
       }
     buffer = vtkFloatArray::New ();
     }
 
   // Buffer is used to help these determine the type of the data to write out
+  if (!this->WriteGlobalData (ts, buffer))
+    {
+    return 0;
+    }
   if (!this->WriteCellData (ts, buffer))
     {
     return 0;
@@ -2748,39 +2953,6 @@ int vtkExodusIIWriter::WriteNextTimeStep()
     }
 
   buffer->Delete ();
-
-  // GLOBAL VARIABLES
-/*
-  int nGlobalVariables = mmd->GetNumberOfGlobalVariables();
-
-  if (nGlobalVariables > 0)
-    {
-    float *vals = mmd->GetGlobalVariableValue();
-
-    if (this->PassDoubles)
-      {
-      double *dvals = new double [nGlobalVariables];
-      for (int ii=0; ii<nGlobalVariables; ii++)
-        {
-        dvals[ii] = (double)vals[ii];
-        }
-
-      rc = ex_put_glob_vars(this->fid, ts + 1, nGlobalVariables, dvals);
-
-      delete [] dvals;
-      }
-    else
-      {
-      rc = ex_put_glob_vars(this->fid, ts + 1, nGlobalVariables, vals);
-      }
-
-    if (rc < 0)
-      {
-      vtkErrorMacro(<< "vtkExodusIIWriter::WriteNextTimeStep ex_put_glob_vars");
-      return 0;
-      }
-    }
-*/
 
   return 1;
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesOptions.cxx,v $
+  Module:    vtkQtChartSeriesOptions.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,10 +17,6 @@
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
-
-/// \file vtkQtChartSeriesOptions.cxx
-/// \date February 15, 2008
-
 #ifdef _MSC_VER
 // Disable warnings that Qt headers give.
 #pragma warning(disable:4127)
@@ -28,85 +24,114 @@
 
 #include "vtkQtChartSeriesOptions.h"
 
-#include "vtkQtChartStyleGenerator.h"
-#include <QBrush>
-#include <QPen>
+#include "vtkQtChartSeriesColors.h"
 
-
-vtkQtChartSeriesOptions::vtkQtChartSeriesOptions(QObject *parentObject)
-  : QObject(parentObject)
+//----------------------------------------------------------------------------
+vtkQtChartSeriesOptions::vtkQtChartSeriesOptions(QObject* parentObject)
+  :QObject(parentObject)
 {
-  this->Pen = new QPen(Qt::black);
-  this->Brush = new QBrush();
-  this->Style = -1;
-  this->Visible = true;
+  this->InitializeDefaults();
 }
 
+//----------------------------------------------------------------------------
 vtkQtChartSeriesOptions::vtkQtChartSeriesOptions(
     const vtkQtChartSeriesOptions &other)
-  : QObject()
+  : QObject(), Data(other.Data), Defaults(other.Defaults)
 {
-  this->Pen = new QPen(*other.Pen);
-  this->Brush = new QBrush(*other.Brush);
-  this->Style = other.Style;
-  this->Visible = other.Visible;
+  this->InitializeDefaults();
 }
 
+//----------------------------------------------------------------------------
 vtkQtChartSeriesOptions::~vtkQtChartSeriesOptions()
 {
-  delete this->Pen;
-  delete this->Brush;
 }
 
+//----------------------------------------------------------------------------
 vtkQtChartSeriesOptions &vtkQtChartSeriesOptions::operator=(
     const vtkQtChartSeriesOptions &other)
 {
-  *this->Pen = *other.Pen;
-  *this->Brush = *other.Brush;
-  this->Style = other.Style;
-  this->Visible = other.Visible;
+  this->Defaults = other.Defaults;
+  this->Data = other.Data;
   return *this;
 }
 
-void vtkQtChartSeriesOptions::setStyle(int style, vtkQtChartStyleGenerator *)
+//----------------------------------------------------------------------------
+vtkQtChartSeriesColors *vtkQtChartSeriesOptions::getSeriesColors() const
 {
-  this->Style = style;
+  return qobject_cast<vtkQtChartSeriesColors*>(
+    this->getGenericOption(COLORS).value<QObject*>());
 }
 
-void vtkQtChartSeriesOptions::setVisible(bool visible)
+//----------------------------------------------------------------------------
+void vtkQtChartSeriesOptions::setSeriesColors(vtkQtChartSeriesColors *colors)
 {
-  if(this->Visible != visible)
+  this->setGenericOption(COLORS, QVariant::fromValue<QObject*>(colors));
+}
+
+//----------------------------------------------------------------------------
+void vtkQtChartSeriesOptions::setGenericOption(
+  vtkQtChartSeriesOptions::OptionType type, const QVariant& value)
+{
+  QMap<OptionType, QVariant>::const_iterator iter = this->Data.find(type);
+  if (iter == this->Data.end() || iter.value() != value)
     {
-    this->Visible = visible;
-    emit this->visibilityChanged(visible);
+    // we call getGenericOption() since we need to take into consideration the
+    // default value as well before firing the dataChanged() signal. This is
+    // essential since the chart layers may do some non-idempotent operations
+    // that can cause amazing issues when this signal is fired when no data has
+    // really changed.
+    QVariant oldValue = this->getGenericOption(type);
+    this->Data[type] = value;
+    if (oldValue != value)
+      {
+      emit this->dataChanged(type, value, oldValue);
+      }
     }
 }
 
-const QPen &vtkQtChartSeriesOptions::getPen() const
+//----------------------------------------------------------------------------
+QVariant vtkQtChartSeriesOptions::getGenericOption(
+  vtkQtChartSeriesOptions::OptionType type) const
 {
-  return *this->Pen;
+  if (this->Data.contains(type))
+    {
+    return this->Data[type];
+    }
+  else if (this->Defaults.contains(type))
+    {
+    return this->Defaults[type];
+    }
+
+  return QVariant();
 }
 
-void vtkQtChartSeriesOptions::setPen(const QPen &pen)
+
+//----------------------------------------------------------------------------
+void vtkQtChartSeriesOptions::setDefaultOption(
+  OptionType type, const QVariant& value)
 {
-  if(*this->Pen != pen)
+  QMap<OptionType, QVariant>::const_iterator iter = this->Defaults.find(type);
+  if (iter == this->Defaults.end() || iter.value() != value)
     {
-    *this->Pen = pen;
-    emit this->penChanged(pen);
+    QVariant oldValue = this->getGenericOption(type);
+    this->Defaults[type] = value;
+    if (this->getGenericOption(type) != oldValue)
+      {
+      emit this->dataChanged(type, value, oldValue);
+      }
     }
 }
 
-const QBrush &vtkQtChartSeriesOptions::getBrush() const
-{
-  return *this->Brush;
-}
 
-void vtkQtChartSeriesOptions::setBrush(const QBrush &brush)
+//----------------------------------------------------------------------------
+void vtkQtChartSeriesOptions::InitializeDefaults()
 {
-  if(*this->Brush != brush)
-    {
-    *this->Brush = brush;
-    emit this->brushChanged(brush);
-    }
+  this->Defaults[VISIBLE] = true;
+  this->Defaults[PEN] = QPen(Qt::red);
+  this->Defaults[BRUSH] = QBrush(Qt::red);
+  this->Defaults[COLORS]= QVariant();
+  this->Defaults[AXES_CORNER] = vtkQtChartLayer::BottomLeft;
+  this->Defaults[MARKER_STYLE] = vtkQtPointMarker::NoMarker;
+  this->Defaults[MARKER_SIZE] = QSizeF(5, 5);
 }
 

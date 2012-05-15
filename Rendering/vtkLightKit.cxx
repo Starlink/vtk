@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLightKit.cxx,v $
+  Module:    vtkLightKit.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkPiecewiseFunction.h"
 #include "vtkRenderer.h"
 
-vtkCxxRevisionMacro(vtkLightKit, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkLightKit);
 
 static const char *vtkLightKitTypeStrings[] = {

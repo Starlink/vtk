@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLImageMapper.cxx,v $
+  Module:    vtkOpenGLImageMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include <limits.h>
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLImageMapper, "$Revision: 1.66 $");
 vtkStandardNewMacro(vtkOpenGLImageMapper);
 #endif
 

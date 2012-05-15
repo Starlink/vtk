@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestBoostAdapter.cxx,v $
+  Module:    TestBoostAdapter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,8 +36,6 @@
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
 
 #include "vtkGraph.h"
 #include "vtkBoostGraphAdapter.h"

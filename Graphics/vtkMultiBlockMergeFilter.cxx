@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiBlockMergeFilter.cxx,v $
+  Module:    vtkMultiBlockMergeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkMultiBlockMergeFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkMultiBlockMergeFilter);
 //-----------------------------------------------------------------------------
 vtkMultiBlockMergeFilter::vtkMultiBlockMergeFilter()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToTreeFilter.cxx,v $
+  Module:    vtkTableToTreeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include <vtkstd/vector>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkTableToTreeFilter, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkTableToTreeFilter);
 
 
@@ -91,24 +90,27 @@ int vtkTableToTreeFilter::RequestData(
   vtkSmartPointer<vtkMutableDirectedGraph> builder =
     vtkSmartPointer<vtkMutableDirectedGraph>::New();
 
-  // The tree will have one more vertex than the number of rows
-  // in the table (the extra vertex is the new root.
-  for (vtkIdType v = 0; v <= new_table->GetNumberOfRows(); ++v)
+  // Check for a corner case where we have a table with 0 rows
+  if (new_table->GetNumberOfRows() != 0)
     {
-    builder->AddVertex();
-    }
 
-  // Make a star, originating at the new root (the last vertex).
-  vtkIdType root = new_table->GetNumberOfRows();
-  for (vtkIdType v = 0; v < new_table->GetNumberOfRows(); ++v)
-    {
-    builder->AddEdge(root, v);
-    }
+    // The tree will have one more vertex than the number of rows
+    // in the table (the extra vertex is the new root).
+    for (vtkIdType v = 0; v <= new_table->GetNumberOfRows(); ++v)
+      {
+      builder->AddVertex();
+      }
 
-  // Insert a row in the table for the new root.
-  // This modifies the input, but it might be ok because we are 
-  // just extending the arrays.
-  new_table->InsertNextBlankRow();
+    // Make a star, originating at the new root (the last vertex).
+    vtkIdType root = new_table->GetNumberOfRows();
+    for (vtkIdType v = 0; v < new_table->GetNumberOfRows(); ++v)
+      {
+      builder->AddEdge(root, v);
+      }
+
+    // Insert a row in the table for the new root.
+    new_table->InsertNextBlankRow(-1);
+    }
 
   // Move the structure of the mutable graph into the tree.
   if (!tree->CheckedShallowCopy(builder))

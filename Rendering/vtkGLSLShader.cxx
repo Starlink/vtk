@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGLSLShader.cxx,v $
+  Module:    vtkGLSLShader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,6 +33,7 @@
 #include "vtkRenderer.h"
 #include "vtkXMLDataElement.h"
 #include "vtkXMLShader.h"
+#include "vtkWindow.h"
 
 #include <vtkgl.h>
 //#include <GL/glu.h>
@@ -169,7 +170,6 @@ static void printAttributeInfo(GLuint program,
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkGLSLShader);
-vtkCxxRevisionMacro(vtkGLSLShader, "$Revision: 1.12 $");
 
 //-----------------------------------------------------------------------------
 vtkGLSLShader::vtkGLSLShader()
@@ -185,9 +185,9 @@ vtkGLSLShader::~vtkGLSLShader()
 }
 
 //-----------------------------------------------------------------------------
-void vtkGLSLShader::ReleaseGraphicsResources(vtkWindow *)
+void vtkGLSLShader::ReleaseGraphicsResources(vtkWindow *win)
 {
-  if (this->IsShader())
+  if (win && win->GetMapped() && this->IsShader())
     {
     vtkgl::DeleteShader(this->Shader);
     this->Shader = 0;

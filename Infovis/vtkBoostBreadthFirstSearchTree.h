@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBreadthFirstSearchTree.h,v $
+  Module:    vtkBoostBreadthFirstSearchTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class VTK_INFOVIS_EXPORT vtkBoostBreadthFirstSearchTree : public vtkTreeAlgorith
 {
 public:
   static vtkBoostBreadthFirstSearchTree *New();
-  vtkTypeRevisionMacro(vtkBoostBreadthFirstSearchTree, vtkTreeAlgorithm);
+  vtkTypeMacro(vtkBoostBreadthFirstSearchTree, vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

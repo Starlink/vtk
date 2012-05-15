@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageAlgorithm.cxx,v $
+  Module:    vtkImageAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkInformationVector.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageAlgorithm, "$Revision: 1.32 $");
 
 //----------------------------------------------------------------------------
 vtkImageAlgorithm::vtkImageAlgorithm()
@@ -304,8 +303,8 @@ void vtkImageAlgorithm::CopyAttributeData(vtkImageData *input,
                                              output->GetNumberOfPoints());
         // Restore the scalars
         int idx = output->GetPointData()->AddArray(tmp);
-        output->GetPointData()->SetActiveAttribute(vtkDataSetAttributes::SCALARS,
-            idx);
+        output->GetPointData()->SetActiveAttribute(idx, 
+          vtkDataSetAttributes::SCALARS);
         tmp->UnRegister(this);
         // Now Copy The point data, but only if output is a subextent of the
         // input.

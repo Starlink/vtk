@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendPolyData.h,v $
+  Module:    vtkAppendPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_GRAPHICS_EXPORT vtkAppendPolyData : public vtkPolyDataAlgorithm
 public:
   static vtkAppendPolyData *New();
 
-  vtkTypeRevisionMacro(vtkAppendPolyData,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkAppendPolyData,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -90,6 +90,10 @@ public:
   vtkGetMacro(ParallelStreaming, int); 
   vtkBooleanMacro(ParallelStreaming, int); 
 
+//BTX
+  int ExecuteAppend(vtkPolyData* output,
+    vtkPolyData* inputs[], int numInputs);
+//ETX
 protected:
   vtkAppendPolyData();
   ~vtkAppendPolyData();

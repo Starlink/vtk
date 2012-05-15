@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitFunctionToImageStencil.cxx,v $
+  Module:    vtkImplicitFunctionToImageStencil.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImplicitFunctionToImageStencil, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkImplicitFunctionToImageStencil);
 vtkCxxSetObjectMacro(vtkImplicitFunctionToImageStencil, Input,
                      vtkImplicitFunction);

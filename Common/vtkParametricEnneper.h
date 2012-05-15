@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricEnneper.h,v $
+  Module:    vtkParametricEnneper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_COMMON_EXPORT vtkParametricEnneper : public vtkParametricFunction
 {
 public:
 
-  vtkTypeRevisionMacro(vtkParametricEnneper,vtkParametricFunction);
+  vtkTypeMacro(vtkParametricEnneper,vtkParametricFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageIterateFilter.h,v $
+  Module:    vtkImageIterateFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_IMAGING_EXPORT vtkImageIterateFilter : public vtkThreadedImageAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkImageIterateFilter,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageIterateFilter,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

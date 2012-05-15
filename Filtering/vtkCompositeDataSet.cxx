@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataSet.cxx,v $
+  Module:    vtkCompositeDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkCompositeDataSet, "$Revision: 1.17 $");
 vtkInformationKeyMacro(vtkCompositeDataSet, NAME, String);
 //----------------------------------------------------------------------------
 vtkCompositeDataSet::vtkCompositeDataSet()

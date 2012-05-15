@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarBarRepresentation.cxx,v $
+  Module:    vtkScalarBarRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkTextProperty.h"
 
 //=============================================================================
-vtkCxxRevisionMacro(vtkScalarBarRepresentation, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkScalarBarRepresentation);
 //-----------------------------------------------------------------------------
 vtkScalarBarRepresentation::vtkScalarBarRepresentation()

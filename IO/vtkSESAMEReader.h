@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSESAMEReader.h,v $
+  Module:    vtkSESAMEReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IO_EXPORT vtkSESAMEReader : public vtkRectilinearGridSource
 {
 public:
   static vtkSESAMEReader *New();
-  vtkTypeRevisionMacro(vtkSESAMEReader, vtkRectilinearGridSource);
+  vtkTypeMacro(vtkSESAMEReader, vtkRectilinearGridSource);
   
   void PrintSelf(ostream& os, vtkIndent indent);
 

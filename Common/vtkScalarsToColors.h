@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColors.h,v $
+  Module:    vtkScalarsToColors.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,8 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkScalarsToColors - map scalar values into colors
+// .NAME vtkScalarsToColors - Superclass for mapping scalar values into 
+//  colors
 // .SECTION Description
 // vtkScalarsToColors is a general purpose superclass for objects that
 // convert scalars to colors. This include vtkLookupTable classes and
@@ -36,7 +37,7 @@ class vtkUnsignedCharArray;
 class VTK_COMMON_EXPORT vtkScalarsToColors : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkScalarsToColors,vtkObject);
+  vtkTypeMacro(vtkScalarsToColors,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

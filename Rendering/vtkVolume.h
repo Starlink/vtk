@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolume.h,v $
+  Module:    vtkVolume.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class vtkAbstractVolumeMapper;
 class VTK_RENDERING_EXPORT vtkVolume : public vtkProp3D
 {
 public:
-  vtkTypeRevisionMacro(vtkVolume,vtkProp3D);
+  vtkTypeMacro(vtkVolume,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -219,7 +219,7 @@ protected:
   vtkTimeStamp         GradientOpacityArrayMTime[VTK_MAX_VRCOMP];
 
   // Function to compute screen coverage of this volume
-  float ComputeScreenCoverage( vtkViewport *vp );
+  double ComputeScreenCoverage( vtkViewport *vp );
   
 private:
   vtkVolume(const vtkVolume&);  // Not implemented.

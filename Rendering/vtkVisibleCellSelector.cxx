@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVisibleCellSelector.cxx,v $
+  Module:    vtkVisibleCellSelector.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -200,7 +200,6 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////
-vtkCxxRevisionMacro(vtkVisibleCellSelector, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkVisibleCellSelector);
 vtkCxxSetObjectMacro(vtkVisibleCellSelector, Renderer, vtkRenderer);
 
@@ -209,6 +208,12 @@ vtkVisibleCellSelector::vtkVisibleCellSelector()
 {
   this->Renderer = NULL;
 
+  this->X0=0;
+  this->Y0=0;
+  this->X1=0;
+  this->Y1=0;
+  
+  
   this->DoProcessor=0;
   this->DoActor=0;
   this->DoCellIdHi=0;
@@ -236,7 +241,6 @@ vtkVisibleCellSelector::vtkVisibleCellSelector()
   this->VertexLists = vtkIdTypeArray::New();
   this->VertexLists->SetNumberOfComponents(1);
   this->VertexLists->SetNumberOfTuples(0);
-
 }
 
 //-----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataObjectToDataSetFilter.h,v $
+  Module:    vtkDataObjectToDataSetFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -77,7 +77,7 @@ class VTK_GRAPHICS_EXPORT vtkDataObjectToDataSetFilter : public vtkDataSetAlgori
 {
 public:
   static vtkDataObjectToDataSetFilter *New();
-  vtkTypeRevisionMacro(vtkDataObjectToDataSetFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkDataObjectToDataSetFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

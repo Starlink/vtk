@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractSelectionBase.cxx,v $
+  Module:    vtkExtractSelectionBase.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkTable.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkExtractSelectionBase, "$Revision: 1.4 $");
 //----------------------------------------------------------------------------
 vtkExtractSelectionBase::vtkExtractSelectionBase()
 {
@@ -95,20 +94,31 @@ int vtkExtractSelectionBase::RequestDataObject(
         }
       newOutput->SetPipelineInformation(outInfo);
       newOutput->Delete();
-      this->GetOutputPortInformation(0)->Set(
-        vtkDataObject::DATA_EXTENT_TYPE(), newOutput->GetExtentType());
       }
     return 1;
     }
 
   vtkGraph *graphInput = vtkGraph::GetData(inInfo);
-  vtkTable *tableInput = vtkTable::GetData(inInfo);
-  if (graphInput || tableInput)
+  if (graphInput)
     {
     // Accept graph input, but we don't produce the correct extracted
     // graph as output yet.
     return 1;
     }
+
+  vtkTable *tableInput = vtkTable::GetData(inInfo);
+  if (tableInput)
+    {
+    vtkTable *output = vtkTable::GetData(outInfo);
+    if (!output)
+      {
+      output = vtkTable::New();
+      output->SetPipelineInformation(outInfo);
+      output->Delete();
+      }
+    return 1;
+    }
+
   return 0;
 }
 

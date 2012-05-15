@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostSplitTableField.h,v $
+  Module:    vtkBoostSplitTableField.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -59,7 +59,7 @@ class VTK_INFOVIS_EXPORT vtkBoostSplitTableField : public vtkTableAlgorithm
 {
 public:
   static vtkBoostSplitTableField* New();
-  vtkTypeRevisionMacro(vtkBoostSplitTableField, vtkTableAlgorithm);
+  vtkTypeMacro(vtkBoostSplitTableField, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   void ClearFields();

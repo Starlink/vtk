@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSelectionSource.cxx,v $
+  Module:    vtkSelectionSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkstd/vector"
 #include "vtkstd/set"
 
-vtkCxxRevisionMacro(vtkSelectionSource, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkSelectionSource);
 
 class vtkSelectionSourceInternals
@@ -62,6 +61,7 @@ vtkSelectionSource::vtkSelectionSource()
   this->ContainingCells = 1;
   this->Inverse = 0;
   this->ArrayName = NULL;
+  this->ArrayComponent = 0;
   for (int cc=0; cc < 32; cc++)
     {
     this->Internal->Frustum[cc] = 0;
@@ -250,6 +250,7 @@ void vtkSelectionSource::PrintSelf(ostream& os, vtkIndent indent)
   os << (this->ContainingCells?"CELLS":"POINTS") << endl;
   os << indent << "Inverse: " << this->Inverse << endl;
   os << indent << "ArrayName: " << (this->ArrayName?this->ArrayName:"NULL") << endl;
+  os << indent << "ArrayComponent: " << this->ArrayComponent << endl;
   os << indent << "CompositeIndex: " << this->CompositeIndex << endl;
   os << indent << "HierarchicalLevel: " << this->HierarchicalLevel << endl;
   os << indent << "HierarchicalIndex: " << this->HierarchicalIndex << endl;
@@ -450,6 +451,8 @@ int vtkSelectionSource::RequestData(
                                  this->ContentType);
     oProperties->Set(vtkSelectionNode::FIELD_TYPE(),
                                  this->FieldType);
+    oProperties->Set(vtkSelectionNode::COMPONENT_NUMBER(),
+                     this->ArrayComponent);
     // Create the selection list
     vtkDoubleArray* selectionList = vtkDoubleArray::New(); 
     selectionList->SetNumberOfComponents(1);

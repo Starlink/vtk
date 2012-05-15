@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoFileTerrainSource.h,v $
+  Module:    vtkGeoFileTerrainSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_GEOVIS_EXPORT vtkGeoFileTerrainSource : public vtkGeoSource
 {
 public:
   static vtkGeoFileTerrainSource *New();
-  vtkTypeRevisionMacro(vtkGeoFileTerrainSource,vtkGeoSource);
+  vtkTypeMacro(vtkGeoFileTerrainSource,vtkGeoSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkGeoFileTerrainSource();

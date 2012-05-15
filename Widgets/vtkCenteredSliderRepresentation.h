@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCenteredSliderRepresentation.h,v $
+  Module:    vtkCenteredSliderRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,7 @@
   the U.S. Government retains certain rights in this software.
 -------------------------------------------------------------------------*/
 
-// .NAME vtkCenteredSliderRepresentation2D - provide the representation for a vtkCenteredSliderWidget
+// .NAME vtkCenteredSliderRepresentation - provide the representation for a vtkCenteredSliderWidget
 // .SECTION Description
 // This class is used to represent and render a vtkCenteredSliderWidget. To use this
 // class, you must at a minimum specify the end points of the
@@ -63,7 +63,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkCenteredSliderRepresentation,
+  vtkTypeMacro(vtkCenteredSliderRepresentation,
                        vtkSliderRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 

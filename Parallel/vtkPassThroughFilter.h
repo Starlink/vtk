@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPassThroughFilter.h,v $
+  Module:    vtkPassThroughFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class vtkFieldData;
 class VTK_PARALLEL_EXPORT vtkPassThroughFilter : public vtkDataSetAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkPassThroughFilter,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkPassThroughFilter,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

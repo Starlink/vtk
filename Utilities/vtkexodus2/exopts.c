@@ -46,7 +46,7 @@
 *
 * revision history - 
 *
-*  $Id: exopts.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 #include "exodusII.h"
@@ -71,5 +71,4 @@ void ex_opts (int options)
 {
   exerrval = 0; /* clear error code */
   exoptval = options;
-  ncopts = exoptval;
 }

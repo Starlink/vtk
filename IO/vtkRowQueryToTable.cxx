@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRowQueryToTable.cxx,v $
+  Module:    vtkRowQueryToTable.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkRowQueryToTable, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkRowQueryToTable);
 
 vtkRowQueryToTable::vtkRowQueryToTable()

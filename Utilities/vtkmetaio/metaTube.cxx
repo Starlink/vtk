@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaTube.cxx,v $
+  Module:    metaTube.cxx
   Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.11 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -46,10 +46,10 @@ TubePnt(int dim)
     }
   m_R=0;
   //Color is red by default
-  m_Color[0]=1.0;
-  m_Color[1]=0.0;
-  m_Color[2]=0.0;
-  m_Color[3]=1.0;
+  m_Color[0]=1.0f;
+  m_Color[1]=0.0f;
+  m_Color[2]=0.0f;
+  m_Color[3]=1.0f;
   m_ID = -1;
   }
 

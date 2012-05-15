@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnsignedLongArray.cxx,v $
+  Module:    vtkUnsignedLongArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(unsigned long);
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkUnsignedLongArray, "$Revision: 1.36 $");
 vtkStandardNewMacro(vtkUnsignedLongArray);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageHSVToRGB.cxx,v $
+  Module:    vtkImageHSVToRGB.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkImageHSVToRGB, "$Revision: 1.32 $");
 vtkStandardNewMacro(vtkImageHSVToRGB);
 
 //----------------------------------------------------------------------------

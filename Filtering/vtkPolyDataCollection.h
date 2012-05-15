@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataCollection.h,v $
+  Module:    vtkPolyDataCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_FILTERING_EXPORT vtkPolyDataCollection : public vtkCollection
 {
 public:
   static vtkPolyDataCollection *New();
-  vtkTypeRevisionMacro(vtkPolyDataCollection,vtkCollection);
+  vtkTypeMacro(vtkPolyDataCollection,vtkCollection);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

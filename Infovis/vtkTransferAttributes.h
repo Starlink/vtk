@@ -1,7 +1,7 @@
 /*=========================================================================
   
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkTransferAttributes.h,v $
+Module:    vtkTransferAttributes.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -50,7 +50,7 @@ public:
   // TargetFieldType=vtkDataObject::FIELD_ASSOCIATION_POINTS
   static vtkTransferAttributes *New();
   
-  vtkTypeRevisionMacro(vtkTransferAttributes,vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkTransferAttributes,vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

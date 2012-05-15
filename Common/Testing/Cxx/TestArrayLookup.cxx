@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestArrayLookup.cxx,v $
+  Module:    TestArrayLookup.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ struct NodeCompare
 
 vtkIdType LookupValue(vtksys_stl::multimap<int, vtkIdType>& lookup, int value)
 {
-  vtksys_stl::pair<int, vtkIdType> found = *lookup.lower_bound(value);
+  vtksys_stl::pair<const int, vtkIdType> found = *lookup.lower_bound(value);
   if (found.first == value)
     {
     return found.second;
@@ -466,7 +466,7 @@ int TestArrayLookupInt(vtkIdType numVal, bool runComparison)
     vtksys_stl::multimap<int, vtkIdType> map;
     for (vtkIdType i = 0; i < arrSize; ++i, ++ptr)
       {
-      map.insert(vtkstd::pair<int, vtkIdType>(*ptr, i));
+      map.insert(vtkstd::pair<const int, vtkIdType>(*ptr, i));
       }
     timer->StopTimer();
     cerr << "," << timer->GetElapsedTime();

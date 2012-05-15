@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAxisActor2D.h,v $
+  Module:    vtkAxisActor2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -66,7 +66,7 @@ class vtkTextProperty;
 class VTK_RENDERING_EXPORT vtkAxisActor2D : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkAxisActor2D,vtkActor2D);
+  vtkTypeMacro(vtkAxisActor2D,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

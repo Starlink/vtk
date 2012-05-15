@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataObjectReader.h,v $
+  Module:    vtkGenericDataObjectReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_IO_EXPORT vtkGenericDataObjectReader : public vtkDataReader
 {
 public:
   static vtkGenericDataObjectReader *New();
-  vtkTypeRevisionMacro(vtkGenericDataObjectReader,vtkDataReader);
+  vtkTypeMacro(vtkGenericDataObjectReader,vtkDataReader);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -76,12 +76,15 @@ public:
   // needing to read the whole file.
   virtual int ReadOutputType();
 
+  // Description:
+  // See vtkAlgorithm for information.
+  virtual int ProcessRequest(vtkInformation *, vtkInformationVector **,
+                             vtkInformationVector *);
+
 protected:
   vtkGenericDataObjectReader();
   ~vtkGenericDataObjectReader();
 
-  virtual int ProcessRequest(vtkInformation *, vtkInformationVector **,
-                             vtkInformationVector *);
   virtual int RequestData(vtkInformation *, vtkInformationVector **,
                           vtkInformationVector *);
   virtual int RequestDataObject(vtkInformation *, vtkInformationVector **,

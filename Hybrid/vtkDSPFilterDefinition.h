@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDSPFilterDefinition.h,v $
+  Module:    vtkDSPFilterDefinition.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class vtkDSPFilterDefinitionStringSTLCloak;
 class VTK_HYBRID_EXPORT vtkDSPFilterDefinition : public vtkObject
 {
  public:
-  vtkTypeRevisionMacro(vtkDSPFilterDefinition, vtkObject);
+  vtkTypeMacro(vtkDSPFilterDefinition, vtkObject);
   void PrintSelf(ostream &os, vtkIndent indent);
   static vtkDSPFilterDefinition *New();
 

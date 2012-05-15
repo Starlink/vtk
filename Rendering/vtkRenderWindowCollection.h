@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderWindowCollection.h,v $
+  Module:    vtkRenderWindowCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkRenderWindowCollection : public vtkCollection
 {
  public:
   static vtkRenderWindowCollection *New();
-  vtkTypeRevisionMacro(vtkRenderWindowCollection,vtkCollection);
+  vtkTypeMacro(vtkRenderWindowCollection,vtkCollection);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

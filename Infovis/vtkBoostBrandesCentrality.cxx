@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBrandesCentrality.cxx,v $
+  Module:    vtkBoostBrandesCentrality.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,11 +36,9 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
-#include <boost/vector_property_map.hpp>
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostBrandesCentrality, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkBoostBrandesCentrality);
 
 // Constructor/Destructor

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLRenderer.h,v $
+  Module:    vtkOpenGLRenderer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ protected:
 
 public:
   static vtkOpenGLRenderer *New();
-  vtkTypeRevisionMacro(vtkOpenGLRenderer,vtkRenderer);
+  vtkTypeMacro(vtkOpenGLRenderer,vtkRenderer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

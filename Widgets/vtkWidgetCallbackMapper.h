@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWidgetCallbackMapper.h,v $
+  Module:    vtkWidgetCallbackMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ public:
 
   // Description:
   // Standard macros.
-  vtkTypeRevisionMacro(vtkWidgetCallbackMapper,vtkObject);
+  vtkTypeMacro(vtkWidgetCallbackMapper,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

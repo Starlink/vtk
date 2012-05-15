@@ -46,7 +46,7 @@
 *
 * revision history - 
 *
-*  $Id: exgns.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -64,5 +64,5 @@ int ex_get_node_set (int   exoid,
                      int  *node_set_node_list)
 {
   return ex_get_set(exoid, EX_NODE_SET, node_set_id, node_set_node_list,
-		    NULL);
+                    NULL);
 }

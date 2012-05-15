@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSQLiteDatabase.cxx,v $
+  Module:    vtkSQLiteDatabase.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,17 +26,21 @@
 #include "vtkStringArray.h"
 
 #include <vtksys/SystemTools.hxx>
+#include <vtksys/ios/fstream>
 #include <vtksys/ios/sstream>
 
 #include <vtksqlite/vtk_sqlite3.h>
 
 vtkStandardNewMacro(vtkSQLiteDatabase);
-vtkCxxRevisionMacro(vtkSQLiteDatabase, "$Revision: 1.19 $");
 
 // ----------------------------------------------------------------------
 vtkSQLiteDatabase::vtkSQLiteDatabase()
 {
   this->SQLiteInstance = NULL;
+
+  this->Tables = vtkStringArray::New();
+  this->Tables->Register(this);
+  this->Tables->Delete();
 
   // Initialize instance variables
   this->DatabaseType = 0;
@@ -59,6 +63,7 @@ vtkSQLiteDatabase::~vtkSQLiteDatabase()
     {
     this->SetDatabaseFileName(0);
     }
+  this->Tables->UnRegister(this);
 }
 
 // ----------------------------------------------------------------------
@@ -242,15 +247,21 @@ bool vtkSQLiteDatabase::IsSupported(int feature)
 // ----------------------------------------------------------------------
 bool vtkSQLiteDatabase::Open(const char* password)
 {
+  return this->Open(password, USE_EXISTING);
+}
+
+// ----------------------------------------------------------------------
+bool vtkSQLiteDatabase::Open(const char* password, int mode)
+{
+  if (this->IsOpen())
+    {
+    vtkWarningMacro("Open(): Database is already open.");
+    return true;
+    }
+
   if(password && strlen(password))
     {
     vtkGenericWarningMacro("Password will be ignored by vtkSQLiteDatabase::Open().");
-    }
-
-  if ( this->IsOpen() )
-    {
-    vtkGenericWarningMacro( "Open(): Database is already open." );
-    return true;
     }
 
   if (!this->DatabaseFileName)
@@ -259,15 +270,52 @@ bool vtkSQLiteDatabase::Open(const char* password)
     return false;
     }
 
-  int result = vtk_sqlite3_open( this->DatabaseFileName, & (this->SQLiteInstance) );
+  if (this->IsOpen())
+    {
+    vtkGenericWarningMacro( "Open(): Database is already open." );
+    return true;
+    }
 
-  if ( result != VTK_SQLITE_OK )
+  // Only do checks if it is not an in-memory database
+  if (strcmp(":memory:", this->DatabaseFileName))
+    {
+    bool exists = vtksys::SystemTools::FileExists(this->DatabaseFileName);
+    if (mode == USE_EXISTING && !exists)
+      {
+      vtkErrorMacro("You specified using an existing database but the file does not exist.\n"
+                    "Use USE_EXISTING_OR_CREATE to allow database creation.");
+      return false;
+      }
+    if (mode == CREATE && exists)
+      {
+      vtkErrorMacro("You specified creating a database but the file exists.\n"
+                    "Use USE_EXISTING_OR_CREATE to allow using an existing database,\n"
+                    "or CREATE_OR_CLEAR to clear any existing file.");
+      return false;
+      }
+    if (mode == CREATE_OR_CLEAR && exists)
+      {
+      // Here we need to clear the file if it exists by opening it.
+      vtksys_ios::ofstream os;
+      os.open(this->DatabaseFileName);
+      if (!os.is_open())
+        {
+        vtkErrorMacro("Unable to create file " << this->DatabaseFileName << ".");
+        return false;
+        }
+      os.close();
+      }
+    }
+
+  int result = vtk_sqlite3_open(this->DatabaseFileName, & (this->SQLiteInstance));
+
+  if (result != VTK_SQLITE_OK)
     {
     vtkDebugMacro(<<"SQLite open() failed.  Error code is " 
                   << result << " and message is " 
                   << vtk_sqlite3_errmsg(this->SQLiteInstance) );
 
-    vtk_sqlite3_close( this->SQLiteInstance );
+    vtk_sqlite3_close(this->SQLiteInstance);
     return false;
     }
   else
@@ -312,10 +360,11 @@ vtkSQLQuery * vtkSQLiteDatabase::GetQueryInstance()
 // ----------------------------------------------------------------------
 vtkStringArray * vtkSQLiteDatabase::GetTables()
 {
+  this->Tables->Resize(0);
   if (this->SQLiteInstance == NULL)
     {
     vtkErrorMacro(<<"GetTables(): Database is not open!");
-    return NULL;
+    return this->Tables;
     }
 
   vtkSQLQuery *query = this->GetQueryInstance();
@@ -327,18 +376,17 @@ vtkStringArray * vtkSQLiteDatabase::GetTables()
     vtkErrorMacro(<< "GetTables(): Database returned error: "
                   << vtk_sqlite3_errmsg(this->SQLiteInstance) );
     query->Delete();
-    return NULL;
+    return this->Tables;
     }
   else
     {
     vtkDebugMacro(<<"GetTables(): SQL query succeeded.");
-    vtkStringArray *results = vtkStringArray::New();
     while (query->NextRow() )
       {
-      results->InsertNextValue(query->DataValue(0).ToString() );
+      this->Tables->InsertNextValue(query->DataValue(0).ToString() );
       }
     query->Delete();
-    return results;
+    return this->Tables;
     }
 }
 
@@ -384,15 +432,14 @@ vtkStringArray * vtkSQLiteDatabase::GetRecord(const char *table)
 // ----------------------------------------------------------------------
 vtkStdString vtkSQLiteDatabase::GetURL()
 {
-  vtkStdString url;
   const char* fname = this->GetDatabaseFileName();
-  url = this->GetDatabaseType();
-  url += "://";
+  this->TempURL = this->GetDatabaseType();
+  this->TempURL += "://";
   if ( fname )
     {
-    url += fname;
+    this->TempURL += fname;
     }
-  return url;
+  return this->TempURL;
 }
 
 // ----------------------------------------------------------------------

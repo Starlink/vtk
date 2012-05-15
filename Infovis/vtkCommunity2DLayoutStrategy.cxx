@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommunity2DLayoutStrategy.cxx,v $
+  Module:    vtkCommunity2DLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkCommunity2DLayoutStrategy, "$Revision: 1.19.4.1 $");
 vtkStandardNewMacro(vtkCommunity2DLayoutStrategy);
 
 // This is just a convenient macro for smart pointers
@@ -96,6 +95,7 @@ vtkCommunity2DLayoutStrategy::~vtkCommunity2DLayoutStrategy()
     delete [] this->EdgeArray;
     }
 }
+
 
 // Helper functions
 void vtkCommunity2DLayoutStrategy::GenerateCircularSplat(vtkImageData *splat, int x, int y)
@@ -235,7 +235,7 @@ void vtkCommunity2DLayoutStrategy::Initialize()
   // Get the weight array
   vtkDataArray* weightArray = NULL;
   double weight, maxWeight = 1;
-  if (this->EdgeWeightField != NULL)
+  if (this->WeightEdges && this->EdgeWeightField != NULL)
     {
     weightArray = vtkDataArray::SafeDownCast(this->Graph->GetEdgeData()->GetAbstractArray(this->EdgeWeightField));
     if (weightArray != NULL)

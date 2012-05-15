@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAffineRepresentation2D.h,v $
+  Module:    vtkAffineRepresentation2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkAffineRepresentation2D,vtkAffineRepresentation);
+  vtkTypeMacro(vtkAffineRepresentation2D,vtkAffineRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPNGWriter.cxx,v $
+  Module:    vtkPNGWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtk_png.h"
 
-vtkCxxRevisionMacro(vtkPNGWriter, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkPNGWriter);
 
 vtkCxxSetObjectMacro(vtkPNGWriter,Result,vtkUnsignedCharArray);

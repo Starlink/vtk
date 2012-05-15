@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTStripsPainter.h,v $
+  Module:    vtkTStripsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,7 @@ class VTK_RENDERING_EXPORT vtkTStripsPainter : public vtkPrimitivePainter
 {
 public:
   static vtkTStripsPainter* New();
-  vtkTypeRevisionMacro(vtkTStripsPainter, vtkPrimitivePainter);
+  vtkTypeMacro(vtkTStripsPainter, vtkPrimitivePainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

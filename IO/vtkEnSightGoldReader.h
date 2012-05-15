@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSightGoldReader.h,v $
+  Module:    vtkEnSightGoldReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ class VTK_IO_EXPORT vtkEnSightGoldReader : public vtkEnSightReader
 {
 public:
   static vtkEnSightGoldReader *New();
-  vtkTypeRevisionMacro(vtkEnSightGoldReader, vtkEnSightReader);
+  vtkTypeMacro(vtkEnSightGoldReader, vtkEnSightReader);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
   
 protected:

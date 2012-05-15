@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSetGet.h,v $
+  Module:    vtkSetGet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,6 +28,13 @@
 #include "vtkSystemIncludes.h"
 #include <math.h>
 
+// Convert a macro representing a value to a string.
+//
+// Example: vtkQuoteMacro(__LINE__) will expand to "1234" whereas
+// vtkInternalQuoteMacro(__LINE__) will expand to "__LINE__"
+#define vtkInternalQuoteMacro(x) #x
+#define vtkQuoteMacro(x) vtkInternalQuoteMacro(x)
+
 // A macro to get the name of a type
 #define vtkImageScalarTypeNameMacro(type) \
 (((type) == VTK_VOID) ? "void" : \
@@ -49,9 +56,10 @@
 (((type) == VTK_DOUBLE) ? "double" : \
 (((type) == VTK_ID_TYPE) ? "idtype" : \
 (((type) == VTK_STRING) ? "string" : \
+(((type) == VTK_UNICODE_STRING) ? "unicode string" : \
 (((type) == VTK_VARIANT) ? "variant" : \
 (((type) == VTK_OBJECT) ? "object" : \
-"Undefined")))))))))))))))))))))
+"Undefined"))))))))))))))))))))))
   
 //
 // Set built-in type.  Creates member Set"name"() (e.g., SetVisibility());
@@ -209,7 +217,7 @@ virtual type *Get##name ()                                              \
 // Set method must be defined to use this macro.
 //
 #define vtkBooleanMacro(name,type) \
-  virtual void name##On () { this->Set##name(static_cast<type>(1));};   \
+  virtual void name##On () { this->Set##name(static_cast<type>(1));}   \
   virtual void name##Off () { this->Set##name(static_cast<type>(0));}
 
 //
@@ -836,5 +844,9 @@ virtual double *Get##name() \
 # define VTK_LEGACY_REPLACED_BODY(method, version, replace) \
   vtkGenericWarningMacro(#method " was deprecated for " version " and will be removed in a future version.  Use " #replace " instead.")
 #endif
+
+// Qualifiers used for function arguments and return types indicating that the
+// class is wrapped externally.
+#define VTK_WRAP_EXTERN
 
 #endif

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAppendSelection.h,v $
+  Module:    vtkAppendSelection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_GRAPHICS_EXPORT vtkAppendSelection : public vtkSelectionAlgorithm
 public:
   static vtkAppendSelection *New();
 
-  vtkTypeRevisionMacro(vtkAppendSelection,vtkSelectionAlgorithm);
+  vtkTypeMacro(vtkAppendSelection,vtkSelectionAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

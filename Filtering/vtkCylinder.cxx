@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCylinder.cxx,v $
+  Module:    vtkCylinder.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkCylinder.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCylinder, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkCylinder);
 
 // Construct cylinder radius of 0.5.

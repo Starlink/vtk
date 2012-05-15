@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointsPainter.cxx,v $
+  Module:    vtkPointsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkUnsignedCharArray.h"
 
 vtkStandardNewMacro(vtkPointsPainter);
-vtkCxxRevisionMacro(vtkPointsPainter, "$Revision: 1.4 $");
 //-----------------------------------------------------------------------------
 vtkPointsPainter::vtkPointsPainter()
 {

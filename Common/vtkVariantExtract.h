@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantExtract.h,v $
+  Module:    vtkVariantExtract.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -35,7 +35,11 @@
 template<typename T>
 T vtkVariantExtract(const vtkVariant& value, bool& valid = 0)
 {
-  vtkGenericWarningMacro(<< "cannot cast vtkVariant containing " << value.GetTypeAsString() << " to unsupported type.");
+  vtkGenericWarningMacro(
+    << "Cannot convert vtkVariant containing [" << value.GetTypeAsString() << "] "
+    << "to unsupported type [" << typeid(T).name() << "].  "
+    << "Create a vtkVariantExtract<> specialization to eliminate this warning."
+    );
 
   valid = false;
   
@@ -155,6 +159,13 @@ inline vtkStdString vtkVariantExtract<vtkStdString>(const vtkVariant& value, boo
 {
   valid = value.IsString();
   return valid ? value.ToString() : vtkStdString();
+}
+
+template<>
+inline vtkUnicodeString vtkVariantExtract<vtkUnicodeString>(const vtkVariant& value, bool& valid)
+{
+  valid = value.IsUnicodeString();
+  return valid ? value.ToUnicodeString() : vtkUnicodeString();
 }
 
 template<>

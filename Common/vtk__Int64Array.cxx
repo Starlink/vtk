@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtk__Int64Array.cxx,v $
+  Module:    vtk__Int64Array.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(__int64);
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtk__Int64Array, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtk__Int64Array);
 
 //----------------------------------------------------------------------------

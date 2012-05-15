@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOutlineFilter.h,v $
+  Module:    vtkOutlineFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,12 +29,20 @@ class VTK_GRAPHICS_EXPORT vtkOutlineFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkOutlineFilter *New();
-  vtkTypeRevisionMacro(vtkOutlineFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkOutlineFilter,vtkPolyDataAlgorithm);
+  void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // Generate solid faces for the box. This is off by default.
+  vtkSetMacro(GenerateFaces, int);
+  vtkBooleanMacro(GenerateFaces, int);
+  vtkGetMacro(GenerateFaces, int);
 
 protected:
   vtkOutlineFilter();
   ~vtkOutlineFilter();
 
+  int GenerateFaces;
   vtkOutlineSource *OutlineSource;
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   virtual int FillInputPortInformation(int port, vtkInformation *info);

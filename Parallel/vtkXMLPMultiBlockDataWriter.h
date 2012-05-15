@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPMultiBlockDataWriter.h,v $
+  Module:    vtkXMLPMultiBlockDataWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,13 +25,14 @@
 
 #include "vtkXMLMultiBlockDataWriter.h"
 
+class vtkCompositeDataSet;
 class vtkMultiProcessController;
 
 class VTK_PARALLEL_EXPORT vtkXMLPMultiBlockDataWriter : public vtkXMLMultiBlockDataWriter
 {
 public:
   static vtkXMLPMultiBlockDataWriter* New();
-  vtkTypeRevisionMacro(vtkXMLPMultiBlockDataWriter, vtkXMLMultiBlockDataWriter);
+  vtkTypeMacro(vtkXMLPMultiBlockDataWriter, vtkXMLMultiBlockDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -43,6 +44,12 @@ public:
   virtual void SetController(vtkMultiProcessController*);
   vtkGetObjectMacro(Controller, vtkMultiProcessController);
 
+  // Description:
+  // Set whether this instance will write the meta-file. WriteMetaFile
+  // is set to flag only on process 0 and all other processes have
+  // WriteMetaFile set to 0 by default.
+  virtual void SetWriteMetaFile(int flag);
+
 //BTX
 protected:
   vtkXMLPMultiBlockDataWriter();
@@ -50,22 +57,51 @@ protected:
 
   // Description:
   // Determine the data types for each of the leaf nodes.
-  // In parallel, all satellites send the datatypes it has at all the leaf nodes
-  // to the root. The root uses this information to identify leaf nodes
-  // that are non-null on more than 1 processes. Such a node is a conflicting
-  // node and writer writes out an XML meta-file with a multipiece inserted at
-  // locations for such conflicting nodes.
+  // Currently each process requires this information in order to
+  // simplify creating the file names for both the metadata file 
+  // as well as the actual dataset files.  It takes into account
+  // that a piece of a dataset may be distributed in multiple pieces
+  // over multiple processes.
   virtual void FillDataTypes(vtkCompositeDataSet*);
 
-  // Description:
-  // Overridden to do some extra workn the root node to handle the case where a
-  // leaf node in the multiblock hierarchy is non-null on more than 1 processes.
-  // In that case, we insert a MultiPiece node at that location with the
-  // non-null leaves as its children.
-  int WriteNonCompositeData(vtkDataObject* dObj, vtkXMLDataElement* datasetXML,
-    int &writerIdx);
-
   vtkMultiProcessController* Controller;
+
+  // Description:
+  // Internal method called recursively to create the xml tree for 
+  // the children of compositeData as well as write the actual data 
+  // set files.  element will only have added nested information.
+  // writerIdx is the global piece index used to create unique
+  // filenames for each file written.  This function returns 0 if 
+  // no files were written from compositeData.  Process 0 creates 
+  // the metadata for all of the processes/files.
+  virtual int WriteComposite(vtkCompositeDataSet* compositeData, 
+                             vtkXMLDataElement* parent, int &currentFileIndex);
+
+  // Description:
+  // Internal method to write a non vtkCompositeDataSet subclass as
+  // well as add in the file name to the metadata file.
+  // Element is the containing XML metadata element that may
+  // have data overwritten and added to (the index XML attribute
+  // should not be touched though).  writerIdx is the piece index
+  // that gets incremented for the globally numbered piece.
+  // If this piece exists on multiple processes than it also takes
+  // care of that in the metadata description. This function returns
+  // 0 if no file was written.
+  int ParallelWriteNonCompositeData(
+    vtkDataObject* dObj, vtkXMLDataElement* parentXML, 
+    int currentFileIndex);
+
+  // Description:
+  // Return the name of the file given the currentFileIndex (also the current 
+  // globally numbered piece index), the procId the file exists on, and
+  // the dataSetType.
+  virtual vtkStdString CreatePieceFileName(
+    int currentFileIndex, int procId, int dataSetType);
+
+  // Description:
+  // Utility function to remove any already written files
+  // in case writer failed.
+  virtual void RemoveWrittenFiles(const char* subDirectory);
 
 private:
   vtkXMLPMultiBlockDataWriter(const vtkXMLPMultiBlockDataWriter&); // Not implemented.

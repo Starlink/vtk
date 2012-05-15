@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartTableSeriesModel.h,v $
+  Module:    vtkQtChartTableSeriesModel.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,6 +48,17 @@ public:
   /// \param parent The parent object.
   vtkQtChartTableSeriesModel(QAbstractItemModel *model, QObject *parent=0);
   virtual ~vtkQtChartTableSeriesModel() {}
+
+  /// \brief
+  ///   Gets the item model.
+  /// \return
+  ///   A pointer to the item model.
+  QAbstractItemModel *getItemModel() const {return this->Model;}
+
+  /// \brief
+  ///   Sets the item model.
+  /// \param model The new item model.
+  void setItemModel(QAbstractItemModel *model);
 
   /// \brief
   ///   Gets whether or not columns are series.

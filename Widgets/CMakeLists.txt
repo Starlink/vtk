@@ -4,7 +4,8 @@ SET(UKIT WIDGETS)
 SET(KIT_TCL_LIBS vtkRenderingTCL vtkHybridTCL)
 SET(KIT_PYTHON_LIBS vtkRenderingPythonD vtkHybridPythonD)
 SET(KIT_JAVA_LIBS vtkRenderingJava vtkHybridJava)
-SET(KIT_LIBS vtkRendering vtkHybrid)
+SET(KIT_INTERFACE_LIBRARIES vtkRendering vtkHybrid)
+SET(KIT_LIBS ${OPENGL_gl_LIBRARY})
 
 SET ( Kit_SRCS
 vtk3DWidget.cxx
@@ -59,6 +60,7 @@ vtkImageTracerWidget.cxx
 vtkImplicitPlaneRepresentation.cxx
 vtkImplicitPlaneWidget.cxx
 vtkImplicitPlaneWidget2.cxx
+vtkLinearContourLineInterpolator.cxx
 vtkLineRepresentation.cxx
 vtkLineWidget.cxx
 vtkLineWidget2.cxx
@@ -79,7 +81,9 @@ vtkPointPlacer.cxx
 vtkPointWidget.cxx
 vtkPolyDataSourceWidget.cxx
 vtkPolyDataPointPlacer.cxx
+vtkAbstractPolygonalHandleRepresentation3D.cxx
 vtkPolygonalHandleRepresentation3D.cxx
+vtkOrientedPolygonalHandleRepresentation3D.cxx
 vtkPolygonalSurfacePointPlacer.cxx
 vtkPolyDataContourLineInterpolator.cxx
 vtkPolygonalSurfaceContourLineInterpolator.cxx
@@ -97,7 +101,9 @@ vtkSphereHandleRepresentation.cxx
 vtkSphereRepresentation.cxx
 vtkSphereWidget.cxx
 vtkSphereWidget2.cxx
+vtkSplineRepresentation.cxx
 vtkSplineWidget.cxx
+vtkSplineWidget2.cxx
 vtkTensorProbeWidget.cxx
 vtkTensorProbeRepresentation.cxx
 vtkTerrainDataPointPlacer.cxx
@@ -115,10 +121,11 @@ vtkXYPlotWidget.cxx
 SET_SOURCE_FILES_PROPERTIES(
 vtk3DWidget
 vtkAbstractWidget
+vtkAbstractPolygonalHandleRepresentation3D
 vtkAffineRepresentation
 vtkAngleRepresentation
-vtkContinuousValueWidget.cxx
-vtkContinuousValueWidgetRepresentation.cxx
+vtkContinuousValueWidget
+vtkContinuousValueWidgetRepresentation
 vtkContourLineInterpolator
 vtkContourRepresentation
 vtkFocalPlaneContourRepresentation

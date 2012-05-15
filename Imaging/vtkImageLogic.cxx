@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageLogic.cxx,v $
+  Module:    vtkImageLogic.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageLogic, "$Revision: 1.36 $");
 vtkStandardNewMacro(vtkImageLogic);
 
 //----------------------------------------------------------------------------

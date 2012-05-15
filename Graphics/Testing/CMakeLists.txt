@@ -15,6 +15,8 @@ IF(PYTHON_EXECUTABLE)
     VTK_GRAPHICS_EXPORT
     vtkButterflySubdivisionFilter.h
     vtkDijkstraGraphInternals.h
+    vtkJavaProgrammableFilter.h
+    vtkJVMManager.h
     vtkLinearSubdivisionFilter.h
     vtkLoopSubdivisionFilter.h
     vtkOutlineFilter.h
@@ -22,5 +24,6 @@ IF(PYTHON_EXECUTABLE)
     vtkProgrammableSource.h
     vtkStructuredGridOutlineFilter.h
     vtkStructuredPointsGeometryFilter.h
+    vtkTableBasedClipCases.h
     )
 ENDIF(PYTHON_EXECUTABLE)

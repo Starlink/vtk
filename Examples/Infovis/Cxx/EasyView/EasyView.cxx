@@ -1,27 +1,22 @@
-/*
- * Copyright 2007 Sandia Corporation.
- * Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
- * license for use of this work by or on behalf of the
- * U.S. Government. Redistribution and use in source and binary forms, with
- * or without modification, are permitted provided that this Notice and any
- * statement of authorship are reproduced on all copies.
- */
+/*-------------------------------------------------------------------------
+  Copyright 2009 Sandia Corporation.
+  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+  the U.S. Government retains certain rights in this software.
+-------------------------------------------------------------------------*/
 
 
 #include "ui_EasyView.h"
 #include "EasyView.h"
 
-
+#include <vtkAnnotationLink.h>
 #include <vtkDataObjectToTable.h>
 #include <vtkDataRepresentation.h>
 #include <vtkGraphLayoutView.h>
-#include <vtkQtTableModelAdapter.h>
 #include <vtkQtTableView.h>
-#include <vtkQtTreeModelAdapter.h>
 #include <vtkQtTreeView.h>
 #include <vtkRenderer.h>
 #include <vtkSelection.h>
-#include <vtkSelectionLink.h>
+#include <vtkSelectionNode.h>
 #include <vtkTable.h>
 #include <vtkTableToGraph.h>
 #include <vtkTreeLayoutStrategy.h>
@@ -33,6 +28,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QTreeView>
 
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
@@ -49,42 +45,65 @@ EasyView::EasyView()
   this->TreeView     = vtkSmartPointer<vtkQtTreeView>::New();
   this->TableView    = vtkSmartPointer<vtkQtTableView>::New();
   this->ColumnView   = vtkSmartPointer<vtkQtTreeView>::New();
-  
-  // Set widgets for the tree and table views
-  this->TreeView->SetItemView(this->ui->treeView);
-  this->TableView->SetItemView(this->ui->tableView);
-  this->ColumnView->SetItemView(this->ui->columnView);
-  
+  this->ColumnView->SetUseColumnView(1);
+ 
+  // Tell the table view to sort selections that it receives (but does
+  // not initiate) to the top
+  this->TableView->SetSortSelectionToTop(true);
+
+  // Set widgets for the tree and table views  
+  this->ui->treeFrame->layout()->addWidget(this->TreeView->GetWidget());
+  this->ui->tableFrame->layout()->addWidget(this->TableView->GetWidget());
+  this->ui->columnFrame->layout()->addWidget(this->ColumnView->GetWidget());
+ 
   // Graph View needs to get my render window
-  this->GraphView->SetupRenderWindow(this->ui->vtkGraphViewWidget->GetRenderWindow());
+  this->GraphView->SetInteractor(this->ui->vtkGraphViewWidget->GetInteractor());
+  this->ui->vtkGraphViewWidget->SetRenderWindow(this->GraphView->GetRenderWindow());
   
   // Set up the theme on the graph view :)
-  vtkViewTheme* theme = vtkViewTheme::CreateMellowTheme();
-  theme->SetLineWidth(3);
+  vtkViewTheme* theme = vtkViewTheme::CreateNeonTheme();
   this->GraphView->ApplyViewTheme(theme);
-  this->GraphView->Update();
   theme->Delete();
   
   // Set up action signals and slots
   connect(this->ui->actionOpenXMLFile, SIGNAL(triggered()), this, SLOT(slotOpenXMLFile()));
   connect(this->ui->actionExit, SIGNAL(triggered()), this, SLOT(slotExit()));
 
+  // Apply application stylesheet
+  QString css = "* { font: bold italic 18px \"Calibri\"; color: midnightblue }";
+  css += "QTreeView { font: bold italic 16px \"Calibri\"; color: midnightblue }";
+  //qApp->setStyleSheet(css); // Seems to cause a bug on some systems
+                              // But at least it's here as an example
+
+  this->GraphView->Render();
 };
 
-// Set up the selection between the vtk and qt views
-void EasyView::SetupSelectionLink()
+// Set up the annotation between the vtk and qt views
+void EasyView::SetupAnnotationLink()
 {
   // Create a selection link and have all the views use it
-  VTK_CREATE(vtkSelectionLink,selectionLink);
-  this->TreeView->GetRepresentation()->SetSelectionLink(selectionLink);
-  this->TableView->GetRepresentation()->SetSelectionLink(selectionLink);
-  this->GraphView->GetRepresentation()->SetSelectionLink(selectionLink);
+  VTK_CREATE(vtkAnnotationLink,annLink);
+  this->TreeView->GetRepresentation()->SetAnnotationLink(annLink);
+  this->TreeView->GetRepresentation()->SetSelectionType(vtkSelectionNode::PEDIGREEIDS);
+  this->TableView->GetRepresentation()->SetAnnotationLink(annLink);
+  this->TableView->GetRepresentation()->SetSelectionType(vtkSelectionNode::PEDIGREEIDS);
+  this->ColumnView->GetRepresentation()->SetAnnotationLink(annLink);
+  this->ColumnView->GetRepresentation()->SetSelectionType(vtkSelectionNode::PEDIGREEIDS);
+  this->GraphView->GetRepresentation()->SetAnnotationLink(annLink);
+  this->GraphView->GetRepresentation()->SetSelectionType(vtkSelectionNode::PEDIGREEIDS);
+
+  // Set up the theme on the graph view :)
+  vtkViewTheme* theme = vtkViewTheme::CreateNeonTheme();
+  this->GraphView->ApplyViewTheme(theme);
+  this->GraphView->Update();
+  theme->Delete();
 
   VTK_CREATE(vtkViewUpdater,updater);
   updater->AddView(this->TreeView);
   updater->AddView(this->TableView);
+  updater->AddView(this->ColumnView);
   updater->AddView(this->GraphView);
-
+  updater->AddAnnotationLink(annLink);
 }
 
 EasyView::~EasyView()
@@ -135,16 +154,14 @@ void EasyView::slotOpenXMLFile()
   // Set the input to the graph view
   this->GraphView->SetRepresentationFromInputConnection(this->XMLReader->GetOutputPort());
   
-  // Okay now do an explicit update so that
+  // Okay now do an explicit reset camera so that
   // the user doesn't have to move the mouse 
   // in the window to see the resulting graph
-  this->GraphView->Update();
-  this->GraphView->GetRenderer()->ResetCamera();
+  this->GraphView->ResetCamera();
    
   // Now hand off tree to the tree view
   this->TreeView->SetRepresentationFromInputConnection(this->XMLReader->GetOutputPort());
   this->ColumnView->SetRepresentationFromInputConnection(this->XMLReader->GetOutputPort());
-  this->ui->treeView->expandAll();
    
   // Extract a table and give to table view
   VTK_CREATE(vtkDataObjectToTable, toTable);
@@ -152,7 +169,22 @@ void EasyView::slotOpenXMLFile()
   toTable->SetFieldType(vtkDataObjectToTable::VERTEX_DATA);
   this->TableView->SetRepresentationFromInputConnection(toTable->GetOutputPort());
 
-  this->SetupSelectionLink();
+  this->SetupAnnotationLink();
+
+  // Hide an unwanted column in the tree view.
+  this->TreeView->HideColumn(2);
+
+  // Turn on some colors.
+  this->TreeView->SetColorArrayName("vertex id");
+  this->TreeView->ColorByArrayOn();
+
+  // Update all the views
+  this->TreeView->Update();
+  this->TableView->Update();
+  this->ColumnView->Update();
+
+  // Force a render on the graph view
+  this->GraphView->Render();
 }
 
 void EasyView::slotExit() {

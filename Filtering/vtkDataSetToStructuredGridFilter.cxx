@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetToStructuredGridFilter.cxx,v $
+  Module:    vtkDataSetToStructuredGridFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkInformation.h"
 #include "vtkStructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkDataSetToStructuredGridFilter, "$Revision: 1.22 $");
 
 //----------------------------------------------------------------------------
 vtkDataSetToStructuredGridFilter::vtkDataSetToStructuredGridFilter()

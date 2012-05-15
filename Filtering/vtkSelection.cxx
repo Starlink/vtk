@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSelection.cxx,v $
+  Module:    vtkSelection.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -38,7 +38,6 @@ struct vtkSelectionInternals
 };
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSelection, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkSelection);
 
 //----------------------------------------------------------------------------
@@ -223,7 +222,7 @@ void vtkSelection::Union(vtkSelectionNode* node)
     {
     vtkSmartPointer<vtkSelectionNode> clone =
       vtkSmartPointer<vtkSelectionNode>::New();
-    clone->ShallowCopy(node);
+    clone->DeepCopy(node);
     this->AddNode(clone);
     }
 }
@@ -252,4 +251,85 @@ vtkSelection* vtkSelection::GetData(vtkInformation* info)
 vtkSelection* vtkSelection::GetData(vtkInformationVector* v, int i)
 {
   return vtkSelection::GetData(v->GetInformationObject(i));
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Dump()
+{
+  this->Dump(cout);
+}
+
+//----------------------------------------------------------------------------
+void vtkSelection::Dump(ostream& os)
+{
+  vtkSmartPointer<vtkTable> tmpTable = vtkSmartPointer<vtkTable>::New();
+  cerr << "==Selection==" << endl;
+  for (unsigned int i = 0; i < this->GetNumberOfNodes(); ++i)
+    {
+    os << "===Node " << i << "===" << endl;
+    vtkSelectionNode* node = this->GetNode(i);
+    os << "ContentType: ";
+    switch (node->GetContentType())
+      {
+      case vtkSelectionNode::GLOBALIDS:
+        os << "GLOBALIDS";
+        break;
+      case vtkSelectionNode::PEDIGREEIDS:
+        os << "PEDIGREEIDS";
+        break;
+      case vtkSelectionNode::VALUES:
+        os << "VALUES";
+        break;
+      case vtkSelectionNode::INDICES:
+        os << "INDICES";
+        break;
+      case vtkSelectionNode::FRUSTUM:
+        os << "FRUSTUM";
+        break;
+      case vtkSelectionNode::LOCATIONS:
+        os << "LOCATIONS";
+        break;
+      case vtkSelectionNode::THRESHOLDS:
+        os << "THRESHOLDS";
+        break;
+      case vtkSelectionNode::BLOCKS:
+        os << "BLOCKS";
+        break;
+      default:
+        os << "UNKNOWN";
+        break;
+      }
+    os << endl;
+    os << "FieldType: ";
+    switch (node->GetFieldType())
+      {
+      case vtkSelectionNode::CELL:
+        os << "CELL";
+        break;
+      case vtkSelectionNode::POINT:
+        os << "POINT";
+        break;
+      case vtkSelectionNode::FIELD:
+        os << "FIELD";
+        break;
+      case vtkSelectionNode::VERTEX:
+        os << "VERTEX";
+        break;
+      case vtkSelectionNode::EDGE:
+        os << "EDGE";
+        break;
+      case vtkSelectionNode::ROW:
+        os << "ROW";
+        break;
+      default:
+        os << "UNKNOWN";
+        break;
+      }
+    os << endl;
+    if (node->GetSelectionData())
+      {
+      tmpTable->SetRowData(node->GetSelectionData());
+      tmpTable->Dump(10);
+      }
+    }
 }

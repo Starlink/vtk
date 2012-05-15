@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSimpleImageToImageFilter.h,v $
+  Module:    vtkSimpleImageToImageFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@
 class VTK_FILTERING_EXPORT vtkSimpleImageToImageFilter : public vtkImageAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkSimpleImageToImageFilter,vtkImageAlgorithm);
+  vtkTypeMacro(vtkSimpleImageToImageFilter,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

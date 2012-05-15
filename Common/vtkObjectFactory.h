@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkObjectFactory.h,v $
+  Module:    vtkObjectFactory.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -110,7 +110,7 @@ public:
   // Instance methods to be used on individual instances of vtkObjectFactory
   
   // Methods from vtkObject
-  vtkTypeRevisionMacro(vtkObjectFactory,vtkObject);
+  vtkTypeMacro(vtkObjectFactory,vtkObject);
   // Description:
   // Print ObjectFactory to stream.
   virtual void PrintSelf(ostream& os, vtkIndent indent);
@@ -254,12 +254,7 @@ static vtkObject* vtkObjectFactoryCreate##classname() \
 
 #endif
 
-
-#ifdef _WIN32
-#define VTK_FACTORY_INTERFACE_EXPORT  __declspec( dllexport )
-#else
-#define VTK_FACTORY_INTERFACE_EXPORT 
-#endif
+#define VTK_FACTORY_INTERFACE_EXPORT VTK_ABI_EXPORT
 
 // Macro to create the interface "C" functions used in
 // a dll or shared library that contains a VTK object factory.

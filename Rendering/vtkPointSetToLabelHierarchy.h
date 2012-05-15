@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointSetToLabelHierarchy.h,v $
+  Module:    vtkPointSetToLabelHierarchy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,11 +32,13 @@
 
 #include "vtkLabelHierarchyAlgorithm.h"
 
+class vtkTextProperty;
+
 class VTK_RENDERING_EXPORT vtkPointSetToLabelHierarchy : public vtkLabelHierarchyAlgorithm
 {
 public:
   static vtkPointSetToLabelHierarchy* New();
-  vtkTypeRevisionMacro(vtkPointSetToLabelHierarchy,vtkLabelHierarchyAlgorithm);
+  vtkTypeMacro(vtkPointSetToLabelHierarchy,vtkLabelHierarchyAlgorithm);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:
@@ -48,6 +50,47 @@ public:
   // Set/get the maximum tree depth in the output hierarchy.
   vtkSetMacro(MaximumDepth,int);
   vtkGetMacro(MaximumDepth,int);
+
+  // Description:
+  // Whether to use unicode strings.
+  vtkSetMacro(UseUnicodeStrings,bool);
+  vtkGetMacro(UseUnicodeStrings,bool);
+  vtkBooleanMacro(UseUnicodeStrings,bool);
+
+  // Description:
+  // Set/get the label array name.
+  virtual void SetLabelArrayName(const char* name);
+  virtual const char* GetLabelArrayName();
+
+  // Description:
+  // Set/get the priority array name.
+  virtual void SetSizeArrayName(const char* name);
+  virtual const char* GetSizeArrayName();
+
+  // Description:
+  // Set/get the priority array name.
+  virtual void SetPriorityArrayName(const char* name);
+  virtual const char* GetPriorityArrayName();
+
+  // Description:
+  // Set/get the icon index array name.
+  virtual void SetIconIndexArrayName(const char* name);
+  virtual const char* GetIconIndexArrayName();
+
+  // Description:
+  // Set/get the text orientation array name.
+  virtual void SetOrientationArrayName(const char* name);
+  virtual const char* GetOrientationArrayName();
+
+  // Description:
+  // Set/get the maximum text width (in world coordinates) array name.
+  virtual void SetBoundedSizeArrayName(const char* name);
+  virtual const char* GetBoundedSizeArrayName();
+
+  // Description:
+  // Set/get the text property assigned to the hierarchy.
+  virtual void SetTextProperty(vtkTextProperty* tprop);
+  vtkGetObjectMacro(TextProperty, vtkTextProperty);
 
 protected:
   vtkPointSetToLabelHierarchy();
@@ -62,6 +105,8 @@ protected:
 
   int TargetLabelCount;
   int MaximumDepth;
+  bool UseUnicodeStrings;
+  vtkTextProperty* TextProperty;
 
 private:
   vtkPointSetToLabelHierarchy( const vtkPointSetToLabelHierarchy& ); // Not implemented.

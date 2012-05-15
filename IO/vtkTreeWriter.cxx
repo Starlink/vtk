@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeWriter.cxx,v $
+  Module:    vtkTreeWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 # include <io.h> /* unlink */
 #endif
 
-vtkCxxRevisionMacro(vtkTreeWriter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkTreeWriter);
 
 void vtkTreeWriter::WriteEdges(ostream& Stream, vtkTree* Tree, vtkIdType Vertex)

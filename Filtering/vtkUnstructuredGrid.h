@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGrid.h,v $
+  Module:    vtkUnstructuredGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,6 +60,8 @@ class vtkQuadraticLinearQuad;
 class vtkBiQuadraticQuad;
 class vtkBiQuadraticQuadraticWedge;
 class vtkBiQuadraticQuadraticHexahedron;
+class vtkBiQuadraticTriangle;
+class vtkCubicLine;
 
 
 class VTK_FILTERING_EXPORT vtkUnstructuredGrid : public vtkPointSet 
@@ -67,7 +69,7 @@ class VTK_FILTERING_EXPORT vtkUnstructuredGrid : public vtkPointSet
 public:
   static vtkUnstructuredGrid *New();
 
-  vtkTypeRevisionMacro(vtkUnstructuredGrid,vtkPointSet);
+  vtkTypeMacro(vtkUnstructuredGrid,vtkPointSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -214,6 +216,8 @@ protected:
   vtkQuadraticLinearWedge           *QuadraticLinearWedge;
   vtkBiQuadraticQuadraticWedge      *BiQuadraticQuadraticWedge;
   vtkBiQuadraticQuadraticHexahedron *BiQuadraticQuadraticHexahedron;
+  vtkBiQuadraticTriangle            *BiQuadraticTriangle;
+  vtkCubicLine                      *CubicLine;
   vtkConvexPointSet                 *ConvexPointSet;
   vtkEmptyCell                      *EmptyCell;
   
@@ -225,6 +229,8 @@ protected:
   vtkIdTypeArray *Locations;
 
  private:
+  void Cleanup();
+  
   // Hide these from the user and the compiler.
   
   // Description:

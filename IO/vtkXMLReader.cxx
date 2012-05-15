@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLReader.cxx,v $
+  Module:    vtkXMLReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,8 +34,8 @@
 #include <vtksys/ios/sstream>
 #include <sys/stat.h>
 #include <assert.h>
+#include <locale> // C++ locale
 
-vtkCxxRevisionMacro(vtkXMLReader, "$Revision: 1.55 $");
 //-----------------------------------------------------------------------------
 static void ReadStringVersion(const char* version, int& major, int& minor)
 {
@@ -502,6 +502,8 @@ int vtkXMLReader::RequestData(vtkInformation *vtkNotUsed(request),
   
   // Give the vtkXMLParser instance its file back so that data section
   // reads will work.
+  
+  (*this->Stream).imbue(vtkstd::locale::classic());
   this->XMLParser->SetStream(this->Stream);
   
   // We are just starting to read.  Do not call UpdateProgressDiscrete

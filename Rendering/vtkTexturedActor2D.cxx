@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTexturedActor2D.cxx,v $
+  Module:    vtkTexturedActor2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkRenderer.h"
 #include "vtkTexture.h"
 
-vtkCxxRevisionMacro(vtkTexturedActor2D, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkTexturedActor2D);
 
 vtkCxxSetObjectMacro(vtkTexturedActor2D, Texture, vtkTexture);

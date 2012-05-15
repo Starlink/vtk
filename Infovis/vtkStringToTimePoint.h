@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStringToTimePoint.h,v $
+  Module:    vtkStringToTimePoint.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_INFOVIS_EXPORT vtkStringToTimePoint : public vtkDataObjectAlgorithm
 {
 public:
   static vtkStringToTimePoint* New();
-  vtkTypeRevisionMacro(vtkStringToTimePoint,vtkDataObjectAlgorithm);
+  vtkTypeMacro(vtkStringToTimePoint,vtkDataObjectAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRecursiveSphereDirectionEncoder.h,v $
+  Module:    vtkRecursiveSphereDirectionEncoder.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@
 class VTK_VOLUMERENDERING_EXPORT vtkRecursiveSphereDirectionEncoder : public vtkDirectionEncoder
 {
 public:
-  vtkTypeRevisionMacro(vtkRecursiveSphereDirectionEncoder,vtkDirectionEncoder);
+  vtkTypeMacro(vtkRecursiveSphereDirectionEncoder,vtkDirectionEncoder);
   void PrintSelf( ostream& os, vtkIndent indent );
 
 // Description:

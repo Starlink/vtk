@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointLocator.cxx,v $
+  Module:    vtkPointLocator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkPointLocator, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkPointLocator);
 
 static const int VTK_INITIAL_SIZE=1000;
@@ -152,7 +151,7 @@ vtkIdType vtkPointLocator::FindClosestPoint(const double x[3])
   int i, j;
   double minDist2;
   double dist2 = VTK_DOUBLE_MAX;
-  double *pt;
+  double pt[3];
   int closest, level;
   vtkIdType ptId, cno;
   vtkIdList *ptIds;
@@ -206,7 +205,7 @@ vtkIdType vtkPointLocator::FindClosestPoint(const double x[3])
         for (j=0; j < ptIds->GetNumberOfIds(); j++) 
           {
           ptId = ptIds->GetId(j);
-          pt = this->DataSet->GetPoint(ptId);
+          this->DataSet->GetPoint(ptId, pt);
           if ( (dist2 = vtkMath::Distance2BetweenPoints(x,pt)) < minDist2 ) 
             {
             closest = ptId;
@@ -235,7 +234,7 @@ vtkIdType vtkPointLocator::FindClosestPoint(const double x[3])
         for (j=0; j < ptIds->GetNumberOfIds(); j++) 
           {
           ptId = ptIds->GetId(j);
-          pt = this->DataSet->GetPoint(ptId);
+          this->DataSet->GetPoint(ptId, pt);
           if ( (dist2 = vtkMath::Distance2BetweenPoints(x,pt)) < minDist2 ) 
             {
             closest = ptId;
@@ -263,7 +262,7 @@ vtkIdType vtkPointLocator::FindClosestPointWithinRadius(double radius,
                                                         double& dist2)
 {
   int i, j;
-  double *pt;
+  double pt[3];
   vtkIdType ptId, closest = -1;
   vtkIdList *ptIds;
   int ijk[3], *nei;
@@ -314,11 +313,11 @@ vtkIdType vtkPointLocator::FindClosestPointWithinRadius(double radius,
       ptId = ptIds->GetId(j);
       if (flag)
         {
-        pt = pointData->GetTuple(ptId);
+        pointData->GetTuple(ptId, pt);
         }
       else
         {
-        pt = this->DataSet->GetPoint(ptId);
+        this->DataSet->GetPoint(ptId, pt);
         }
       if ( (dist2 = vtkMath::Distance2BetweenPoints(x,pt)) < minDist2 ) 
         {
@@ -408,11 +407,11 @@ vtkIdType vtkPointLocator::FindClosestPointWithinRadius(double radius,
           ptId = ptIds->GetId(j);
           if (flag)
             {
-            pt = pointData->GetTuple(ptId);
+            pointData->GetTuple(ptId, pt);
             }
           else
             {
-            pt = this->DataSet->GetPoint(ptId);
+            this->DataSet->GetPoint(ptId, pt);
             }
           if ( (dist2 = vtkMath::Distance2BetweenPoints(x,pt)) < minDist2 ) 
             {
@@ -553,7 +552,7 @@ void vtkPointLocator::FindDistributedPoints(int N, const double x[3],
 {
   int i, j;
   double dist2;
-  double *pt;
+  double pt[3];
   int level;
   vtkIdType ptId, cno;
   vtkIdList *ptIds;
@@ -621,7 +620,7 @@ void vtkPointLocator::FindDistributedPoints(int N, const double x[3],
           {
           pointsChecked++;
           ptId = ptIds->GetId(j);
-          pt = this->DataSet->GetPoint(ptId);
+          this->DataSet->GetPoint(ptId, pt);
           dist2 = vtkMath::Distance2BetweenPoints(x,pt);
           oct = GetOctent(x,pt);
           if (currentCount[oct] < N)
@@ -676,7 +675,7 @@ void vtkPointLocator::FindDistributedPoints(int N, const double x[3],
         {
         pointsChecked++;
         ptId = ptIds->GetId(j);
-        pt = this->DataSet->GetPoint(ptId);
+        this->DataSet->GetPoint(ptId, pt);
         dist2 = vtkMath::Distance2BetweenPoints(x,pt);
         oct = GetOctent(x,pt);
         if (dist2 < maxDistance[oct])
@@ -706,7 +705,7 @@ void vtkPointLocator::FindClosestNPoints(int N, const double x[3],
 {
   int i, j;
   double dist2;
-  double *pt;
+  double pt[3];
   int level;
   vtkIdType ptId, cno;
   vtkIdList *ptIds;
@@ -759,7 +758,7 @@ void vtkPointLocator::FindClosestNPoints(int N, const double x[3],
         for (j=0; j < ptIds->GetNumberOfIds(); j++) 
           {
           ptId = ptIds->GetId(j);
-          pt = this->DataSet->GetPoint(ptId);
+          this->DataSet->GetPoint(ptId, pt);
           dist2 = vtkMath::Distance2BetweenPoints(x,pt);
           if (currentCount < N)
             {
@@ -806,7 +805,7 @@ void vtkPointLocator::FindClosestNPoints(int N, const double x[3],
       for (j=0; j < ptIds->GetNumberOfIds(); j++) 
         {
         ptId = ptIds->GetId(j);
-        pt = this->DataSet->GetPoint(ptId);
+        this->DataSet->GetPoint(ptId, pt);
         dist2 = vtkMath::Distance2BetweenPoints(x,pt);
         if (dist2 < maxDistance)
           {
@@ -834,7 +833,7 @@ void vtkPointLocator::FindPointsWithinRadius(double R, const double x[3],
 {
   int i, j;
   double dist2;
-  double *pt;
+  double pt[3];
   vtkIdType ptId, cno;
   vtkIdList *ptIds;
   int ijk[3], *nei;
@@ -880,7 +879,7 @@ void vtkPointLocator::FindPointsWithinRadius(double R, const double x[3],
       for (j=0; j < ptIds->GetNumberOfIds(); j++) 
         {
         ptId = ptIds->GetId(j);
-        pt = this->DataSet->GetPoint(ptId);
+        this->DataSet->GetPoint(ptId, pt);
         dist2 = vtkMath::Distance2BetweenPoints(x,pt);
         if (dist2 <= R2)
           {
@@ -907,7 +906,7 @@ void vtkPointLocator::BuildLocator()
   vtkIdType idx;
   vtkIdList *bucket;
   vtkIdType numPts;
-  double *x;
+  double x[3];
   typedef vtkIdList *vtkIdListPtr;
 
   if ( (this->HashTable != NULL) && (this->BuildTime > this->MTime)
@@ -987,7 +986,7 @@ void vtkPointLocator::BuildLocator()
   product = ndivs[0]*ndivs[1];
   for (i=0; i<numPts; i++) 
     {
-    x = this->DataSet->GetPoint(i);
+    this->DataSet->GetPoint(i, x);
     for (j=0; j<3; j++) 
       {
       ijk[j] = static_cast<int>(
@@ -1369,7 +1368,7 @@ vtkIdType vtkPointLocator::InsertNextPoint(const double x[3])
 // Incrementally insert a point into search structure with a particular
 // index value. You should use the method IsInsertedPoint() to see whether 
 // this point has already been inserted (that is, if you desire to prevent
-// dulicate points). Before using this method you must make sure that 
+// duplicate points). Before using this method you must make sure that 
 // newPts have been supplied, the bounds has been set properly, and that 
 // divs are properly set. (See InitPointInsertion().)
 void vtkPointLocator::InsertPoint(vtkIdType ptId, const double x[3])

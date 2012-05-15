@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterWriter.cxx,v $
+  Module:    vtkX3DExporterWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkX3DExporterWriter, "$Revision: 1.1 $");
 //----------------------------------------------------------------------------
 vtkX3DExporterWriter::vtkX3DExporterWriter()
 {

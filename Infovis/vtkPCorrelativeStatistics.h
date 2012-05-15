@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPCorrelativeStatistics.h,v $
+  Module:    vtkPCorrelativeStatistics.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_INFOVIS_EXPORT vtkPCorrelativeStatistics : public vtkCorrelativeStatis
 {
 public:
   static vtkPCorrelativeStatistics* New();
-  vtkTypeRevisionMacro(vtkPCorrelativeStatistics, vtkCorrelativeStatistics);
+  vtkTypeMacro(vtkPCorrelativeStatistics, vtkCorrelativeStatistics);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -43,7 +43,8 @@ public:
 
   // Description:
   // Execute the parallel calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
+  virtual void Learn( vtkTable* inData,
+                             vtkTable* inParameters,
                              vtkDataObject* outMeta );
 
 protected:

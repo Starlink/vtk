@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: QVTKWin32Header.h,v $
+  Module:    QVTKWin32Header.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,15 +21,16 @@
 #define __QVTKWin32Header_h
 
 #include "vtkConfigure.h"
+#include "vtkABI.h"
 
-#if defined(WIN32) && defined(VTK_BUILD_SHARED_LIBS)
-#if defined(QVTK_EXPORTS) || defined(QVTKWidgetPlugin_EXPORTS)
-#define QVTK_EXPORT __declspec( dllexport )
+#if defined(VTK_BUILD_SHARED_LIBS)
+# if defined(QVTK_EXPORTS) || defined(QVTKWidgetPlugin_EXPORTS)
+#  define QVTK_EXPORT VTK_ABI_EXPORT
+# else
+#  define QVTK_EXPORT VTK_ABI_IMPORT
+# endif
 #else
-#define QVTK_EXPORT __declspec( dllimport ) 
-#endif
-#else
-#define QVTK_EXPORT
+# define QVTK_EXPORT
 #endif
 
 #endif /*__QVTKWin32Header_h*/

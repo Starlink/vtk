@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataObjectWriter.cxx,v $
+  Module:    vtkGenericDataObjectWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkUnstructuredGridWriter.h"
 
-vtkCxxRevisionMacro(vtkGenericDataObjectWriter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGenericDataObjectWriter);
 
 template<typename WriterT, typename DataT>

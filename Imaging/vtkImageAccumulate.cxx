@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageAccumulate.cxx,v $
+  Module:    vtkImageAccumulate.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageAccumulate, "$Revision: 1.73 $");
 vtkStandardNewMacro(vtkImageAccumulate);
 
 //----------------------------------------------------------------------------
@@ -219,7 +218,7 @@ void vtkImageAccumulateExecute(vtkImageAccumulate *self,
               {
               // Gather statistics
               sum[idxC] += *subPtr;
-              sumSqr[idxC] += (*subPtr * *subPtr);
+              sumSqr[idxC] += (static_cast<double>(*subPtr) * (*subPtr));
               if (*subPtr > max[idxC])
                 {
                 max[idxC] = *subPtr;

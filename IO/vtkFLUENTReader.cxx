@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFLUENTReader.cxx,v $
+  Module:    vtkFLUENTReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,7 +58,6 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
-vtkCxxRevisionMacro(vtkFLUENTReader, "$Revision: 1.23.4.1 $");
 vtkStandardNewMacro(vtkFLUENTReader);
 
 #define VTK_FILE_BYTE_ORDER_BIG_ENDIAN 0
@@ -327,7 +326,7 @@ int vtkFLUENTReader::RequestData(
                                      this->ConvexPointSet->GetPointIds());
       }
     }
-  this->Cells->value.clear();
+//  this->Cells->value.clear();
 
   //Scalar Data
   for (int l = 0; l < (int)this->ScalarDataChunks->value.size(); l++)
@@ -418,10 +417,10 @@ int vtkFLUENTReader::RequestInformation(
     return 0;
     }
 
-  if(!this->OpenDataFile(this->FileName))
+  int dat_file_opened = this->OpenDataFile(this->FileName);
+  if(!dat_file_opened)
     {
-    vtkErrorMacro("Unable to open dat file.");
-    return 0;
+    vtkWarningMacro("Unable to open dat file.");
     }
 
   this->LoadVariableNames();
@@ -431,7 +430,10 @@ int vtkFLUENTReader::RequestInformation(
   this->GetNumberOfCellZones();
   this->NumberOfScalars = 0;
   this->NumberOfVectors = 0;
-  this->ParseDataFile();
+  if(dat_file_opened)
+    {
+    this->ParseDataFile();
+    }
   for (int i = 0; i < (int)this->SubSectionIds->value.size(); i++)
     {
     if (this->SubSectionSize->value[i] == 1)
@@ -747,8 +749,8 @@ int vtkFLUENTReader::GetDataChunk ()
     //file pointer to the "))" entry.
     char end[120];
     strcpy(end, "End of Binary Section   ");
-    // strcat(end, index.c_str());
-    // strcat(end, ")");
+    //strcat(end, index.c_str());
+    //strcat(end, ")");
     size_t len = strlen(end);
 
     // Load the data buffer enough to start comparing to the end vtkstd::string.

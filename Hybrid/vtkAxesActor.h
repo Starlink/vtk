@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAxesActor.h,v $
+  Module:    vtkAxesActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,7 @@ class VTK_HYBRID_EXPORT vtkAxesActor : public vtkProp3D
 {
 public:
   static vtkAxesActor *New();
-  vtkTypeRevisionMacro(vtkAxesActor,vtkProp3D);
+  vtkTypeMacro(vtkAxesActor,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description: 

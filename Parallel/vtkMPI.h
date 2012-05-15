@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPI.h,v $
+  Module:    vtkMPI.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,6 +50,13 @@ public:
   MPI_Datatype DataType;
   MPI_Status Status;
   MPI_Comm* Handle;
+};
+
+class VTK_PARALLEL_EXPORT vtkMPIOpaqueFileHandle
+{
+public:
+  vtkMPIOpaqueFileHandle() : Handle(MPI_FILE_NULL) { }
+  MPI_File Handle;
 };
 
 //-----------------------------------------------------------------------------

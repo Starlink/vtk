@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHoverWidget.h,v $
+  Module:    vtkHoverWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -78,7 +78,7 @@ public:
 
   // Description:
   // Standard methods for a VTK class.
-  vtkTypeRevisionMacro(vtkHoverWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkHoverWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

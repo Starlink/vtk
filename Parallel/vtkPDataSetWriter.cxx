@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDataSetWriter.cxx,v $
+  Module:    vtkPDataSetWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkRectilinearGrid.h"
 #include "vtkErrorCode.h"
 
-vtkCxxRevisionMacro(vtkPDataSetWriter, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkPDataSetWriter);
 
 //----------------------------------------------------------------------------

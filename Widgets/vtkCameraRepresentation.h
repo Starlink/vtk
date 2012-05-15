@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCameraRepresentation.h,v $
+  Module:    vtkCameraRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ public:
 
   // Description:
   // Standard VTK class methods.
-  vtkTypeRevisionMacro(vtkCameraRepresentation,vtkBorderRepresentation);
+  vtkTypeMacro(vtkCameraRepresentation,vtkBorderRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

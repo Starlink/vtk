@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointsPainter.h,v $
+  Module:    vtkPointsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_RENDERING_EXPORT vtkPointsPainter : public vtkPrimitivePainter
 {
 public:
   static vtkPointsPainter* New();
-  vtkTypeRevisionMacro(vtkPointsPainter, vtkPrimitivePainter);
+  vtkTypeMacro(vtkPointsPainter, vtkPrimitivePainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

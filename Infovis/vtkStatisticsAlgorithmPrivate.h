@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkStatisticsAlgorithmPrivate.h,v $
+Module:    vtkStatisticsAlgorithmPrivate.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -33,7 +33,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkStdString.h"
 
-#include <vtkstd/set> // used to iterate over internal organs
+#include <vtksys/stl/set> // used to iterate over internal organs
 
 class vtkStatisticsAlgorithmPrivate
 {
@@ -44,15 +44,15 @@ public:
   ~vtkStatisticsAlgorithmPrivate()
     {
     }
-  void SetBufferColumnStatus( const char* colName, int status )
+  int SetBufferColumnStatus( const char* colName, int status )
     {
     if ( status )
       {
-      this->Buffer.insert( colName );
+      return this->Buffer.insert( colName ).second ? 1 : 0;
       }
     else
       {
-      this->Buffer.erase( colName );
+      return this->Buffer.erase( colName ) ? 1 : 0;
       }
     }
   int AddBufferToRequests()
@@ -68,10 +68,10 @@ public:
   int AddBufferEntriesToRequests()
     {
     int count = 0;
-    vtkstd::set<vtkStdString>::iterator it;
+    vtksys_stl::set<vtkStdString>::iterator it;
     for ( it = this->Buffer.begin(); it != this->Buffer.end(); ++ it )
       {
-      vtkstd::set<vtkStdString> tmp;
+      vtksys_stl::set<vtkStdString> tmp;
       tmp.insert( *it );
       if ( this->Requests.insert( tmp ).second )
         {
@@ -83,14 +83,14 @@ public:
   int AddBufferEntryPairsToRequests()
     {
     int count = 0;
-    vtkstd::pair<vtkstd::set<vtkstd::set<vtkStdString> >::iterator,bool> result;
-    vtkstd::set<vtkStdString>::iterator it;
+    vtksys_stl::pair<vtksys_stl::set<vtksys_stl::set<vtkStdString> >::iterator,bool> result;
+    vtksys_stl::set<vtkStdString>::iterator it;
     for ( it = this->Buffer.begin(); it != this->Buffer.end(); ++ it )
       {
-      vtkstd::set<vtkStdString>::iterator it2 = it;
+      vtksys_stl::set<vtkStdString>::iterator it2 = it;
       for ( ++ it2; it2 != this->Buffer.end(); ++ it2 )
         {
-        vtkstd::set<vtkStdString> tmp;
+        vtksys_stl::set<vtkStdString> tmp;
         tmp.insert( *it );
         tmp.insert( *it2 );
         if ( this->Requests.insert( tmp ).second )
@@ -101,17 +101,79 @@ public:
       }
     return count;
     }
+  /// This function doesn't use the buffer like other column selection methods.
+  int AddColumnPairToRequests( const char* cola, const char* colb )
+    {
+    if ( cola && colb && strlen( cola ) && strlen( colb ) )
+      {
+      vtksys_stl::set<vtkStdString> tmp;
+      tmp.insert( cola );
+      tmp.insert( colb );
+      if ( this->Requests.insert( tmp ).second )
+        {
+        return 1;
+        }
+      }
+    return 0;
+    }
   void ResetRequests()
     {
     this->Requests.clear();
     }
-  void ResetBuffer()
+  int ResetBuffer()
     {
+    int rval = this->Buffer.empty() ? 0 : 1;
     this->Buffer.clear();
+    return rval;
+    }
+  /// Return the number of currently-defined requests
+  vtkIdType GetNumberOfRequests()
+    {
+    return static_cast<vtkIdType>( this->Requests.size() );
+    }
+  /// Return the number of columns associated with request \a r.
+  vtkIdType GetNumberOfColumnsForRequest( vtkIdType r )
+    {
+    if ( r < 0 || r > static_cast<vtkIdType>( this->Requests.size() ) )
+      {
+      return 0;
+      }
+    vtksys_stl::set<vtksys_stl::set<vtkStdString> >::iterator it = this->Requests.begin();
+    for ( vtkIdType i = 0; i < r; ++ i )
+      {
+      ++ it;
+      }
+    return it->size();
+    }
+  /**\brief Provide the name of the \a c-th column of the \a r-th request in \a columnName.
+    * Returns false if the request or column does not exist and true otherwise.
+    */
+  bool GetColumnForRequest( vtkIdType r, vtkIdType c, vtkStdString& columnName )
+    {
+    if ( r < 0 || r > static_cast<vtkIdType>( this->Requests.size() ) || c < 0 )
+      {
+      return false;
+      }
+    vtksys_stl::set<vtksys_stl::set<vtkStdString> >::const_iterator it = this->Requests.begin();
+    for ( vtkIdType i = 0; i < r; ++ i )
+      {
+      ++ it;
+      }
+    if ( c > static_cast<vtkIdType>( it->size() ) )
+      {
+      return false;
+      }
+    vtksys_stl::set<vtkStdString>::const_iterator cit = it->begin();
+    for ( vtkIdType j = 0; j < c; ++ j )
+      {
+      ++ cit;
+      }
+    columnName = *cit;
+    return true;
     }
   
-  vtkstd::set<vtkstd::set<vtkStdString> > Requests;
-  vtkstd::set<vtkStdString> Buffer;
+  vtksys_stl::set<vtksys_stl::set<vtkStdString> > Requests;
+  vtksys_stl::set<vtkStdString> Buffer;
 };
 
 #endif // __vtkStatisticsAlgorithmPrivate_h

@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkMultiCorrelativeStatistics.h,v $
+Module:    vtkMultiCorrelativeStatistics.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -24,10 +24,10 @@ PURPOSE.  See the above copyright notice for more information.
 // following functionalities, depending on the execution mode it is executed in:
 // * Learn: calculates means, unbiased variance and covariance estimators of
 //   column pairs coefficient.
-//   More precisely, ExecuteLearn calculates the averages and centered
+//   More precisely, Learn calculates the averages and centered
 //   variance/covariance sums; if \p finalize is set to true (default),
 //   the final statistics are calculated.
-//   The output metadata on port 1 is a multiblock dataset containing at a minimum
+//   The output metadata on port OUTPUT_MODEL is a multiblock dataset containing at a minimum
 //   one vtkTable holding the raw sums in a sparse matrix style. If \a finalize is
 //   true, then one additional vtkTable will be present for each requested set of
 //   column correlations. These additional tables contain column averages, the
@@ -47,11 +47,11 @@ PURPOSE.  See the above copyright notice for more information.
 //      ColC    |avg(C)   |chol(2,1)|chol(2,2)|cov(C,C)
 //      Cholesky|length(A)|chol(3,1)|chol(3,2)|chol(3,3)
 //   </pre>
-// * Assess: given a set of results matrices as specified above in input port 1 and
-//   tabular data on input port 0 that contains column names matching those
-//   of the tables on input port 1, the assess mode computes the relative
-//   deviation of each observation in port 0's table according to the linear
-//   correlations implied by each table in port 1.
+// * Assess: given a set of results matrices as specified above in input port INPUT_MODEL and
+//   tabular data on input port INPUT_DATA that contains column names matching those
+//   of the tables on input port INPUT_MODEL, the assess mode computes the relative
+//   deviation of each observation in port INPUT_DATA's table according to the linear
+//   correlations implied by each table in port INPUT_MODEL.
 //  
 // .SECTION Thanks
 // Thanks to Philippe Pebay, Jackson Mayo, and David Thompson of
@@ -62,12 +62,19 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkStatisticsAlgorithm.h"
 
+class vtkVariant;
+
 class VTK_INFOVIS_EXPORT vtkMultiCorrelativeStatistics : public vtkStatisticsAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkMultiCorrelativeStatistics, vtkStatisticsAlgorithm);
+  vtkTypeMacro(vtkMultiCorrelativeStatistics, vtkStatisticsAlgorithm);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
   static vtkMultiCorrelativeStatistics* New();
+
+  // Description:
+  // Given a collection of models, calculate aggregate model
+  virtual void Aggregate( vtkDataObjectCollection*,
+                          vtkDataObject* );
 
 protected:
   vtkMultiCorrelativeStatistics();
@@ -75,24 +82,33 @@ protected:
 
   // Description:
   // This algorithm accepts and returns a multiblock dataset containing several tables for
-  // its Learn input/output (port 1) instead of a single vtkTable.
-  // We override FillInputPortInformation/FillOutputPortInformation to indicate this.
+  // its meta input/output (port INPUT_MODEL) instead of a single vtkTable.
+  // FillInputPortInformation/FillOutputPortInformation are overridden accordingly.
   virtual int FillInputPortInformation( int port, vtkInformation* info );
   virtual int FillOutputPortInformation( int port, vtkInformation* info );
 
-
-  // Description:
-  // Execute the calculations required by the Derive option.
-  virtual void ExecuteDerive( vtkDataObject* );
-
-  // Description:
-  // Execute the calculations required by the Derive option.
-  virtual void ExecuteAssess( vtkTable*, vtkDataObject*, vtkTable*, vtkDataObject* );
-
   // Description:
   // Execute the calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
-                             vtkDataObject* outMeta );
+  virtual void Learn( vtkTable* inData,
+                      vtkTable* inParameters,
+                      vtkDataObject* outMeta );
+
+  // Description:
+  // Execute the calculations required by the Derive option.
+  virtual void Derive( vtkDataObject* );
+
+  // Description:
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable*, 
+                       vtkDataObject*, 
+                       vtkTable* );
+
+  // Description:
+  // Execute the calculations required by the Test option.
+  virtual void Test( vtkTable*,
+                     vtkDataObject*,
+                     vtkDataObject* ) { return; };
+
   //BTX  
   // Description:
   // Provide the appropriate assessment functor.

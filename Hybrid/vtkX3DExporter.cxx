@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporter.cxx,v $
+  Module:    vtkX3DExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen, Kristian Sons
   All rights reserved.
@@ -76,7 +76,6 @@ static bool vtkX3DExporterWriterRenderPoints(
   vtkX3DExporterWriter* writer);
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkX3DExporter, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkX3DExporter);
 
 //----------------------------------------------------------------------------
@@ -324,7 +323,7 @@ void vtkX3DExporter::WriteALight(vtkLight *aLight,
 
   pos = aLight->GetPosition();
   focus = aLight->GetFocalPoint();
-  colord = aLight->GetColor();
+  colord = aLight->GetDiffuseColor();
 
   dir[0] = focus[0] - pos[0];
   dir[1] = focus[1] - pos[1];

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTextureUnitManager.h,v $
+  Module:    vtkTextureUnitManager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class vtkOpenGLRenderWindow;
 class VTK_RENDERING_EXPORT vtkTextureUnitManager : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkTextureUnitManager,vtkObject);
+  vtkTypeMacro(vtkTextureUnitManager,vtkObject);
 
   void PrintSelf(ostream& os, vtkIndent indent);
   

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeTextureMapper3D.cxx,v $
+  Module:    vtkVolumeTextureMapper3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkVolumeProperty.h"
 #include "vtkVolumeRenderingFactory.h"
 
-vtkCxxRevisionMacro(vtkVolumeTextureMapper3D, "$Revision: 1.13 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
@@ -665,22 +664,29 @@ vtkVolumeTextureMapper3D::vtkVolumeTextureMapper3D()
   this->VolumeSize                    = 0;
   this->VolumeComponents              = 0;
   this->VolumeSpacing[0] = this->VolumeSpacing[1] = this->VolumeSpacing[2] = 0;
+  this->VolumeDimensions[0]=0;
+  this->VolumeDimensions[1]=0;
+  this->VolumeDimensions[2]=0;
   
   this->SampleDistance                = 1.0;
   this->ActualSampleDistance          = 1.0;
   
   this->RenderMethod                  = vtkVolumeTextureMapper3D::NO_METHOD;
-  this->PreferredRenderMethod         = vtkVolumeTextureMapper3D::FRAGMENT_PROGRAM_METHOD;
+  this->PreferredRenderMethod         =
+    vtkVolumeTextureMapper3D::FRAGMENT_PROGRAM_METHOD;
+  
+  this->UseCompressedTexture          = false;
+  this->SupportsNonPowerOfTwoTextures = false;
 }
 
 //-----------------------------------------------------------------------------
 vtkVolumeTextureMapper3D::~vtkVolumeTextureMapper3D()
 {
-    delete [] this->PolygonBuffer;
-    delete [] this->IntersectionBuffer;
-    delete [] this->Volume1;
-    delete [] this->Volume2;
-    delete [] this->Volume3;
+  delete [] this->PolygonBuffer;
+  delete [] this->IntersectionBuffer;
+  delete [] this->Volume1;
+  delete [] this->Volume2;
+  delete [] this->Volume3;
 }
 
 
@@ -1030,18 +1036,30 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
   int dim[3];
   input->GetDimensions(dim);
 
+  int components = input->GetNumberOfScalarComponents();
+  
   int powerOfTwoDim[3];
- 
-  for ( int i = 0; i < 3; i++ )
+  
+  if(this->SupportsNonPowerOfTwoTextures)
     {
-    powerOfTwoDim[i] = 32;
-    while ( powerOfTwoDim[i] < dim[i] )
+     for ( int i = 0; i < 3; i++ )
+       {
+       powerOfTwoDim[i]=dim[i];
+       }
+    }
+  else
+    {
+    for ( int i = 0; i < 3; i++ )
       {
-      powerOfTwoDim[i] *= 2;
+      powerOfTwoDim[i] = 32;
+      while ( powerOfTwoDim[i] < dim[i] )
+        {
+        powerOfTwoDim[i] *= 2;
+        }
       }
     }
  
-  while ( ! this->IsTextureSizeSupported( powerOfTwoDim ) )
+  while ( ! this->IsTextureSizeSupported( powerOfTwoDim,components ) )
     {
     if ( powerOfTwoDim[0] >= powerOfTwoDim[1] &&
          powerOfTwoDim[0] >= powerOfTwoDim[2] )
@@ -1060,8 +1078,6 @@ int vtkVolumeTextureMapper3D::UpdateVolumes(vtkVolume *vtkNotUsed(vol))
     }
  
   int neededSize = powerOfTwoDim[0] * powerOfTwoDim[1] * powerOfTwoDim[2];
- 
-  int components = input->GetNumberOfScalarComponents();
  
   // What is the spacing?
   double spacing[3];
@@ -1476,6 +1492,9 @@ void vtkVolumeTextureMapper3D::PrintSelf(ostream& os, vtkIndent indent)
      << this->VolumeDimensions[1] << " " << this->VolumeDimensions[2] << endl;
   os << indent << "VolumeSpacing: " << this->VolumeSpacing[0] << " "
      << this->VolumeSpacing[1] << " " << this->VolumeSpacing[2] << endl;
+  
+  os << indent << "UseCompressedTexture: " << this->UseCompressedTexture
+     << endl;
 }
 
 

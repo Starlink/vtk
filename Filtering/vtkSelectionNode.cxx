@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSelectionNode.cxx,v $
+  Module:    vtkSelectionNode.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -23,9 +23,9 @@
 #include "vtkInformationDoubleKey.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkProp.h"
 #include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkSelectionNode, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSelectionNode);
 vtkCxxSetObjectMacro(vtkSelectionNode, SelectionData, vtkDataSetAttributes);
 
@@ -44,6 +44,7 @@ vtkInformationKeyMacro(vtkSelectionNode,CONTAINING_CELLS,Integer);
 vtkInformationKeyMacro(vtkSelectionNode,PIXEL_COUNT,Integer);
 vtkInformationKeyMacro(vtkSelectionNode,INVERSE,Integer);
 vtkInformationKeyMacro(vtkSelectionNode,INDEXED_VERTICES,Integer);
+vtkInformationKeyMacro(vtkSelectionNode,COMPONENT_NUMBER,Integer);
 
 //----------------------------------------------------------------------------
 vtkSelectionNode::vtkSelectionNode()
@@ -225,6 +226,22 @@ int vtkSelectionNode::GetFieldType()
     return this->GetProperties()->Get(vtkSelectionNode::FIELD_TYPE());
     }
   return -1;
+}
+
+//----------------------------------------------------------------------------
+void vtkSelectionNode::SetSelectedProp(vtkProp* prop)
+{
+  this->GetProperties()->Set(vtkSelectionNode::PROP(), prop);
+}
+
+//----------------------------------------------------------------------------
+vtkProp* vtkSelectionNode::GetSelectedProp()
+{
+  if (this->GetProperties()->Has(vtkSelectionNode::PROP()))
+    {
+    return vtkProp::SafeDownCast(this->GetProperties()->Get(vtkSelectionNode::PROP()));
+    }
+  return 0;
 }
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeSurfaceFilter.cxx,v $
+  Module:    vtkHyperOctreeSurfaceFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,8 +24,8 @@
 #include "vtkMergePoints.h"
 #include "vtkCellData.h"
 #include "vtkPointData.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeSurfaceFilter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkHyperOctreeSurfaceFilter);
 
 // merging: locator
@@ -71,7 +71,7 @@ int vtkHyperOctreeSurfaceFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkHyperOctree *input = vtkHyperOctree::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -694,7 +694,7 @@ void vtkHyperOctreeSurfaceFilter::GenerateFaces(double bounds[6],
 //-----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkHyperOctreeSurfaceFilter::SetLocator(vtkPointLocator *locator)
+void vtkHyperOctreeSurfaceFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if(this->Locator!=locator) 
     {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParallelRenderManager.h,v $
+  Module:    vtkParallelRenderManager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@ class vtkUnsignedCharArray;
 class VTK_PARALLEL_EXPORT vtkParallelRenderManager : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkParallelRenderManager, vtkObject);
+  vtkTypeMacro(vtkParallelRenderManager, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:
@@ -586,6 +586,9 @@ protected:
     double CameraClippingRange[2];
     double CameraViewAngle;
     double Background[3];
+    double Background2[3];
+    bool GradientBackground;
+    
     double ParallelScale;
 
     // Save/restore the struct to/from a stream.

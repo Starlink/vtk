@@ -2,7 +2,7 @@
 #include <vtkDenseArray.h>
 #include <vtkSparseArray.h>
 
-int main(int argc, char* argv[])
+int main(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   ////////////////////////////////////////////////////////
   // Creating N-Way Arrays
@@ -18,10 +18,10 @@ int main(int argc, char* argv[])
   // Creating a sparse 10 x 20 x 30 x 40 tensor:
   vtkArrayExtents extents;
   extents.SetDimensions(4);
-  extents[0] = 10;
-  extents[1] = 20;
-  extents[2] = 30;
-  extents[3] = 40;
+  extents[0] = vtkArrayRange(0, 10);
+  extents[1] = vtkArrayRange(0, 20);
+  extents[2] = vtkArrayRange(0, 30);
+  extents[3] = vtkArrayRange(0, 40);
   vtkSparseArray<vtkIdType>* tensor = vtkSparseArray<vtkIdType>::New();
   tensor->Resize(extents);
 
@@ -88,4 +88,3 @@ int main(int argc, char* argv[])
   
   return 0;
 }
-

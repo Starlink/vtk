@@ -1,7 +1,7 @@
 /*=========================================================================
   
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMagnify.h,v $
+  Module:    vtkImageMagnify.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImageMagnify : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageMagnify *New();
-  vtkTypeRevisionMacro(vtkImageMagnify,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageMagnify,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKdNode.h,v $
+  Module:    vtkKdNode.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class vtkPlanesIntersection;
 class VTK_FILTERING_EXPORT vtkKdNode : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkKdNode, vtkObject);
+  vtkTypeMacro(vtkKdNode, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkKdNode *New();

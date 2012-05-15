@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkModelMetadata.h,v $
+  Module:    vtkModelMetadata.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -88,7 +88,7 @@ class vtkModelMetadataSTLCloak;
 class VTK_GRAPHICS_EXPORT vtkModelMetadata : public vtkObject
 { 
 public:
-  vtkTypeRevisionMacro(vtkModelMetadata, vtkObject);
+  vtkTypeMacro(vtkModelMetadata, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
   static vtkModelMetadata *New();
 

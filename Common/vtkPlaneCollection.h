@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPlaneCollection.h,v $
+  Module:    vtkPlaneCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@
 class VTK_COMMON_EXPORT vtkPlaneCollection : public vtkCollection
 {
 public:
-  vtkTypeRevisionMacro(vtkPlaneCollection,vtkCollection);
+  vtkTypeMacro(vtkPlaneCollection,vtkCollection);
   static vtkPlaneCollection *New();
 
   // Description:
@@ -39,7 +39,12 @@ public:
   // Description:
   // Get the next plane in the list.
   vtkPlane *GetNextItem();
-  
+
+  // Description:
+  // Get the ith plane in the list.
+  vtkPlane *GetItem(int i) { 
+    return static_cast<vtkPlane *>(this->GetItemAsObject(i));}; 
+
   //BTX
   // Description: 
   // Reentrant safe way to get an object in a collection. Just pass the

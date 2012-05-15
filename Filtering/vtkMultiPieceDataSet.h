@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiPieceDataSet.h,v $
+  Module:    vtkMultiPieceDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_FILTERING_EXPORT vtkMultiPieceDataSet : public vtkCompositeDataSet
 {
 public:
   static vtkMultiPieceDataSet* New();
-  vtkTypeRevisionMacro(vtkMultiPieceDataSet, vtkCompositeDataSet);
+  vtkTypeMacro(vtkMultiPieceDataSet, vtkCompositeDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

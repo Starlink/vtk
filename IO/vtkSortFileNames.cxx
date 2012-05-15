@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSortFileNames.cxx,v $
+  Module:    vtkSortFileNames.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 
 #include <ctype.h>
 
-vtkCxxRevisionMacro(vtkSortFileNames, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkSortFileNames);
 
 // a container for holding string arrays

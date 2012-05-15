@@ -1,22 +1,3 @@
-
-INCLUDE_REGULAR_EXPRESSION("^(vtk|Q).*$")
-
-# we need Qt3 or Qt4
-# we ask up front so FindQt.cmake doesn't auto-find an undesired Qt version
-SET(DESIRED_QT_VERSION 0 CACHE STRING "Pick a version of Qt to use: 3 or 4")
-
-IF(DESIRED_QT_VERSION MATCHES 0)
-  MESSAGE("Please set the DESIRED_QT_VERSION")
-ELSE(DESIRED_QT_VERSION MATCHES 0)
-  
-SET ( QT_USE_QTSQL 1 )
-
-INCLUDE( ${CMAKE_ROOT}/Modules/FindQt${DESIRED_QT_VERSION}.cmake )
-
-IF(NOT QT_FOUND)
-  MESSAGE("Qt was not found")
-ELSE(NOT QT_FOUND)
-
 # set up sources to build
 SET ( QVTKLibSrcs
     vtkEventQtSlotConnect.cxx
@@ -25,129 +6,123 @@ SET ( QVTKLibSrcs
     )
 
 SET ( QVTKMocHeaders
-    ${CMAKE_CURRENT_BINARY_DIR}/QVTKWidget.h 
+    QVTKWidget.h 
     vtkQtConnection.h
+    )
+
+SET ( QVTKNonMocHeaders
+    ${CMAKE_CURRENT_SOURCE_DIR}/QVTKWin32Header.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkEventQtSlotConnect.h
     )
 
 INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_BINARY_DIR} )
 
-
-IF(DESIRED_QT_VERSION MATCHES 4)
-
-  SET(Q_SIGNALS Q_SIGNALS)
-  SET(Q_SLOTS Q_SLOTS)
-
-  # add files that require Qt 4
-  SET ( QVTKLibSrcs
-      ${QVTKLibSrcs}
-      vtkQtAbstractModelAdapter.cxx
-      vtkQtInitialization.cxx
-      vtkQtSQLDatabase.cxx
-      vtkQtSQLQuery.cxx
-      vtkQtTableModelAdapter.cxx
-      vtkQtTimePointUtility.cxx
-      vtkQtTreeModelAdapter.cxx 
-      )
+# add files that require Qt 4
+SET ( QVTKLibSrcs
+    ${QVTKLibSrcs}
+    QFilterTreeProxyModel.cxx
+    QVTKPaintEngine.cxx
+    QVTKPaintEngine.h
+    vtkQtAbstractModelAdapter.cxx
+    vtkQtAnnotationLayersModelAdapter.cxx
+    vtkQtSQLDatabase.cxx
+    vtkQtSQLQuery.cxx
+    vtkQtTableModelAdapter.cxx
+    vtkQtTimePointUtility.cxx
+    vtkQtTreeModelAdapter.cxx 
+    )
     
-  SET ( QVTKMocHeaders
-      ${QVTKMocHeaders}
-      vtkQtAbstractModelAdapter.h
-      vtkQtTableModelAdapter.h
-      vtkQtTreeModelAdapter.h
+SET ( QVTKMocHeaders
+    ${QVTKMocHeaders}
+    QFilterTreeProxyModel.h
+    vtkQtAbstractModelAdapter.h
+    vtkQtAnnotationLayersModelAdapter.h
+    vtkQtTableModelAdapter.h
+    vtkQtTreeModelAdapter.h
+    )
+
+# add additional files depending on infovis and/or views
+IF(VTK_USE_VIEWS)
+  SET( QVTKLibSrcs ${QVTKLibSrcs}
+    vtkQtAnnotationView.cxx
+    vtkQtBarChartView.cxx
+    vtkQtChartRepresentation.cxx
+    vtkQtChartView.cxx
+    vtkQtLineChartView.cxx
+    vtkQtListView.cxx
+    vtkQtRecordView.cxx
+    vtkQtStackedChartView.cxx
+    vtkQtStatisticalBoxChartView.cxx
+    vtkQtTableRepresentation.cxx
+    vtkQtTableView.cxx
+    vtkQtTreeView.cxx
+    vtkQtView.cxx
+    ) 
+  SET_SOURCE_FILES_PROPERTIES(vtkQtView.cxx ABSTRACT )
+  SET ( QVTKMocHeaders ${QVTKMocHeaders}
+    vtkQtAnnotationView.h
+    vtkQtBarChartView.h
+    vtkQtChartView.h
+    vtkQtLineChartView.h
+    vtkQtListView.h
+    vtkQtRecordView.h
+    vtkQtStackedChartView.h
+    vtkQtStatisticalBoxChartView.h
+    vtkQtTableView.h
+    vtkQtTreeView.h
+    vtkQtView.h
+    )
+  SET ( QVTKNonMocHeaders ${QVTKNonMocHeaders}
+    vtkQtChartRepresentation.h
+    vtkQtTableRepresentation.h
+    )
+
+  # Rich-text view requires Qt >= 4.5.0
+  # Rich-text depends on QT Webkit which is not portable on Unix (AIX & HP-UX)
+  IF(QT_QTWEBKIT_FOUND)
+    OPTION(VTK_QT_USE_WEBKIT "Option to use QT Webkit" ON)
+    MARK_AS_ADVANCED(VTK_QT_USE_WEBKIT)
+    IF( VTK_QT_USE_WEBKIT )
+      QT4_WRAP_UI(UI_FILES vtkQtRichTextView.ui)
+      SET(QVTKLibSrcs ${QVTKLibSrcs} ${UI_FILES} vtkQtRichTextView.cxx)
+      SET(QVTKMocHeaders ${QVTKMocHeaders} vtkQtRichTextView.h)
+      IF(QT_PHONON_FOUND AND APPLE)
+        SET(QT_USE_PHONON 1)
+      ENDIF(QT_PHONON_FOUND AND APPLE)
+      SET(QT_USE_QTWEBKIT 1)
+    ENDIF( VTK_QT_USE_WEBKIT )
+  ENDIF(QT_QTWEBKIT_FOUND)
+ENDIF(VTK_USE_VIEWS)
+  
+# help CMake find QtDesigner on Mac (binary install)
+FIND_PATH(QT_QTDESIGNER_INCLUDE_DIR QDesignerComponents
+          PATHS ${QT_LIBRARY_DIR}/QtDesigner.framework/Headers
+          NO_DEFAULT_PATH)
+
+# import Qt4 build settings
+SET (QT_USE_QTNETWORK 1)
+INCLUDE(${QT_USE_FILE})
+
+SET ( PluginLibSrcs
+      Q4VTKWidgetPlugin.cxx
       )
 
-  # add additional files depending on infovis and/or views
-  IF(VTK_USE_VIEWS)
-    SET( QVTKLibSrcs ${QVTKLibSrcs}
-      vtkQtChartRepresentation.cxx
-      vtkQtChartTableRepresentation.cxx
-      vtkQtChartView.cxx
-      vtkQtChartViewBase.cxx
-      vtkQtBarChartView.cxx
-      vtkQtLineChartView.cxx
-      vtkQtStackedChartView.cxx
-      vtkQtStatisticalBoxChartView.cxx
-      vtkQtItemView.cxx
-      vtkQtListView.cxx
-      vtkQtTableDataRepresentation.cxx
-      vtkQtTableMetadataRepresentation.cxx
-      vtkQtTableRepresentation.cxx
-      vtkQtTableView.cxx
-      vtkQtTreeView.cxx
-      vtkQtView.cxx
-      ) 
-    SET ( QVTKMocHeaders ${QVTKMocHeaders}
-      vtkQtItemView.h
-      vtkQtChartRepresentation.h
+SET ( PluginMocHeaders
+      Q4VTKWidgetPlugin.h
       )
-  ENDIF(VTK_USE_VIEWS)
-  
-  # help CMake fine QtDesigner on Mac (binary install)
-  FIND_PATH(QT_QTDESIGNER_INCLUDE_DIR QDesignerComponents
-            PATHS ${QT_LIBRARY_DIR}/QtDesigner.framework/Headers
-            NO_DEFAULT_PATH)
 
-  # import Qt4 build settings
-  INCLUDE(${QT_USE_FILE})
+# CMake apparently doesn't do this automatically
+SET_SOURCE_FILES_PROPERTIES(Q4VTKWidgetPlugin.cxx PROPERTIES 
+                            OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QVTKWidget.xpm)
 
-  SET ( PluginLibSrcs
-        Q4VTKWidgetPlugin.cxx
-        )
+# Reduce the number of dirs that get included on moc command line
+# since it causes issues on Windows 2000.
+GET_DIRECTORY_PROPERTY(include_dirs_tmp INCLUDE_DIRECTORIES)
+SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${MOC_INCLUDE_DIRS}")
 
-  SET ( PluginMocHeaders
-        Q4VTKWidgetPlugin.h
-        )
+QT4_WRAP_CPP ( QVTKLibMocSrcs ${QVTKMocHeaders} )
 
-  # CMake apparently doesn't do this automatically
-  SET_SOURCE_FILES_PROPERTIES(Q4VTKWidgetPlugin.cxx PROPERTIES 
-                              OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QVTKWidget.xpm)
-
-  # Reduce the number of dirs that get included on moc command line
-  # since it causes issues on Windows 2000.
-  GET_DIRECTORY_PROPERTY(include_dirs_tmp INCLUDE_DIRECTORIES)
-  SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${MOC_INCLUDE_DIRS}")
-
-  QT4_WRAP_CPP ( QVTKLibMocSrcs ${QVTKMocHeaders} )
-
-  SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${include_dirs_tmp}")
-
-  SET(QT_LIBS "${QT_LIBRARIES}")
-  
-ELSE(DESIRED_QT_VERSION MATCHES 4)
-  
-  SET(Q_SIGNALS signals)
-  SET(Q_SLOTS slots)
-
-  # Qt3 settings
-  INCLUDE_DIRECTORIES ( ${QT_INCLUDE_DIR} )
-  # assume Qt dll
-  ADD_DEFINITIONS(-DQT_DLL)
-  # check for a multithreaded Qt3 dll
-  IF(QT_QT_LIBRARY MATCHES "mt")
-    ADD_DEFINITIONS(-DQT_THREAD_SUPPORT)
-  ENDIF(QT_QT_LIBRARY MATCHES "mt")
-  
-  SET ( PluginLibSrcs
-        Q3VTKWidgetPlugin.cxx)
-
-  SET ( PluginMocHeaders
-        Q3VTKWidgetPlugin.h
-        )
-
-  # CMake apparently doesn't do this automatically
-  SET_SOURCE_FILES_PROPERTIES(Q3VTKWidgetPlugin.cxx PROPERTIES 
-                              OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QVTKWidget.xpm)
-
-
-  QT_WRAP_CPP ( QVTK QVTKLibMocSrcs ${QVTKMocHeaders} )
-  
-  SET(QT_LIBS ${QT_QT_LIBRARY})
-
-ENDIF(DESIRED_QT_VERSION MATCHES 4)
-
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/QVTKWidget.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/QVTKWidget.h
-               @ONLY)
+SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${include_dirs_tmp}")
 
 ADD_LIBRARY(QVTK ${QVTKLibSrcs} ${QVTKLibMocSrcs})
 
@@ -157,40 +132,40 @@ IF(VTK_LIBRARY_PROPERTIES)
 ENDIF(VTK_LIBRARY_PROPERTIES)
 
 TARGET_LINK_LIBRARIES( QVTK 
-  ${QT_LIBS}
+  ${QT_LIBRARIES}
   vtkRendering 
   vtkGraphics
   vtkImaging 
   vtkCommon)
 
 # add extra dependencies if necessary
-IF(DESIRED_QT_VERSION MATCHES 4)
-  TARGET_LINK_LIBRARIES( QVTK vtkQtChart )
-  IF(VTK_USE_VIEWS)
-    TARGET_LINK_LIBRARIES( QVTK vtkViews )
-  ENDIF(VTK_USE_VIEWS)
-ENDIF(DESIRED_QT_VERSION MATCHES 4)
+TARGET_LINK_LIBRARIES( QVTK vtkQtChart )
+IF(VTK_USE_VIEWS)
+  TARGET_LINK_LIBRARIES( QVTK vtkViews )
+ENDIF(VTK_USE_VIEWS)
+
+IF(APPLE)
+  IF(VTK_USE_CARBON)
+    TARGET_LINK_LIBRARIES( QVTK "-framework Carbon" )
+  ENDIF(VTK_USE_CARBON)
+ENDIF(APPLE)
 
 # build plugin
-SET(QT_PLUGIN_LIBS ${QT_LIBS})
+SET(QT_PLUGIN_LIBS ${QT_LIBRARIES})
 
 ADD_DEFINITIONS(-DQT_PLUGIN)
-IF(DESIRED_QT_VERSION MATCHES 4)
-  # A release build of the designer must have 
-  # a release build of this plugin to work properly
-  # if the QtGui exists, a release build of the designer is assumed
-  IF(QT_QTGUI_LIBRARY)
-   ADD_DEFINITIONS(-DQT_NO_DEBUG)
-   SET(QT_PLUGIN_LIBS
+# A release build of the designer must have 
+# a release build of this plugin to work properly
+# if the QtGui exists, a release build of the designer is assumed
+IF(QT_QTGUI_LIBRARY)
+  ADD_DEFINITIONS(-DQT_NO_DEBUG)
+  SET(QT_PLUGIN_LIBS
      ${QT_QTCORE_LIBRARY}
      ${QT_QTGUI_LIBRARY}
-     )
-  ENDIF(QT_QTGUI_LIBRARY)
-  INCLUDE_DIRECTORIES(${QT_QTDESIGNER_INCLUDE_DIR})
-  QT4_WRAP_CPP ( PluginMocSrcs ${PluginMocHeaders} )
-ELSE(DESIRED_QT_VERSION MATCHES 4)
-  QT_WRAP_CPP ( QVTKWidgetPlugin PluginMocSrcs ${PluginMocHeaders} )
-ENDIF(DESIRED_QT_VERSION MATCHES 4)
+  )
+ENDIF(QT_QTGUI_LIBRARY)
+INCLUDE_DIRECTORIES(${QT_QTDESIGNER_INCLUDE_DIR})
+QT4_WRAP_CPP ( PluginMocSrcs ${PluginMocHeaders} )
 
 # add QVTK plugin from sources 
 # stand-alone as it doesn't depend on QVTK library
@@ -251,9 +226,8 @@ ENDIF(NOT VTK_INSTALL_NO_QT_PLUGIN)
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   INSTALL(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/QVTKWidget.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/QVTKWin32Header.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/vtkEventQtSlotConnect.h"
+    ${QVTKMocHeaders}
+    ${QVTKNonMocHeaders}
     DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
     COMPONENT Development
     )
@@ -264,6 +238,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     COMPONENT Development
     )
 ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+
 IF(NOT VTK_INSTALL_NO_LIBRARIES)
   INSTALL(TARGETS QVTK
     RUNTIME DESTINATION ${VTK_INSTALL_BIN_DIR_CM24} COMPONENT RuntimeLibraries
@@ -275,19 +250,11 @@ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/CTestCustom.ctest.in"
   "${CMAKE_CURRENT_BINARY_DIR}/CTestCustom.ctest" @ONLY IMMEDIATE)
 
 
-# recurse into Chart directory if we have Qt4
-IF(DESIRED_QT_VERSION MATCHES 4)
-  SUBDIRS(Chart)
-ENDIF(DESIRED_QT_VERSION MATCHES 4)
+# recurse into Chart directory
+SUBDIRS(Chart)
 
 # recurse into testing directory if testing is on
-IF(DESIRED_QT_VERSION MATCHES 4)
-  IF(BUILD_TESTING)
-    SUBDIRS(Testing/Cxx)
-  ENDIF(BUILD_TESTING)
-ENDIF(DESIRED_QT_VERSION MATCHES 4)
-
-ENDIF(NOT QT_FOUND)
-
-ENDIF(DESIRED_QT_VERSION MATCHES 0)
+IF(BUILD_TESTING)
+  SUBDIRS(Testing/Cxx)
+ENDIF(BUILD_TESTING)
 

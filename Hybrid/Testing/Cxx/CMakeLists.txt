@@ -8,10 +8,22 @@ IF (VTK_DATA_ROOT)
   # add tests that require data
   SET(MyTests ${MyTests}
     TestBarChartActor.cxx
+    TestExodusImplicitArrays.cxx
+    #TestLabelPlacerExodus.cxx
     TestLegendScaleActor.cxx
     TestPieChartActor.cxx
     TestSpiderPlotActor.cxx
+    TestVRMLNormals.cxx
     )
+  # Temporarily disable LIC tests on non-windows platforms
+  IF (VTK_USE_GLSL_SHADERS AND WIN32)
+    SET(MyTests ${MyTests}
+      TestImageDataLIC2D.cxx
+      TestStructuredGridLIC2DXSlice.cxx
+      TestStructuredGridLIC2DYSlice.cxx
+      TestStructuredGridLIC2DZSlice.cxx
+      )
+  ENDIF (VTK_USE_GLSL_SHADERS AND WIN32)
 ENDIF (VTK_DATA_ROOT)
 
 # remove some tests if there is no display
@@ -22,14 +34,14 @@ IF(NOT VTK_USE_DISPLAY)
     TestPieChartActor.cxx
     TestSpiderPlotActor.cxx
     X3DTest.cxx     
-    )
+    ) 
 ENDIF(NOT VTK_USE_DISPLAY)
-
+ 
 CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
                        EXTRA_INCLUDE vtkTestDriver.h)
 
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
-TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkHybrid)
+TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkHybrid vtkRendering vtkImaging vtkIO )
 SET (TestsToRun ${Tests})
 REMOVE (TestsToRun ${KIT}CxxTests.cxx TestImageStencilData.cxx)
 

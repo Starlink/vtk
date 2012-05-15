@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLMaterialParser.cxx,v $
+  Module:    vtkXMLMaterialParser.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,6 @@ public:
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkXMLMaterialParser);
-vtkCxxRevisionMacro(vtkXMLMaterialParser, "$Revision: 1.5 $" );
 vtkCxxSetObjectMacro(vtkXMLMaterialParser, Material, vtkXMLMaterial);
 
 //-----------------------------------------------------------------------------

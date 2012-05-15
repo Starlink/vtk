@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnsignedLongLongArray.h,v $
+  Module:    vtkUnsignedLongLongArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_COMMON_EXPORT vtkUnsignedLongLongArray : public vtkDataArray
 {
 public:
   static vtkUnsignedLongLongArray* New();
-  vtkTypeRevisionMacro(vtkUnsignedLongLongArray,vtkDataArray);
+  vtkTypeMacro(vtkUnsignedLongLongArray,vtkDataArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

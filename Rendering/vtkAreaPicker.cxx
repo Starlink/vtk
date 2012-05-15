@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAreaPicker.cxx,v $
+  Module:    vtkAreaPicker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,6 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-
 
 #include "vtkAreaPicker.h"
 #include "vtkObjectFactory.h"
@@ -36,7 +35,6 @@
 #include "vtkPoints.h"
 #include "vtkExtractSelectedFrustum.h"
 
-vtkCxxRevisionMacro(vtkAreaPicker, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkAreaPicker);
 
 //--------------------------------------------------------------------------
@@ -115,8 +113,6 @@ int vtkAreaPicker::AreaPick(double x0, double y0, double x1, double y1,
   this->SelectionPoint[0] = (this->X0+this->X1)*0.5;
   this->SelectionPoint[1] = (this->Y0+this->Y1)*0.5;
   this->SelectionPoint[2] = 0.0;
-
-  this->InvokeEvent(vtkCommand::StartPickEvent,NULL);
 
   if ( this->Renderer == NULL )
     {
@@ -206,7 +202,6 @@ void vtkAreaPicker::DefineFrustum(double x0, double y0, double x1, double y1,
 int vtkAreaPicker::PickProps(vtkRenderer *renderer)
 {
   vtkProp *prop;
-  int picked=0;
   int pickable;
   double bounds[6];
   
@@ -260,7 +255,6 @@ int vtkAreaPicker::PickProps(vtkRenderer *renderer)
           //cerr << "mapper ABFISECT" << endl;
           if (this->ABoxFrustumIsect(bounds, dist))
             {
-            picked = 1;
             if ( ! this->Prop3Ds->IsItemPresent(prop) )
               {
               this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
@@ -287,8 +281,6 @@ int vtkAreaPicker::PickProps(vtkRenderer *renderer)
                   this->DataSet = NULL;
                   }              
                 }
-              static_cast<vtkProp3D *>(propCandidate)->Pick();
-              this->InvokeEvent(vtkCommand::PickEvent,NULL);
               }
             }
           }//mapper
@@ -299,10 +291,9 @@ int vtkAreaPicker::PickProps(vtkRenderer *renderer)
           //cerr << "imageA ABFISECT" << endl;
           if (this->ABoxFrustumIsect(bounds, dist))
             {
-            picked = 1;          
             if ( ! this->Prop3Ds->IsItemPresent(prop) )
               {
-              this->Prop3Ds->AddItem(imageActor);
+              this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
               //cerr << "picked an imageactor" << endl;
               if (dist < mindist) //new nearest, remember it
                 {
@@ -311,8 +302,6 @@ int vtkAreaPicker::PickProps(vtkRenderer *renderer)
                 this->Mapper = mapper; // mapper is null
                 this->DataSet = imageActor->GetInput();
                 }
-              imageActor->Pick();
-              this->InvokeEvent(vtkCommand::PickEvent,NULL);          
               }
             }
           }//imageActor
@@ -320,6 +309,16 @@ int vtkAreaPicker::PickProps(vtkRenderer *renderer)
 
       }//for all parts
     }//for all props
+
+  int picked = 0;
+
+  if (this->Path)
+    {
+    // Invoke pick method if one defined - prop goes first
+    this->Path->GetFirstNode()->GetViewProp()->Pick();
+    this->InvokeEvent(vtkCommand::PickEvent,NULL);
+    picked = 1;
+    }
 
   // Invoke end pick method if defined
   this->InvokeEvent(vtkCommand::EndPickEvent,NULL);

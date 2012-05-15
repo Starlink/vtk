@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellArray.h,v $
+  Module:    vtkCellArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@
 class VTK_FILTERING_EXPORT vtkCellArray : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkCellArray,vtkObject);
+  vtkTypeMacro(vtkCellArray,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -54,8 +54,7 @@ public:
 
   // Description:
   // Free any memory and reset to an empty state.
-  void Initialize() 
-    {this->Ia->Initialize();}
+  void Initialize(); 
 
   // Description:
   // Get the number of cells in the array.

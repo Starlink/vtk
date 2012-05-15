@@ -15,9 +15,13 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
   TestDirectory.cxx
   TestFastNumericConversion.cxx
   TestMath.cxx
+  TestMatrix3x3.cxx
+  TestMinimalStandardRandomSequence.cxx
   TestPolynomialSolversUnivariate.cxx
   TestSmartPointer.cxx
   TestSortDataArray.cxx
+  TestUnicodeStringAPI.cxx
+  TestUnicodeStringArrayAPI.cxx
   TestVariantComparison.cxx
   SystemInformation.cxx
   EXTRA_INCLUDE vtkTestDriver.h
@@ -63,8 +67,13 @@ ADD_TEST(TestInstantiator ${CXX_TEST_PATH}/TestInstantiator)
 # with cygwin:
 #
 IF(CYGWIN)
+  EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy 
+    ${CMAKE_CURRENT_SOURCE_DIR}/SystemInformation-cygcheck.sh
+    ${CMAKE_CURRENT_BINARY_DIR}/SystemInformation-cygcheck.sh)
+  EXECUTE_PROCESS(COMMAND dos2unix 
+    ${CMAKE_CURRENT_BINARY_DIR}/SystemInformation-cygcheck.sh)
   ADD_TEST(SystemInformation-cygcheck
-    "${CMAKE_CURRENT_SOURCE_DIR}/SystemInformation-cygcheck.sh")
+    "${CMAKE_CURRENT_BINARY_DIR}/SystemInformation-cygcheck.sh")
 ENDIF(CYGWIN)
 
 IF(VTK_USE_N_WAY_ARRAYS)
@@ -77,8 +86,11 @@ IF(VTK_USE_N_WAY_ARRAYS)
     ArrayBool.cxx
     ArrayInterpolationDense.cxx
     ArrayNullValues.cxx
-    ArraySlice.cxx
+    ArrayExtents.cxx
+    ArrayUserTypes.cxx
     ArrayVariants.cxx
+    SparseArrayValidation.cxx
+    EXTRA_INCLUDE vtkTestDriver.h
     )
 
   ADD_EXECUTABLE(ArrayCxxTests ${ArrayTests})
@@ -92,5 +104,14 @@ IF(VTK_USE_N_WAY_ARRAYS)
     ADD_TEST(Array-${TName} ${CXX_TEST_PATH}/ArrayCxxTests ${TName})
   ENDFOREACH(test)
 
+  IF(VTK_USE_BOOST)
+    ADD_EXECUTABLE(ArrayCasting ArrayCasting.cxx)
+    TARGET_LINK_LIBRARIES(ArrayCasting vtkCommon)
+    ADD_TEST(Array-ArrayCasting ${CXX_TEST_PATH}/ArrayCasting)
+  ENDIF()
+
 ENDIF(VTK_USE_N_WAY_ARRAYS)
 
+# TestConditionVariable will attempt to allocate a thread for each available core
+# and thus should not be run in parallel.
+set_tests_properties(TestConditionVariable PROPERTIES RUN_SERIAL ON)

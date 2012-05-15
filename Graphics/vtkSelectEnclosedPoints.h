@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSelectEnclosedPoints.h,v $
+  Module:    vtkSelectEnclosedPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_GRAPHICS_EXPORT vtkSelectEnclosedPoints : public vtkDataSetAlgorithm
 public:
   // Description
   // Standard methods for type information and printing.
-  vtkTypeRevisionMacro(vtkSelectEnclosedPoints,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkSelectEnclosedPoints,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

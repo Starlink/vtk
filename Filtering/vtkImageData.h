@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageData.h,v $
+  Module:    vtkImageData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_FILTERING_EXPORT vtkImageData : public vtkDataSet
 public:
   static vtkImageData *New();
 
-  vtkTypeRevisionMacro(vtkImageData,vtkDataSet);
+  vtkTypeMacro(vtkImageData,vtkDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -87,11 +87,15 @@ public:
   virtual void Initialize();
 
   // Description:
-  // Set dimensions of structured points dataset.
+  // Pass your way. This is for backward compatibility only.
+  // Use SetExtent() instead.
+  // Same as SetExtent(0, i-1, 0, j-1, 0, k-1)
   virtual void SetDimensions(int i, int j, int k);
 
   // Description:
-  // Set dimensions of structured points dataset.
+  // Pass your way. This is for backward compatibility only.
+  // Use SetExtent() instead.
+  // Same as SetExtent(0, dims[0]-1, 0, dims[1]-1, 0, dims[2]-1)
   virtual void SetDimensions(const int dims[3]);
 
   // Description:
@@ -135,12 +139,12 @@ public:
   // Description:
   // Given a location in structured coordinates (i-j-k), return the point id.
   virtual vtkIdType ComputePointId(int ijk[3]) {
-    return vtkStructuredData::ComputePointId(this->GetDimensions(),ijk);};
+    return vtkStructuredData::ComputePointIdForExtent(this->Extent,ijk);};
 
   // Description:
   // Given a location in structured coordinates (i-j-k), return the cell id.
   virtual vtkIdType ComputeCellId(int ijk[3]) {
-    return vtkStructuredData::ComputeCellId(this->GetDimensions(),ijk);};
+    return vtkStructuredData::ComputeCellIdForExtent(this->Extent,ijk);};
 
   // Description:
   // Set / Get the extent on just one axis

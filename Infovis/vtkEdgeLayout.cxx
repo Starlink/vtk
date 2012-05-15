@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEdgeLayout.cxx,v $
+  Module:    vtkEdgeLayout.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,6 @@
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkEdgeLayout, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkEdgeLayout);
 
 // ----------------------------------------------------------------------
@@ -74,7 +73,6 @@ void vtkEdgeLayout::SetLayoutStrategy(vtkEdgeLayoutStrategy *strategy)
     this->LayoutStrategy = strategy;
     if (this->LayoutStrategy != NULL)
       {
-      this->StrategyChanged = true;
       this->LayoutStrategy->Register(this);
       this->ObserverTag =
         this->LayoutStrategy->AddObserver(vtkCommand::ProgressEvent, 
@@ -167,8 +165,6 @@ int vtkEdgeLayout::RequestData(vtkInformation *vtkNotUsed(request),
 void vtkEdgeLayout::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
-  os << indent << "StrategyChanged: "
-    << (this->StrategyChanged ? "True" : "False") << endl;
   os << indent << "LayoutStrategy: "
     << (this->LayoutStrategy ? "" : "(none)") << endl;
   if (this->LayoutStrategy)

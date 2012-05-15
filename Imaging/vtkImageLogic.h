@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageLogic.h,v $
+  Module:    vtkImageLogic.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_IMAGING_EXPORT vtkImageLogic : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageLogic *New();
-  vtkTypeRevisionMacro(vtkImageLogic,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageLogic,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

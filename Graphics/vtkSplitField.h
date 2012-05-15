@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSplitField.h,v $
+  Module:    vtkSplitField.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -60,7 +60,7 @@ class vtkFieldData;
 class VTK_GRAPHICS_EXPORT vtkSplitField : public vtkDataSetAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkSplitField,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkSplitField,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

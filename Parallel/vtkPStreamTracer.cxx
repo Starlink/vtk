@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPStreamTracer.cxx,v $
+  Module:    vtkPStreamTracer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkInterpolatedVelocityField.h"
+#include "vtkAbstractInterpolatedVelocityField.h"
 #include "vtkMultiProcessController.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
@@ -29,12 +29,11 @@
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPStreamTracer, "$Revision: 1.22 $");
 
 vtkCxxSetObjectMacro(vtkPStreamTracer, Controller, vtkMultiProcessController);
 vtkCxxSetObjectMacro(vtkPStreamTracer, 
                      Interpolator,
-                     vtkInterpolatedVelocityField);
+                     vtkAbstractInterpolatedVelocityField);
 
 vtkPStreamTracer::vtkPStreamTracer()
 {
@@ -353,7 +352,7 @@ int vtkPStreamTracer::RequestData(
   vtkPolyData* output = vtkPolyData::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  vtkInterpolatedVelocityField* func;
+  vtkAbstractInterpolatedVelocityField* func;
   int maxCellSize = 0;
   if (this->CheckInputs(func, &maxCellSize) != VTK_OK)
     {

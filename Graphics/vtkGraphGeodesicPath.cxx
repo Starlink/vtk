@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphGeodesicPath.cxx,v $
+  Module:    vtkGraphGeodesicPath.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkExecutive.h"
 
-vtkCxxRevisionMacro(vtkGraphGeodesicPath, "$Revision: 1.3 $");
 
 //-----------------------------------------------------------------------------
 vtkGraphGeodesicPath::vtkGraphGeodesicPath()

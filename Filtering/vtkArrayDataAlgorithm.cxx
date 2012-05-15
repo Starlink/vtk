@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayDataAlgorithm.cxx,v $
+  Module:    vtkArrayDataAlgorithm.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -28,7 +28,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkArrayDataAlgorithm, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkArrayDataAlgorithm);
 
 //----------------------------------------------------------------------------

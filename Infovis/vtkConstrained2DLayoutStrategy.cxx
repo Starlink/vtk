@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConstrained2DLayoutStrategy.cxx,v $
+  Module:    vtkConstrained2DLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkConstrained2DLayoutStrategy, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkConstrained2DLayoutStrategy);
 
 // This is just a convenient macro for smart pointers
@@ -232,7 +231,7 @@ void vtkConstrained2DLayoutStrategy::Initialize()
   // Get the weight array
   vtkDataArray* weightArray = NULL;
   double weight, maxWeight = 1;
-  if (this->EdgeWeightField != NULL)
+  if (this->WeightEdges && this->EdgeWeightField != NULL)
     {
     weightArray = vtkDataArray::SafeDownCast(this->Graph->GetEdgeData()->GetAbstractArray(this->EdgeWeightField));
     if (weightArray != NULL)

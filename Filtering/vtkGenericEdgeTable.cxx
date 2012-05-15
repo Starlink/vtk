@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericEdgeTable.cxx,v $
+  Module:    vtkGenericEdgeTable.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include <vtkstd/vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkGenericEdgeTable, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkGenericEdgeTable);
 
 static int PRIME_NUMBERS[] = {1, 3, 7, 13, 31, 61, 127,  251,  509,  1021,

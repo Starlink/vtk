@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDirectedGraphAlgorithm.cxx,v $
+  Module:    vtkDirectedGraphAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkDirectedGraphAlgorithm, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkDirectedGraphAlgorithm);
 
 //----------------------------------------------------------------------------

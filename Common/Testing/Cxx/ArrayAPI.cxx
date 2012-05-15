@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayAPI.cxx,v $
+  Module:    ArrayAPI.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,13 +31,13 @@
 { \
   if(!(expression)) \
     { \
-    vtkstd::ostringstream buffer; \
+    vtksys_ios::ostringstream buffer; \
     buffer << "Expression failed at line " << __LINE__ << ": " << #expression; \
     throw vtkstd::runtime_error(buffer.str()); \
     } \
 }
 
-int ArrayAPI(int argc, char* argv[])
+int ArrayAPI(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -78,12 +78,16 @@ int ArrayAPI(int argc, char* argv[])
 
     for(vtkstd::vector<int>::const_iterator storage_type = storage_types.begin(); storage_type != storage_types.end(); ++storage_type)
       {
-      for(int value_type = 0; value_type != value_types.size(); ++value_type)
+      for(size_t value_type = 0; value_type != value_types.size(); ++value_type)
         {
         cerr << "creating array with storage type " << *storage_type << " and value type " << vtkImageScalarTypeNameMacro(value_types[value_type]) << endl;
 
         array.TakeReference(vtkArray::CreateArray(*storage_type, value_types[value_type]));
         test_expression(array);
+
+        test_expression(array->GetName() == "");
+        array->SetName("foo");
+        test_expression(array->GetName() == "foo");
 
         array->Resize(10);
         array->SetVariantValue(5, sample_values[value_type]);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointSource.h,v $
+  Module:    vtkPointSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_GRAPHICS_EXPORT vtkPointSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPointSource *New();
-  vtkTypeRevisionMacro(vtkPointSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkPointSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

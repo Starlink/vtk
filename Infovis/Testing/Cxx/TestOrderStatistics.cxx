@@ -10,7 +10,6 @@
 // Thanks to Philippe Pebay from Sandia National Laboratories 
 // for implementing this test.
 
-#include "vtkCharArray.h"
 #include "vtkDoubleArray.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
@@ -122,34 +121,36 @@ int TestOrderStatistics( int, char *[] )
   int nMetrics = 3;
   vtkStdString columns[] = { "Metric 1", "Metric 2", "Metric 0" };
 
-  vtkOrderStatistics* haruspex = vtkOrderStatistics::New();
-  haruspex->SetInput( 0, datasetTable );
-  vtkTable* outputData = haruspex->GetOutput( 0 );
-  vtkTable* outputMeta = haruspex->GetOutput( 1 );
+  vtkOrderStatistics* os = vtkOrderStatistics::New();
+  os->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, datasetTable );
+  vtkTable* outputData = os->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
+  vtkTable* outputMeta = os->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL );
 
   datasetTable->Delete();
 
-// -- Select Columns of Interest -- 
-  haruspex->AddColumn( "Metric 3" ); // Include invalid Metric 3
-  haruspex->AddColumn( "Metric 4" ); // Include invalid Metric 4
+  // Select Columns of Interest
+  os->AddColumn( "Metric 3" ); // Include invalid Metric 3
   for ( int i = 0; i< nMetrics; ++ i )
     {  // Try to add all valid indices once more
-    haruspex->AddColumn( columns[i] );
+    os->AddColumn( columns[i] );
     }
-  haruspex->RemoveColumn( "Metric 3" ); // Remove invalid Metric 3 (but retain 4)
 
-  haruspex->SetLearn( true );
-  haruspex->SetAssess( false );
-  haruspex->Update();
+  // Test Learn only (Derive does not do anything for order statistics)
+  os->SetLearnOption( true );
+  os->SetAssessOption( false );
+  os->Update();
 
-  double valsTest1 [] = { 0.,
-    46., 47., 49., 51.5, 54.,
-    45., 47., 49., 52., 54.,
-    -1., -1., -1., -1., -1.,
-  };
-  cout << "## Calculated the following 5-points statistics with InverseCDFAveragedSteps quantile definition ( "
-       << haruspex->GetSampleSize()
-       << " entries per column ):\n";
+  // Offset between baseline values for each variable
+  int valsOffset = 6;
+
+  double valsTest1 [] = 
+    { 0.,
+      32., 46., 47., 49., 51.5, 54.,
+      32., 45., 47., 49., 52., 54.,
+      32., -1., -1., -1., -1., -1.,
+    };
+
+  cout << "## Calculated the following 5-points statistics with InverseCDFAveragedSteps quantile definition):\n";
   for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
     {
     cout << "   ";
@@ -160,30 +161,28 @@ int TestOrderStatistics( int, char *[] )
            << outputMeta->GetValue( r, i ).ToString()
            << "  ";
 
-      if ( i && outputMeta->GetValue( r, i ).ToDouble() != valsTest1[r * 5 + i] )
+      if ( i && outputMeta->GetValue( r, i ).ToDouble() != valsTest1[r * valsOffset + i] )
         {
         testStatus = 1;
-        vtkGenericWarningMacro("Incorrect 5-points statistics: " << valsTest1[r * 5 + i] << ".");
+        vtkGenericWarningMacro("Incorrect 5-points statistics: " << valsTest1[r * valsOffset + i] << ".");
         }
       }
     cout << "\n";
     }
 
-// -- Test Learn and Assess options for quartiles with InverseCDF quantile definition -- 
-  haruspex->SetQuantileDefinition( vtkOrderStatistics::InverseCDF );
-  haruspex->RemoveColumn( "Metric 2" ); // Remove invalid Metric 2 (but which contains only value -1)
-  haruspex->RemoveColumn( "Metric 4" ); // Remove invalid Metric 4
-  haruspex->SetAssess( true );
-  haruspex->Update();
+  // Test Learn and Assess options for quartiles with InverseCDF quantile definition
+  os->SetQuantileDefinition( vtkOrderStatistics::InverseCDF );
+  os->SetAssessOption( true );
+  os->Update();
 
-  double valsTest2 [] = { 0.,
-    46., 47., 49., 51., 54.,
-    45., 47., 49., 52., 54.,
-    -1., -1., -1., -1., -1.,
-  };
-  cout << "## Calculated the following 5-points statistics with InverseCDF quantile definition ( "
-       << haruspex->GetSampleSize()
-       << " entries per column ):\n";
+  double valsTest2 [] = 
+    { 0.,
+      32., 46., 47., 49., 51., 54.,
+      32., 45., 47., 49., 52., 54.,
+      32., -1., -1., -1., -1., -1.,
+    };
+
+  cout << "## Calculated the following 5-points statistics with InverseCDF quantile definition:\n";
   for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
     {
     cout << "   ";
@@ -194,10 +193,10 @@ int TestOrderStatistics( int, char *[] )
            << outputMeta->GetValue( r, i ).ToString()
            << "  ";
 
-      if ( i && outputMeta->GetValue( r, i ).ToDouble() != valsTest2[r * 5 + i] )
+      if ( i && outputMeta->GetValue( r, i ).ToDouble() != valsTest2[r * valsOffset + i] )
         {
         testStatus = 1;
-        vtkGenericWarningMacro("Incorrect 5-points statistics: " << valsTest2[r * 5 + i] << ".");
+        vtkGenericWarningMacro("Incorrect 5-points statistics: " << valsTest2[r * valsOffset + i] << ".");
         }
       }
     cout << "\n";
@@ -236,16 +235,13 @@ int TestOrderStatistics( int, char *[] )
       }
     }
 
-// -- Test Learn option for deciles with InverseCDF quantile definition (as with Octave) -- 
-  haruspex->SetQuantileDefinition( 0 ); // 0: vtkOrderStatistics::InverseCDF
-  haruspex->SetNumberOfIntervals( 10 );
-  haruspex->RemoveColumn( "Metric 4" ); // Remove invalid Metric 4
-  haruspex->SetAssess( false );
-  haruspex->Update();
+  // Test Learn option for deciles with InverseCDF quantile definition (as with Octave)
+  os->SetQuantileDefinition( 0 ); // 0: vtkOrderStatistics::InverseCDF
+  os->SetNumberOfIntervals( 10 );
+  os->SetAssessOption( false );
+  os->Update();
 
-  cout << "## Calculated the following deciles with InverseCDF quantile definition ( "
-       << haruspex->GetSampleSize()
-       << " entries per column ):\n";
+  cout << "## Calculated the following deciles with InverseCDF quantile definition:\n";
   for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
     {
     cout << "   ";
@@ -259,11 +255,53 @@ int TestOrderStatistics( int, char *[] )
     cout << "\n";
     }
 
-// -- Test Learn option for quartiles with non-numeric ordinal data --
-  char text[] = "An ordinal scale defines a total preorder of objects; the scale values themselves have a total order; names may be used like bad, medium, good; if numbers are used they are only relevant up to strictly monotonically increasing transformations (order isomorphism).";
-  int textLength = 263;
+  // Test Learn option for quartiles with non-numeric ordinal data
+  vtkStdString text[] = { 
+    "an", 
+    "ordinal", 
+    "scale", 
+    "defines", 
+    "a", 
+    "total", 
+    "preorder", 
+    "of", 
+    "objects", 
+    "the", 
+    "scale", 
+    "values", 
+    "themselves", 
+    "have", 
+    "a", 
+    "total", 
+    "order", 
+    "names", 
+    "may", 
+    "be", 
+    "used", 
+    "like", 
+    "bad", 
+    "medium", 
+    "good", 
+    "if", 
+    "numbers", 
+    "are", 
+    "used", 
+    "they", 
+    "are", 
+    "only", 
+    "relevant", 
+    "up", 
+    "to", 
+    "strictly", 
+    "monotonically", 
+    "increasing", 
+    "transformations", 
+    "order", 
+    "isomorphism"
+  };
+  int textLength = 41;
     
-  vtkCharArray* textArr = vtkCharArray::New();
+  vtkStringArray* textArr = vtkStringArray::New();
   textArr->SetNumberOfComponents( 1 );
   textArr->SetName( "Text" );
 
@@ -276,18 +314,19 @@ int TestOrderStatistics( int, char *[] )
   textTable->AddColumn( textArr );
   textArr->Delete();
 
-  haruspex->SetInput( 0, textTable );
+  os->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, textTable );
   textTable->Delete();
-  haruspex->SetQuantileDefinition( 1 ); // InverseCDFAverageSteps to make sure it is not trying to average non-numeric values
-  haruspex->SetNumberOfIntervals( 4 );
-  haruspex->ResetColumns(); // Clear list of columns of interest
-  haruspex->AddColumn( "Text" ); // Add column of interest
-  haruspex->SetAssess( true );
-  haruspex->Update();
+  os->ResetAllColumnStates(); // Clear list of columns of interest
+  os->AddColumn( "Text" ); // Add column of interest
 
-  cout << "## Calculated the following 5-points statistics with non-numerical ordinal data (letters) ( "
-       << haruspex->GetSampleSize()
-       << " entries ):\n";
+  // Test Learn and Assess with 4 intervals (use SetParameter method for Learn parameters)
+  os->SetParameter( "QuantileDefinition", 0, 0 ); // Does not matter and should be ignored by the engine as the column contains strings
+  os->SetParameter( "NumberOfIntervals", 0, 4 );
+  os->SetLearnOption( true );
+  os->SetAssessOption( true );
+  os->Update();
+
+  cout << "## Calculated the following 5-points statistics with non-numerical ordinal data (letters):\n";
   for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
     {
     cout << "   ";
@@ -329,7 +368,7 @@ int TestOrderStatistics( int, char *[] )
     testStatus = 1;
     }
 
-  haruspex->Delete();
+  os->Delete();
 
   return testStatus;
 }

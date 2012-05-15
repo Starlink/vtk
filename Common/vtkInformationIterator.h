@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationIterator.h,v $
+  Module:    vtkInformationIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,12 +28,13 @@
 
 class vtkInformation;
 class vtkInformationKey;
+class vtkInformationIteratorInternals;
 
 class VTK_COMMON_EXPORT vtkInformationIterator : public vtkObject
 {
 public:
   static vtkInformationIterator *New();
-  vtkTypeRevisionMacro(vtkInformationIterator,vtkObject);
+  vtkTypeMacro(vtkInformationIterator,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -68,7 +69,7 @@ protected:
   ~vtkInformationIterator();
 
   vtkInformation* Information;
-  unsigned short Index;
+  vtkInformationIteratorInternals* Internal;
 
 private:
   vtkInformationIterator(const vtkInformationIterator&);  // Not implemented.

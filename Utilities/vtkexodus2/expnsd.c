@@ -46,7 +46,7 @@
 *
 * revision history - 
 *
-*  $Id: expnsd.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -66,5 +66,5 @@ int ex_put_node_set_dist_fact  (int   exoid,
                                 const void *node_set_dist_fact)
 {
   return ex_put_set_dist_fact(exoid, EX_NODE_SET, node_set_id,
-			      node_set_dist_fact);
+                              node_set_dist_fact);
 }

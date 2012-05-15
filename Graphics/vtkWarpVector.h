@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWarpVector.h,v $
+  Module:    vtkWarpVector.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_GRAPHICS_EXPORT vtkWarpVector : public vtkPointSetAlgorithm
 {
 public:
   static vtkWarpVector *New();
-  vtkTypeRevisionMacro(vtkWarpVector,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkWarpVector,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

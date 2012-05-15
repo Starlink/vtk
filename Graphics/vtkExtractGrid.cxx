@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractGrid.cxx,v $
+  Module:    vtkExtractGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkExtractGrid, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkExtractGrid);
 
 // Construct object to extract all of the input data.
@@ -240,7 +239,7 @@ int vtkExtractGrid::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkStructuredGrid *input = vtkStructuredGrid::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkStructuredGrid *output = vtkStructuredGrid::SafeDownCast(

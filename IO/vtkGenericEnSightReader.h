@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericEnSightReader.h,v $
+  Module:    vtkGenericEnSightReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_IO_EXPORT vtkGenericEnSightReader : public vtkMultiBlockDataSetAlgorit
 {
 public:
   static vtkGenericEnSightReader *New();
-  vtkTypeRevisionMacro(vtkGenericEnSightReader, vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkGenericEnSightReader, vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -108,9 +108,10 @@ public:
 
   // Description:
   // Reads the FORMAT part of the case file to determine whether this is an
-  // EnSight6 or EnSightGold data set.  Returns 0 if the format is EnSight6,
-  // 1 if it is EnSightGold, and -1 otherwise (meaning an error occurred).
-  int DetermineEnSightVersion();
+  // EnSight6 or EnSightGold data set.  Returns an identifier listed in
+  // the FileTypes enum or -1 if an error occurred or the file could not
+  // be indentified as any EnSight type.
+  int DetermineEnSightVersion(int quiet=0);
 
   // Description:
   // Set/get the flag for whether to read all the variables
@@ -193,6 +194,11 @@ public:
   vtkSetMacro(ParticleCoordinatesByIndex, int);
   vtkGetMacro(ParticleCoordinatesByIndex, int);
   vtkBooleanMacro(ParticleCoordinatesByIndex, int);
+
+  // Description:
+  // Returns true if the file pointed to by casefilename appears to be a
+  // valid EnSight case file.
+  static int CanReadFile(const char *casefilename);
 
 protected:
   vtkGenericEnSightReader();

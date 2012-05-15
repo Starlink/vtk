@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterFIWriter.h,v $
+  Module:    vtkX3DExporterFIWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+// .NAME vtkX3DExporterFIWriter - 
+// .SECTION Description
+
 #ifndef __vtkX3DExporterFIWriter_h
 #define __vtkX3DExporterFIWriter_h
 
@@ -25,7 +28,7 @@ class VTK_HYBRID_EXPORT vtkX3DExporterFIWriter : public vtkX3DExporterWriter
 {
 public:
   static vtkX3DExporterFIWriter *New();
-  vtkTypeRevisionMacro(vtkX3DExporterFIWriter, vtkX3DExporterWriter);
+  vtkTypeMacro(vtkX3DExporterFIWriter, vtkX3DExporterWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual void CloseFile();

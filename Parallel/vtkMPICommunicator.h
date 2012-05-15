@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPICommunicator.h,v $
+  Module:    vtkMPICommunicator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkCommunicator.h"
 
 class vtkMPIController;
-class vtkMPIGroup;
 class vtkProcessGroup;
 
 class vtkMPICommunicatorOpaqueComm;
@@ -63,7 +62,7 @@ public:
 
 //ETX
 
-  vtkTypeRevisionMacro( vtkMPICommunicator,vtkCommunicator);
+  vtkTypeMacro( vtkMPICommunicator,vtkCommunicator);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -82,8 +81,9 @@ public:
   int Initialize(vtkProcessGroup *group);
 
   // Description:
-  // DO NOT CALL.  Deprecated in VTK 5.2.
-  VTK_LEGACY(int Initialize(vtkMPICommunicator* mpiComm, vtkMPIGroup* group));
+  // Used to initialize the communicator (i.e. create the underlying MPI_Comm)
+  // using MPI_Comm_split on the given communicator.
+  int SplitInitialize(vtkCommunicator *oldcomm, int color, int key);
 
   // Description:
   // Performs the actual communication.  You will usually use the convenience
@@ -161,28 +161,6 @@ public:
   virtual int AllReduceVoidArray(const void *sendBuffer, void *recvBuffer,
                                  vtkIdType length, int type,
                                  Operation *operation);
-
-  // Description:
-  // DO NOT CALL.  Deprecated in VTK 5.2.  Use Reduce instead.
-  VTK_LEGACY(int ReduceMax(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceMax(double* data, double* to, int size, int root));
-
-  VTK_LEGACY(int ReduceMin(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceMin(double* data, double* to, int size, int root));
-
-  VTK_LEGACY(int ReduceSum(int* data, int* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(unsigned long* data, unsigned long* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(float* data, float* to, int size, int root));
-  VTK_LEGACY(int ReduceSum(double* data, double* to, int size, int root));
-
-//BTX
-  VTK_LEGACY(int ReduceAnd(bool* data, bool* to, int size, int root));
-  VTK_LEGACY(int ReduceOr(bool* data, bool* to, int size, int root));
-//ETX
 
 //BTX
 

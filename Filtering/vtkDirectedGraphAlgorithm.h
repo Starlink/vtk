@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDirectedGraphAlgorithm.h,v $
+  Module:    vtkDirectedGraphAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_FILTERING_EXPORT vtkDirectedGraphAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkDirectedGraphAlgorithm *New();
-  vtkTypeRevisionMacro(vtkDirectedGraphAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkDirectedGraphAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

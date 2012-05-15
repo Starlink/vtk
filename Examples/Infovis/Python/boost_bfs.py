@@ -1,6 +1,8 @@
 from vtk import *
 
 source = vtkRandomGraphSource()
+source.SetNumberOfVertices(15)
+source.SetStartWithTree(True)
 source.SetIncludeEdgeWeights(True)
 
 bfs = vtkBoostBreadthFirstSearch()
@@ -13,23 +15,21 @@ view.SetVertexLabelArrayName("BFS")
 view.SetVertexLabelVisibility(True)
 view.SetVertexColorArrayName("BFS")
 view.SetColorVertices(True)
-view.SetEdgeLabelArrayName("edge weight")
-view.SetEdgeLabelVisibility(True)
 view.SetEdgeColorArrayName("edge weight")
 view.SetColorEdges(True)
 view.SetLayoutStrategyToSimple2D()
+view.SetVertexLabelFontSize(20)
 
-theme = vtkViewTheme.CreateMellowTheme()
+theme = vtkViewTheme.CreateNeonTheme()
 theme.SetLineWidth(5)
 theme.SetPointSize(10)
 view.ApplyViewTheme(theme)
-view.SetVertexLabelFontSize(20)
-view.SetEdgeLabelFontSize(12)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
 
-window.GetInteractor().Start()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
+
+view.GetInteractor().Start()
 

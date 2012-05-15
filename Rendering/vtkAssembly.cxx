@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssembly.cxx,v $
+  Module:    vtkAssembly.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkVolume.h"
 
-vtkCxxRevisionMacro(vtkAssembly, "$Revision: 1.60 $");
 vtkStandardNewMacro(vtkAssembly);
 
 // Construct object with no children.

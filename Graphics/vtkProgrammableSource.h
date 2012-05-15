@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableSource.h,v $
+  Module:    vtkProgrammableSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_GRAPHICS_EXPORT vtkProgrammableSource : public vtkDataSetAlgorithm
 {
 public:
   static vtkProgrammableSource *New();
-  vtkTypeRevisionMacro(vtkProgrammableSource,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkProgrammableSource,vtkDataSetAlgorithm);
 
   // Description:
   // Specify the function to use to generate the source data. Note

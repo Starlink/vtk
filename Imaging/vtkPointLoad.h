@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointLoad.h,v $
+  Module:    vtkPointLoad.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@
 class VTK_IMAGING_EXPORT vtkPointLoad :  public vtkImageAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkPointLoad,vtkImageAlgorithm);
+  vtkTypeMacro(vtkPointLoad,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

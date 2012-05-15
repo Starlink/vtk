@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFFMPEGWriter.cxx,v $
+  Module:    vtkFFMPEGWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,9 +18,22 @@
 #include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 #include "vtkErrorCode.h"
+#include "vtkFFMPEGConfig.h"
 
 extern "C" {
-#include <ffmpeg/avformat.h>
+#ifdef VTK_FFMPEG_HAS_OLD_HEADER
+# include <ffmpeg/avformat.h>
+#else
+# include <libavformat/avformat.h>
+#endif
+
+#ifndef VTK_FFMPEG_HAS_IMG_CONVERT
+# ifdef VTK_FFMPEG_HAS_OLD_HEADER
+#  include <ffmpeg/swscale.h>
+# else
+#  include <libswscale/swscale.h>
+# endif
+#endif
 }
 
 //---------------------------------------------------------------------------
@@ -98,7 +111,11 @@ int vtkFFMPEGWriterInternal::Start()
   av_register_all();
 
   //create the format context that wraps all of the media output structures
+#ifdef VTK_FFMPEG_NEW_ALLOC
+  this->avFormatContext = avformat_alloc_context();
+#else
   this->avFormatContext = av_alloc_format_context();
+#endif
   if (!this->avFormatContext) 
     {
     vtkGenericWarningMacro (<< "Coult not open the format context.");
@@ -114,7 +131,7 @@ int vtkFFMPEGWriterInternal::Start()
     }
 
   //chosen a codec that is easily playable on windows
-  this->avOutputFormat->video_codec = CODEC_ID_MSMPEG4V3;
+  this->avOutputFormat->video_codec = CODEC_ID_MJPEG;
 
   //assign the format to the context
   this->avFormatContext->oformat = this->avOutputFormat;
@@ -136,9 +153,9 @@ int vtkFFMPEGWriterInternal::Start()
   c->codec_type = CODEC_TYPE_VIDEO;
   c->width = this->Dim[0];
   c->height = this->Dim[1];
-  c->pix_fmt = PIX_FMT_YUV420P;
+  c->pix_fmt = PIX_FMT_YUVJ420P;
   //change DIV3 to MP43 fourCC to be easily playable on windows
-  c->codec_tag = ('3'<<24) + ('4'<<16) + ('P'<<8) + 'M';
+  //c->codec_tag = ('3'<<24) + ('4'<<16) + ('P'<<8) + 'M';
   //to do playback at actual recorded rate, this will need more work see also below
   c->time_base.den = this->FrameRate; 
   c->time_base.num = 1;
@@ -158,6 +175,8 @@ int vtkFFMPEGWriterInternal::Start()
       c->bit_rate = 12*1024*1024;
       break;
     }
+
+  c->bit_rate_tolerance = c->bit_rate/this->FrameRate;
 
   //apply the chosen parameters
   if (av_set_parameters(this->avFormatContext, NULL) < 0) 
@@ -256,10 +275,39 @@ int vtkFFMPEGWriterInternal::Write(vtkImageData *id)
     }
 
   //convert that to YUV for input to the codec
+#ifdef VTK_FFMPEG_HAS_IMG_CONVERT
   img_convert((AVPicture *)this->yuvOutput, cc->pix_fmt, 
               (AVPicture *)this->rgbInput, PIX_FMT_RGB24,
               cc->width, cc->height);
-  
+#else
+  //convert that to YUV for input to the codec
+  SwsContext* convert_ctx = sws_getContext(
+    cc->width, cc->height, PIX_FMT_RGB24,
+    cc->width, cc->height, cc->pix_fmt,
+    SWS_BICUBIC, NULL, NULL, NULL);
+
+  if(convert_ctx == NULL)
+    {
+    vtkGenericWarningMacro(<< "swscale context initialization failed");
+    return 0;
+    }
+
+  int result = sws_scale(convert_ctx,
+    this->rgbInput->data, this->rgbInput->linesize,
+    0, cc->height,
+    this->yuvOutput->data, this->yuvOutput->linesize
+    );
+
+  sws_freeContext(convert_ctx);
+
+  if(!result)
+    {
+    vtkGenericWarningMacro(<< "sws_scale() failed");
+    return 0;
+    }
+#endif
+
+
   //run the encoder
   int toAdd = avcodec_encode_video(cc, 
                                    this->codecBuf, 
@@ -332,7 +380,11 @@ void vtkFFMPEGWriterInternal::End()
     if (this->openedFile)
       {
       av_write_trailer(this->avFormatContext);
+#ifdef VTK_FFMPEG_OLD_URL_FCLOSE
       url_fclose(&this->avFormatContext->pb);
+#else
+      url_fclose(this->avFormatContext->pb);
+#endif
       this->openedFile = 0;
       }
     
@@ -354,7 +406,6 @@ void vtkFFMPEGWriterInternal::End()
 
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkFFMPEGWriter);
-vtkCxxRevisionMacro(vtkFFMPEGWriter, "$Revision: 1.5 $");
 
 //---------------------------------------------------------------------------
 vtkFFMPEGWriter::vtkFFMPEGWriter()

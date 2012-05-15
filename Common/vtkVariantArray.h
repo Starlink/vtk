@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantArray.h,v $
+  Module:    vtkVariantArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@ class VTK_COMMON_EXPORT vtkVariantArray : public vtkAbstractArray
 
 public:
   static vtkVariantArray* New();
-  vtkTypeRevisionMacro(vtkVariantArray,vtkAbstractArray);
+  vtkTypeMacro(vtkVariantArray,vtkAbstractArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // 

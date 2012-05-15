@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationObjectBaseVectorKey.h,v $
+  Module:    vtkInformationObjectBaseVectorKey.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class vtkInformationObjectBaseVectorValue;
 class VTK_COMMON_EXPORT vtkInformationObjectBaseVectorKey : public vtkInformationKey
 {
 public:
-  vtkTypeRevisionMacro(vtkInformationObjectBaseVectorKey,vtkInformationKey);
+  vtkTypeMacro(vtkInformationObjectBaseVectorKey,vtkInformationKey);
   void PrintSelf(ostream& os, vtkIndent indent);
   // Description:
   // The name of the static instance and the class in which

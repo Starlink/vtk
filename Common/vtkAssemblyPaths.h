@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssemblyPaths.h,v $
+  Module:    vtkAssemblyPaths.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_COMMON_EXPORT vtkAssemblyPaths : public vtkCollection
 {
 public:
   static vtkAssemblyPaths *New();
-  vtkTypeRevisionMacro(vtkAssemblyPaths,vtkCollection);
+  vtkTypeMacro(vtkAssemblyPaths,vtkCollection);
 
   // Description:
   // Add a path to the list.

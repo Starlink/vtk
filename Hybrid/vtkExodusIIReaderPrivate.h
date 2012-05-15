@@ -17,7 +17,7 @@ class vtkMultiProcessController;
 #include <vtkstd/map>
 #include <vtkstd/vector>
 
-#include "exodusII.h"
+#include "vtkExodusII.h"
 
 class vtkExodusIIReaderParser;
 class vtkMutableDirectedGraph;
@@ -30,7 +30,7 @@ class vtkExodusIIReaderPrivate : public vtkObject
 public:
   static vtkExodusIIReaderPrivate* New();
   void PrintData( ostream& os, vtkIndent indent );
-  vtkTypeRevisionMacro(vtkExodusIIReaderPrivate,vtkObject);
+  vtkTypeMacro(vtkExodusIIReaderPrivate,vtkObject);
   //virtual void Modified();
 
   /// Open an ExodusII file for reading. Returns 0 on success.
@@ -230,6 +230,14 @@ public:
   vtkGetMacro(GenerateGlobalNodeIdArray,int);
   static const char* GetGlobalNodeIdArrayName() { return "GlobalNodeId"; }  
 
+  vtkSetMacro(GenerateImplicitElementIdArray,int);
+  vtkGetMacro(GenerateImplicitElementIdArray,int);
+  static const char* GetImplicitElementIdArrayName() { return "ImplicitElementId"; }  
+
+  vtkSetMacro(GenerateImplicitNodeIdArray,int);
+  vtkGetMacro(GenerateImplicitNodeIdArray,int);
+  static const char* GetImplicitNodeIdArrayName() { return "ImplicitNodeId"; }  
+
   /** Should we generate an array defined over all cells
     * (whether they are members of blocks or sets) indicating the source file?
     */
@@ -257,6 +265,9 @@ public:
 
   vtkSetMacro(ModeShapeTime,double);
   vtkGetMacro(ModeShapeTime,double);
+
+  vtkSetMacro(AnimateModeShapes, int);
+  vtkGetMacro(AnimateModeShapes, int);
 
   vtkDataArray* FindDisplacementVectors( int timeStep );
 
@@ -479,6 +490,8 @@ public:
   void SetInitialObjectArrayStatus( int otype, const char *name, int stat );
 
   int UpdateTimeInformation();
+
+  bool ProducedFastPathOutput;
 
 protected:
   vtkExodusIIReaderPrivate();
@@ -775,6 +788,8 @@ protected:
   int GenerateFileIdArray;
   int GenerateGlobalElementIdArray;
   int GenerateGlobalNodeIdArray;
+  int GenerateImplicitElementIdArray;
+  int GenerateImplicitNodeIdArray;
 
   /** Defaults to 0. Set by vtkPExodusIIReader on each entry of ReaderList.
     * Used to generate the file ID array over all output cells.
@@ -787,6 +802,7 @@ protected:
   int ApplyDisplacements;
   float DisplacementMagnitude;
   int HasModeShapes;
+  int AnimateModeShapes;
 
   // Specify how to decorate edge and face variables.
   int EdgeFieldDecorations;

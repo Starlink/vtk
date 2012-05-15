@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableFilter.h,v $
+  Module:    vtkProgrammableFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,12 +40,13 @@
 #include "vtkPassInputTypeAlgorithm.h"
 
 class vtkGraph;
+class vtkTable;
 
 class VTK_GRAPHICS_EXPORT vtkProgrammableFilter : public vtkPassInputTypeAlgorithm
 {
 public:
   static vtkProgrammableFilter *New();
-  vtkTypeRevisionMacro(vtkProgrammableFilter,vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkProgrammableFilter,vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -83,6 +84,11 @@ public:
   // Description:
   // Get the input as a concrete type.
   vtkGraph *GetGraphInput();
+
+  
+  // Description:
+  // Get the input as a concrete type.
+  vtkTable *GetTableInput();
 
   // Description:
   // When CopyArrays is true, all arrays are copied to the output

@@ -4,24 +4,40 @@
 
 SET(KIT Infovis)
 SET(UKIT INFOVIS)
-SET(KIT_TCL_LIBS vtkWidgetsTCL)
-SET(KIT_PYTHON_LIBS vtkWidgetsPythonD)
-SET(KIT_JAVA_LIBS vtkWidgetsJava)
-SET(KIT_LIBS vtkWidgets ${VTK_LIBXML2_LIBRARIES} vtkalglib)
+IF(VTK_USE_RENDERING)
+  SET(KIT_TCL_LIBS vtkWidgetsTCL)
+  SET(KIT_PYTHON_LIBS vtkWidgetsPythonD)
+  SET(KIT_JAVA_LIBS vtkWidgetsJava)
+  SET(KIT_INTERFACE_LIBRARIES vtkWidgets)
+  SET(KIT_LIBS ${VTK_LIBXML2_LIBRARIES} vtkalglib)
+ELSE(VTK_USE_RENDERING)
+  SET(KIT_TCL_LIBS vtkGraphicsTCL)
+  SET(KIT_PYTHON_LIBS vtkGraphicsPythonD)
+  SET(KIT_JAVA_LIBS vtkGraphicsJava)
+  SET(KIT_INTERFACE_LIBRARIES vtkGraphics)
+  SET(KIT_LIBS ${VTK_LIBXML2_LIBRARIES} vtkalglib vtkIO vtkImaging)
+ENDIF(VTK_USE_RENDERING)
 
 SET( Kit_SRCS
+vtkAddMembershipArray.cxx
+vtkAppendPoints.cxx
+vtkApplyColors.cxx
+vtkApplyIcons.cxx
 vtkArcParallelEdgeStrategy.cxx
 vtkAreaLayout.cxx
 vtkAreaLayoutStrategy.cxx
-vtkArrayMap.cxx
 vtkAssignCoordinates.cxx
+vtkAssignCoordinatesLayoutStrategy.cxx
+vtkBivariateLinearTableThreshold.cxx
 vtkBivariateStatisticsAlgorithm.cxx
 vtkBoxLayoutStrategy.cxx
 vtkChacoGraphReader.cxx
 vtkCircularLayoutStrategy.cxx
 vtkClustering2DLayoutStrategy.cxx
 vtkCollapseGraph.cxx
+vtkCollapseVerticesByArray.cxx
 vtkCommunity2DLayoutStrategy.cxx
+vtkConeLayoutStrategy.cxx
 vtkConstrained2DLayoutStrategy.cxx
 vtkContingencyStatistics.cxx
 vtkCorrelativeStatistics.cxx
@@ -32,27 +48,31 @@ vtkDescriptiveStatistics.cxx
 vtkEdgeCenters.cxx
 vtkEdgeLayout.cxx
 vtkEdgeLayoutStrategy.cxx
+vtkExpandSelectedGraph.cxx
 vtkExtractSelectedGraph.cxx
 vtkFast2DLayoutStrategy.cxx
 vtkFixedWidthTextReader.cxx
 vtkForceDirectedLayoutStrategy.cxx
 vtkGenerateIndexArray.cxx
+vtkGeoEdgeStrategy.cxx
+vtkGeoMath.cxx
 vtkGraphHierarchicalBundle.cxx
+vtkGraphHierarchicalBundleEdges.cxx
 vtkGraphLayout.cxx
 vtkGraphLayoutStrategy.cxx
-vtkGraphMapper.cxx
-vtkGraphToPolyData.cxx
 vtkGroupLeafVertices.cxx
 vtkISIReader.cxx
-vtkInteractorStyleAreaSelectHover.cxx
-vtkInteractorStyleTreeMapHover.cxx
-vtkLabeledTreeMapDataMapper.cxx
+vtkKMeansDistanceFunctor.cxx
+vtkKMeansDistanceFunctorCalculator.cxx
+vtkKMeansStatistics.cxx
 vtkMergeColumns.cxx
+vtkMergeGraphs.cxx
 vtkMergeTables.cxx
 vtkMultiCorrelativeStatistics.cxx
 vtkMutableGraphHelper.cxx
 vtkNetworkHierarchy.cxx
 vtkOrderStatistics.cxx
+vtkPassArrays.cxx
 vtkPassThrough.cxx
 vtkPassThroughEdgeStrategy.cxx
 vtkPassThroughLayoutStrategy.cxx
@@ -63,11 +83,19 @@ vtkRISReader.cxx
 vtkRandomGraphSource.cxx
 vtkRandomLayoutStrategy.cxx
 vtkRemoveIsolatedVertices.cxx
+vtkRemoveHiddenData.cxx
+vtkSCurveSpline.cxx
 vtkSimple2DLayoutStrategy.cxx
+vtkSimple3DCirclesStrategy.cxx
 vtkSliceAndDiceLayoutStrategy.cxx
+vtkSplineGraphEdges.cxx
+vtkSplitColumnComponents.cxx
 vtkSquarifyLayoutStrategy.cxx
+vtkSpanTreeLayoutStrategy.cxx
 vtkStackedTreeLayoutStrategy.cxx
 vtkStatisticsAlgorithm.cxx
+vtkStrahlerMetric.cxx
+vtkStreamGraph.cxx
 vtkStringToCategory.cxx
 vtkStringToNumeric.cxx
 vtkTableToGraph.cxx
@@ -81,13 +109,12 @@ vtkTreeLevelsFilter.cxx
 vtkTreeMapLayout.cxx
 vtkTreeMapLayoutStrategy.cxx
 vtkTreeMapToPolyData.cxx
-vtkTreeMapViewer.cxx
 vtkTreeRingToPolyData.cxx
 vtkTulipReader.cxx
 vtkUnivariateStatisticsAlgorithm.cxx
+vtkAttributeClustering2DLayoutStrategy.cxx
 vtkVertexDegree.cxx
-vtkViewTheme.cxx
-vtkViewUpdater.cxx
+vtkXGMLReader.cxx
 vtkXMLTreeReader.cxx
 )
 
@@ -151,13 +178,18 @@ IF(VTK_USE_N_WAY_ARRAYS)
   SET(Kit_SRCS
     ${Kit_SRCS}
     vtkAdjacencyMatrixToEdgeTable.cxx
+    vtkArrayNorm.cxx
     vtkArrayToTable.cxx
-    vtkCosineSimilarity.cxx
+    vtkComputeHistogram2DOutliers.cxx
     vtkDiagonalMatrixSource.cxx
-    vtkExtractFactoredArray.cxx
+    vtkDotProductSimilarity.cxx
+    vtkExtractArray.cxx
+    vtkExtractHistogram2D.cxx
     vtkMatricizeArray.cxx
-    vtkMatrixColumnNorm.cxx
     vtkNormalizeMatrixVectors.cxx
+    vtkPairwiseExtractHistogram2D.cxx
+    vtkSparseArrayToTable.cxx
+    vtkTableToArray.cxx
     vtkTableToSparseArray.cxx
     vtkTransposeMatrix.cxx
     )
@@ -176,12 +208,24 @@ ENDIF(VTK_USE_N_WAY_ARRAYS)
 # Add these classes only if PARALLEL is turned ON
 IF(VTK_USE_PARALLEL)
   SET(Kit_SRCS ${Kit_SRCS}
+    vtkPBivariateLinearTableThreshold.cxx
     vtkPCorrelativeStatistics.cxx
+    vtkPContingencyStatistics.cxx
     vtkPDescriptiveStatistics.cxx
+    vtkPKMeansStatistics.cxx
     vtkPMultiCorrelativeStatistics.cxx
     vtkPPCAStatistics.cxx
     )
-  SET(KIT_LIBS ${KIT_LIBS} vtkParallel)
+
+    IF(VTK_USE_N_WAY_ARRAYS)
+      SET(Kit_SRCS ${Kit_SRCS}
+        vtkPComputeHistogram2DOutliers.cxx
+        vtkPExtractHistogram2D.cxx
+        vtkPPairwiseExtractHistogram2D.cxx
+        )
+    ENDIF(VTK_USE_N_WAY_ARRAYS)
+
+  SET(KIT_INTERFACE_LIBRARIES ${KIT_INTERFACE_LIBRARIES} vtkParallel)
 ENDIF(VTK_USE_PARALLEL)
 
 # Add these classes only if vtkTypeUInt64Array exists

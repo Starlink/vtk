@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLCollectGraph.cxx,v $
+  Module:    vtkPBGLCollectGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,9 +51,11 @@
 #include <vtksys/stl/numeric> // for accumulate, partial_sum
 #include <vtksys/stl/functional> // for plus
 
+#define VTK_CREATE(type, name) \
+  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLCollectGraph, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPBGLCollectGraph);
 
 
@@ -65,6 +67,8 @@ vtkPBGLCollectGraph::vtkPBGLCollectGraph()
   this->ReplicateGraph  = false;
   this->CopyVertexData  = true;
   this->CopyEdgeData    = true;
+  this->CreateOriginProcessArray = false;
+  this->OriginProcessArrayName = NULL;
   this->SetNumberOfInputPorts(1);
   this->SetNumberOfOutputPorts(1);
 }
@@ -111,6 +115,23 @@ int vtkPBGLCollectGraph::RequestData(
     {
     vtkErrorMacro("Can only collect Parallel BGL distributed graph");
     return 1;
+    }
+
+  // Set up the origin process array
+  VTK_CREATE(vtkIdTypeArray, VertexProcessSourceArray);
+  VTK_CREATE(vtkIdTypeArray, EdgeProcessSourceArray);
+  if(this->CreateOriginProcessArray)
+    {
+    if(OriginProcessArrayName)
+      {
+      VertexProcessSourceArray->SetName(this->OriginProcessArrayName);
+      EdgeProcessSourceArray->SetName(this->OriginProcessArrayName);
+      }
+    else
+      {
+      VertexProcessSourceArray->SetName("ProcessorID");
+      EdgeProcessSourceArray->SetName("ProcessorID");
+      }
     }
 
   int myRank = input->GetInformation()->Get(vtkDataObject::DATA_PIECE_NUMBER());
@@ -374,6 +395,7 @@ int vtkPBGLCollectGraph::RequestData(
       vtkSmartPointer<vtkVariantArray> propArray
         = vtkSmartPointer<vtkVariantArray>::New();
       propArray->SetNumberOfTuples(numArrays);
+
       for (int origin = 0; origin < numProcs; ++origin)
         {
         // Extract the edges and properties
@@ -396,11 +418,19 @@ int vtkPBGLCollectGraph::RequestData(
           // Add the edge.
           if (isDirected)
             {
-            dirBuilder->AddEdge(source, target, &*propArray);
+            vtkEdgeType newEdge = dirBuilder->AddEdge(source, target, &*propArray);
+            if(CreateOriginProcessArray)
+              {
+              EdgeProcessSourceArray->InsertNextValue(origin);
+              }
             }
           else
             {
-            undirBuilder->AddEdge(source, target, &*propArray);
+            vtkEdgeType newEdge = undirBuilder->AddEdge(source, target, &*propArray);
+            if(CreateOriginProcessArray)
+              {
+              EdgeProcessSourceArray->InsertNextValue(origin);
+              }
             }
           }
 
@@ -462,11 +492,11 @@ int vtkPBGLCollectGraph::RequestData(
           {
           if (isDirected)
             {
-            dirBuilder->AddEdge(e->first, e->second);
+            vtkEdgeType edge = dirBuilder->AddEdge(e->first, e->second);
             }
           else
             {
-            undirBuilder->AddEdge(e->first, e->second);
+            vtkEdgeType edge = undirBuilder->AddEdge(e->first, e->second);
             }
           }
 
@@ -474,6 +504,29 @@ int vtkPBGLCollectGraph::RequestData(
         // edge data from this source processor.
         vtkstd::vector<vtkIdPair>().swap(allEdges[origin]);
         }
+      }
+    }
+
+  // Set the vertex ProcessorID array if requested.
+  if(CreateOriginProcessArray)
+    {
+    VertexProcessSourceArray->SetNumberOfTuples(totalNumVertices);
+    for(vtkIdType pid=0; pid<numProcs; pid++)
+      {
+      for(vtkIdType vid=vertexOffsets[pid]; vid<vertexOffsets[pid+1]; vid++)
+        {
+        VertexProcessSourceArray->SetValue(vid, pid);
+        }
+      }
+    if(isDirected)
+      {
+      dirBuilder->GetVertexData()->AddArray(VertexProcessSourceArray);
+      dirBuilder->GetEdgeData()->AddArray(EdgeProcessSourceArray);
+      }
+    else
+      {
+      undirBuilder->GetVertexData()->AddArray(VertexProcessSourceArray);
+      undirBuilder->GetEdgeData()->AddArray(EdgeProcessSourceArray);
       }
     }
 
@@ -515,6 +568,14 @@ void vtkPBGLCollectGraph::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "CopyEdgeData: "
      << (this->CopyEdgeData ? "on" : "off") << endl;
+
+  os << indent << "CreateOriginProcessArray: "
+     << (this->CreateOriginProcessArray ? "on" : "off") << endl;
+
+  os << indent << "OriginProcessArrayName: "
+     << (this->OriginProcessArrayName ? this->OriginProcessArrayName
+                                      : "ProcessorID")
+     << endl;
 }
 
 

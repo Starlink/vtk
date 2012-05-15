@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkSQLDatabaseSchema.h,v $
+Module:    vtkSQLDatabaseSchema.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -49,7 +49,7 @@ class vtkSQLDatabaseSchemaInternals;
 class VTK_IO_EXPORT vtkSQLDatabaseSchema : public vtkObject
 {
  public:
-  vtkTypeRevisionMacro(vtkSQLDatabaseSchema, vtkObject);
+  vtkTypeMacro(vtkSQLDatabaseSchema, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkSQLDatabaseSchema *New();
 

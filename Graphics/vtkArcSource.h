@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArcSource.h,v $
+  Module:    vtkArcSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_GRAPHICS_EXPORT vtkArcSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkArcSource *New();
-  vtkTypeRevisionMacro(vtkArcSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkArcSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -41,14 +41,26 @@ public:
   vtkGetVectorMacro(Point2,double,3);
 
   // Description:
-  // Set position of other end point.
+  // Set position of the center of the circle that define the arc.
+  // Note: you can use the function vtkMath::Solve3PointCircle to
+  // find the center from 3 points located on a circle.
   vtkSetVector3Macro(Center,double);
   vtkGetVectorMacro(Center,double,3);
   
   // Description:
   // Divide line into resolution number of pieces.
+  // Note: if Resolution is set to 1 (default), the arc is a 
+  // straight line.
   vtkSetClampMacro(Resolution,int,1,VTK_LARGE_INTEGER);
   vtkGetMacro(Resolution,int);
+
+  // Description:
+  // Use the angle that is a negative coterminal of the vectors angle:
+  // the longest angle.
+  // Note: false by default.
+  vtkSetMacro(Negative, bool);
+  vtkGetMacro(Negative, bool);
+  vtkBooleanMacro(Negative, bool);
 
 protected:
   vtkArcSource(int res=1);
@@ -60,6 +72,7 @@ protected:
   double Point2[3];
   double Center[3];
   int Resolution;
+  bool Negative;
 
 private:
   vtkArcSource(const vtkArcSource&);  // Not implemented.

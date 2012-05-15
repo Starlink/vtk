@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFourierFilter.cxx,v $
+  Module:    vtkImageFourierFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageFourierFilter, "$Revision: 1.19 $");
 
 
 /*=========================================================================

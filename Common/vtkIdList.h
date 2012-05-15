@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIdList.h,v $
+  Module:    vtkIdList.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ public:
 
   void Initialize();
   int Allocate(const vtkIdType sz, const int strategy=0);
-  vtkTypeRevisionMacro(vtkIdList,vtkObject);
+  vtkTypeMacro(vtkIdList,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkNetworkHierarchy.h,v $
+  Module:    vtkNetworkHierarchy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_INFOVIS_EXPORT vtkNetworkHierarchy : public vtkTreeAlgorithm
 {
 public:
   static vtkNetworkHierarchy* New();
-  vtkTypeRevisionMacro(vtkNetworkHierarchy,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkNetworkHierarchy,vtkTreeAlgorithm);
   
   // Description:
   // Used to store the ip array name

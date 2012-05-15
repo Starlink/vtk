@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBivariateStatisticsAlgorithm.cxx,v $
+  Module:    vtkBivariateStatisticsAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,30 +19,29 @@
 -------------------------------------------------------------------------*/
 
 #include "vtkBivariateStatisticsAlgorithm.h"
-#include "vtkBivariateStatisticsAlgorithmPrivate.h"
+#include "vtkStatisticsAlgorithmPrivate.h"
 
+#include "vtkDoubleArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkStdString.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
 #include "vtkVariantArray.h"
 
-#include <vtkstd/set>
+#include <vtksys/stl/set>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkBivariateStatisticsAlgorithm, "$Revision: 1.10 $");
+#define VTK_STATISTICS_NUMBER_OF_VARIABLES 2
+
 
 // ----------------------------------------------------------------------
 vtkBivariateStatisticsAlgorithm::vtkBivariateStatisticsAlgorithm()
 {
-  this->NumberOfVariables = 2;
-  this->Internals = new vtkBivariateStatisticsAlgorithmPrivate;
 }
 
 // ----------------------------------------------------------------------
 vtkBivariateStatisticsAlgorithm::~vtkBivariateStatisticsAlgorithm()
 {
-  delete this->Internals;
 }
 
 // ----------------------------------------------------------------------
@@ -52,66 +51,24 @@ void vtkBivariateStatisticsAlgorithm::PrintSelf( ostream &os, vtkIndent indent )
 }
 
 // ----------------------------------------------------------------------
-void vtkBivariateStatisticsAlgorithm::ResetColumnPairs()
-{
-  this->Internals->Selection.clear();
-
-  this->Modified();
-}
-
-// ----------------------------------------------------------------------
 void vtkBivariateStatisticsAlgorithm::AddColumnPair( const char* namColX, const char* namColY )
 {
-  vtkstd::pair<vtkStdString,vtkStdString> namPair( namColX, namColY );
-  this->Internals->Selection.insert( namPair );
-
-  this->Modified();
+  if ( this->Internals->AddColumnPairToRequests( namColX, namColY ) )
+    {
+    this->Modified();
+    }
 }
 
 // ----------------------------------------------------------------------
-void vtkBivariateStatisticsAlgorithm::RemoveColumnPair( const char* namColX, const char* namColY )
+int vtkBivariateStatisticsAlgorithm::RequestSelectedColumns()
 {
-  vtkstd::pair<vtkStdString,vtkStdString> namPair( namColX, namColY );
-  this->Internals->Selection.erase( namPair );
-
-  this->Modified();
+  return this->Internals->AddBufferEntryPairsToRequests();
 }
 
 // ----------------------------------------------------------------------
-void vtkBivariateStatisticsAlgorithm::SetColumnStatus( const char* namCol, int status )
-{
-  if( status )
-    {
-    this->Internals->BufferedColumns.insert( namCol );
-    }
-  else
-    {
-    this->Internals->BufferedColumns.erase( namCol );
-    }
-  
-  this->Internals->Selection.clear();
-
-  int i = 0;
-  for ( vtkstd::set<vtkStdString>::iterator ait = this->Internals->BufferedColumns.begin(); 
-        ait != this->Internals->BufferedColumns.end(); ++ ait, ++ i )
-    {
-    int j = 0;
-    for ( vtkstd::set<vtkStdString>::iterator bit = this->Internals->BufferedColumns.begin(); 
-          j < i ; ++ bit, ++ j )
-      {
-      vtkstd::pair<vtkStdString,vtkStdString> namPair( *bit, *ait );
-      this->Internals->Selection.insert( namPair );
-      }
-    }
-
-  this->Modified();
-}
-
-// ----------------------------------------------------------------------
-void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
-                                                     vtkDataObject* inMetaDO,
-                                                     vtkTable* outData,
-                                                     vtkDataObject* vtkNotUsed( outMeta ) )
+void vtkBivariateStatisticsAlgorithm::Assess( vtkTable* inData,
+                                              vtkDataObject* inMetaDO,
+                                              vtkTable* outData )
 {
   vtkTable* inMeta = vtkTable::SafeDownCast( inMetaDO );
   if ( ! inMeta )
@@ -119,13 +76,13 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
     return;
     }
 
-  if ( ! inData->GetNumberOfColumns() )
+  if ( ! inData || inData->GetNumberOfColumns() <= 0 )
     {
     return;
     }
 
   vtkIdType nRowD = inData->GetNumberOfRows();
-  if ( ! nRowD )
+  if ( nRowD <= 0 )
     {
     return;
     }
@@ -134,10 +91,10 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
   if ( this->AssessParameters )
     {
     nColP = this->AssessParameters->GetNumberOfValues();
-    if ( inMeta->GetNumberOfColumns() - this->NumberOfVariables < nColP )
+    if ( inMeta->GetNumberOfColumns() - VTK_STATISTICS_NUMBER_OF_VARIABLES < nColP )
       {
       vtkWarningMacro( "Parameter table has " 
-                       << inMeta->GetNumberOfColumns() - this->NumberOfVariables
+                       << inMeta->GetNumberOfColumns() - VTK_STATISTICS_NUMBER_OF_VARIABLES
                        << " parameters < "
                        << nColP
                        << " columns. Doing nothing." );
@@ -150,17 +107,13 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
     return;
     }
 
-  if ( ! this->Internals->Selection.size() )
+  // Loop over requests
+  for ( vtksys_stl::set<vtksys_stl::set<vtkStdString> >::const_iterator rit = this->Internals->Requests.begin(); 
+        rit != this->Internals->Requests.end(); ++ rit )
     {
-    return;
-    }
-
-
-  // Loop over pairs of columns of interest
-  for ( vtkstd::set<vtkstd::pair<vtkStdString,vtkStdString> >::iterator it = this->Internals->Selection.begin(); 
-        it != this->Internals->Selection.end(); ++ it )
-    {
-    vtkStdString varNameX = it->first;
+    // Each request contains only one pair of column of interest (if there are others, they are ignored)
+    vtksys_stl::set<vtkStdString>::const_iterator it = rit->begin();
+    vtkStdString varNameX = *it;
     if ( ! inData->GetColumnByName( varNameX ) )
       {
       vtkWarningMacro( "InData table does not have a column "
@@ -169,7 +122,8 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
       continue;
       }
 
-    vtkStdString varNameY = it->second;
+    ++ it;
+    vtkStdString varNameY = *it;
     if ( ! inData->GetColumnByName( varNameY ) )
       {
       vtkWarningMacro( "InData table does not have a column "
@@ -179,11 +133,11 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
       }
     
     vtkStringArray* varNames = vtkStringArray::New();
-    varNames->SetNumberOfValues( this->NumberOfVariables );
+    varNames->SetNumberOfValues( VTK_STATISTICS_NUMBER_OF_VARIABLES );
     varNames->SetValue( 0, varNameX );
     varNames->SetValue( 1, varNameY );
 
-    // Store names to be able to use SetValueByName which is faster than SetValue
+    // Store names to be able to use SetValueByName, and create the outData columns
     int nv = this->AssessNames->GetNumberOfValues();
     vtkStdString* names = new vtkStdString[nv];
     for ( int v = 0; v < nv; ++ v )
@@ -197,6 +151,12 @@ void vtkBivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
                     << ")";
 
       names[v] = assessColName.str().c_str();
+
+      vtkDoubleArray* assessValues = vtkDoubleArray::New(); 
+      assessValues->SetName( names[v] ); 
+      assessValues->SetNumberOfTuples( nRowD  ); 
+      outData->AddColumn( assessValues ); 
+      assessValues->Delete(); 
       }
 
     // Select assess functor

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayNormalizeMatrixVectors.cxx,v $
+  Module:    ArrayNormalizeMatrixVectors.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -35,12 +35,12 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-static const bool close_enough(const double lhs, const double rhs)
+static bool close_enough(const double lhs, const double rhs)
 {
   return fabs(lhs - rhs) < 1.0e-12;
 }
 
-int ArrayNormalizeMatrixVectors(int argc, char* argv[])
+int ArrayNormalizeMatrixVectors(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -54,14 +54,16 @@ int ArrayNormalizeMatrixVectors(int argc, char* argv[])
     cout << vtkstd::fixed << setprecision(1);
     cout << "sparse diagonal source:\n";
     source->Update();
-    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray()));
+    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(
+        source->GetOutput()->GetArray(static_cast<vtkIdType>(0))));
 
     vtkSmartPointer<vtkNormalizeMatrixVectors> normalize = vtkSmartPointer<vtkNormalizeMatrixVectors>::New();
     normalize->AddInputConnection(source->GetOutputPort());
     normalize->SetVectorDimension(1);
 
     normalize->Update();
-    vtkTypedArray<double>* normalized = vtkTypedArray<double>::SafeDownCast(normalize->GetOutput()->GetArray());
+    vtkTypedArray<double>* normalized = vtkTypedArray<double>::SafeDownCast(
+      normalize->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     cout << vtkstd::fixed << setprecision(17);
     cout << "sparse normalized:\n";
     vtkPrintMatrixFormat(cout, normalized);
@@ -83,10 +85,12 @@ int ArrayNormalizeMatrixVectors(int argc, char* argv[])
     cout << vtkstd::fixed << setprecision(1);
     cout << "dense diagonal source:\n";
     source->Update();
-    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray()));
+    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(
+        source->GetOutput()->GetArray(static_cast<vtkIdType>(0))));
 
     normalize->Update();
-    normalized = vtkTypedArray<double>::SafeDownCast(normalize->GetOutput()->GetArray());
+    normalized = vtkTypedArray<double>::SafeDownCast(
+      normalize->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     cout << vtkstd::fixed << setprecision(17);
     cout << "dense normalized:\n";
     vtkPrintMatrixFormat(cout, normalized);

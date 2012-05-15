@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMCubesReader.cxx,v $
+  Module:    vtkMCubesReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,11 +23,11 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
-vtkCxxRevisionMacro(vtkMCubesReader, "$Revision: 1.66 $");
 vtkStandardNewMacro(vtkMCubesReader);
 
 // Construct object with FlipNormals turned off and Normals set to true.
@@ -286,7 +286,7 @@ int vtkMCubesReader::RequestData(
 
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkMCubesReader::SetLocator(vtkPointLocator *locator)
+void vtkMCubesReader::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

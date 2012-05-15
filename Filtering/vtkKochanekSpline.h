@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKochanekSpline.h,v $
+  Module:    vtkKochanekSpline.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,7 +48,7 @@
 class VTK_FILTERING_EXPORT vtkKochanekSpline : public vtkSpline
 {
 public:
-  vtkTypeRevisionMacro(vtkKochanekSpline,vtkSpline);
+  vtkTypeMacro(vtkKochanekSpline,vtkSpline);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

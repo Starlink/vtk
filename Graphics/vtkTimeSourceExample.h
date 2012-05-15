@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTimeSourceExample.h,v $
+  Module:    vtkTimeSourceExample.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,7 @@
 // .NAME vtkTimeSource - creates a simple time varying data set.
 // .SECTION Description
 // Creates a small easily understood time varying data set for testing.
-// The output is a vtkImageData in which the point and cell values vary
+// The output is a vtkUntructuredGrid in which the point and cell values vary
 // over time in a sin wave. The analytic ivar controls whether the output 
 // corresponds to a step function over time or is continuous.
 // The X and Y Amplitude ivars make the output move in the X and Y directions 
@@ -25,13 +25,13 @@
 #ifndef __vtkTimeSourceExample_h
 #define __vtkTimeSourceExample_h
 
-#include "vtkImageAlgorithm.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 
-class VTK_GRAPHICS_EXPORT vtkTimeSourceExample : public vtkImageAlgorithm
+class VTK_GRAPHICS_EXPORT vtkTimeSourceExample : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkTimeSourceExample *New();
-  vtkTypeRevisionMacro(vtkTimeSourceExample,vtkImageAlgorithm);
+  vtkTypeMacro(vtkTimeSourceExample,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:

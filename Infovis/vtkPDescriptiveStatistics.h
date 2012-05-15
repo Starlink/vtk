@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDescriptiveStatistics.h,v $
+  Module:    vtkPDescriptiveStatistics.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_INFOVIS_EXPORT vtkPDescriptiveStatistics : public vtkDescriptiveStatis
 {
 public:
   static vtkPDescriptiveStatistics* New();
-  vtkTypeRevisionMacro(vtkPDescriptiveStatistics, vtkDescriptiveStatistics);
+  vtkTypeMacro(vtkPDescriptiveStatistics, vtkDescriptiveStatistics);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -43,7 +43,8 @@ public:
 
   // Description:
   // Execute the parallel calculations required by the Learn option.
-  virtual void ExecuteLearn( vtkTable* inData,
+  virtual void Learn( vtkTable* inData,
+                             vtkTable* inParameters,
                              vtkDataObject* outMeta );
 
 protected:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoArcs.cxx,v $
+  Module:    vtkGeoArcs.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,6 @@
 #include <vtksys/stl/map>
 using vtksys_stl::map;
 
-vtkCxxRevisionMacro(vtkGeoArcs, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGeoArcs);
 
 vtkGeoArcs::vtkGeoArcs()
@@ -52,7 +51,7 @@ int vtkGeoArcs::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -178,4 +177,3 @@ void vtkGeoArcs::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "ExplodeFactor: " << this->ExplodeFactor << endl;
   os << indent << "NumberOfSubdivisions: " << this->NumberOfSubdivisions << endl;
 }
-

@@ -17,7 +17,6 @@
 #include <vtkstd/string>
 
 vtkStandardNewMacro(vtkSESAMEReader);
-vtkCxxRevisionMacro(vtkSESAMEReader, "$Revision: 1.7 $");
 
 static const int SESAME_NUM_CHARS = 512;
 static const char* TableLineFormat = "%2i%6i%6i";
@@ -103,16 +102,37 @@ static const vtkSESAMETableDef TableDefs[] =
        0}  // keep 0 last
     },
 
+    {601, 
+      {"601: Mean Ion Charge2",
+       0}  // keep 0 last
+    },
+
     {602, 
       {"602: Electrical Conductivity",
        0}  // keep 0 last
+    },
+
+    {603, 
+      {"603: Thermal Conductivity",
+       0}  // keep 0 last
+    },
+
+    {604, 
+      {"604: Thermoelectric Coefficient",
+       0}  // keep 0 last
+    },
+
+    {605, 
+    {"605: Electron Conductive Opacity2",
+    0}  // keep 0 last
     }
+
 };
 
 static int TableIndex(int tableId)
 {
   // check that we got a valid table id
-  for(unsigned int i=0; i<sizeof(TableDefs); i++)
+  for(unsigned int i=0; i<sizeof(TableDefs)/sizeof(vtkSESAMETableDef); i++)
     {
     if(tableId == TableDefs[i].TableId)
       {
@@ -171,6 +191,7 @@ void vtkSESAMEReader::SetFileName(const char* file)
   // clean out possible data from last file
   this->Internal->ClearTables();
   this->CloseFile();
+  this->Modified();
 }
 
 const char* vtkSESAMEReader::GetFileName()
@@ -351,11 +372,11 @@ void vtkSESAMEReader::ExecuteInformation()
       }
     }
 
-  if(this->Internal->TableId == -1 &&
-     !this->Internal->TableIds.empty())
-    {
-    this->Internal->TableId = this->Internal->TableIds[0];
-    }
+  //if(this->Internal->TableId == -1 &&
+  //   !this->Internal->TableIds.empty())
+  //  {
+  //  this->Internal->TableId = this->Internal->TableIds[0];
+  //  }
 
   if(this->Internal->TableId != -1)
     {

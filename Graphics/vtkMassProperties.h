@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMassProperties.h,v $
+  Module:    vtkMassProperties.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ public:
   // Constructs with initial values of zero.
   static vtkMassProperties *New();
 
-  vtkTypeRevisionMacro(vtkMassProperties,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkMassProperties,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

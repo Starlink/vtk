@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractPolyDataGeometry.h,v $
+  Module:    vtkExtractPolyDataGeometry.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class vtkImplicitFunction;
 class VTK_GRAPHICS_EXPORT vtkExtractPolyDataGeometry : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkExtractPolyDataGeometry,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkExtractPolyDataGeometry,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

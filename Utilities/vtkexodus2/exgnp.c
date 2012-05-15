@@ -47,7 +47,7 @@
 *
 * revision history - 
 *
-*  $Id: exgnp.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -65,5 +65,5 @@ int ex_get_node_set_param (int  exoid,
                            int *num_df_in_set)
 {
   return ex_get_set_param(exoid, EX_NODE_SET, node_set_id,
-			  num_nodes_in_set, num_df_in_set);
+                          num_nodes_in_set, num_df_in_set);
 }

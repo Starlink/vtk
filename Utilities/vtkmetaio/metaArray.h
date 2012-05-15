@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaArray.h,v $
+  Module:    metaArray.h
   Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.3 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -187,7 +187,7 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     bool               m_AutoFreeElementData;
 
-    unsigned int       m_CompressedElementDataSize;
+    METAIO_STL::streamoff m_CompressedElementDataSize;
 
     char               m_ElementDataFileName[255];
 
@@ -207,7 +207,7 @@ class METAIO_EXPORT MetaArray : public MetaForm
 
     bool  M_WriteElements(METAIO_STREAM::ofstream * _fstream,
                           const void * _data,
-                          int _dataQuantity);
+                          METAIO_STL::streamoff _dataQuantity);
 
     };
 

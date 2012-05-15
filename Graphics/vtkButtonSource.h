@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkButtonSource.h,v $
+  Module:    vtkButtonSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class VTK_GRAPHICS_EXPORT vtkButtonSource : public vtkPolyDataAlgorithm
 {
 public:
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkButtonSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkButtonSource,vtkPolyDataAlgorithm);
 
   // Description:
   // Specify a point defining the origin (center) of the button.

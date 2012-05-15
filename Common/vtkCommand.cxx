@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommand.cxx,v $
+  Module:    vtkCommand.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -48,6 +48,8 @@ static const char *vtkCommandEventStrings[] = {
   "MouseMoveEvent",
   "MouseWheelForwardEvent",
   "MouseWheelBackwardEvent",
+  "ActiveCameraEvent",
+  "CreateCameraEvent",
   "ResetCameraEvent",
   "ResetCameraClippingRangeEvent",
   "ModifiedEvent",
@@ -91,11 +93,20 @@ static const char *vtkCommandEventStrings[] = {
   "RegisterEvent",
   "UnRegisterEvent",
   "UpdateInformationEvent",
+  "AnnotationChangedEvent",
   "SelectionChangedEvent",
   "UpdatePropertyEvent",
   "ViewProgressEvent",
   "UpdateDataEvent",
   "CurrentChangedEvent",
+  "ComputeVisiblePropBoundsEvent",
+  "TDxMotionEvent", // 3D Connexion device event
+  "TDxButtonPressEvent", // 3D Connexion device event
+  "TDxButtonReleaseEvent", // 3D Connexion device event
+  "HoverEvent",
+  "LoadStateEvent",
+  "SaveStateEvent",
+  "StateChangedEvent",
   NULL
 };
 

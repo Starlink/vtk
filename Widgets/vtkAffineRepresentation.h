@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAffineRepresentation.h,v $
+  Module:    vtkAffineRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class VTK_WIDGETS_EXPORT vtkAffineRepresentation : public vtkWidgetRepresentatio
 public:
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkAffineRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkAffineRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSQLiteDatabase.h,v $
+  Module:    vtkSQLiteDatabase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,15 +57,29 @@ class VTK_IO_EXPORT vtkSQLiteDatabase : public vtkSQLDatabase
   //ETX
 
 public:
-  vtkTypeRevisionMacro(vtkSQLiteDatabase, vtkSQLDatabase);
+  vtkTypeMacro(vtkSQLiteDatabase, vtkSQLDatabase);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkSQLiteDatabase *New();
+
+  //BTX
+  enum {
+    USE_EXISTING,
+    USE_EXISTING_OR_CREATE,
+    CREATE_OR_CLEAR,
+    CREATE
+  };
+  //ETX
 
   // Description:
   // Open a new connection to the database.  You need to set the
   // filename before calling this function.  Returns true if the
   // database was opened successfully; false otherwise.
+  // - USE_EXISTING (default) - Fail if the file does not exist.
+  // - USE_EXISTING_OR_CREATE - Create a new file if necessary.
+  // - CREATE_OR_CLEAR - Create new or clear existing file.
+  // - CREATE - Create new, fail if file exists.
   bool Open(const char* password);
+  bool Open(const char* password, int mode);
 
   // Description:
   // Close the connection to the database.
@@ -137,9 +151,13 @@ private:
   // We want this to be private, a user of this class
   // should not be setting this for any reason
   vtkSetStringMacro(DatabaseType);
+
+  vtkStringArray *Tables;
   
   char* DatabaseType;
   char* DatabaseFileName;
+
+  vtkStdString TempURL;
   
   vtkSQLiteDatabase(const vtkSQLiteDatabase &); // Not implemented.
   void operator=(const vtkSQLiteDatabase &); // Not implemented.

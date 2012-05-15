@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoxLayoutStrategy.h,v $
+  Module:    vtkBoxLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_INFOVIS_EXPORT vtkBoxLayoutStrategy : public vtkTreeMapLayoutStrategy
 public:
   static vtkBoxLayoutStrategy *New();
 
-  vtkTypeRevisionMacro(vtkBoxLayoutStrategy,vtkTreeMapLayoutStrategy);
+  vtkTypeMacro(vtkBoxLayoutStrategy,vtkTreeMapLayoutStrategy);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusModel.cxx,v $
+  Module:    vtkExodusModel.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,11 +29,10 @@
 #include <ctype.h>
 #include <vtkstd/set>
 #include <vtkstd/map>
-#include <exodusII.h>
+#include "vtkExodusII.h"
 #include <ctype.h>
 
 
-vtkCxxRevisionMacro(vtkExodusModel, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkExodusModel);
 
 vtkExodusModel::vtkExodusModel()
@@ -777,6 +776,12 @@ int vtkExodusModel::SetLocalNodeSetInformation(
   int *nodeMap = new int [numNodesInFile];
 
   ex_get_node_num_map(fid, nodeMap);
+cerr << "node num map : ";
+for (i = 0; i < numNodesInFile; i ++)
+{
+  cerr << nodeMap[i] << " ";
+}
+cerr << endl;
 
   // external node IDs in vtkUnstructuredGrid
 

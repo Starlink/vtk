@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAngleRepresentation.h,v $
+  Module:    vtkAngleRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_WIDGETS_EXPORT vtkAngleRepresentation : public vtkWidgetRepresentation
 public:
   // Description:
   // Standard VTK methods.
-  vtkTypeRevisionMacro(vtkAngleRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkAngleRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

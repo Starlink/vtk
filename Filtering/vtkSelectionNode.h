@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSelectionNode.h,v $
+  Module:    vtkSelectionNode.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -52,13 +52,14 @@ class vtkInformation;
 class vtkInformationDoubleKey;
 class vtkInformationIntegerKey;
 class vtkInformationObjectBaseKey;
+class vtkProp;
 class vtkTable;
 //ETX
 
 class VTK_FILTERING_EXPORT vtkSelectionNode : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkSelectionNode,vtkObject);
+  vtkTypeMacro(vtkSelectionNode,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkSelectionNode* New();
 
@@ -155,6 +156,12 @@ public:
   // This is the same as setting the FIELD_TYPE() key on the property.
   virtual void SetFieldType(int type);
   virtual int GetFieldType();
+
+  // Description:
+  // Get or set the prop of the selection.
+  // This is the same as setting the PROP() key on the property.
+  virtual void SetSelectedProp(vtkProp* prop);
+  virtual vtkProp* GetSelectedProp();
   
   // Description:
   // For location selection of points, if distance is greater than this reject.
@@ -164,6 +171,14 @@ public:
   // This flag tells the extraction filter, when FIELD_TYPE==POINT, that
   // it should also extract the cells that contain any of the extracted points.
   static vtkInformationIntegerKey* CONTAINING_CELLS();
+
+  // Description:
+  // When ContentType==THRESHOLDS  or ContentType==VALUES 
+  // i.e. threshold and value based selections, it is
+  // possible pick the component number using this key. If none is specified,
+  // the 0th component is used. If any number less than 0 is specified, then
+  // the magnitude is used.
+  static vtkInformationIntegerKey* COMPONENT_NUMBER();
 
   // Description:
   // This flag tells the extraction filter to exclude the selection.

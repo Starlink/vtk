@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostLogWeighting.h,v $
+  Module:    vtkBoostLogWeighting.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -25,8 +25,11 @@
 #include "vtkArrayDataAlgorithm.h"
 
 // .NAME vtkBoostLogWeighting - Given an arbitrary-dimension array of doubles,
-// replaces each value with the base-e log of (value + 1)
-
+// replaces each value x with one of:
+//
+// * The natural logarithm of 1 + x (the default)
+// * The base-2 logarithm of 1 + x
+//
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
@@ -34,9 +37,29 @@ class VTK_INFOVIS_EXPORT vtkBoostLogWeighting : public vtkArrayDataAlgorithm
 {
 public:
   static vtkBoostLogWeighting* New();
-  vtkTypeRevisionMacro(vtkBoostLogWeighting, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkBoostLogWeighting, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+//BTX
+  enum 
+  {
+    BASE_E = 0,
+    BASE_2 = 1
+  };
+//ETX
+
+  // Description:
+  // Specify the logarithm base to apply
+  vtkSetMacro(Base, int);
+  vtkGetMacro(Base, int);
+
+  // Description:
+  // Specify whether this filter should emit progress events
+  vtkSetMacro(EmitProgress, bool);
+  vtkGetMacro(EmitProgress, bool);
+  vtkBooleanMacro(EmitProgress, bool);
+
+//BTX
 protected:
   vtkBoostLogWeighting();
   ~vtkBoostLogWeighting();
@@ -49,6 +72,10 @@ protected:
 private:
   vtkBoostLogWeighting(const vtkBoostLogWeighting&); // Not implemented
   void operator=(const vtkBoostLogWeighting&);   // Not implemented
+
+  int Base;
+  bool EmitProgress;
+//ETX
 };
 
 #endif

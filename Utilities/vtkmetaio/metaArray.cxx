@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaArray.cxx,v $
+  Module:    metaArray.cxx
   Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.7 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -18,6 +18,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(disable:4702)
+#pragma warning(disable:4996)
 #endif
 
 #include <stdio.h>
@@ -1155,7 +1156,7 @@ M_ReadElements(METAIO_STREAM::ifstream * _fstream, void * _data,
       }
 
     unsigned char* compr = new unsigned char[m_CompressedElementDataSize];
-    _fstream->read((char *)compr, m_CompressedElementDataSize);
+    _fstream->read((char *)compr, (size_t)m_CompressedElementDataSize);
     
     MET_PerformUncompression(compr, m_CompressedElementDataSize,
                              (unsigned char *)_data, readSize);
@@ -1197,7 +1198,7 @@ M_ReadElements(METAIO_STREAM::ifstream * _fstream, void * _data,
 //
 bool MetaArray::
 M_WriteElements(METAIO_STREAM::ofstream * _fstream, const void * _data,
-               int _dataQuantity)
+               METAIO_STL::streamoff _dataQuantity)
   {
   bool localData = false;
   METAIO_STREAM::ofstream* tmpWriteStream;
@@ -1255,7 +1256,7 @@ M_WriteElements(METAIO_STREAM::ofstream * _fstream, const void * _data,
     }
    else
     {
-    tmpWriteStream->write( (const char *)_data, _dataQuantity );  
+    tmpWriteStream->write( (const char *)_data, (size_t)_dataQuantity );  
     } 
 
   if(!localData)

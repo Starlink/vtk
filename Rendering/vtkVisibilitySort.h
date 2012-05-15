@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVisibilitySort.h,v $
+  Module:    vtkVisibilitySort.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class vtkCamera;
 class VTK_RENDERING_EXPORT vtkVisibilitySort : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkVisibilitySort, vtkObject);
+  vtkTypeMacro(vtkVisibilitySort, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:

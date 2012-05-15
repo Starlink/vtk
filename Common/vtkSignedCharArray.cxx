@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSignedCharArray.cxx,v $
+  Module:    vtkSignedCharArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(signed char);
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSignedCharArray, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkSignedCharArray);
 
 //----------------------------------------------------------------------------

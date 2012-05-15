@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnivariateStatisticsAlgorithm.cxx,v $
+  Module:    vtkUnivariateStatisticsAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,30 +19,29 @@
 -------------------------------------------------------------------------*/
 
 #include "vtkUnivariateStatisticsAlgorithm.h"
-#include "vtkUnivariateStatisticsAlgorithmPrivate.h"
 
+#include "vtkDoubleArray.h"
 #include "vtkObjectFactory.h"
+#include "vtkStatisticsAlgorithmPrivate.h"
 #include "vtkStdString.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
 #include "vtkVariantArray.h"
 
-#include <vtkstd/set>
+#include <vtksys/stl/set>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkUnivariateStatisticsAlgorithm, "$Revision: 1.22 $");
+#define VTK_STATISTICS_NUMBER_OF_VARIABLES 1
+
 
 // ----------------------------------------------------------------------
 vtkUnivariateStatisticsAlgorithm::vtkUnivariateStatisticsAlgorithm()
 {
-  this->NumberOfVariables = 1;
-  this->Internals = new vtkUnivariateStatisticsAlgorithmPrivate;
 }
 
 // ----------------------------------------------------------------------
 vtkUnivariateStatisticsAlgorithm::~vtkUnivariateStatisticsAlgorithm()
 {
-  delete this->Internals;
 }
 
 // ----------------------------------------------------------------------
@@ -52,49 +51,24 @@ void vtkUnivariateStatisticsAlgorithm::PrintSelf( ostream &os, vtkIndent indent 
 }
 
 // ----------------------------------------------------------------------
-void vtkUnivariateStatisticsAlgorithm::ResetColumns()
-{
-  this->Internals->Selection.clear();
-
-  this->Modified();
-}
-
-// ----------------------------------------------------------------------
 void vtkUnivariateStatisticsAlgorithm::AddColumn( const char* namCol )
 {
-  this->Internals->Selection.insert( namCol );
-
-  this->Modified();
-}
-
-// ----------------------------------------------------------------------
-void vtkUnivariateStatisticsAlgorithm::RemoveColumn( const char* namCol )
-{
-  this->Internals->Selection.erase( namCol );
-
-  this->Modified();
-}
-
-// ----------------------------------------------------------------------
-void vtkUnivariateStatisticsAlgorithm::SetColumnStatus( const char* namCol, int status )
-{
-  if( status )
+  if ( this->Internals->SetBufferColumnStatus( namCol, 1 ) )
     {
-    this->Internals->Selection.insert( namCol );
+    this->Modified();
     }
-  else
-    {
-    this->Internals->Selection.erase( namCol );
-    }
-
-  this->Modified();
 }
 
 // ----------------------------------------------------------------------
-void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
-                                                      vtkDataObject* inMetaDO,
-                                                      vtkTable* outData,
-                                                      vtkDataObject* vtkNotUsed( outMeta ) )
+int vtkUnivariateStatisticsAlgorithm::RequestSelectedColumns()
+{
+  return this->Internals->AddBufferEntriesToRequests();
+}
+
+// ----------------------------------------------------------------------
+void vtkUnivariateStatisticsAlgorithm::Assess( vtkTable* inData,
+                                               vtkDataObject* inMetaDO,
+                                               vtkTable* outData )
 {
   vtkTable* inMeta = vtkTable::SafeDownCast( inMetaDO ); 
   if ( ! inMeta ) 
@@ -102,13 +76,13 @@ void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
     return; 
     } 
 
-  if ( ! inData->GetNumberOfColumns() )
+  if ( ! inData || inData->GetNumberOfColumns() <= 0 )
     {
     return;
     }
 
   vtkIdType nRowD = inData->GetNumberOfRows();
-  if ( ! nRowD )
+  if ( nRowD <= 0 )
     {
     return;
     }
@@ -117,10 +91,10 @@ void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
   if ( this->AssessParameters )
     {
     nColP = this->AssessParameters->GetNumberOfValues();
-    if ( inMeta->GetNumberOfColumns() - this->NumberOfVariables < nColP )
+    if ( inMeta->GetNumberOfColumns() - VTK_STATISTICS_NUMBER_OF_VARIABLES < nColP )
       {
       vtkWarningMacro( "Parameter table has " 
-                       << inMeta->GetNumberOfColumns() - this->NumberOfVariables
+                       << inMeta->GetNumberOfColumns() - VTK_STATISTICS_NUMBER_OF_VARIABLES
                        << " parameters < "
                        << nColP
                        << " columns. Doing nothing." );
@@ -133,15 +107,12 @@ void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
     return;
     }
 
-  if ( ! this->Internals->Selection.size() )
+  // Loop over requests
+  for ( vtksys_stl::set<vtksys_stl::set<vtkStdString> >::const_iterator rit = this->Internals->Requests.begin(); 
+        rit != this->Internals->Requests.end(); ++ rit )
     {
-    return;
-    }
-
-  // Loop over columns of interest
-  for ( vtkstd::set<vtkStdString>::iterator it = this->Internals->Selection.begin(); 
-        it != this->Internals->Selection.end(); ++ it )
-    {
+    // Each request contains only one column of interest (if there are others, they are ignored)
+    vtksys_stl::set<vtkStdString>::const_iterator it = rit->begin();
     vtkStdString varName = *it;
     if ( ! inData->GetColumnByName( varName ) )
       {
@@ -152,10 +123,10 @@ void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
       }
 
     vtkStringArray* varNames = vtkStringArray::New();
-    varNames->SetNumberOfValues( this->NumberOfVariables );
+    varNames->SetNumberOfValues( VTK_STATISTICS_NUMBER_OF_VARIABLES );
     varNames->SetValue( 0, varName );
 
-    // Store names to be able to use SetValueByName which is faster than SetValue    
+    // Store names to be able to use SetValueByName, and create the outData columns
     int nv = this->AssessNames->GetNumberOfValues();
     vtkStdString* names = new vtkStdString[nv];
     for ( int v = 0; v < nv; ++ v )
@@ -167,6 +138,12 @@ void vtkUnivariateStatisticsAlgorithm::ExecuteAssess( vtkTable* inData,
                     << ")";
 
       names[v] = assessColName.str().c_str(); 
+
+      vtkDoubleArray* assessValues = vtkDoubleArray::New(); 
+      assessValues->SetName( names[v] ); 
+      assessValues->SetNumberOfTuples( nRowD  ); 
+      outData->AddColumn( assessValues ); 
+      assessValues->Delete(); 
       }
 
     // Select assess functor

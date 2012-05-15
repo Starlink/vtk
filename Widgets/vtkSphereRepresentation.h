@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphereRepresentation.h,v $
+  Module:    vtkSphereRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -76,7 +76,7 @@ public:
 
   // Description:
   // Standard methods for type information and to print out the contents of the class.
-  vtkTypeRevisionMacro(vtkSphereRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkSphereRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 //BTX - used to manage the state of the widget

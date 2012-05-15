@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToGraph.cxx,v $
+  Module:    vtkTableToGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,6 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-vtkCxxRevisionMacro(vtkTableToGraph, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkTableToGraph);
 vtkCxxSetObjectMacro(vtkTableToGraph, LinkGraph, vtkMutableDirectedGraph);
 //---------------------------------------------------------------------------
@@ -550,7 +549,7 @@ int vtkTableToGraph::RequestData(
         // but don't update the vertex table.
         switch(arr->GetDataType())
           {
-          vtkExtendedTemplateMacro(vtkTableToGraphFindHiddenVertices(
+          vtkSuperExtraExtendedTemplateMacro(vtkTableToGraphFindHiddenVertices(
             static_cast<VTK_TT*>(arr->GetVoidPointer(0)), 
             arr->GetNumberOfTuples(), hiddenMap, curHiddenVertex,
             domain));
@@ -562,7 +561,7 @@ int vtkTableToGraph::RequestData(
         // auxiliary arrays, and add rows to the vertex table.
         switch(arr->GetDataType())
           {
-          vtkExtendedTemplateMacro(vtkTableToGraphFindVertices(
+          vtkSuperExtraExtendedTemplateMacro(vtkTableToGraphFindVertices(
             static_cast<VTK_TT*>(arr->GetVoidPointer(0)), 
             arr->GetNumberOfTuples(), vertexMap, domainArr, 
             labelArr, idArr, curVertex,
@@ -658,7 +657,7 @@ int vtkTableToGraph::RequestData(
           }
         switch(edgeArr->GetDataType())
           {
-          vtkExtendedTemplateMacro(vtkTableToGraphFindHiddenVertices(
+          vtkSuperExtraExtendedTemplateMacro(vtkTableToGraphFindHiddenVertices(
             static_cast<VTK_TT*>(edgeArr->GetVoidPointer(0)), 
             edgeArr->GetNumberOfTuples(), hiddenMap, curHiddenVertex, domain));
           } // end switch
@@ -698,8 +697,21 @@ int vtkTableToGraph::RequestData(
   
   // Add the auxiliary arrays to the vertex table.
   builder->GetVertexData()->AddArray(labelArr);
-  builder->GetVertexData()->SetPedigreeIds(idArr);
   builder->GetVertexData()->AddArray(domainArr);
+
+  // Check if the vertex table already has pedigree ids.
+  // If it does we're not going to add the generated
+  // array.
+  if (vertexTable->GetRowData()->GetPedigreeIds() == NULL)
+    {
+    builder->GetVertexData()->SetPedigreeIds(idArr);
+    }
+  else
+    {
+    builder->GetVertexData()->SetPedigreeIds(
+      vertexTable->GetRowData()->GetPedigreeIds());
+    }
+
 
   // Now go through the edge table, adding edges.
   // For each row in the edge table, add one edge to the
@@ -745,7 +757,7 @@ int vtkTableToGraph::RequestData(
         }  
       switch(columnSource->GetDataType())
         {
-        vtkExtendedTemplateMacro(valueSource = vtkTableToGraphGetValue(
+        vtkSuperExtraExtendedTemplateMacro(valueSource = vtkTableToGraphGetValue(
           static_cast<VTK_TT*>(columnSource->GetVoidPointer(0)), r));
         }
       vtkVariant valueTarget;
@@ -756,7 +768,7 @@ int vtkTableToGraph::RequestData(
         }  
       switch(columnTarget->GetDataType())
         {
-        vtkExtendedTemplateMacro(valueTarget = vtkTableToGraphGetValue(
+        vtkSuperExtraExtendedTemplateMacro(valueTarget = vtkTableToGraphGetValue(
           static_cast<VTK_TT*>(columnTarget->GetVoidPointer(0)), r));
         }
       vtksys_stl::pair<vtkStdString, vtkVariant> lookupSource(typeSource, vtkVariant(valueSource));
@@ -858,16 +870,25 @@ int vtkTableToGraph::RequestData(
     ++curHidden;
     }
 
-  // Add pedigree ids to the edges of the graph.
-  vtkIdType numEdges = builder->GetNumberOfEdges();
-  vtkSmartPointer<vtkIdTypeArray> edgeIds = vtkSmartPointer<vtkIdTypeArray>::New();
-  edgeIds->SetNumberOfTuples(numEdges);
-  edgeIds->SetName("edge");
-  for (vtkIdType i = 0; i < numEdges; ++i)
+  // Check if pedigree ids are in the input edge data
+  if (edgeTable->GetRowData()->GetPedigreeIds() == NULL)
     {
-    edgeIds->SetValue(i, i);
+    // Add pedigree ids to the edges of the graph.
+    vtkIdType numEdges = builder->GetNumberOfEdges();
+    VTK_CREATE(vtkIdTypeArray, edgeIds);
+    edgeIds->SetNumberOfTuples(numEdges);
+    edgeIds->SetName("edge");
+    for (vtkIdType i = 0; i < numEdges; ++i)
+      {
+      edgeIds->SetValue(i, i);
+      }
+    builder->GetEdgeData()->SetPedigreeIds(edgeIds);
     }
-  builder->GetEdgeData()->SetPedigreeIds(edgeIds);
+  else
+    {
+    builder->GetEdgeData()->SetPedigreeIds(
+      edgeTable->GetRowData()->GetPedigreeIds());
+    }
 
   // Copy structure into output graph.
   vtkInformation* outputInfo = outputVector->GetInformationObject(0);

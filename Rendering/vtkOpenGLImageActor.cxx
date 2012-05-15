@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLImageActor.cxx,v $
+  Module:    vtkOpenGLImageActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkgl.h" // vtkgl namespace
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLImageActor, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkOpenGLImageActor);
 #endif
 
@@ -49,7 +48,7 @@ vtkOpenGLImageActor::~vtkOpenGLImageActor()
 // Release the graphics resources used by this texture.  
 void vtkOpenGLImageActor::ReleaseGraphicsResources(vtkWindow *renWin)
 {
-  if (this->Index && renWin)
+  if (this->Index && renWin && renWin->GetMapped())
     {
     static_cast<vtkRenderWindow *>(renWin)->MakeCurrent();
 #ifdef GL_VERSION_1_1

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridGeometryFilter.cxx,v $
+  Module:    vtkUnstructuredGridGeometryFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,12 +43,13 @@
 #include "vtkQuadraticLinearWedge.h"
 #include "vtkBiQuadraticQuadraticWedge.h"
 #include "vtkBiQuadraticQuadraticHexahedron.h"
+#include "vtkBiQuadraticTriangle.h"
+#include "vtkIncrementalPointLocator.h"
 
 
 #include <vtkstd/vector>
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkUnstructuredGridGeometryFilter, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkUnstructuredGridGeometryFilter);
 
 #if 0
@@ -326,6 +327,7 @@ public:
   // VTK_QUADRATIC_TRIANGLE,
   // VTK_QUADRATIC_QUAD,
   // VTK_BIQUADRATIC_QUAD,
+  // VTK_BIQUADRATIC_TRIANGLE
   // VTK_QUADRATIC_LINEAR_QUAD
   vtkIdType Type;
   
@@ -402,6 +404,7 @@ public:
       switch(faceType)
         {
         case VTK_QUADRATIC_TRIANGLE:
+        case VTK_BIQUADRATIC_TRIANGLE:
           numberOfCornerPoints=3;
           break;
         case VTK_QUADRATIC_QUAD:
@@ -509,6 +512,22 @@ public:
               switch(faceType)
                 {
                 case VTK_QUADRATIC_TRIANGLE:
+                  // the mid-edge points
+                  i=0;
+                  while(found && i<3) 
+                    {
+                    // we add numberOfPoints before modulo. Modulo does not work
+                    // with negative values.
+                    // -1: start at the end in reverse order.
+                    found=current->Points[numberOfCornerPoints+((current->SmallestIdx-i+3-1)%3)]
+                      ==points[numberOfCornerPoints+((smallestIdx+i)%3)];
+                    ++i;
+                    }
+                  break;
+                case VTK_BIQUADRATIC_TRIANGLE:
+                  // the center point
+                  found=current->Points[6]==points[6];
+                  
                   // the mid-edge points
                   i=0;
                   while(found && i<3) 
@@ -768,7 +787,7 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkUnstructuredGrid *input = vtkUnstructuredGrid::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -944,7 +963,8 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
       if((cellType>=VTK_EMPTY_CELL && cellType<=VTK_QUAD)
          ||(cellType>=VTK_QUADRATIC_EDGE && cellType<=VTK_QUADRATIC_QUAD)
          ||(cellType==VTK_BIQUADRATIC_QUAD)
-         ||(cellType==VTK_QUADRATIC_LINEAR_QUAD))
+         ||(cellType==VTK_QUADRATIC_LINEAR_QUAD)
+         ||(cellType==VTK_BIQUADRATIC_TRIANGLE))
         {
         vtkDebugMacro(<<"not 3D cell. type="<<cellType);
         // not 3D: just copy it
@@ -1412,7 +1432,7 @@ int vtkUnstructuredGridGeometryFilter::RequestData(
 //-----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkUnstructuredGridGeometryFilter::SetLocator(vtkPointLocator *locator)
+void vtkUnstructuredGridGeometryFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

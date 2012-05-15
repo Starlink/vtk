@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolume16Reader.h,v $
+  Module:    vtkVolume16Reader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,7 +57,7 @@ class vtkUnsignedShortArray;
 class VTK_IO_EXPORT vtkVolume16Reader : public vtkVolumeReader
 {
 public:
-  vtkTypeRevisionMacro(vtkVolume16Reader,vtkVolumeReader);
+  vtkTypeMacro(vtkVolume16Reader,vtkVolumeReader);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

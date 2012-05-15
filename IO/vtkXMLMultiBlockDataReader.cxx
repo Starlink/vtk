@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkXMLMultiBlockDataReader.cxx,v $
+  Module:    vtkXMLMultiBlockDataReader.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkXMLDataElement.h"
 
-vtkCxxRevisionMacro(vtkXMLMultiBlockDataReader, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkXMLMultiBlockDataReader);
 
 //----------------------------------------------------------------------------

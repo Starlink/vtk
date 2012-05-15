@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayPrint.txx,v $
+  Module:    vtkArrayPrint.txx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -68,13 +68,12 @@ void vtkPrintMatrixFormat(ostream& stream, vtkTypedArray<T>* matrix)
     return;
     }
     
-  const vtkArrayExtents extents = matrix->GetExtents();
-  const vtkIdType row_count = extents[0];
-  const vtkIdType column_count = extents[1];
+  const vtkArrayRange rows = matrix->GetExtent(0);
+  const vtkArrayRange columns = matrix->GetExtent(1);
 
-  for(vtkIdType row = 0; row != row_count; ++row)
+  for(vtkIdType row = rows.GetBegin(); row != rows.GetEnd(); ++row)
     {
-    for(vtkIdType column = 0; column != column_count; ++column)
+    for(vtkIdType column = columns.GetBegin(); column != columns.GetEnd(); ++column)
       {
       stream << matrix->GetValue(vtkArrayCoordinates(row, column)) << " ";
       }
@@ -97,10 +96,9 @@ void vtkPrintVectorFormat(ostream& stream, vtkTypedArray<T>* vector)
     return;
     }
     
-  const vtkArrayExtents extents = vector->GetExtents();
-  const vtkIdType row_count = extents[0];
+  const vtkArrayRange rows = vector->GetExtent(0);
 
-  for(vtkIdType row = 0; row != row_count; ++row)
+  for(vtkIdType row = rows.GetBegin(); row != rows.GetEnd(); ++row)
     {
     stream << vector->GetValue(vtkArrayCoordinates(row)) << "\n";
     }

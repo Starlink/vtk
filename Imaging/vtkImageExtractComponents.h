@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageExtractComponents.h,v $
+  Module:    vtkImageExtractComponents.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IMAGING_EXPORT vtkImageExtractComponents : public vtkThreadedImageAlgo
 {
 public:
   static vtkImageExtractComponents *New();
-  vtkTypeRevisionMacro(vtkImageExtractComponents,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageExtractComponents,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

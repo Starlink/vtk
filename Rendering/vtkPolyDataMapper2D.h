@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataMapper2D.h,v $
+  Module:    vtkPolyDataMapper2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class vtkUnsignedCharArray;
 class VTK_RENDERING_EXPORT vtkPolyDataMapper2D : public vtkMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkPolyDataMapper2D,vtkMapper2D);
+  vtkTypeMacro(vtkPolyDataMapper2D,vtkMapper2D);
   static vtkPolyDataMapper2D *New();
   void PrintSelf(ostream& os, vtkIndent indent);
   

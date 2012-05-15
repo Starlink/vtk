@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLScalarsToColorsPainter.h,v $
+  Module:    vtkOpenGLScalarsToColorsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,8 +30,8 @@ class VTK_RENDERING_EXPORT vtkOpenGLScalarsToColorsPainter :
 {
 public:
   static vtkOpenGLScalarsToColorsPainter* New();
-  vtkTypeRevisionMacro(vtkOpenGLScalarsToColorsPainter, 
-    vtkScalarsToColorsPainter);
+  vtkTypeMacro(vtkOpenGLScalarsToColorsPainter,
+               vtkScalarsToColorsPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
   
 

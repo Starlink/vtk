@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThreshold.h,v $
+  Module:    vtkThreshold.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class VTK_GRAPHICS_EXPORT vtkThreshold : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkThreshold *New();
-  vtkTypeRevisionMacro(vtkThreshold,vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkThreshold,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -138,6 +138,8 @@ protected:
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
+
+  virtual int ProcessRequest(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   int    AllScalars;
   double LowerThreshold;

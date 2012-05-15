@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBrandesCentrality.h,v $
+  Module:    vtkBoostBrandesCentrality.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_INFOVIS_EXPORT vtkBoostBrandesCentrality : public vtkGraphAlgorithm
 {
 public:
   static vtkBoostBrandesCentrality *New();
-  vtkTypeRevisionMacro(vtkBoostBrandesCentrality, vtkGraphAlgorithm);
+  vtkTypeMacro(vtkBoostBrandesCentrality, vtkGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalDataSetCache.cxx,v $
+  Module:    vtkTemporalDataSetCache.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkTemporalDataSetCache, "$Revision: 1.8 $");
 //---------------------------------------------------------------------------
 vtkStandardNewMacro(vtkTemporalDataSetCache);
 

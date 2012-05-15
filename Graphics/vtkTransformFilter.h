@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTransformFilter.h,v $
+  Module:    vtkTransformFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_GRAPHICS_EXPORT vtkTransformFilter : public vtkPointSetAlgorithm
 {
 public:
   static vtkTransformFilter *New();
-  vtkTypeRevisionMacro(vtkTransformFilter,vtkPointSetAlgorithm);
+  vtkTypeMacro(vtkTransformFilter,vtkPointSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

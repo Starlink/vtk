@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCenteredSliderRepresentation.cxx,v $
+  Module:    vtkCenteredSliderRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,6 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkCenteredSliderRepresentation, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCenteredSliderRepresentation);
 
 //----------------------------------------------------------------------
@@ -68,7 +67,7 @@ vtkCenteredSliderRepresentation::vtkCenteredSliderRepresentation()
   // The points and the transformation for the points. 
   this->XForm = vtkTransform::New();
   this->Points = vtkPoints::New();
-  this->Points->SetNumberOfPoints(2*(10+this->ArcCount));
+  this->Points->SetNumberOfPoints(2*this->ArcCount + 12);
 
   this->TubeCells = 0;
   this->Tube = 0;
@@ -401,6 +400,21 @@ void vtkCenteredSliderRepresentation::Highlight(int highlight)
 //----------------------------------------------------------------------
 void vtkCenteredSliderRepresentation::BuildRepresentation()
 {
+  if ( this->GetMTime() <= this->BuildTime && 
+       (!this->Renderer || !this->Renderer->GetVTKWindow() ||
+        this->Renderer->GetVTKWindow()->GetMTime() <= this->BuildTime) )
+    {
+    return;
+    }
+
+  int *size = this->Renderer->GetSize();
+  if (0 == size[0] || 0 == size[1])
+    {
+    // Renderer has no size yet: wait until the next
+    // BuildRepresentation...
+    return;
+    }
+
   this->XForm->Identity();
   
   // scale and position and rotate the polydata

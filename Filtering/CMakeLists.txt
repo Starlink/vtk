@@ -3,10 +3,11 @@ SET(UKIT FILTERING)
 SET(KIT_TCL_LIBS vtkCommonTCL)
 SET(KIT_PYTHON_LIBS vtkCommonPythonD)
 SET(KIT_JAVA_LIBS vtkCommonJava)
-SET(KIT_LIBS vtkCommon)
+SET(KIT_INTERFACE_LIBRARIES vtkCommon)
 
 SET( Kit_SRCS
 vtkAbstractCellLocator.cxx
+vtkAbstractInterpolatedVelocityField.cxx
 vtkAbstractMapper.cxx
 vtkAbstractPointLocator.cxx
 vtkActor2DCollection.cxx
@@ -15,10 +16,14 @@ vtkAdjacentVertexIterator.cxx
 vtkAlgorithm.cxx
 vtkAlgorithmOutput.cxx
 vtkAMRBox.cxx
+vtkAnnotation.cxx
+vtkAnnotationLayers.cxx
+vtkAnnotationLayersAlgorithm.cxx
 vtkAttributesErrorMetric.cxx
 vtkBiQuadraticQuad.cxx
 vtkBiQuadraticQuadraticHexahedron.cxx
 vtkBiQuadraticQuadraticWedge.cxx
+vtkBiQuadraticTriangle.cxx
 vtkBSPCuts.cxx
 vtkBSPIntersections.cxx
 vtkCachedStreamingDemandDrivenPipeline.cxx
@@ -30,15 +35,18 @@ vtkCell.cxx
 vtkCellData.cxx
 vtkCellLinks.cxx
 vtkCellLocator.cxx
+vtkCellLocatorInterpolatedVelocityField.cxx
 vtkCellTypes.cxx
 vtkColorTransferFunction.cxx
 vtkCompositeDataIterator.cxx
 vtkCompositeDataPipeline.cxx
 vtkCompositeDataSetAlgorithm.cxx
 vtkCompositeDataSet.cxx
+vtkComputingResources.cxx
 vtkCone.cxx
 vtkConvexPointSet.cxx
 vtkCoordinate.cxx
+vtkCubicLine.cxx
 vtkCylinder.cxx
 vtkDataObjectAlgorithm.cxx
 vtkDataObjectCollection.cxx
@@ -60,10 +68,13 @@ vtkDemandDrivenPipeline.cxx
 vtkDirectedAcyclicGraph.cxx
 vtkDirectedGraphAlgorithm.cxx
 vtkDirectedGraph.cxx
+vtkDiscretizableColorTransferFunction.cxx
 vtkDistributedGraphHelper.cxx
 vtkEdgeListIterator.cxx
 vtkEmptyCell.cxx
+vtkExecutionScheduler.cxx
 vtkExecutive.cxx
+vtkExecutiveCollection.cxx
 vtkExplicitCell.cxx
 vtkFieldData.cxx
 vtkFilteringInformationKeyManager.cxx
@@ -111,6 +122,9 @@ vtkImplicitSelectionLoop.cxx
 vtkImplicitSum.cxx
 vtkImplicitVolume.cxx
 vtkImplicitWindowFunction.cxx
+vtkIncrementalOctreeNode.cxx
+vtkIncrementalOctreePointLocator.cxx
+vtkIncrementalPointLocator.cxx
 vtkInEdgeIterator.cxx
 vtkInformation.cxx
 vtkInformationExecutivePortKey.cxx
@@ -124,12 +138,16 @@ vtkLine.cxx
 vtkLocator.cxx
 vtkMapper2D.cxx
 vtkMergePoints.cxx
+vtkModifiedBSPTree.cxx
 vtkMultiBlockDataSetAlgorithm.cxx
 vtkMultiBlockDataSet.cxx
 vtkMultiPieceDataSet.cxx
 vtkMutableDirectedGraph.cxx
 vtkMutableUndirectedGraph.cxx
 vtkNonLinearCell.cxx
+vtkNonMergingPointLocator.cxx
+vtkOctreePointLocator.cxx
+vtkOctreePointLocatorNode.cxx
 vtkOrderedTriangulator.cxx
 vtkOutEdgeIterator.cxx
 vtkParametricSpline.cxx
@@ -203,6 +221,7 @@ vtkTemporalDataSetAlgorithm.cxx
 vtkTemporalDataSet.cxx
 vtkTetra.cxx
 vtkThreadedImageAlgorithm.cxx
+vtkThreadedStreamingPipeline.cxx
 vtkTreeAlgorithm.cxx
 vtkTree.cxx
 vtkTreeDFSIterator.cxx
@@ -228,6 +247,7 @@ vtkWedge.cxx
 
 SET_SOURCE_FILES_PROPERTIES(
 vtkAbstractCellLocator
+vtkAbstractInterpolatedVelocityField
 vtkAbstractMapper
 vtkAbstractPointLocator
 vtkCell
@@ -268,6 +288,7 @@ vtkImageProgressIterator
 vtkImageSource
 vtkImageToImageFilter
 vtkImageTwoInputFilter
+vtkIncrementalPointLocator
 vtkInformationExecutivePortKey
 vtkInformationExecutivePortVectorKey
 vtkLocator
@@ -306,6 +327,9 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkImageIterator.cxx
   vtkInformation.cxx
   vtkImageProgressIterator.cxx
+  vtkComputingResources.cxx
+  vtkExecutionScheduler.cxx
+  vtkThreadedStreamingPipeline.cxx
   WRAP_EXCLUDE
 )
 
@@ -324,8 +348,6 @@ IF(VTK_USE_N_WAY_ARRAYS)
     ${Kit_SRCS}
     vtkArrayData.cxx
     vtkArrayDataAlgorithm.cxx
-    vtkFactoredArrayData.cxx
-    vtkFactoredArrayDataAlgorithm.cxx
     )
 
 ENDIF(VTK_USE_N_WAY_ARRAYS)

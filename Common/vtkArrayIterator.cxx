@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayIterator.cxx,v $
+  Module:    vtkArrayIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkArrayIterator, "$Revision: 1.1 $");
 //-----------------------------------------------------------------------------
 vtkArrayIterator::vtkArrayIterator()
 {

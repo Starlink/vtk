@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBreadthFirstSearchTree.cxx,v $
+  Module:    vtkBoostBreadthFirstSearchTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,12 +39,10 @@
 #include "vtkTree.h"
 
 #include <boost/graph/breadth_first_search.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostBreadthFirstSearchTree, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkBoostBreadthFirstSearchTree);
 
 
@@ -198,7 +196,7 @@ int vtkBoostBreadthFirstSearchTree::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
 

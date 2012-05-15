@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRecursiveDividingCubes.cxx,v $
+  Module:    vtkRecursiveDividingCubes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPolyData.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkRecursiveDividingCubes, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkRecursiveDividingCubes);
 
 vtkRecursiveDividingCubes::vtkRecursiveDividingCubes()
@@ -58,7 +57,7 @@ int vtkRecursiveDividingCubes::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkImageData *input = vtkImageData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(

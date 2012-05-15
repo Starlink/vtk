@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaImageUtils.cxx,v $
+  Module:    metaImageUtils.cxx
   Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.5 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -15,6 +15,12 @@
 
 =========================================================================*/
 #include <stdio.h>
+
+#ifdef _MSC_VER
+#pragma warning(disable:4702)
+#pragma warning(disable:4996)
+#endif
+
 
 #include "metaImageTypes.h"
 #include <string.h>

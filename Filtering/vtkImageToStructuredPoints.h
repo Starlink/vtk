@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageToStructuredPoints.h,v $
+  Module:    vtkImageToStructuredPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,13 +33,17 @@ class VTK_FILTERING_EXPORT vtkImageToStructuredPoints : public vtkImageAlgorithm
 {
 public:
   static vtkImageToStructuredPoints *New();
-  vtkTypeRevisionMacro(vtkImageToStructuredPoints,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageToStructuredPoints,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
   // Set/Get the input object from the image pipeline.
   void SetVectorInput(vtkImageData *input);
   vtkImageData *GetVectorInput();
+
+  // Description:
+  // Get the output of the filter.
+  vtkStructuredPoints* GetStructuredPointsOutput();
 
 protected:
   vtkImageToStructuredPoints();

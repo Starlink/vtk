@@ -7,10 +7,27 @@
  * statement of authorship are reproduced on all copies.
  */
 #include "vtkMath.h"
+#include "vtkMathConfigure.h"
+
+#include <vtkstd/limits>
 
 #ifndef ABS
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
+
+template<class A>
+bool fuzzyCompare(A a, A b)
+{
+  return ABS(a - b) < vtkstd::numeric_limits<A>::epsilon();
+}
+
+template<class A>
+bool fuzzyCompare(A a[3], A b[3])
+{
+  return fuzzyCompare(a[0], b[0]) &&
+         fuzzyCompare(a[1], b[1]) &&
+         fuzzyCompare(a[2], b[2]);
+}
 
 //=============================================================================
 // Helpful class for storing and using color triples.
@@ -57,6 +74,12 @@ static ostream &operator<<(ostream &os, const Triple t)
 static int TestColorConvert(const Triple &rgb, const Triple &hsv,
                             const Triple &xyz, const Triple &lab);
 
+// Function for comparing special doubles like Inf and NaN.
+#define TestSpecialDoubles(value, inftest, nantest) \
+  TestSpecialDoublesReal(value, #value, inftest, nantest)
+static int TestSpecialDoublesReal(double value, const char *name,
+                                  bool inftest, bool nantest);
+
 int TestMath(int,char *[])
 {
   int testIntValue;
@@ -82,6 +105,58 @@ int TestMath(int,char *[])
     return 1;
     }
 
+  // Test add, subtract, scalar multiplication.
+  double a[3] = {1.0, 2.0, 3.0};
+  double b[3] = {0.0, 1.0, 2.0};
+  double c[3];
+  double ans1[3] = {1.0, 3.0, 5.0};
+  double ans2[3] = {1.0, 1.0, 1.0};
+  double ans3[3] = {3.0, 6.0, 9.0};
+  float af[3] = {1.0f, 2.0f, 3.0f};
+  float bf[3] = {0.0f, 1.0f, 2.0f};
+  float cf[3];
+  float ans1f[3] = {1.0, 3.0, 5.0};
+  float ans2f[3] = {1.0, 1.0, 1.0};
+  float ans3f[3] = {3.0, 6.0, 9.0};
+
+  vtkMath::Add(a, b, c);
+  if (!fuzzyCompare(c, ans1))
+    {
+    vtkGenericWarningMacro("Double addition failed.");
+    return 1;
+    }
+  vtkMath::Subtract(a, b, c);
+  if (!fuzzyCompare(c, ans2))
+    {
+    vtkGenericWarningMacro("Double subtraction failed.");
+    return 1;
+    }
+  vtkMath::MultiplyScalar(a, 3.0);
+  if (!fuzzyCompare(a, ans3))
+    {
+    vtkGenericWarningMacro("Double scalar multiplication failed.");
+    return 1;
+    }
+  vtkMath::Add(af, bf, cf);
+  if (!fuzzyCompare(cf, ans1f))
+    {
+    vtkGenericWarningMacro("Float addition failed.");
+	cout << "Result: { " << cf[0] << ", " << cf[1] << ", " << cf[2] << " }" << endl;
+    return 1;
+    }
+  vtkMath::Subtract(af, bf, cf);
+  if (!fuzzyCompare(cf, ans2f))
+    {
+    vtkGenericWarningMacro("Float subtraction failed.");
+    return 1;
+    }
+  vtkMath::MultiplyScalar(af, 3.0f);
+  if (!fuzzyCompare(af, ans3f))
+    {
+    vtkGenericWarningMacro("Float scalar multiplication failed.");
+    return 1;
+    }
+
   // Test color conversion.
   int colorsPassed = 1;
 
@@ -92,13 +167,13 @@ int TestMath(int,char *[])
 
   colorsPassed &= TestColorConvert(Triple(0.5, 0.5, 0.0),             // RGB
                                    Triple(1.0/6.0, 1.0, 0.5),         // HSV
-                                   Triple(0.385, 0.464, 0.069),       // XYZ
-                                   Triple(73.8, -17.11, 74.99));      // CIELAB
+                                   Triple(0.165, 0.199, 0.030),       // XYZ
+                                   Triple(51.7, -12.90, 56.54));      // CIELAB
 
   colorsPassed &= TestColorConvert(Triple(0.25, 0.25, 0.5),           // RGB
                                    Triple(2.0/3.0, 0.5, 0.5),         // HSV
-                                   Triple(0.283, 0.268, 0.510),       // XYZ
-                                   Triple(58.79, 11.39, -26.35));     // CIELAB
+                                   Triple(0.078, 0.063, 0.211),       // XYZ
+                                   Triple(30.11, 18.49, -36.18));     // CIELAB
 
   colorsPassed &= TestColorConvert(Triple(0.0, 0.0, 0.0),             // RGB
                                    Triple(0.0, 0.0, 0.0), // HSV (H&S ambiguous)
@@ -109,7 +184,23 @@ int TestMath(int,char *[])
     {
     return 1;
     }
-                                              
+
+  if (!TestSpecialDoubles(0, false, false)) return 1;
+  if (!TestSpecialDoubles(5, false, false)) return 1;
+  if (!TestSpecialDoubles(vtkMath::Inf(), true, false)) return 1;
+  if (!TestSpecialDoubles(vtkMath::NegInf(), true, false)) return 1;
+  if (!TestSpecialDoubles(vtkMath::Nan(), false, true)) return 1;
+
+  if (!(0 < vtkMath::Inf()))
+    {
+    vtkGenericWarningMacro(<< "Odd comparison for infinity.");
+    return 1;
+    }
+  if (!(0 > vtkMath::NegInf()))
+    {
+    vtkGenericWarningMacro(<< "Odd comparison for negitive infinity.");
+    return 1;
+    }
 
   return 0;
 }
@@ -205,6 +296,27 @@ static int TestColorConvert(const Triple &rgb, const Triple &hsv,
   vtkMath::RGBToLab(rgb[0], rgb[1], rgb[2],
                     &result1[0], &result1[1], &result1[2]);
   COMPARE(RGBToLab, lab, result1);
+
+  return 1;
+}
+
+static int TestSpecialDoublesReal(double value, const char *name,
+                                  bool inftest, bool nantest)
+{
+  cout << "Testing comparison of " << name << " to non-finite values." << endl;
+  cout << "  * IsNan test." << endl;
+  if (vtkMath::IsNan(value) != static_cast<int>(nantest))
+    {
+    cout << value << " failed the IsNan test." << endl;
+    return 0;
+    }
+  cout << "  * IsInf test." << endl;
+  if (vtkMath::IsInf(value) != static_cast<int>(inftest))
+    {
+    cout << value << " failed the IsInf test." << endl;
+    return 0;
+    }
+  cout << "  * Tests passed." << endl;
 
   return 1;
 }

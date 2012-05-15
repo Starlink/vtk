@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMutableDirectedGraph.cxx,v $
+  Module:    vtkMutableDirectedGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 //----------------------------------------------------------------------------
 // class vtkMutableDirectedGraph
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMutableDirectedGraph, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkMutableDirectedGraph);
 //----------------------------------------------------------------------------
 vtkMutableDirectedGraph::vtkMutableDirectedGraph()
@@ -207,6 +206,30 @@ vtkIdType vtkMutableDirectedGraph::AddChild(vtkIdType parent,
   vtkIdType v = this->AddVertex();
   this->AddEdge(parent, v, propertyArr);
   return v;
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::RemoveVertex(vtkIdType v)
+{
+  this->RemoveVertexInternal(v, true);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::RemoveEdge(vtkIdType e)
+{
+  this->RemoveEdgeInternal(e, true);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::RemoveVertices(vtkIdTypeArray* arr)
+{
+  this->RemoveVerticesInternal(arr, true);
+}
+
+//----------------------------------------------------------------------------
+void vtkMutableDirectedGraph::RemoveEdges(vtkIdTypeArray* arr)
+{
+  this->RemoveEdgesInternal(arr, true);
 }
 
 //----------------------------------------------------------------------------

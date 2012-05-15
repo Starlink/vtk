@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkJavaAwt.h,v $
+  Module:    vtkJavaAwt.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@
   H = E->CallIntMethod(C, mid); }
 # include "vtkWindows.h"
 int WJLH_init_check = 0;
-# include <vtkstd/map>
+# include <vtkstd/map> // STL Header
 vtkstd::map<int,int> WJLH_lock_map;
 #endif
 
@@ -95,6 +95,7 @@ Java_vtk_vtkPanel_RenderCreate(JNIEnv *env, jobject canvas, jobject id0)
   
 // Here is the win32 drawing code
 #if defined(_WIN32) || defined(WIN32)
+  temp0->Finalize();
   JAWT_Win32DrawingSurfaceInfo* dsi_win;
   dsi_win = (JAWT_Win32DrawingSurfaceInfo*)dsi->platformInfo;
   temp0->SetWindowId((void *)dsi_win->hwnd);
@@ -105,7 +106,7 @@ Java_vtk_vtkPanel_RenderCreate(JNIEnv *env, jobject canvas, jobject id0)
 #elif defined(__APPLE__)
   JAWT_MacOSXDrawingSurfaceInfo* dsi_mac;
   dsi_mac = (JAWT_MacOSXDrawingSurfaceInfo*)dsi->platformInfo;
-  temp0->SetDisplayId(dsi_mac->cocoaViewRef);
+  temp0->SetWindowId(dsi_mac->cocoaViewRef);
 // otherwise use X11 code
 #else
   JAWT_X11DrawingSurfaceInfo* dsi_x11;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestTextureRGBA.cxx,v $
+  Module:    TestTextureRGBA.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,6 +31,7 @@
 #include "vtkPNGReader.h"
 #include "vtkTestUtilities.h"
 #include "vtkRegressionTestImage.h"
+
 
 int TestTextureRGBA(int argc, char *argv[])
 {

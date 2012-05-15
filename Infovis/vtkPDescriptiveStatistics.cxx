@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPDescriptiveStatistics.cxx,v $
+  Module:    vtkPDescriptiveStatistics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkVariant.h"
 
 vtkStandardNewMacro(vtkPDescriptiveStatistics);
-vtkCxxRevisionMacro(vtkPDescriptiveStatistics, "$Revision: 1.4 $");
 vtkCxxSetObjectMacro(vtkPDescriptiveStatistics, Controller, vtkMultiProcessController);
 //-----------------------------------------------------------------------------
 vtkPDescriptiveStatistics::vtkPDescriptiveStatistics()
@@ -48,8 +47,9 @@ void vtkPDescriptiveStatistics::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------------------------------------------------------
-void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
-                                              vtkDataObject* outMetaDO )
+void vtkPDescriptiveStatistics::Learn( vtkTable* inData,
+                                       vtkTable* inParameters,
+                                       vtkDataObject* outMetaDO )
 {
   vtkTable* outMeta = vtkTable::SafeDownCast( outMetaDO );
   if ( ! outMeta ) 
@@ -58,7 +58,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     } 
 
   // First calculate descriptive statistics on local data set
-  this->Superclass::ExecuteLearn( inData, outMeta );
+  this->Superclass::Learn( inData, inParameters, outMeta );
 
   vtkIdType nRow = outMeta->GetNumberOfRows();
   if ( ! nRow )
@@ -76,9 +76,13 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
 
   // Now get ready for parallel calculations
   vtkCommunicator* com = this->Controller->GetCommunicator();
-  
+  if ( ! com )
+    {
+    vtkErrorMacro("No parallel communicator.");
+    }
+
   // (All) gather all sample sizes
-  int n_l = this->SampleSize;
+  int n_l = outMeta->GetValueByName( 0, "Cardinality" ).ToInt(); // Cardinality
   int* n_g = new int[np];
   com->AllGather( &n_l, n_g, 1 ); 
   
@@ -88,7 +92,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     // Reduce to global extrema
     double extrema_l[2];
     extrema_l[0] = outMeta->GetValueByName( r, "Minimum" ).ToDouble();
-    // Collect -max instead of max so a single reduce op. (minimum) can process both extrema at a time
+    // Collect - max instead of max so a single reduce op. (minimum) can process both extrema at a time
     extrema_l[1] = - outMeta->GetValueByName( r, "Maximum" ).ToDouble();
 
     double extrema_g[2];
@@ -97,6 +101,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
                     2, 
                     vtkCommunicator::MIN_OP );
     outMeta->SetValueByName( r, "Minimum", extrema_g[0] );
+    // max = - min ( - max )
     outMeta->SetValueByName( r, "Maximum", - extrema_g[1] );
 
     // (All) gather all local M statistics
@@ -118,7 +123,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     for ( int i = 1; i < np; ++ i )
       {
       int ns_l = n_g[i];
-      ns += ns_l;
+      int N = ns + ns_l; 
 
       int o = 4 * i;
       double mean_part = M_g[o];
@@ -127,26 +132,28 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
       double mom4_part = M_g[o + 3];
       
       double delta = mean_part - mean;
-      double delta_sur_n = delta / static_cast<double>( ns );
-      double delta_sur_n2 = delta_sur_n * delta_sur_n;
+      double delta_sur_N = delta / static_cast<double>( N );
+      double delta2_sur_N2 = delta_sur_N * delta_sur_N;
 
       int ns2 = ns * ns;
       int ns_l2 = ns_l * ns_l;
       int prod_ns = ns * ns_l;
  
       mom4 += mom4_part 
-        + prod_ns * ( ns2 - prod_ns + ns_l2 ) * delta * delta_sur_n * delta_sur_n2
-        + 6. * ( ns2 * mom2_part + ns_l2 * mom2 ) * delta_sur_n2
-        + 4. * ( ns * mom3_part - ns_l * mom3 ) * delta_sur_n;
+        + prod_ns * ( ns2 - prod_ns + ns_l2 ) * delta * delta_sur_N * delta2_sur_N2
+        + 6. * ( ns2 * mom2_part + ns_l2 * mom2 ) * delta2_sur_N2
+        + 4. * ( ns * mom3_part - ns_l * mom3 ) * delta_sur_N;
 
       mom3 += mom3_part 
-        + prod_ns * ( ns - ns_l ) * delta * delta_sur_n2
-        + 3. * ( ns * mom2_part - ns_l * mom2 ) * delta_sur_n;
+        + prod_ns * ( ns - ns_l ) * delta * delta2_sur_N2
+        + 3. * ( ns * mom2_part - ns_l * mom2 ) * delta_sur_N;
 
       mom2 += mom2_part 
-        + prod_ns * delta * delta_sur_n;
+        + prod_ns * delta * delta_sur_N;
 
-      mean += ns_l * delta_sur_n;
+      mean += ns_l * delta_sur_N;
+
+      ns = N;
       }
 
     outMeta->SetValueByName( r, "Mean", mean );
@@ -155,7 +162,7 @@ void vtkPDescriptiveStatistics::ExecuteLearn( vtkTable* inData,
     outMeta->SetValueByName( r, "M4", mom4 );
 
     // Set global statistics
-    this->SampleSize = ns;
+    outMeta->SetValueByName( r, "Cardinality", ns );
 
     // Clean-up
     delete [] M_g;

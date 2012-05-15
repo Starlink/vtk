@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAxisActor.cxx,v $
+  Module:    vtkAxisActor.cxx
   Thanks:    Kathleen Bonnell, B Division, Lawrence Livermore Nat'l Laboratory
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
@@ -33,7 +33,6 @@
 // ****************************************************************
 
 vtkStandardNewMacro(vtkAxisActor);
-vtkCxxRevisionMacro(vtkAxisActor, "$Revision: 1.7 $");
 vtkCxxSetObjectMacro(vtkAxisActor, Camera, vtkCamera); 
 
 // ****************************************************************

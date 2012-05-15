@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridOutlineFilter.h,v $
+  Module:    vtkRectilinearGridOutlineFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_PARALLEL_EXPORT vtkRectilinearGridOutlineFilter : public vtkPolyDataAl
 {
 public:
   static vtkRectilinearGridOutlineFilter *New();
-  vtkTypeRevisionMacro(vtkRectilinearGridOutlineFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkRectilinearGridOutlineFilter,vtkPolyDataAlgorithm);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

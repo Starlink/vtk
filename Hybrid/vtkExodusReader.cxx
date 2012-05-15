@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExodusReader.cxx,v $
+  Module:    vtkExodusReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,7 @@
 
 #include <sys/stat.h>
 #include <ctype.h>
-#include <exodusII.h>
+#include "vtkExodusII.h"
 
 #include <vtkstd/algorithm>
 #include <vtkstd/string>
@@ -942,7 +942,7 @@ private:
   vtkstd::map<vtkStdString,int> apbIndents;
 
 public:
-  vtkTypeRevisionMacro(vtkExodusXMLParser,vtkXMLParser);
+  vtkTypeMacro(vtkExodusXMLParser,vtkXMLParser);
 
   static vtkExodusXMLParser* New();
 
@@ -1395,7 +1395,6 @@ private:
 };
 
 
-vtkCxxRevisionMacro(vtkExodusXMLParser, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkExodusXMLParser);
 
 // This is a cruddy hack... because we need to pass a
@@ -1577,7 +1576,6 @@ void vtkExodusMetadata::Finalize()
 }
 
 
-vtkCxxRevisionMacro(vtkExodusReader, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkExodusReader);
 
 #ifdef ARRAY_TYPE_NAMES_IN_CXX_FILE
@@ -4000,6 +3998,13 @@ void vtkExodusReader::GenerateExtraArrays(vtkUnstructuredGrid* output)
 
     // Get the data into the temp int array
     ex_get_node_num_map(this->CurrentHandle, exo_array_data);
+cerr << "node num map : ";
+for (i = 0; i < this->NumberOfNodesInFile; i ++)
+{
+  cerr << exo_array_data[i] << " ";
+}
+cerr << endl;
+
 
     // Okay copy the points that are actually used into the vtk array
     int point_index;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricFunctionSource.cxx,v $
+  Module:    vtkParametricFunctionSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -29,7 +29,6 @@
 #include <math.h>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkParametricFunctionSource, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkParametricFunctionSource);
 vtkCxxSetObjectMacro(vtkParametricFunctionSource,ParametricFunction,vtkParametricFunction);
 

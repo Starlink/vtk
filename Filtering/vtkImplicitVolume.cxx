@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitVolume.cxx,v $
+  Module:    vtkImplicitVolume.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkPointData.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkImplicitVolume, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkImplicitVolume);
 vtkCxxSetObjectMacro(vtkImplicitVolume,Volume,vtkImageData);
 

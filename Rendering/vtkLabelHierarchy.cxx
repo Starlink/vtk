@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelHierarchy.cxx,v $
+  Module:    vtkLabelHierarchy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,6 +40,7 @@
 #include "vtkPythagoreanQuadruples.h"
 #include "vtkRenderer.h"
 #include "vtkSmartPointer.h"
+#include "vtkTextProperty.h"
 
 #include <octree/octree>
 #include <vtkstd/deque>
@@ -73,7 +74,6 @@
 //
 vtkLabelHierarchy* vtkLabelHierarchy::Implementation::Current;
 
-
 //----------------------------------------------------------------------------
 // vtkLabelHierarchyFrustumIterator - an iterator with no-initial processing
 //
@@ -83,7 +83,7 @@ vtkLabelHierarchy* vtkLabelHierarchy::Implementation::Current;
 class vtkLabelHierarchyFrustumIterator : public vtkLabelHierarchyIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchyFrustumIterator,vtkLabelHierarchyIterator);
+  vtkTypeMacro(vtkLabelHierarchyFrustumIterator,vtkLabelHierarchyIterator);
   static vtkLabelHierarchyFrustumIterator* New();
   void Prepare( vtkLabelHierarchy* hier, vtkCamera* cam, double frustumPlanes[24] );
   virtual void Begin( vtkIdTypeArray* lastPlaced );
@@ -122,7 +122,6 @@ protected:
   vtkIdType PreviousLabelIter;
 };
 
-vtkCxxRevisionMacro(vtkLabelHierarchyFrustumIterator,"$Revision: 1.37 $");
 vtkStandardNewMacro(vtkLabelHierarchyFrustumIterator);
 vtkCxxSetObjectMacro(vtkLabelHierarchyFrustumIterator, Camera, vtkCamera);
 vtkLabelHierarchyFrustumIterator::vtkLabelHierarchyFrustumIterator()
@@ -500,7 +499,7 @@ bool vtkLabelHierarchyFrustumIterator::IsCursorInFrustum()
 class vtkLabelHierarchyFullSortIterator : public vtkLabelHierarchyIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchyFullSortIterator,vtkLabelHierarchyIterator);
+  vtkTypeMacro(vtkLabelHierarchyFullSortIterator,vtkLabelHierarchyIterator);
   static vtkLabelHierarchyFullSortIterator* New();
 
   void Prepare( vtkLabelHierarchy* hier, vtkCamera* cam,
@@ -553,7 +552,6 @@ protected:
   int NodesTraversed;
 };
 
-vtkCxxRevisionMacro(vtkLabelHierarchyFullSortIterator,"$Revision: 1.37 $");
 vtkStandardNewMacro(vtkLabelHierarchyFullSortIterator);
 vtkCxxSetObjectMacro(vtkLabelHierarchyFullSortIterator, Camera, vtkCamera);
 void vtkLabelHierarchyFullSortIterator::Prepare( vtkLabelHierarchy* hier, vtkCamera* cam,
@@ -713,7 +711,12 @@ bool vtkLabelHierarchyFullSortIterator::IsAtEnd()
 
 vtkIdType vtkLabelHierarchyFullSortIterator::GetLabelId()
 {
-  return *this->LabelIterator;
+  if (!(this->IsAtEnd()))
+    {
+    return *this->LabelIterator;
+    }
+  else
+    return 0;
 }
 
 void vtkLabelHierarchyFullSortIterator::GetNodeGeometry( double center[3], double& sz )
@@ -766,7 +769,7 @@ vtkLabelHierarchyFullSortIterator::~vtkLabelHierarchyFullSortIterator()
 class vtkLabelHierarchyQuadtreeIterator : public vtkLabelHierarchyIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchyQuadtreeIterator,vtkLabelHierarchyIterator);
+  vtkTypeMacro(vtkLabelHierarchyQuadtreeIterator,vtkLabelHierarchyIterator);
   static vtkLabelHierarchyQuadtreeIterator* New();
 
   typedef vtkLabelHierarchy::Implementation::HierarchyType2::octree_node_pointer NodePointer;
@@ -806,7 +809,6 @@ protected:
   int NodesQueued;
 };
 
-vtkCxxRevisionMacro(vtkLabelHierarchyQuadtreeIterator,"$Revision: 1.37 $");
 vtkStandardNewMacro(vtkLabelHierarchyQuadtreeIterator);
 vtkCxxSetObjectMacro(vtkLabelHierarchyQuadtreeIterator,Camera,vtkCamera);
 vtkCxxSetObjectMacro(vtkLabelHierarchyQuadtreeIterator,Renderer,vtkRenderer);
@@ -855,12 +857,12 @@ void vtkLabelHierarchyQuadtreeIterator::Prepare(
   if ( cam->GetParallelProjection() )
     { // Compute threshold for quadtree nodes too small to visit using parallel projection
     //cout << "SizeLimit ParallelProj ps: " << cam->GetParallelScale() << "\n";
-    this->SizeLimit = 0.0001 * cam->GetParallelScale(); // FIXME: Should be set using cam->ParallelScale and pixel size
+    //this->SizeLimit = 0.0001 * cam->GetParallelScale(); // FIXME: Should be set using cam->ParallelScale and pixel size
     }
   else
     { // Compute threshold for quadtree nodes too small to visit using perspective projection
-    double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
-    double tva = 2. * tan( va / 2. );
+    //double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
+    //double tva = 2. * tan( va / 2. );
     double vsr;
     if ( cam->GetUseHorizontalViewAngle() )
       {
@@ -872,9 +874,9 @@ void vtkLabelHierarchyQuadtreeIterator::Prepare(
       double vs = ren->GetSize()[1];
       vsr = this->BucketSize[1] ? ( vs / this->BucketSize[1] ) : VTK_DOUBLE_MAX;
       }
-    double fac = vsr ? ( 0.1 * tva / vsr ) : 0.;
+    //double fac = vsr ? ( 0.1 * tva / vsr ) : 0.;
     //cout << "SizeLimit  va: " << va << " tva: " << tva << " vsr: " << vsr << " fac: " << fac << " slim: " << fac * fac << "\n";
-    this->SizeLimit = fac * fac;
+    //this->SizeLimit = fac * fac;
     }
 }
 
@@ -974,7 +976,12 @@ bool vtkLabelHierarchyQuadtreeIterator::IsAtEnd()
 
 vtkIdType vtkLabelHierarchyQuadtreeIterator::GetLabelId()
 {
-  return *this->LabelIterator;
+  if (!(this->IsAtEnd()))
+    {
+    return *this->LabelIterator;
+    }
+  else
+    return 0;
 }
 
 void vtkLabelHierarchyQuadtreeIterator::GetNodeGeometry( double center[3], double& sz )
@@ -1085,7 +1092,7 @@ void vtkLabelHierarchyQuadtreeIterator::QueueChildren()
 class vtkLabelHierarchyOctreeQueueIterator : public vtkLabelHierarchyIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchyOctreeQueueIterator,vtkLabelHierarchyIterator);
+  vtkTypeMacro(vtkLabelHierarchyOctreeQueueIterator,vtkLabelHierarchyIterator);
   static vtkLabelHierarchyOctreeQueueIterator* New();
 
   typedef vtkLabelHierarchy::Implementation::HierarchyType3::octree_node_pointer NodePointer;
@@ -1120,12 +1127,13 @@ protected:
   vtkstd::deque<NodePointer> Queue; // Queue of nodes to be traversed.
   float BucketSize[2]; // size of label placer buckets in pixels
   double SizeLimit; // square of smallest allowable distance-normalized octree node size.
+  vtkIdTypeArray* LastPlaced; // Labels placed in the previous frame
+  vtkIdType LastPlacedIndex; // Index into LastPlaced for the current frame
 
   bool AtEnd;
   int NodesQueued;
 };
 
-vtkCxxRevisionMacro(vtkLabelHierarchyOctreeQueueIterator,"$Revision: 1.37 $");
 vtkStandardNewMacro(vtkLabelHierarchyOctreeQueueIterator);
 vtkCxxSetObjectMacro(vtkLabelHierarchyOctreeQueueIterator,Camera,vtkCamera);
 vtkCxxSetObjectMacro(vtkLabelHierarchyOctreeQueueIterator,Renderer,vtkRenderer);
@@ -1174,12 +1182,12 @@ void vtkLabelHierarchyOctreeQueueIterator::Prepare(
   if ( cam->GetParallelProjection() )
     { // Compute threshold for quadtree nodes too small to visit using parallel projection
     //cout << "SizeLimit ParallelProj ps: " << cam->GetParallelScale() << "\n";
-    this->SizeLimit = 0.0001 * cam->GetParallelScale(); // FIXME: Should be set using cam->ParallelScale and pixel size
+    //this->SizeLimit = 0.0001 * cam->GetParallelScale(); // FIXME: Should be set using cam->ParallelScale and pixel size
     }
   else
     { // Compute threshold for quadtree nodes too small to visit using perspective projection
-    double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
-    double tva = 2. * tan( va / 2. );
+    //double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
+    //double tva = 2. * tan( va / 2. );
     double vsr;
     if ( cam->GetUseHorizontalViewAngle() )
       {
@@ -1191,14 +1199,32 @@ void vtkLabelHierarchyOctreeQueueIterator::Prepare(
       double vs = ren->GetSize()[1];
       vsr = this->BucketSize[1] ? ( vs / this->BucketSize[1] ) : VTK_DOUBLE_MAX;
       }
-    double fac = vsr ? ( 0.1 * tva / vsr ) : 0.;
+    //double fac = vsr ? ( 0.1 * tva / vsr ) : 0.;
     //cout << "SizeLimit  va: " << va << " tva: " << tva << " vsr: " << vsr << " fac: " << fac << " slim: " << fac * fac << "\n";
-    this->SizeLimit = fac * fac;
+    //this->SizeLimit = fac * fac;
     }
 }
 
-void vtkLabelHierarchyOctreeQueueIterator::Begin( vtkIdTypeArray* vtkNotUsed(lastPlaced) )
+void vtkLabelHierarchyOctreeQueueIterator::Begin( vtkIdTypeArray* lastPlaced )
 {
+  this->LastPlaced = lastPlaced;
+  this->LastPlacedIndex = ( lastPlaced && lastPlaced->GetNumberOfTuples() > 0 )? 0 : -1; // don't try to traverse what's not there
+
+  // Skip over invalid label indices
+  if ( this->LastPlacedIndex >= 0 )
+    {
+    vtkIdType numLabels = this->Hierarchy->GetPointData()->GetAbstractArray( "Type" )->GetNumberOfTuples();
+    while ( this->LastPlacedIndex < this->LastPlaced->GetNumberOfTuples() &&
+            this->LastPlaced->GetValue( this->LastPlacedIndex ) >= numLabels )
+      {
+      ++ this->LastPlacedIndex;
+      }
+    if ( this->LastPlacedIndex >= this->LastPlaced->GetNumberOfTuples() )
+      {
+      this->LastPlacedIndex = -1;
+      }
+    }
+
   this->Node = this->Hierarchy->GetImplementation()->Hierarchy3->root();
   if ( &(this->Node->value()) )
     {
@@ -1258,8 +1284,37 @@ typedef vtkstd::set<vtkLabelHierarchyOctreeQueueIterator::NodePointer,vtkOctreeN
 
 void vtkLabelHierarchyOctreeQueueIterator::Next()
 {
+  if ( this->LastPlacedIndex >= 0 )
+    {
+    ++ this->LastPlacedIndex;
+
+    // Skip over invalid label indices
+    vtkIdType numLabels = this->Hierarchy->GetPointData()->GetAbstractArray( "Type" )->GetNumberOfTuples();
+    while ( this->LastPlacedIndex < this->LastPlaced->GetNumberOfTuples() &&
+            this->LastPlaced->GetValue( this->LastPlacedIndex ) >= numLabels )
+      {
+      ++ this->LastPlacedIndex;
+      }
+
+    if ( this->LastPlacedIndex < this->LastPlaced->GetNumberOfTuples() )
+      {
+      return; // Done
+      }
+    else
+      {
+      this->LastPlacedIndex = -1;
+      if ( this->AtEnd )
+        {
+        return;
+        }
+      }
+    }
+
   //const int maxNumChildren = ( 1 << 2 );
-  ++ this->LabelIterator;
+  if ( this->LabelIterator != this->Node->value().end() )
+    {
+    ++ this->LabelIterator;
+    }
   if ( this->LabelIterator == this->Node->value().end() )
     {
     this->BoxNode();
@@ -1288,12 +1343,26 @@ void vtkLabelHierarchyOctreeQueueIterator::Next()
 
 bool vtkLabelHierarchyOctreeQueueIterator::IsAtEnd()
 {
-  return this->AtEnd;
+  return this->LastPlacedIndex < 0 && this->AtEnd;
 }
 
 vtkIdType vtkLabelHierarchyOctreeQueueIterator::GetLabelId()
 {
-  return *this->LabelIterator;
+  vtkIdType myId;
+  if ( this->LastPlacedIndex >= 0 )
+    {
+    myId = this->LastPlaced->GetValue( this->LastPlacedIndex );
+    }
+  else
+    {
+    if (!(this->IsAtEnd()))
+      {
+      myId = *this->LabelIterator;
+      }
+    else
+      myId = 0;
+    }
+  return myId;
 }
 
 void vtkLabelHierarchyOctreeQueueIterator::GetNodeGeometry( double center[3], double& sz )
@@ -1402,7 +1471,7 @@ void vtkLabelHierarchyOctreeQueueIterator::QueueChildren()
 class vtkLabelHierarchy3DepthFirstIterator : public vtkLabelHierarchyIterator
 {
 public:
-  vtkTypeRevisionMacro(vtkLabelHierarchy3DepthFirstIterator,vtkLabelHierarchyIterator);
+  vtkTypeMacro(vtkLabelHierarchy3DepthFirstIterator,vtkLabelHierarchyIterator);
   static vtkLabelHierarchy3DepthFirstIterator* New();
 
   void Prepare( vtkLabelHierarchy* hier, vtkCamera* cam, double frustumPlanes[24], vtkRenderer* ren, float bucketSize[2] );
@@ -1438,7 +1507,6 @@ protected:
   int DidRoot;
 };
 
-vtkCxxRevisionMacro(vtkLabelHierarchy3DepthFirstIterator,"$Revision: 1.37 $");
 vtkStandardNewMacro(vtkLabelHierarchy3DepthFirstIterator);
 vtkCxxSetObjectMacro(vtkLabelHierarchy3DepthFirstIterator,Camera,vtkCamera);
 vtkCxxSetObjectMacro(vtkLabelHierarchy3DepthFirstIterator,Renderer,vtkRenderer);
@@ -1486,12 +1554,12 @@ void vtkLabelHierarchy3DepthFirstIterator::Prepare(
   if ( cam->GetParallelProjection() )
     { // Compute threshold for quadtree nodes too small to visit using parallel projection
     //cout << "SizeLimit ParallelProj ps: " << cam->GetParallelScale() << "\n";
-    this->SizeLimit = 0.0001; // FIXME: Should be set using cam->ParallelScale
+    //this->SizeLimit = 0.0001; // FIXME: Should be set using cam->ParallelScale
     }
   else
     { // Compute threshold for quadtree nodes too small to visit using perspective projection
-    double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
-    double tva = 2. * tan( va / 2. );
+    //double va = vtkMath::RadiansFromDegrees( cam->GetViewAngle() );
+    //double tva = 2. * tan( va / 2. );
     double vsr;
     if ( cam->GetUseHorizontalViewAngle() )
       {
@@ -1503,9 +1571,9 @@ void vtkLabelHierarchy3DepthFirstIterator::Prepare(
       double vs = ren->GetSize()[1];
       vsr = vs / this->BucketSize[1];
       }
-    double fac = 0.1 * tva / vsr;
+    //double fac = 0.1 * tva / vsr;
     //cout << "SizeLimit  va: " << va << " tva: " << tva << " vsr: " << vsr << " fac: " << fac << " slim: " << fac * fac << "\n";
-    this->SizeLimit = fac * fac;
+    //this->SizeLimit = fac * fac;
     }
 }
 
@@ -1637,7 +1705,12 @@ bool vtkLabelHierarchy3DepthFirstIterator::IsAtEnd()
 
 vtkIdType vtkLabelHierarchy3DepthFirstIterator::GetLabelId()
 {
-  return *this->LabelIterator;
+  if (!(this->IsAtEnd()))
+    {
+    return *this->LabelIterator;
+    }
+  else
+    return 0;
 }
 
 void vtkLabelHierarchy3DepthFirstIterator::GetNodeGeometry( double center[3], double& sz )
@@ -1732,15 +1805,26 @@ void vtkLabelHierarchy3DepthFirstIterator::ReorderChildrenForView( int* order )
 // vtkLabelHierarchy
 
 vtkStandardNewMacro(vtkLabelHierarchy);
-vtkCxxRevisionMacro(vtkLabelHierarchy,"$Revision: 1.37 $");
 vtkCxxSetObjectMacro(vtkLabelHierarchy,Priorities,vtkDataArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,Labels,vtkAbstractArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,IconIndices,vtkIntArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,Orientations,vtkDataArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,Sizes,vtkDataArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,BoundedSizes,vtkDataArray);
+vtkCxxSetObjectMacro(vtkLabelHierarchy,TextProperty,vtkTextProperty);
 vtkLabelHierarchy::vtkLabelHierarchy()
 {
   this->Impl = new Implementation();
   this->Impl->Husk = this;
   this->Priorities = 0;
+  this->Labels = 0;
+  this->IconIndices = 0;
+  this->Orientations = 0;
+  this->Sizes = 0;
+  this->BoundedSizes = 0;
   this->TargetLabelCount = 16;
   this->MaximumDepth = 5;
+  this->TextProperty = vtkTextProperty::New();
 
   this->CenterPts = vtkPoints::New();
   this->CoincidentPoints = vtkCoincidentPoints::New();
@@ -1752,6 +1836,30 @@ vtkLabelHierarchy::~vtkLabelHierarchy()
   if ( this->Priorities )
     {
     this->Priorities->Delete();
+    }
+  if ( this->Labels )
+    {
+    this->Labels->Delete();
+    }
+  if ( this->IconIndices )
+    {
+    this->IconIndices->Delete();
+    }
+  if ( this->Orientations )
+    {
+    this->Orientations->Delete();
+    }
+  if ( this->Sizes )
+    {
+    this->Sizes->Delete();
+    }
+  if ( this->BoundedSizes )
+    {
+    this->BoundedSizes->Delete();
+    }
+  if ( this->TextProperty )
+    {
+    this->TextProperty->Delete();
     }
 
   this->CenterPts->Delete();
@@ -1768,8 +1876,14 @@ void vtkLabelHierarchy::PrintSelf( ostream& os, vtkIndent indent )
   os << indent << "Hierarchy3: " << this->Impl->Hierarchy3 << "\n";
   os << indent << "HierarchyTime: " << this->Impl->HierarchyTime << "\n";
   os << indent << "Priorities: " << this->Priorities << "\n";
+  os << indent << "Labels: " << this->Labels << "\n";
+  os << indent << "IconIndices: " << this->IconIndices << "\n";
+  os << indent << "Orientations: " << this->Orientations << "\n";
+  os << indent << "Sizes: " << this->Sizes << "\n";
+  os << indent << "BoundedSizes: " << this->BoundedSizes << "\n";
   os << indent << "CoincidentPoints: " << this->CoincidentPoints << "\n";
   os << indent << "CenterPts: " << this->CenterPts << "\n";
+  os << indent << "TextProperty: " << this->TextProperty << "\n";
 }
 
 void vtkLabelHierarchy::SetPoints( vtkPoints* src )

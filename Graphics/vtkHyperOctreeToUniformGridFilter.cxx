@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeToUniformGridFilter.cxx,v $
+  Module:    vtkHyperOctreeToUniformGridFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkImageData.h"
 #include "vtkStreamingDemandDrivenPipeline.h" // WHOLE_EXTENT() key
 
-vtkCxxRevisionMacro(vtkHyperOctreeToUniformGridFilter, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkHyperOctreeToUniformGridFilter);
 
 // merging: locator
@@ -128,7 +127,7 @@ int vtkHyperOctreeToUniformGridFilter::RequestData(
   // get the upper limit for the number of levels
   int levels=inInfo->Get(vtkHyperOctree::LEVELS());
   
-  // get the input and ouptut
+  // get the input and output
   vtkHyperOctree *input = vtkHyperOctree::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkImageData *output = vtkImageData::SafeDownCast(

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDepthPeelingPass.h,v $
+  Module:    vtkDepthPeelingPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,13 +47,15 @@ class VTK_RENDERING_EXPORT vtkDepthPeelingPass : public vtkRenderPass
 {
 public:
   static vtkDepthPeelingPass *New();
-  vtkTypeRevisionMacro(vtkDepthPeelingPass,vtkRenderPass);
+  vtkTypeMacro(vtkDepthPeelingPass,vtkRenderPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
   // Description:
   // Release graphics resources and ask components to release their own
@@ -97,7 +99,7 @@ public:
   // rendering a layer other than the first one? (Boolean value)
   // If so, the uniform variables UseTexture and Texture can be set.
   // (Used by vtkOpenGLProperty or vtkOpenGLTexture)
-  int GetDepthPeelingHigherLayer();
+//  int GetDepthPeelingHigherLayer();
   
  protected:
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMath.cxx,v $
+  Module:    vtkMath.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,50 +28,99 @@
 #include "vtkPoints.h"
 #include <assert.h>
 
-#ifndef isnan
-// This is compiler specific not platform specific: MinGW doesn't need that.
-# if defined(_MSC_VER) || defined(__BORLANDC__)
-#  include <float.h>
-#  define isnan(x) _isnan(x)
-# endif
-#endif
+#include "vtkMathConfigure.h"
+#include "vtkBoxMuellerRandomSequence.h"
+#include "vtkMinimalStandardRandomSequence.h"
 
-vtkCxxRevisionMacro(vtkMath, "$Revision: 1.132 $");
 vtkStandardNewMacro(vtkMath);
 
-long vtkMath::Seed = 1177; // One authors home address
+vtkMathInternal::vtkMathInternal()
+{
+  this->Gaussian=vtkBoxMuellerRandomSequence::New();
+  
+  // This line assumes the current vtkBoxMuellerRandomSequence behavior:
+  // an initial vtkMinimalStandardRandomSequence is created.
+  this->Uniform=static_cast<vtkMinimalStandardRandomSequence *>(
+    this->Gaussian->GetUniformSequence());
+  this->Uniform->SetSeedOnly(1177); // One authors home address
+}
+
+vtkMathInternal::~vtkMathInternal()
+{
+  this->Gaussian->Delete();
+}
+
+vtkMathInternal vtkMath::Internal;
+
+#ifdef VTK_HAS_STD_NUMERIC_LIMITS
+
+#include <vtkstd/limits>
+
+#else // VTK_HAS_STD_NUMERIC_LIMITS
 
 // Avoid aliasing optimization problems by using a union:
 union vtkIEEE754Bits {
-  vtkTypeInt64 i64v;
+  vtkTypeUInt64 i64v;
   double d;
 };
 
-// I've always relied on the kindness of IEEE-754.
-#if defined(WIN32) && defined(_MSC_VER)
+#if defined(_MSC_VER)
 // MSVC70 is broken; it doesn't accept the "LL" suffix. MSVC6 and MSVC71 do.
 static union vtkIEEE754Bits vtkMathNanBits    = { 0x7FF8000000000000i64 };
 static union vtkIEEE754Bits vtkMathInfBits    = { 0x7FF0000000000000i64 };
 static union vtkIEEE754Bits vtkMathNegInfBits = { 0xFFF0000000000000i64 };
-#elif defined(WIN32) && defined(__BORLANDC__)
+#elif defined(__BORLANDC__)
 // Borland C++ union initializers are broken.
 // Use an otherwise-discouraged aliasing trick:
-static vtkTypeInt64 vtkMathNanBits            = 0x7FF8000000000000i64;
-static vtkTypeInt64 vtkMathInfBits            = 0x7FF0000000000000i64;
-static vtkTypeInt64 vtkMathNegInfBits         = 0xFFF0000000000000i64;
+static vtkTypeUInt64 vtkMathNanBits    = 0x7FF8000000000000i64;
+static vtkTypeUInt64 vtkMathInfBits    = 0x7FF0000000000000i64;
+static vtkTypeUInt64 vtkMathNegInfBits = 0xFFF0000000000000i64;
 #else
 static union vtkIEEE754Bits vtkMathNanBits    = { 0x7FF8000000000000LL };
 static union vtkIEEE754Bits vtkMathInfBits    = { 0x7FF0000000000000LL };
 static union vtkIEEE754Bits vtkMathNegInfBits = { 0xFFF0000000000000LL };
 #endif
 
-//
-// some constants we need
-//
-#define VTK_K_A 16807
-#define VTK_K_M 2147483647              /* Mersenne prime 2^31 -1 */
-#define VTK_K_Q 127773                  /* VTK_K_M div VTK_K_A */
-#define VTK_K_R 2836                    /* VTK_K_M mod VTK_K_A */
+#endif //VTK_HAS_STD_NUMERIC_LIMITS
+
+#if defined(_MSC_VER) || defined(__BORLANDC__)
+const vtkTypeInt64 vtkMathDoubleExponent = 0x7FF0000000000000i64;
+const vtkTypeInt64 vtkMathDoubleMantissa = 0x000FFFFFFFFFFFFFi64;
+#else
+const vtkTypeInt64 vtkMathDoubleExponent = 0x7FF0000000000000LL;
+const vtkTypeInt64 vtkMathDoubleMantissa = 0x000FFFFFFFFFFFFFLL;
+#endif
+
+// If we cannot do comparisons to non-finite numbers without causing floating
+// point exceptions, we better fall back to IEEE-754 bit comparisons.
+
+#if !defined(VTK_HAS_ISINF) && defined(VTK_NON_FINITE_CAUSES_EXCEPTIONS)
+inline bool vtkMathIsInf(double x)
+{
+  // IEEE-754 infinites have all of their exponent set and none of their
+  // mantissa set.
+  vtkTypeInt64 xbits = *reinterpret_cast<vtkTypeInt64*>(&x);
+  cout << "IsInf of " << xbits << endl;
+  return (   ((xbits & vtkMathDoubleExponent) == vtkMathDoubleExponent)
+          && ((xbits & vtkMathDoubleMantissa) == 0) );
+}
+#define isinf(x) vtkMathIsInf(x)
+#define VTK_HAS_ISINF
+#endif // !VTK_HAS_ISINF && VTK_NON_FINITE_CAUSES_EXCEPTIONS
+
+#if !defined(VTK_HAS_ISNAN) && defined(VTK_NON_FINITE_CAUSES_EXCEPTIONS)
+inline bool vtkMathIsNan(double x)
+{
+  // IEEE-754 NaNs have all of their exponent set and at least one bit in
+  // their mantissa set.
+  vtkTypeInt64 xbits = *reinterpret_cast<vtkTypeInt64*>(&x);
+  cout << "IsNan of " << xbits << endl;
+  return (   ((xbits & vtkMathDoubleExponent) == vtkMathDoubleExponent)
+          && ((xbits & vtkMathDoubleMantissa) != 0) );
+}
+#define isnan(x) vtkMathIsNan(x)
+#define VTK_HAS_ISNAN
+#endif // !VTK_HAS_ISNAN && VTK_NON_FINITE_CAUSES_EXCEPTIONS
 
 //
 // Some useful macros and functions
@@ -85,19 +134,8 @@ static union vtkIEEE754Bits vtkMathNegInfBits = { 0xFFF0000000000000LL };
 // This is used to provide portability across different systems.
 double vtkMath::Random()
 {
-  long hi, lo;
-    
-  // Based on code in "Random Number Generators: Good Ones are Hard to Find,"
-  // by Stephen K. Park and Keith W. Miller in Communications of the ACM,
-  // 31, 10 (Oct. 1988) pp. 1192-1201.
-  // Borrowed from: Fuat C. Baran, Columbia University, 1988.
-  hi = vtkMath::Seed / VTK_K_Q;
-  lo = vtkMath::Seed % VTK_K_Q;
-  if ((vtkMath::Seed = VTK_K_A * lo - VTK_K_R * hi) <= 0)
-    {
-    Seed += VTK_K_M;
-    }
-  return static_cast<double>(vtkMath::Seed)/VTK_K_M;
+  vtkMath::Internal.Uniform->Next();
+  return vtkMath::Internal.Uniform->GetValue();
 }
 
 //----------------------------------------------------------------------------
@@ -107,21 +145,38 @@ double vtkMath::Random()
 // RandomSeed() a few times inside seed. This doesn't ruin the 
 // repeatability of Random().
 //
-void vtkMath::RandomSeed(long s)
+void vtkMath::RandomSeed(int s)
 {
-  vtkMath::Seed = s;
-
-  vtkMath::Random();
-  vtkMath::Random();
-  vtkMath::Random();
+  vtkMath::Internal.Uniform->SetSeed(s);
 }
 
 //----------------------------------------------------------------------------
 // Description:
 // Return the current seed used by the random number generator.
-long vtkMath::GetSeed()
+int vtkMath::GetSeed()
 {
-  return vtkMath::Seed;
+  return vtkMath::Internal.Uniform->GetSeed();
+}
+
+//----------------------------------------------------------------------------
+double vtkMath::Random( double min, double max )
+{
+  vtkMath::Internal.Uniform->Next();
+  return vtkMath::Internal.Uniform->GetRangeValue(min,max);
+}
+
+//----------------------------------------------------------------------------
+double vtkMath::Gaussian()
+{
+  vtkMath::Internal.Gaussian->Next();
+  return vtkMath::Internal.Gaussian->GetValue();
+}
+
+//----------------------------------------------------------------------------
+double vtkMath::Gaussian( double mean, double std )
+{
+  vtkMath::Internal.Gaussian->Next();
+  return vtkMath::Internal.Gaussian->GetScaledValue(mean,std);
 }
 
 //----------------------------------------------------------------------------
@@ -221,12 +276,14 @@ void vtkMath::FreeCombination( int* r )
 }
 
 //----------------------------------------------------------------------------
-// Find unit vectors which is perpendicular to this on and to
-// each other.
-void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
-                             double theta)
+// Given a unit vector 'x', find two other unit vectors 'y' and 'z' which
+// which form an orthonormal set.
+template<class T1, class T2, class T3>
+inline void vtkMathPerpendiculars(const T1 x[3], T2 y[3], T3 z[3],
+                                  double theta)
 {
   int dx,dy,dz;
+
   double x2 = x[0]*x[0];
   double y2 = x[1]*x[1];
   double z2 = x[2]*x[2];
@@ -234,17 +291,17 @@ void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
 
   // transpose the vector to avoid divide-by-zero error
   if (x2 > y2 && x2 > z2)
-  {
+    {
     dx = 0; dy = 1; dz = 2;
-  }
+    }
   else if (y2 > z2) 
-  {
+    {
     dx = 1; dy = 2; dz = 0;
-  }
+    }
   else 
-  {
+    {
     dx = 2; dy = 0; dz = 1;
-  }
+    }
 
   double a = x[dx]/r;
   double b = x[dy]/r;
@@ -258,11 +315,11 @@ void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
     double costheta = cos(theta);
 
     if (y)
-    {
+      {
       y[dx] = (c*costheta - a*b*sintheta)/tmp;
       y[dy] = sintheta*tmp;
       y[dz] = (-a*costheta - b*c*sintheta)/tmp;
-    }
+      }
 
     if (z)
       {
@@ -274,11 +331,11 @@ void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
   else
     {
     if (y)
-    {
+      {
       y[dx] = c/tmp;
       y[dy] = 0;
       y[dz] = -a/tmp;
-    }
+      }
 
     if (z)
       {
@@ -289,73 +346,16 @@ void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
     }      
 }
 
-//----------------------------------------------------------------------------
-// Find unit vectors which are perpendicular to this one and to
-// each other.
+void vtkMath::Perpendiculars(const double x[3], double y[3], double z[3],
+                             double theta)
+{
+  vtkMathPerpendiculars(x, y, z, theta);
+}
+
 void vtkMath::Perpendiculars(const float x[3], float y[3], float z[3],
                              double theta)
 {
-  int dx,dy,dz;
-  double x2 = x[0]*x[0];
-  double y2 = x[1]*x[1];
-  double z2 = x[2]*x[2];
-  double r = sqrt(x2 + y2 + z2);
-
-  // transpose the vector to avoid divide-by-zero error
-  if (x2 > y2 && x2 > z2)
-  {
-    dx = 0; dy = 1; dz = 2;
-  }
-  else if (y2 > z2) 
-  {
-    dx = 1; dy = 2; dz = 0;
-  }
-  else 
-  {
-    dx = 2; dy = 0; dz = 1;
-  }
-
-  double a = x[dx]/r;
-  double b = x[dy]/r;
-  double c = x[dz]/r;
-
-  double tmp = sqrt(a*a+c*c);
-
-  if (theta != 0)
-    {
-    double sintheta = sin(theta);
-    double costheta = cos(theta);
-
-    if (y)
-    {
-      y[dx] = (c*costheta - a*b*sintheta)/tmp;
-      y[dy] = sintheta*tmp;
-      y[dz] = (-a*costheta - b*c*sintheta)/tmp;
-    }
-
-    if (z)
-      {
-      z[dx] = (-c*sintheta - a*b*costheta)/tmp;
-      z[dy] = costheta*tmp;
-      z[dz] = (a*sintheta - b*c*costheta)/tmp;
-      }
-    }
-  else
-    {
-    if (y)
-    {
-      y[dx] = c/tmp;
-      y[dy] = 0;
-      y[dz] = -a/tmp;
-    }
-
-    if (z)
-      {
-      z[dx] = -a*b/tmp;
-      z[dy] = tmp;
-      z[dz] = -b*c/tmp;
-      }
-    }      
+  vtkMathPerpendiculars(x, y, z, theta);
 }
 
 #define VTK_SMALL_NUMBER 1.0e-12
@@ -893,313 +893,6 @@ double vtkMath::EstimateMatrixCondition(double **A, int size)
 }
 
 //----------------------------------------------------------------------------
-// Solves a cubic equation c0*t^3  + c1*t^2  + c2*t + c3 = 0 when
-// c0, c1, c2, and c3 are REAL.
-// Solution is motivated by Numerical Recipes In C 2nd Ed.
-// Return array contains number of (real) roots (counting multiple roots as one)
-// followed by roots themselves. The value in roots[4] is a integer giving
-// further information about the roots (see return codes for int SolveCubic()).
-double* vtkMath::SolveCubic( double c0, double c1, double c2, double c3 ) 
-{
-  static double roots[5];
-  roots[1] = 0.0;
-  roots[2] = 0.0;
-  roots[3] = 0.0;
-  int num_roots;
-
-  roots[4] = vtkMath::SolveCubic(c0, c1, c2, c3, 
-                                 &roots[1], &roots[2], &roots[3], &num_roots );
-  roots[0] = num_roots;
-  return roots;
-}
-
-//----------------------------------------------------------------------------
-// Solves a cubic equation when c0, c1, c2, And c3 Are REAL.  Solution
-// is motivated by Numerical Recipes In C 2nd Ed.  Roots and number of
-// real roots are stored in user provided variables r1, r2, r3, and
-// num_roots. Note that the function can return the following integer
-// values describing the roots: (0)-no solution; (-1)-infinite number
-// of solutions; (1)-one distinct real root of multiplicity 3 (stored
-// in r1); (2)-two distinct real roots, one of multiplicity 2 (stored
-// in r1 & r2); (3)-three distinct real roots; (-2)-quadratic equation
-// with complex conjugate solution (real part of root returned in r1,
-// imaginary in r2); (-3)-one real root and a complex conjugate pair
-// (real root in r1 and real part of pair in r2 and imaginary in r3).
-int vtkMath::SolveCubic( double c0, double c1, double c2, double c3, 
-                         double *r1, double *r2, double *r3, int *num_roots )
-{
-  double        Q, R;
-  double        R_squared;      /* R*R */
-  double        Q_cubed;        /* Q*Q*Q */
-  double        theta;
-  double        A, B;
-
-  // Cubic equation: c0*t^3  + c1*t^2  + c2*t + c3 = 0 
-  //                                               
-  //   r1, r2, r3 are roots and num_roots is the number
-  //   of real roots                               
-
-  // Make Sure This Is A Bonafide Cubic Equation 
-  if( c0 != 0.0 )
-    {
-    //Put Coefficients In Right Form 
-    c1 = c1/c0;
-    c2 = c2/c0;
-    c3 = c3/c0;
-
-    Q = ((c1*c1) - 3*c2)/9.0;
-
-    R = (2.0*(c1*c1*c1) - 9.0*(c1*c2) + 27.0*c3)/54.0;
-
-    R_squared = R*R;
-    Q_cubed   = Q*Q*Q;
-
-    if( R_squared <= Q_cubed )
-      {
-      if( Q_cubed == 0.0 )
-        {
-        *r1 = -c1/3.0;
-        *r2 = *r1;
-        *r3 = *r1;
-        *num_roots = 1;
-        return 1;
-        } 
-      else
-        {
-        theta = acos( R / (sqrt(Q_cubed) ) );
-
-        *r1 = -2.0*sqrt(Q)*cos( theta/3.0 ) - c1/3.0;
-        *r2 = -2.0*sqrt(Q)*cos( (theta + 2.0*3.141592653589)/3.0) - c1/3.0;
-        *r3 = -2.0*sqrt(Q)*cos( (theta - 2.0*3.141592653589)/3.0) - c1/3.0;
-
-        *num_roots = 3;
-
-        // Reduce Number Of Roots To Two 
-        if( *r1 == *r2 )
-          {
-          *num_roots = 2;
-          *r2 = *r3;
-          }
-        else if( *r1 == *r3 )
-          {
-          *num_roots = 2;
-          }
-
-        if( (*r2 == *r3) && (*num_roots == 3) )
-          {
-          *num_roots = 2;
-          }
-
-        // Reduce Number Of Roots To One 
-        if( (*r1 == *r2) )
-          {
-          *num_roots = 1;
-          }
-        }
-      return *num_roots;
-      }
-    else //single real and complex conjugate pair
-      {
-      A = -VTK_SIGN(R) * pow(fabs(R) + sqrt(R_squared - Q_cubed), 1.0/3);
-
-      if( A == 0.0 )
-        {
-        B = 0.0;
-        }
-      else
-        {
-        B = Q/A;
-        }
-
-      *r1 =  (A + B) - c1/3.0;
-      *r2 = -0.5*(A + B) - c1/3.0;
-      *r3 = sqrt(3.0)/2.0*(A - B);
-
-      *num_roots = 1;
-      return (-3);
-      }
-    } //if cubic equation
-
-  else // Quadratic Equation: c1*t  + c2*t + c3 = 0 
-    {
-    // Okay this was not a cubic - lets try quadratic
-    return vtkMath::SolveQuadratic( c1, c2, c3, r1, r2, num_roots );
-    }
-}
-
-//----------------------------------------------------------------------------
-// Solves a quadratic equation c1*t^2 + c2*t + c3 = 0 when c1, c2, and
-// c3 are REAL.  Solution is motivated by Numerical Recipes In C 2nd
-// Ed.  Return array contains number of (real) roots (counting
-// multiple roots as one) followed by roots themselves. Note that 
-// roots[3] contains a return code further describing solution - see
-// documentation for SolveCubic() for meaining of return codes.
-double* vtkMath::SolveQuadratic( double c1, double c2, double c3) 
-{
-  static double roots[4];
-  roots[0] = 0.0;
-  roots[1] = 0.0;
-  roots[2] = 0.0;
-  int num_roots;
-
-  roots[3] = vtkMath::SolveQuadratic( c1, c2, c3, &roots[1], &roots[2], 
-                                      &num_roots );
-  roots[0] = num_roots;
-  return roots;
-}
-
-//----------------------------------------------------------------------------
-// Solves A Quadratic Equation c1*t^2  + c2*t  + c3 = 0 when 
-// c1, c2, and c3 are REAL.
-// Solution is motivated by Numerical Recipes In C 2nd Ed.
-// Roots and number of roots are stored in user provided variables
-// r1, r2, num_roots
-int vtkMath::SolveQuadratic( double c1, double c2, double c3, 
-                             double *r1, double *r2, int *num_roots )
-{
-  double        Q;
-  double        determinant;
-
-  // Quadratic equation: c1*t^2 + c2*t + c3 = 0 
-
-  // Make sure this is a quadratic equation
-  if( c1 != 0.0 )
-    {
-    determinant = c2*c2 - 4*c1*c3;
-
-    if( determinant >= 0.0 )
-      {
-      Q = -0.5 * (c2 + VTK_SIGN(c2)*sqrt(determinant));
-
-      *r1 = Q / c1;
-
-      if( Q == 0.0 )
-        {
-        *r2 = 0.0;
-        }
-      else
-        {
-        *r2 = c3 / Q;
-        }
-
-      *num_roots = 2;
-
-      // Reduce Number Of Roots To One 
-      if( *r1 == *r2 )
-        {
-        *num_roots = 1;
-        }
-      return *num_roots;
-      }
-    else        // Equation Does Not Have Real Roots 
-      {
-      *num_roots = 0;
-      return (-2);
-      }
-    }
-
-  else // Linear Equation: c2*t + c3 = 0 
-    {
-    // Okay this was not quadratic - lets try linear
-    return vtkMath::SolveLinear( c2, c3, r1, num_roots );
-    }
-}
-
-//----------------------------------------------------------------------------
-// Algebraically extracts REAL roots of the quadratic polynomial with 
-// REAL coefficients c[0] X^2 + c[1] X + c[2]
-// and stores them (when they exist) and their respective multiplicities.
-// Returns either the number of roots, or -1 if ininite number of roots.
-int vtkMath::SolveQuadratic( double* c, double* r, int* m )
-{
-  if( ! c[0] )
-    {
-    if( c[1] )
-      {
-      r[0] = -c[2] / c[1];
-      m[0] = 1;
-      return 1;
-      }
-    else
-      {
-      if ( c[2] ) return 0;
-      else return -1;
-      }
-    }
-
-  double delta = c[1] * c[1] - 4. * c[0] * c[2];
-
-  if ( delta >= 0. )
-    {
-    double fac = 1. / ( 2. *  c[0] );
-    // check whether there are 2 simple or 1 double root(s)
-    if ( delta )
-      {
-      delta = sqrt( delta );
-      // insert 1st simple real root 
-      r[0] = ( - delta - c[1] ) * fac;
-      m[0] = 1;
-      // insert 2nd simple real root 
-      r[1] = ( delta - c[1] ) * fac ;
-      m[1] = 1;
-      return 2;
-      }
-    else
-      {
-      // insert single double real root 
-      r[0] = - c[1] * fac;
-      m[0] = 2;
-      return 1;
-      }
-    }
-  else
-    {
-    return 0;
-    }
-}
-
-//----------------------------------------------------------------------------
-// Solves a linear equation c2*t  + c3 = 0 when c2 and c3 are REAL.
-// Solution is motivated by Numerical Recipes In C 2nd Ed.
-// Return array contains number of roots followed by roots themselves.
-double* vtkMath::SolveLinear( double c2, double c3) 
-{
-  static double roots[3];
-  int num_roots;
-  roots[1] = 0.0;
-  roots[2] = vtkMath::SolveLinear( c2, c3, &roots[1], &num_roots );
-  roots[0] = num_roots;
-  return roots;
-}
-
-//----------------------------------------------------------------------------
-// Solves a linear equation c2*t + c3 = 0 when c2 and c3 are REAL.
-// Solution is motivated by Numerical Recipes In C 2nd Ed.
-// Root and number of (real) roots are stored in user provided variables
-// r2 and num_roots.
-int vtkMath::SolveLinear( double c2, double c3, double *r1, int *num_roots )
-{
-  // Linear equation: c2*t + c3 = 0 
-  // Now this had better be linear 
-  if( c2 != 0.0 )
-    {
-    *r1 = -c3 / c2;
-    *num_roots = 1;
-    return *num_roots;
-    }
-  else
-    {
-    *num_roots = 0;
-    if ( c3 == 0.0 )
-      {
-      return (-1);
-      }
-    }
-
-  return *num_roots;
-}
-
-//----------------------------------------------------------------------------
 // Solves for the least squares best fit matrix for the homogeneous equation X'M' = 0'.
 // Uses the method described on pages 40-41 of Computer Vision by 
 // Forsyth and Ponce, which is that the solution is the eigenvector 
@@ -1682,9 +1375,6 @@ inline void vtkSwapVectors3(T v1[3], T v2[3])
 
 //----------------------------------------------------------------------------
 // Unrolled LU factorization of a 3x3 matrix with pivoting.
-// This decomposition is non-standard in that the diagonal
-// elements are inverted, to convert a division to a multiplication
-// in the backsubstitution.
 template<class T>
 inline void vtkLUFactor3x3(T A[3][3], int index[3])
 {
@@ -1729,9 +1419,8 @@ inline void vtkLUFactor3x3(T A[3][3], int index[3])
     }
   index[0] = maxI;
 
-  A[0][0] = T(1.0)/A[0][0];
-  A[1][0] *= A[0][0];
-  A[2][0] *= A[0][0];
+  A[1][0] /= A[0][0];
+  A[2][0] /= A[0][0];
     
   // second column
   A[1][1] -= A[1][0]*A[0][1];
@@ -1745,15 +1434,13 @@ inline void vtkLUFactor3x3(T A[3][3], int index[3])
     scale[2] = scale[1];
     }
   index[1] = maxI;
-  A[1][1] = T(1.0)/A[1][1];
-  A[2][1] *= A[1][1];
+  A[2][1] /= A[1][1];
 
   // third column
   A[1][2] -= A[1][0]*A[0][2];
   A[2][2] -= A[2][0]*A[0][2] + A[2][1]*A[1][2];
   largest = scale[2]*fabs(A[2][2]);
   index[2] = 2;
-  A[2][2] = T(1.0)/A[2][2];
 }
 
 //----------------------------------------------------------------------------
@@ -1769,8 +1456,7 @@ void vtkMath::LUFactor3x3(double A[3][3], int index[3])
 }
 
 //----------------------------------------------------------------------------
-// Backsubsitution with an LU-decomposed matrix.  This is the standard
-// LU decomposition, except that the diagonals elements have been inverted.
+// Backsubstitution with an LU-decomposed matrix.
 template<class T1, class T2>
 inline void vtkLUSolve3x3(const T1 A[3][3], const int index[3], T2 x[3])
 {
@@ -1792,9 +1478,9 @@ inline void vtkLUSolve3x3(const T1 A[3][3], const int index[3], T2 x[3])
 
   // back substitution
   
-  x[2] = x[2]*A[2][2];
-  x[1] = (x[1] - A[1][2]*x[2])*A[1][1];
-  x[0] = (x[0] - A[0][1]*x[1] - A[0][2]*x[2])*A[0][0];
+  x[2] = x[2]/A[2][2];
+  x[1] = (x[1] - A[1][2]*x[2])/A[1][1];
+  x[0] = (x[0] - A[0][1]*x[1] - A[0][2]*x[2])/A[0][0];
 }  
 
 //----------------------------------------------------------------------------
@@ -1816,18 +1502,35 @@ void vtkMath::LUSolve3x3(const double A[3][3],
 template<class T1, class T2, class T3>
 inline void vtkLinearSolve3x3(const T1 A[3][3], const T2 x[3], T3 y[3])
 {
-  int index[3];
-  T3 B[3][3];
-  for (int i = 0; i < 3; i++)
-    {
-    B[i][0] = A[i][0];
-    B[i][1] = A[i][1];
-    B[i][2] = A[i][2];
-    y[i] = x[i];
-    }
+  double a1 = A[0][0]; double b1 = A[0][1]; double c1 = A[0][2];
+  double a2 = A[1][0]; double b2 = A[1][1]; double c2 = A[1][2];
+  double a3 = A[2][0]; double b3 = A[2][1]; double c3 = A[2][2];
 
-  vtkMath::LUFactor3x3(B,index);
-  vtkMath::LUSolve3x3(B,index,y);
+  // Compute the adjoint
+  double d1 =   vtkMath::Determinant2x2( b2, b3, c2, c3);
+  double d2 = - vtkMath::Determinant2x2( a2, a3, c2, c3);
+  double d3 =   vtkMath::Determinant2x2( a2, a3, b2, b3);
+
+  double e1 = - vtkMath::Determinant2x2( b1, b3, c1, c3);
+  double e2 =   vtkMath::Determinant2x2( a1, a3, c1, c3);
+  double e3 = - vtkMath::Determinant2x2( a1, a3, b1, b3);
+
+  double f1 =   vtkMath::Determinant2x2( b1, b2, c1, c2);
+  double f2 = - vtkMath::Determinant2x2( a1, a2, c1, c2);
+  double f3 =   vtkMath::Determinant2x2( a1, a2, b1, b2);
+
+  // Compute the determinant
+  double det = a1*d1 + b1*d2 + c1*d3;
+
+  // Multiply by the adjoint
+  double v1 = d1*x[0] + e1*x[1] + f1*x[2];
+  double v2 = d2*x[0] + e2*x[1] + f2*x[2];
+  double v3 = d3*x[0] + e3*x[1] + f3*x[2];
+
+  // Divide by the determinant
+  y[0] = v1/det;
+  y[1] = v2/det;
+  y[2] = v3/det;
 }
 
 //----------------------------------------------------------------------------
@@ -1971,32 +1674,38 @@ void vtkMath::Transpose3x3(const double A[3][3], double AT[3][3])
 //----------------------------------------------------------------------------
 template<class T1, class T2>
 inline void vtkInvert3x3(const T1 A[3][3], T2 AI[3][3])
-{
-  int index[3];
-  T2 tmp[3][3];
+{ 
+  double a1 = A[0][0]; double b1 = A[0][1]; double c1 = A[0][2];
+  double a2 = A[1][0]; double b2 = A[1][1]; double c2 = A[1][2];
+  double a3 = A[2][0]; double b3 = A[2][1]; double c3 = A[2][2];
 
-  for (int k = 0; k < 3; k++)
-    {
-    AI[k][0] = A[k][0];
-    AI[k][1] = A[k][1];
-    AI[k][2] = A[k][2];
-    }
-  // invert one column at a time
-  vtkMath::LUFactor3x3(AI,index);
-  for (int i = 0; i < 3; i++)
-    {
-    T2 *x = tmp[i];
-    x[0] = x[1] = x[2] = 0.0;
-    x[i] = 1.0;
-    vtkMath::LUSolve3x3(AI,index,x);
-    }
-  for (int j = 0; j < 3; j++)
-    {
-    T2 *x = tmp[j];
-    AI[0][j] = x[0];
-    AI[1][j] = x[1];
-    AI[2][j] = x[2];      
-    }
+  // Compute the adjoint
+  double d1 =   vtkMath::Determinant2x2( b2, b3, c2, c3);
+  double d2 = - vtkMath::Determinant2x2( a2, a3, c2, c3);
+  double d3 =   vtkMath::Determinant2x2( a2, a3, b2, b3);
+
+  double e1 = - vtkMath::Determinant2x2( b1, b3, c1, c3);
+  double e2 =   vtkMath::Determinant2x2( a1, a3, c1, c3);
+  double e3 = - vtkMath::Determinant2x2( a1, a3, b1, b3);
+
+  double f1 =   vtkMath::Determinant2x2( b1, b2, c1, c2);
+  double f2 = - vtkMath::Determinant2x2( a1, a2, c1, c2);
+  double f3 =   vtkMath::Determinant2x2( a1, a2, b1, b2);
+
+  // Divide by the determinant
+  double det = a1*d1 + b1*d2 + c1*d3;
+
+  AI[0][0]  = d1/det;
+  AI[1][0]  = d2/det;
+  AI[2][0]  = d3/det;
+
+  AI[0][1]  = e1/det;
+  AI[1][1]  = e2/det;
+  AI[2][1]  = e3/det;
+
+  AI[0][2]  = f1/det;
+  AI[1][2]  = f2/det;
+  AI[2][2]  = f3/det;
 }
 
 //----------------------------------------------------------------------------
@@ -2157,36 +1866,35 @@ inline void vtkOrthogonalize3x3(const T1 A[3][3], T2 B[3][3])
   // Pivot the matrix to improve accuracy
   T2 scale[3];
   int index[3];
-  T2 tmp, largest;
+  T2 largest;
 
   // Loop over rows to get implicit scaling information
   for (i = 0; i < 3; i++)
     {
-    largest = fabs(B[i][0]);
-    if ((tmp = fabs(B[i][1])) > largest)
-      {
-      largest = tmp;
-      }
-    if ((tmp = fabs(B[i][2])) > largest)
-      {
-      largest = tmp;
-      }
-    scale[i] = 1.0;
+    T2 x1 = fabs(B[i][0]);
+    T2 x2 = fabs(B[i][1]);
+    T2 x3 = fabs(B[i][2]);
+    largest = (x2 > x1 ? x2 : x1);
+    largest = (x3 > largest ? x3 : largest);
+    scale[i] = 1;
     if (largest != 0)
       {
-      scale[i] = T2(1.0)/largest;
+      scale[i] /= largest;
       }
     }
 
   // first column
+  T2 x1 = fabs(B[0][0])*scale[0];
+  T2 x2 = fabs(B[1][0])*scale[1];
+  T2 x3 = fabs(B[2][0])*scale[2];
   index[0] = 0;
-  largest = scale[0]*fabs(B[0][0]);
-  if ((tmp = scale[1]*fabs(B[1][0])) >= largest) 
+  largest = x1;
+  if (x2 >= largest) 
     {
-    largest = tmp;
+    largest = x2;
     index[0] = 1;
     }
-  if ((tmp = scale[2]*fabs(B[2][0])) >= largest) 
+  if (x3 >= largest) 
     {
     index[0] = 2;
     }
@@ -2197,9 +1905,11 @@ inline void vtkOrthogonalize3x3(const T1 A[3][3], T2 B[3][3])
     }
 
   // second column
+  T2 y2 = fabs(B[1][1])*scale[1];
+  T2 y3 = fabs(B[2][1])*scale[2];
   index[1] = 1;
-  largest = scale[1]*fabs(B[1][1]);
-  if ((tmp = scale[2]*fabs(B[2][1])) >= largest) 
+  largest = y2;
+  if (y3 >= largest) 
     {
     index[1] = 2;
     vtkSwapVectors3(B[2],B[1]);
@@ -2208,12 +1918,13 @@ inline void vtkOrthogonalize3x3(const T1 A[3][3], T2 B[3][3])
   // third column
   index[2] = 2;
 
-  // A quaternian can only describe a pure rotation, not
+  // A quaternion can only describe a pure rotation, not
   // a rotation with a flip, therefore the flip must be
   // removed before the matrix is converted to a quaternion.
-  T2 d = vtkDeterminant3x3(B);
-  if (d < 0)
+  int flip = 0;
+  if (vtkDeterminant3x3(B) < 0)
     {
+    flip = 1;
     for (i = 0; i < 3; i++)
       {
       B[0][i] = -B[0][i];
@@ -2231,7 +1942,7 @@ inline void vtkOrthogonalize3x3(const T1 A[3][3], T2 B[3][3])
   vtkMath::QuaternionToMatrix3x3(quat,B);
 
   // Put the flip back into the orthogonalized matrix.
-  if (d < 0)
+  if (flip)
     {
     for (i = 0; i < 3; i++)
       {
@@ -2804,21 +2515,19 @@ void vtkMath::XYZToRGB(double x, double y, double z,
   *b = x *  0.0557 + y * -0.2040 + z *  1.0570;
 
   // The following performs a "gamma correction" specified by the sRGB color
-  // space.  sRGB is defined by a cononical definition of a display monitor and
+  // space.  sRGB is defined by a canonical definition of a display monitor and
   // has been standardized by the International Electrotechnical Commission (IEC
-  // 61966-2-1).  However, it is a non-linear color space, which means that it
-  // will invalidate the color computations done by OpenGL.  Furthermore, most
-  // OS or display drivers will do some gamma correction on there own, so
-  // displaying these colors directly usually results in overly bright images.
-  // Thus, the non-linear RGB values are inappropriate for VTK, so the code is
-  // commented out.  If someone needs sRGB values in the future, there should be
-  // a separate set of color conversion functions for that.
-//   if (*r > 0.0031308) *r = 1.055 * (pow(*r, ( 1 / 2.4 ))) - 0.055;
-//   else *r = 12.92 * (*r);
-//   if (*g > 0.0031308) *g = 1.055 * (pow(*g ,( 1 / 2.4 ))) - 0.055;
-//   else  *g = 12.92 * )*g);
-//   if (*b > 0.0031308) *b = 1.055 * (pow(*b, ( 1 / 2.4 ))) - 0.055;
-//   else *b = 12.92 * (*b);
+  // 61966-2-1).  The nonlinearity of the correction is designed to make the
+  // colors more perceptually uniform.  This color space has been adopted by
+  // several applications including Adobe Photoshop and Microsoft Windows color
+  // management.  OpenGL is agnostic on its RGB color space, but it is reasonable
+  // to assume it is close to this one.
+  if (*r > 0.0031308) *r = 1.055 * (pow(*r, ( 1 / 2.4 ))) - 0.055;
+  else *r = 12.92 * (*r);
+  if (*g > 0.0031308) *g = 1.055 * (pow(*g ,( 1 / 2.4 ))) - 0.055;
+  else  *g = 12.92 * (*g);
+  if (*b > 0.0031308) *b = 1.055 * (pow(*b, ( 1 / 2.4 ))) - 0.055;
+  else *b = 12.92 * (*b);
   
   // Clip colors. ideally we would do something that is perceptually closest
   // (since we can see colors outside of the display gamut), but this seems to
@@ -2850,22 +2559,20 @@ double *vtkMath::XYZToRGB(const double xyz[3])
 void vtkMath::RGBToXYZ(double r, double g, double b,
                        double *x, double *y, double *z)
 {
-  // The following performs an inverse "gamma correction" specified by the sRGB
-  // color space.  sRGB is defined by a cononical definition of a display
-  // monitor and has been standardized by the International Electrotechnical
-  // Commission (IEC 61966-2-1).  However, it is a non-linear color space, which
-  // means that it will invalidate the color computations done by OpenGL.
-  // Furthermore, most OS or display drivers will do some gamma correction on
-  // there own, so displaying these colors directly usually results in overly
-  // bright images.  Thus, the non-linear RGB values are inappropriate for VTK,
-  // so the code is commented out.  If someone needs sRGB values in the future,
-  // there should be a separate set of color conversion functions for that.
-//   if ( r > 0.04045 ) r = pow(( r + 0.055 ) / 1.055, 2.4);
-//   else               r = r / 12.92;
-//   if ( g > 0.04045 ) g = pow(( g + 0.055 ) / 1.055, 2.4);
-//   else               g = g / 12.92;
-//   if ( b > 0.04045 ) b = pow(( b + 0.055 ) / 1.055, 2.4);
-//   else               b = b / 12.92;
+  // The following performs a "gamma correction" specified by the sRGB color
+  // space.  sRGB is defined by a canonical definition of a display monitor and
+  // has been standardized by the International Electrotechnical Commission (IEC
+  // 61966-2-1).  The nonlinearity of the correction is designed to make the
+  // colors more perceptually uniform.  This color space has been adopted by
+  // several applications including Adobe Photoshop and Microsoft Windows color
+  // management.  OpenGL is agnostic on its RGB color space, but it is reasonable
+  // to assume it is close to this one.
+  if ( r > 0.04045 ) r = pow(( r + 0.055 ) / 1.055, 2.4);
+  else               r = r / 12.92;
+  if ( g > 0.04045 ) g = pow(( g + 0.055 ) / 1.055, 2.4);
+  else               g = g / 12.92;
+  if ( b > 0.04045 ) b = pow(( b + 0.055 ) / 1.055, 2.4);
+  else               b = b / 12.92;
 
   //Observer. = 2 deg, Illuminant = D65
   *x = r * 0.4124 + g * 0.3576 + b * 0.1805;
@@ -3182,19 +2889,61 @@ void vtkMath::SpiralPoints(vtkIdType num, vtkPoints * offsets)
 }
 
 //----------------------------------------------------------------------------
+double vtkMath::Solve3PointCircle(const double p1[3], const double p2[3], 
+                               const double p3[3], double center[3])
+{
+  double v21[3], v32[3], v13[3];
+  double v12[3], v23[3], v31[3];
+  for (int i = 0; i < 3; ++i)
+    {
+    v21[i] = p1[i] - p2[i];
+    v32[i] = p2[i] - p3[i];
+    v13[i] = p3[i] - p1[i];
+    v12[i] = -v21[i];
+    v23[i] = -v32[i];
+    v31[i] = -v13[i];
+    }
+
+  double norm12 = vtkMath::Norm(v12);
+  double norm23 = vtkMath::Norm(v23);
+  double norm13 = vtkMath::Norm(v13);
+
+  double crossv21v32[3];
+  vtkMath::Cross(v21, v32, crossv21v32);
+  double normCross = vtkMath::Norm(crossv21v32);
+
+  double radius = (norm12 * norm23 * norm13) / (2. * normCross);  
+
+  double alpha = ((norm23 * norm23) * vtkMath::Dot(v21, v31)) /
+    (2. * normCross * normCross);
+  double beta = ((norm13 * norm13) * vtkMath::Dot(v12, v32)) /
+    (2. * normCross * normCross);
+  double gamma = ((norm12 * norm12) * vtkMath::Dot(v13, v23)) /
+    (2. * normCross * normCross);
+  
+  for (int i = 0; i < 3; ++i)
+    {
+    center[i] = alpha * p1[i] + beta * p2[i] + gamma * p3[i];
+    }
+  return radius;
+}
+
+//----------------------------------------------------------------------------
 void vtkMath::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
   
-  os << indent << "Seed: " << this->Seed << "\n";
+  os << indent << "Seed: " << vtkMath::Internal.Uniform->GetSeed() << "\n";
 }
 
 
 //----------------------------------------------------------------------------
 double vtkMath::Inf()
 {
-#if defined(WIN32) && defined(__BORLANDC__)
-  return *( (double*) vtkMathInfBits );
+#if defined(VTK_HAS_STD_NUMERIC_LIMITS)
+  return vtkstd::numeric_limits<double>::infinity();
+#elif defined(__BORLANDC__)
+  return *reinterpret_cast<double*>(&vtkMathInfBits);
 #else
   return vtkMathInfBits.d;
 #endif
@@ -3203,8 +2952,10 @@ double vtkMath::Inf()
 //----------------------------------------------------------------------------
 double vtkMath::NegInf()
 {
-#if defined(WIN32) && defined(__BORLANDC__)
-  return *( (double*) vtkMathNegInfBits );
+#if defined(VTK_HAS_STD_NUMERIC_LIMITS)
+  return -vtkstd::numeric_limits<double>::infinity();
+#elif defined(__BORLANDC__)
+  return *reinterpret_cast<double*>(&vtkMathNegInfBits);
 #else
   return vtkMathNegInfBits.d;
 #endif
@@ -3213,11 +2964,32 @@ double vtkMath::NegInf()
 //----------------------------------------------------------------------------
 double vtkMath::Nan()
 {
-#if defined(WIN32) && defined(__BORLANDC__)
-  return *( (double*) vtkMathNanBits );
+#if defined(VTK_HAS_STD_NUMERIC_LIMITS)
+  return vtkstd::numeric_limits<double>::quiet_NaN();
+#elif defined(__BORLANDC__)
+  return *reinterpret_cast<double*>(&vtkMathNanBits);
 #else
   return vtkMathNanBits.d;
 #endif
 }
 
+//-----------------------------------------------------------------------------
+int vtkMath::IsInf(double x)
+{
+#ifdef VTK_HAS_ISINF
+  return (isinf(x) ? 1 : 0);
+#else
+  return (   !vtkMath::IsNan(x)
+          && !((x < vtkMath::Inf()) && (x > vtkMath::NegInf())) );
+#endif
+}
 
+//-----------------------------------------------------------------------------
+int vtkMath::IsNan(double x)
+{
+#ifdef VTK_HAS_ISNAN
+  return (isnan(x) ? 1 : 0);
+#else
+  return !((x <= 0.0) || (x >= 0.0));
+#endif
+}

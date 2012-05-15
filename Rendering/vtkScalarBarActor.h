@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarBarActor.h,v $
+  Module:    vtkScalarBarActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -68,7 +68,7 @@ class vtkTexture;
 class VTK_RENDERING_EXPORT vtkScalarBarActor : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkScalarBarActor,vtkActor2D);
+  vtkTypeMacro(vtkScalarBarActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -180,6 +180,17 @@ public:
   virtual void SetTextPositionToSucceedScalarBar()
     { this->SetTextPosition( vtkScalarBarActor::SucceedScalarBar ); }
 
+  // Description:
+  // Set/Get the maximum width and height in pixels. Specifying the size as
+  // a relative fraction of the viewport can sometimes undersirably strech 
+  // the size of the actor too much. These methods allow the user to set 
+  // bounds on the maximum size of the scalar bar in pixels along any 
+  // direction. Defaults to unbounded.
+  vtkSetMacro( MaximumWidthInPixels, int );
+  vtkGetMacro( MaximumWidthInPixels, int );
+  vtkSetMacro( MaximumHeightInPixels, int );
+  vtkGetMacro( MaximumHeightInPixels, int );
+
 protected:
   vtkScalarBarActor();
   ~vtkScalarBarActor();
@@ -219,6 +230,8 @@ protected:
   int LastSize[2];
   int LastOrigin[2];
 
+  int MaximumWidthInPixels;
+  int MaximumHeightInPixels;
 
 private:
   vtkScalarBarActor(const vtkScalarBarActor&);  // Not implemented.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLookupTableWithEnabling.cxx,v $
+  Module:    vtkLookupTableWithEnabling.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkVariant.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkLookupTableWithEnabling, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkLookupTableWithEnabling);
 
 vtkCxxSetObjectMacro(vtkLookupTableWithEnabling,EnabledArray,vtkDataArray);

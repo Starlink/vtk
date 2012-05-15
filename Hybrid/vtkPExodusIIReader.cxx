@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPExodusIIReader.cxx,v $
+  Module:    vtkPExodusIIReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,11 +39,13 @@
 #include "vtkUnstructuredGrid.h"
 
 #include "netcdf.h"
-#include "exodusII.h"
+#include "vtkExodusII.h"
 
 #include "vtksys/SystemTools.hxx"
 
 #include <vtkstd/vector>
+
+#include <vtksys/RegularExpression.hxx>
 
 #include <sys/stat.h>
 #include <ctype.h>
@@ -89,7 +91,6 @@ static const int objAttribTypes[] = {
 static const int numObjAttribTypes = sizeof(objAttribTypes)/sizeof(objAttribTypes[0]);
 
 
-vtkCxxRevisionMacro(vtkPExodusIIReader, "$Revision: 1.25 $");
 vtkStandardNewMacro(vtkPExodusIIReader);
 
 class vtkPExodusIIReaderUpdateProgress : public vtkCommand
@@ -122,8 +123,10 @@ protected:
     if(event == vtkCommand::ProgressEvent)
     {
       double num = Reader->GetNumberOfFileNames();
-      if(num == 0)
+      if (num <= 1)
+        {
         num = Reader->GetNumberOfFiles();
+        }
       double* progress = static_cast<double*>(callData);
       double newProgress = *progress/num + Index/num;
       Reader->UpdateProgress(newProgress);
@@ -501,6 +504,7 @@ int vtkPExodusIIReader::RequestData(
   this->Dump();
 #endif // DBG_PEXOIIRDR
   // This constructs the filenames
+  int fast_path_reader_index = -1;
   for ( fileIndex = min, reader_idx=0; fileIndex <= max; ++fileIndex, ++reader_idx )
     {
     int fileId = -1;
@@ -573,11 +577,14 @@ int vtkPExodusIIReader::RequestData(
     this->ReaderList[reader_idx]->SetGenerateObjectIdCellArray( this->GetGenerateObjectIdCellArray() );
     this->ReaderList[reader_idx]->SetGenerateGlobalElementIdArray( this->GetGenerateGlobalElementIdArray() );
     this->ReaderList[reader_idx]->SetGenerateGlobalNodeIdArray( this->GetGenerateGlobalNodeIdArray() );
+    this->ReaderList[reader_idx]->SetGenerateImplicitElementIdArray( this->GetGenerateImplicitElementIdArray() );
+    this->ReaderList[reader_idx]->SetGenerateImplicitNodeIdArray( this->GetGenerateImplicitNodeIdArray() );
     this->ReaderList[reader_idx]->SetGenerateFileIdArray( this->GetGenerateFileIdArray() );
     this->ReaderList[reader_idx]->SetFileId( fileId );
     this->ReaderList[reader_idx]->SetApplyDisplacements( this->GetApplyDisplacements() );
     this->ReaderList[reader_idx]->SetDisplacementMagnitude( this->GetDisplacementMagnitude() );
     this->ReaderList[reader_idx]->SetHasModeShapes( this->GetHasModeShapes() );
+    this->ReaderList[reader_idx]->SetAnimateModeShapes( this->GetAnimateModeShapes() );
     this->ReaderList[reader_idx]->SetEdgeFieldDecorations( this->GetEdgeFieldDecorations() );
     this->ReaderList[reader_idx]->SetFaceFieldDecorations( this->GetFaceFieldDecorations() );
 
@@ -627,7 +634,6 @@ int vtkPExodusIIReader::RequestData(
         }
       }
 
-    // Look for fast-path keys and propagate to sub-reader.
     // All keys must be present for the fast-path to work.
     if ( outInfo->Has( vtkStreamingDemandDrivenPipeline::FAST_PATH_OBJECT_TYPE() ) && 
          outInfo->Has( vtkStreamingDemandDrivenPipeline::FAST_PATH_OBJECT_ID() ) && 
@@ -652,6 +658,16 @@ int vtkPExodusIIReader::RequestData(
       }
 
     this->ReaderList[reader_idx]->Update();
+    if (this->ReaderList[reader_idx]->GetProducedFastPathOutput())
+      {
+      //if (fast_path_reader_index != -1)
+      //  {
+      //  Requested fast-path Global ID was provided by two readers. This
+      //  typically happens for points since points are duplicated among 
+      //  pieces. Nothing to worry about, just pick one. 
+      //  }
+      fast_path_reader_index = reader_idx;
+      }
 
 #if 0
     vtkCompositeDataSet* subgrid = this->ReaderList[reader_idx]->GetOutput();
@@ -702,6 +718,31 @@ int vtkPExodusIIReader::RequestData(
     {
     append->Update();
     output->ShallowCopy( append->GetOutput() );
+    }
+
+  if (fast_path_reader_index != -1 && fast_path_reader_index !=0)
+    {
+    // if fast_path_reader_index==0, then the field data is copied over by
+    // vtkAppendCompositeDataLeaves so only copy the "OverTime" arrays if the
+    // field id > 0 (BUG #9335).
+    vtkFieldData* ofd = output->GetFieldData();
+    vtkFieldData* ifd = this->ReaderList[fast_path_reader_index]->
+      GetOutputDataObject(0)->GetFieldData();
+    // Copy all over-time arrays
+    int numFieldArrays = ifd->GetNumberOfArrays();
+    for (int j=0; j<numFieldArrays; j++)
+      {  
+      vtkAbstractArray* inFieldArray = ifd->GetAbstractArray(j);
+      if (inFieldArray && inFieldArray->GetName())
+        {
+        vtkStdString fieldName = inFieldArray->GetName();
+        
+        if (fieldName.find("OverTime",0) != vtkStdString::npos)
+          {
+          ofd->AddArray(inFieldArray);
+          }
+        }
+      }
     }
 
   // I've copied append's output to the 'output' so delete append
@@ -819,83 +860,66 @@ int vtkPExodusIIReader::DetermineFileId( const char* file )
 
 int vtkPExodusIIReader::DeterminePattern( const char* file )
 {
-  char* prefix = vtksys::SystemTools::DuplicateString( file );
-  int slen = static_cast<int>( strlen( file ) );
   char pattern[20] = "%s";
   int scount = 0;
   int cc = 0;
-  int res =0;
   int min = 0, max = 0;
 
-  
-  // Check for specific extensions
-  // If .ex2 or .ex2v2 is present do not look for a numbered sequence.
-  char* ex2 = strstr(prefix, ".ex2");
-  char* ex2v2 = strstr(prefix, ".ex2v2");
-  if ( ex2 || ex2v2 )
+  // First check for file names for which we should _not_ look for a numbered
+  // sequence.  If using the extension .ex2 or .ex2v2, then we should not.
+  // Furthermore, if the filename ends in .e-s#, then this number is indicative
+  // of a restart number, not a partition number, so we should not look for
+  // numbered sequences there either.
+  vtksys::RegularExpression ex2RegEx("\\.ex2$");
+  vtksys::RegularExpression ex2v2RegEx("\\.ex2v2$");
+  vtksys::RegularExpression restartRegEx("\\.e-s\\.?[0-9]+(\\.ex2v[0-9]+)?$");
+
+  // This regular expression finds the number for a numbered sequence.  This
+  // number appears at the end of file (or potentially right before an extension
+  // like .ex2v3 or perhaps a future version of this extension).  The matches
+  // (in parentheses) are as follows:
+  // 1 - The prefix.
+  // 2 - The sequence number.
+  // 3 - The optional extension.
+  vtksys::RegularExpression
+    numberRegEx("^(.*[^0-9])([0-9]+)(\\.ex2v[0-9]+)?$");
+
+  if (   ex2RegEx.find(file) || ex2v2RegEx.find(file)
+      || restartRegEx.find(file) || !numberRegEx.find(file) )
     {
     // Set my info
     //this->SetFilePattern( pattern ); // XXX Bad set
-    //this->SetFilePrefix( prefix ); // XXX Bad set
+    //this->SetFilePrefix( file ); // XXX Bad set
     //this->SetFileRange( min, max ); // XXX Bad set
-    //delete [] prefix;
     if ( this->FilePattern )
       delete [] this->FilePattern;
     if ( this->FilePrefix )
       delete [] this->FilePrefix;
     this->FilePattern = vtksys::SystemTools::DuplicateString( pattern );
-    this->FilePrefix = prefix;
+    this->FilePrefix = vtksys::SystemTools::DuplicateString( file );
     this->FileRange[0] = min;
     this->FileRange[1] = max;
     this->NumberOfFiles = max - min + 1;
     return VTK_OK;
     }
 
-  char* ex2v3 = strstr( prefix, ".ex2v3" );
-  // Find minimum of range, if any
-  for ( cc = ex2v3 ? ex2v3 - prefix - 1 : slen - 1; cc >= 0; -- cc )
-    {
-    if ( prefix[cc] >= '0' && prefix[cc] <= '9' )
-      {
-      prefix[cc] = 0;
-      scount ++;
-      }
-    else if ( prefix[cc] == '.' )
-      {
-      prefix[cc] = 0;
-      break;
-      }
-    else
-      {
-      break;
-      }
-    }
+  // If we are here, then numberRegEx matched and we have found the part of
+  // the filename that is the number.  Extract the filename parts.
+  vtkstd::string prefix = numberRegEx.match(1);
+  scount = static_cast<int>(numberRegEx.match(2).size());
+  vtkstd::string extension = numberRegEx.match(3);
 
   // Determine the pattern
-  if ( scount > 0 )
-    {
-    res = sscanf( file + (ex2v3 ? ex2v3 - prefix - scount : slen - scount), "%d", &min );
-    if ( res )
-      {
-      if ( ex2v3 )
-        {
-        sprintf( pattern, "%%s.%%0%ii%s", scount, file + (ex2v3 - prefix) );
-        }
-      else
-        {
-        sprintf( pattern, "%%s.%%0%ii", scount );
-        }
-      }
-    }
+  sprintf(pattern, "%%s%%0%ii%s", scount, extension.c_str());
 
   // Count up the files
   char buffer[1024];
   struct stat fs;
   
   // First go up every 100
-  for ( cc = min + 100; res; cc += 100 )
+  for ( cc = min + 100; true; cc += 100 )
     {
-    sprintf( buffer, pattern, prefix, cc );
+    sprintf( buffer, pattern, prefix.c_str(), cc );
 
     // Stat returns -1 if file NOT found
     if ( stat( buffer, &fs ) == -1 )
@@ -904,9 +928,9 @@ int vtkPExodusIIReader::DeterminePattern( const char* file )
     }
   // Okay if I'm here than stat has failed so -100 on my cc
   cc = cc - 100;
-  for ( cc = cc + 1; res; ++cc )
+  for ( cc = cc + 1; true; ++cc )
     {
-    sprintf( buffer, pattern, prefix, cc );
+    sprintf( buffer, pattern, prefix.c_str(), cc );
 
     // Stat returns -1 if file NOT found
     if ( stat( buffer, &fs ) == -1 )
@@ -918,12 +942,12 @@ int vtkPExodusIIReader::DeterminePattern( const char* file )
   // Second, go down every 100
   // We can't assume that we're starting at 0 because the file selector
   // will pick up every file that ends in .ex2v3... not just the first one.
-  for ( cc = min - 100; res; cc -= 100 )
+  for ( cc = min - 100; true; cc -= 100 )
     {
     if ( cc < 0 )
       break;
 
-    sprintf( buffer, pattern, prefix, cc );
+    sprintf( buffer, pattern, prefix.c_str(), cc );
 
     // Stat returns -1 if file NOT found
     if ( stat( buffer, &fs ) == -1 )
@@ -933,12 +957,12 @@ int vtkPExodusIIReader::DeterminePattern( const char* file )
 
   cc += 100;
   // Okay if I'm here than stat has failed so -100 on my cc
-  for (cc = cc - 1; res; --cc )
+  for (cc = cc - 1; true; --cc )
     {
     if ( cc < 0 )
       break;
 
-    sprintf( buffer, pattern, prefix, cc );
+    sprintf( buffer, pattern, prefix.c_str(), cc );
 
     // Stat returns -1 if file NOT found
     if ( stat( buffer, &fs ) == -1 )
@@ -965,7 +989,7 @@ int vtkPExodusIIReader::DeterminePattern( const char* file )
   if ( this->FilePrefix )
     delete [] this->FilePrefix;
   this->FilePattern = vtksys::SystemTools::DuplicateString( pattern );
-  this->FilePrefix = prefix;
+  this->FilePrefix = vtksys::SystemTools::DuplicateString(prefix.c_str());
 
   return VTK_OK;
 }

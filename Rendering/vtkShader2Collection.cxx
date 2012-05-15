@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShader2Collection.cxx,v $
+  Module:    vtkShader2Collection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkShader2.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkShader2Collection, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkShader2Collection);
 
 // ----------------------------------------------------------------------------
@@ -147,11 +146,8 @@ bool vtkShader2Collection::HasVertexShaders()
 
 // ----------------------------------------------------------------------------
 // Description:
-// Tells if at least one of the shaders is a fragment shader.
-// If yes, it means the fragment processing of the fixed-pipeline is
-// bypassed.
-// If no, it means the fragment processing of the fixed-pipeline is used.
-bool vtkShader2Collection::HasFragmentShaders()
+// Tells if at least one of the shaders is a tessellation control shader.
+bool vtkShader2Collection::HasTessellationControlShaders()
 {
   bool result=false;
   
@@ -159,7 +155,25 @@ bool vtkShader2Collection::HasFragmentShaders()
   vtkShader2 *s=this->GetNextShader();
   while(!result && s!=0)
     {
-    result=s->GetType()==VTK_SHADER_TYPE_FRAGMENT;
+    result=s->GetType()==VTK_SHADER_TYPE_TESSELLATION_CONTROL;
+    s=this->GetNextShader();
+    }
+  
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Tells if at least one of the shaders is a tessellation evaluation shader.
+bool vtkShader2Collection::HasTessellationEvaluationShaders()
+{
+  bool result=false;
+  
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(!result && s!=0)
+    {
+    result=s->GetType()==VTK_SHADER_TYPE_TESSELLATION_EVALUATION;
     s=this->GetNextShader();
     }
   
@@ -178,6 +192,27 @@ bool vtkShader2Collection::HasGeometryShaders()
   while(!result && s!=0)
     {
     result=s->GetType()==VTK_SHADER_TYPE_GEOMETRY;
+    s=this->GetNextShader();
+    }
+  
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// Description:
+// Tells if at least one of the shaders is a fragment shader.
+// If yes, it means the fragment processing of the fixed-pipeline is
+// bypassed.
+// If no, it means the fragment processing of the fixed-pipeline is used.
+bool vtkShader2Collection::HasFragmentShaders()
+{
+  bool result=false;
+  
+  this->InitTraversal();
+  vtkShader2 *s=this->GetNextShader();
+  while(!result && s!=0)
+    {
+    result=s->GetType()==VTK_SHADER_TYPE_FRAGMENT;
     s=this->GetNextShader();
     }
   

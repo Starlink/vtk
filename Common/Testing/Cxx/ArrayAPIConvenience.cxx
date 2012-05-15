@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayAPIConvenience.cxx,v $
+  Module:    ArrayAPIConvenience.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -30,13 +30,13 @@
 { \
   if(!(expression)) \
     { \
-    vtkstd::ostringstream buffer; \
+    vtksys_ios::ostringstream buffer; \
     buffer << "Expression failed at line " << __LINE__ << ": " << #expression; \
     throw vtkstd::runtime_error(buffer.str()); \
     } \
 }
 
-int ArrayAPIConvenience(int argc, char* argv[])
+int ArrayAPIConvenience(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {

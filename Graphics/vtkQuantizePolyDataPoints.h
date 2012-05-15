@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuantizePolyDataPoints.h,v $
+  Module:    vtkQuantizePolyDataPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,11 +40,11 @@ class VTK_GRAPHICS_EXPORT vtkQuantizePolyDataPoints : public vtkCleanPolyData
 {
 public:
   static vtkQuantizePolyDataPoints *New();
-  vtkTypeRevisionMacro(vtkQuantizePolyDataPoints,vtkCleanPolyData);
+  vtkTypeMacro(vtkQuantizePolyDataPoints,vtkCleanPolyData);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Specify quantization grain size
+  // Specify quantization grain size. Default is 0.25
   vtkSetClampMacro(QFactor,double,1E-5,VTK_LARGE_FLOAT);
   vtkGetMacro(QFactor,double);
 

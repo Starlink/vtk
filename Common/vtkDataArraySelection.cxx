@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataArraySelection.cxx,v $
+  Module:    vtkDataArraySelection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include <vtkstd/vector>
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkDataArraySelection, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkDataArraySelection);
 
 class vtkDataArraySelectionInternals

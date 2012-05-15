@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeTextureMapper.h,v $
+  Module:    vtkVolumeTextureMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkVolume;
 class VTK_VOLUMERENDERING_EXPORT vtkVolumeTextureMapper : public vtkVolumeMapper
 {
 public:
-  vtkTypeRevisionMacro(vtkVolumeTextureMapper,vtkVolumeMapper);
+  vtkTypeMacro(vtkVolumeTextureMapper,vtkVolumeMapper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:

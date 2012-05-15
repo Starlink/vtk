@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTupleInterpolator.h,v $
+  Module:    vtkTupleInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -50,7 +50,7 @@ class vtkPiecewiseFunction;
 class VTK_RENDERING_EXPORT vtkTupleInterpolator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkTupleInterpolator, vtkObject);
+  vtkTypeMacro(vtkTupleInterpolator, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

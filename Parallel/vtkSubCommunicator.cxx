@@ -2,7 +2,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSubCommunicator.cxx,v $
+  Module:    vtkSubCommunicator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkProcessGroup.h"
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSubCommunicator, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkSubCommunicator);
 
 //-----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositeDataProbeFilter.cxx,v $
+  Module:    vtkCompositeDataProbeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,18 +18,20 @@
 #include "vtkCompositeDataIterator.h"
 #include "vtkCompositeDataPipeline.h"
 #include "vtkCompositeDataSet.h"
+#include "vtkDataArray.h"
 #include "vtkDataSet.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 
 vtkStandardNewMacro(vtkCompositeDataProbeFilter);
-vtkCxxRevisionMacro(vtkCompositeDataProbeFilter, "$Revision: 1.2 $");
 //----------------------------------------------------------------------------
 vtkCompositeDataProbeFilter::vtkCompositeDataProbeFilter()
 {
+  this->PassPartialArrays = false;
 }
 
 //----------------------------------------------------------------------------
@@ -68,7 +70,7 @@ int vtkCompositeDataProbeFilter::RequestData(
   vtkInformation *sourceInfo = inputVector[1]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -132,6 +134,42 @@ int vtkCompositeDataProbeFilter::RequestData(
 
   return 1;
 }
+//----------------------------------------------------------------------------
+void vtkCompositeDataProbeFilter::InitializeForProbing(vtkDataSet *input, vtkDataSet *output)
+{
+  this->Superclass::InitializeForProbing(input, output);
+
+  if (!this->PassPartialArrays)
+    {
+    return;
+    }
+
+  vtkPointData* outPD = output->GetPointData();
+  vtkIdType numPts = input->GetNumberOfPoints();
+  outPD->SetNumberOfTuples(numPts);
+
+  // Initialize the arrays.
+  for (int cc=0; cc < outPD->GetNumberOfArrays(); cc++)
+    {
+    vtkDataArray* da = outPD->GetArray(cc);
+    if (da)
+      {
+      double null_value = 0.0;
+      if (da->IsA("vtkDoubleArray") || da->IsA("vtkFloatArray"))
+        {
+        null_value = vtkMath::Nan();
+        }
+      for (int kk=0; kk < da->GetNumberOfComponents(); kk++)
+        {
+        da->FillComponent(kk, null_value);
+        }
+      }
+    }
+
+  // Override superclass's default behavior to call NullPoint() on every point
+  // that is does not hit since we already initialized arrays with NaNs.
+  this->UseNullPoint = false;
+}
 
 //----------------------------------------------------------------------------
 int vtkCompositeDataProbeFilter::BuildFieldList(vtkCompositeDataSet* source)
@@ -182,7 +220,14 @@ int vtkCompositeDataProbeFilter::BuildFieldList(vtkCompositeDataSet* source)
       }
     else
       {
-      this->PointList->IntersectFieldList(sourceDS->GetPointData());
+      if (this->PassPartialArrays)
+        {
+        this->PointList->UnionFieldList(sourceDS->GetPointData());
+        }
+      else
+        {
+        this->PointList->IntersectFieldList(sourceDS->GetPointData());
+        }
       }
 
     if (sourceDS->GetNumberOfCells() > 0)
@@ -194,7 +239,14 @@ int vtkCompositeDataProbeFilter::BuildFieldList(vtkCompositeDataSet* source)
         }
       else
         {
-        this->CellList->IntersectFieldList(sourceDS->GetCellData());
+        if (this->PassPartialArrays)
+          {
+          this->CellList->UnionFieldList(sourceDS->GetCellData());
+          }
+        else
+          {
+          this->CellList->IntersectFieldList(sourceDS->GetPointData());
+          }
         }
       }
     }
@@ -205,5 +257,6 @@ int vtkCompositeDataProbeFilter::BuildFieldList(vtkCompositeDataSet* source)
 void vtkCompositeDataProbeFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  os << "PassPartialArrays: " << this->PassPartialArrays << endl;
 }
 

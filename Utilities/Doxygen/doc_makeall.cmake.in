@@ -180,6 +180,7 @@ set(VTK_TAGFILE_DEST_DIR "${DOXTEMP}")
 # rushed edits...
 #
 set(SOURCE_DIRECTORIES
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Charts"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Common"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Filtering"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/GenericFiltering"
@@ -193,10 +194,11 @@ set(SOURCE_DIRECTORIES
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Infovis"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/IO"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Parallel"
-  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Widgets"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Rendering"
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/TextAnalysis"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Views"
   "${SOURCE_DIR}/${REL_PATH_TO_TOP}/VolumeRendering"
+  "${SOURCE_DIR}/${REL_PATH_TO_TOP}/Widgets"
 )
 
 # ----------------------------------------------------------------------------
@@ -332,7 +334,7 @@ execute_process(COMMAND ${PERL}
   --baselinelinksuffix "${CVSWEB_DATA_SUFFIX}"
   --datamatch "\\W(VTK_DATA_ROOT|VTKData|(vtk)?GetDataRoot|ExpandDataFileName)\\W"
   --dataicon "paper-clip.gif"
-  --dirmatch "^Examples\\$"
+  --dirmatch "^Examples$"
   --label "Examples"
   --link "${CVSWEB_CHECKOUT}"
   --linksuffix "${CVSWEB_SUFFIX}"

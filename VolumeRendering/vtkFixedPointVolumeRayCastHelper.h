@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointVolumeRayCastHelper.h,v $
+  Module:    vtkFixedPointVolumeRayCastHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -1195,7 +1195,7 @@
 #define VTKKWRCHelper_IncrementAndLoopEnd()                                             \
       imagePtr+=4;                                                                      \
       }                                                                                 \
-    if ( j%32 == 31 )                                                                   \
+    if ( (j/threadCount)%8 == 7 && threadID == 0)                                       \
       {                                                                                 \
       double fargs[1];                                                                  \
       fargs[0] = static_cast<double>(j)/static_cast<float>(imageInUseSize[1]-1);        \
@@ -1312,7 +1312,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkFixedPointVolumeRayCastHelper : public vtkOb
 {
 public:
   static vtkFixedPointVolumeRayCastHelper *New();
-  vtkTypeRevisionMacro(vtkFixedPointVolumeRayCastHelper,vtkObject);
+  vtkTypeMacro(vtkFixedPointVolumeRayCastHelper,vtkObject);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   virtual void   GenerateImage( int, 

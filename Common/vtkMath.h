@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMath.h,v $
+  Module:    vtkMath.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,12 +28,16 @@
 // include providing constants such as Pi; conversion from degrees to 
 // radians; vector operations such as dot and cross products and vector 
 // norm; matrix determinant for 2x2 and 3x3 matrices; univariate polynomial
-// solvers; and random number generation.
+// solvers; and for random number generation (for backward compatibility only).
+// .SECTION See Also
+// vtkMinimalStandardRandomSequence, vtkBoxMuellerRandomSequence
 
 #ifndef __vtkMath_h
 #define __vtkMath_h
 
 #include "vtkObject.h"
+#include "vtkPolynomialSolversUnivariate.h" // For backwards compatibility of old solvers
+
 #include <assert.h> // assert() in inline implementations.
 
 #ifndef DBL_EPSILON
@@ -44,32 +48,40 @@
 
 class vtkDataArray;
 class vtkPoints;
+class vtkMathInternal;
+class vtkMinimalStandardRandomSequence;
+class vtkBoxMuellerRandomSequence;
 
 class VTK_COMMON_EXPORT vtkMath : public vtkObject
 {
 public:
   static vtkMath *New();
-  vtkTypeRevisionMacro(vtkMath,vtkObject);
+  vtkTypeMacro(vtkMath,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Useful constants.
+  // A mathematical constant. This version is 3.14159265358979f.
   static float Pi() { return 3.14159265358979f; };
 
   // Description:
-  // Useful constants. (double-precision version)
+  // A mathematical constant (double-precision version). This version 
+  // is 6.283185307179586.
   static double DoubleTwoPi() { return  6.283185307179586; };
+
+  // Description:
+  // A mathematical constant (double-precision version). This version
+  // is 3.1415926535897932384626.
   static double DoublePi() { return 3.1415926535897932384626; };
 
   // Description:
   // Convert degrees into radians
-  static float RadiansFromDegrees( float );
-  static double RadiansFromDegrees( double );
+  static float RadiansFromDegrees( float degrees);
+  static double RadiansFromDegrees( double degrees);
 
   // Description:
   // Convert radians into degrees
-  static float DegreesFromRadians( float );
-  static double DegreesFromRadians( double );
+  static float DegreesFromRadians( float radians);
+  static double DegreesFromRadians( double radians);
 
   // Description:
   // @deprecated Replaced by vtkMath::RadiansFromDegrees() as of VTK 5.4.
@@ -88,6 +100,8 @@ public:
   static int Round(double f) {
     return static_cast<int>( f + ( f >= 0 ? 0.5 : -0.5 ) ); }
 
+  // Description:
+  // Rounds a double to the nearest integer less than itself.
   static int Floor(double x);
   
   // Description:
@@ -133,32 +147,124 @@ public:
   // is proportional to the seed value! To help solve this, call 
   // RandomSeed() a few times inside seed. This doesn't ruin the 
   // repeatability of Random().
-  static void RandomSeed(long s);  
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
+  static void RandomSeed(int s);  
 
   // Description:
   // Return the current seed used by the random number generator.
-  static long GetSeed();
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
+  static int GetSeed();
   
   // Description:
   // Generate pseudo-random numbers distributed according to the uniform 
   // distribution between 0.0 and 1.0.
   // This is used to provide portability across different systems.
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
   static double Random();  
 
   // Description:
   // Generate  pseudo-random numbers distributed according to the uniform 
   // distribution between \a min and \a max.
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
   static double Random( double min, double max );
 
   // Description:
   // Generate pseudo-random numbers distributed according to the standard
   // normal distribution.
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
   static double Gaussian();  
 
   // Description:
   // Generate  pseudo-random numbers distributed according to the Gaussian
   // distribution with mean \a mean and standard deviation \a std.
+  //
+  // DON'T USE Random(), RandomSeed(), GetSeed(), Gaussian()
+  // THIS IS STATIC SO THIS IS PRONE TO ERRORS (SPECIALLY FOR REGRESSION TESTS)
+  // THIS IS HERE FOR BACKWARD COMPATIBILITY ONLY.
+  // Instead, for a sequence of random numbers with a uniform distribution
+  // create a vtkMinimalStandardRandomSequence object.
+  // For a sequence of random numbers with a gaussian/normal distribution
+  // create a vtkBoxMuellerRandomSequence object.
   static double Gaussian( double mean, double std );
+
+  // Description:
+  // Addition of two 3-vectors (float version). Result is stored in c.
+  static void Add(const float a[3], const float b[3], float c[3]) {
+    for (int i = 0; i < 3; ++i)
+      c[i] = a[i] + b[i];
+  }
+
+  // Description:
+  // Addition of two 3-vectors (double version). Result is stored in c.
+  static void Add(const double a[3], const double b[3], double c[3]) {
+    for (int i = 0; i < 3; ++i)
+      c[i] = a[i] + b[i];
+  }
+
+  // Description:
+  // Subtraction of two 3-vectors (float version). Result is stored in c according to c = a - b.
+  static void Subtract(const float a[3], const float b[3], float c[3]) {
+    for (int i = 0; i < 3; ++i)
+      c[i] = a[i] - b[i];
+  }
+
+  // Description:
+  // Subtraction of two 3-vectors (double version). Result is stored in c according to c = a - b.
+  static void Subtract(const double a[3], const double b[3], double c[3]) {
+    for (int i = 0; i < 3; ++i)
+      c[i] = a[i] - b[i];
+  }
+
+  // Description:
+  // Multiplies a 3-vector by a scalar (float version).
+  // This modifies the input 3-vector.
+  static void MultiplyScalar(float a[3], float s) {
+    for (int i = 0; i < 3; ++i)
+      a[i] *= s;
+  }
+
+  // Description:
+  // Multiplies a 3-vector by a scalar (double version).
+  // This modifies the input 3-vector.
+  static void MultiplyScalar(double a[3], double s) {
+    for (int i = 0; i < 3; ++i)
+      a[i] *= s;
+  }
 
   // Description:
   // Dot product of two 3-vectors (float version).
@@ -186,16 +292,16 @@ public:
   }
 
   // Description:
-  // Cross product of two 3-vectors. Result vector in z[3].
+  // Cross product of two 3-vectors. Result (a x b) is stored in z.
   static void Cross(const float x[3], const float y[3], float z[3]);
 
   // Description:
-  // Cross product of two 3-vectors. Result vector in z[3]. (double-precision
+  // Cross product of two 3-vectors. Result (a x b) is stored in z. (double-precision
   // version)
   static void Cross(const double x[3], const double y[3], double z[3]);
 
   // Description:
-  // Compute the norm of n-vector.
+  // Compute the norm of n-vector. x is the vector, n is its length.
   static float Norm(const float* x, int n); 
   static double Norm(const double* x, int n); 
 
@@ -230,27 +336,26 @@ public:
                              double theta);
 
   // Description:
-  // Compute distance squared between two points.
+  // Compute distance squared between two points x and y.
   static float Distance2BetweenPoints(const float x[3], const float y[3]);
 
   // Description:
-  // Compute distance squared between two points (double precision version).
+  // Compute distance squared between two points x and y(double precision version).
   static double Distance2BetweenPoints(const double x[3], const double y[3]);
 
   // Description:
-  // Dot product of two 2-vectors. The third (z) component is ignored.
-  static float Dot2D(const float x[3], const float y[3]) {
+  // Dot product of two 2-vectors.
+  static float Dot2D(const float x[2], const float y[2]) {
     return ( x[0] * y[0] + x[1] * y[1] );};
   
   // Description:
-  // Dot product of two 2-vectors. The third (z) component is
-  // ignored (double-precision version).
-  static double Dot2D(const double x[3], const double y[3]) {
+  // Dot product of two 2-vectors. (double-precision version).
+  static double Dot2D(const double x[2], const double y[2]) {
     return ( x[0] * y[0] + x[1] * y[1] );};
 
   // Description:
-  // Outer product of two 2-vectors (float version). z-comp is ignored
-  static void Outer2D(const float x[3], const float y[3], float A[3][3]) 
+  // Outer product of two 2-vectors (float version).
+  static void Outer2D(const float x[2], const float y[2], float A[2][2]) 
     {
     for (int i=0; i < 2; i++)
       {
@@ -261,8 +366,8 @@ public:
       }
     }
   // Description:
-  // Outer product of two 2-vectors (float version). z-comp is ignored
-  static void Outer2D(const double x[3], const double y[3], double A[3][3]) 
+  // Outer product of two 2-vectors (float version).
+  static void Outer2D(const double x[2], const double y[2], double A[2][2]) 
     {
     for (int i=0; i < 2; i++)
       {
@@ -274,25 +379,24 @@ public:
     }
 
   // Description:
-  // Compute the norm of a 2-vector. Ignores z-component.
-  static float Norm2D(const float x[3]) {
+  // Compute the norm of a 2-vector.
+  static float Norm2D(const float x[2]) {
     return static_cast<float> (sqrt( x[0] * x[0] + x[1] * x[1] ) );};
 
   // Description:
-  // Compute the norm of a 2-vector. Ignores z-component
+  // Compute the norm of a 2-vector.
   // (double-precision version).
-  static double Norm2D(const double x[3]) {
+  static double Norm2D(const double x[2]) {
     return sqrt( x[0] * x[0] + x[1] * x[1] );};
 
   // Description:
-  // Normalize (in place) a 2-vector. Returns norm of vector. Ignores
-  // z-component.
-  static float Normalize2D(float x[3]);
+  // Normalize (in place) a 2-vector. Returns norm of vector.
+  static float Normalize2D(float x[2]);
 
   // Description:
-  // Normalize (in place) a 2-vector. Returns norm of vector. Ignores
-  // z-component (double-precision version).
-  static double Normalize2D(double x[3]);
+  // Normalize (in place) a 2-vector. Returns norm of vector.
+  // (double-precision version).
+  static double Normalize2D(double x[2]);
 
   // Description:
   // Compute determinant of 2x2 matrix. Two columns of matrix are input.
@@ -307,14 +411,12 @@ public:
     return (c1[0] * c2[1] - c2[0] * c1[1] );};
 
   // Description:
-  // LU Factorization of a 3x3 matrix.  The diagonal elements are the
-  // multiplicative inverse of those in the standard LU factorization.
+  // LU Factorization of a 3x3 matrix.
   static void LUFactor3x3(float A[3][3], int index[3]);
   static void LUFactor3x3(double A[3][3], int index[3]);
 
   // Description:
-  // LU back substitution for a 3x3 matrix.  The diagonal elements are the
-  // multiplicative inverse of those in the standard LU factorization.
+  // LU back substitution for a 3x3 matrix.
   static void LUSolve3x3(const float A[3][3], const int index[3], 
                          float x[3]);
   static void LUSolve3x3(const double A[3][3], const int index[3], 
@@ -352,12 +454,14 @@ public:
                              double **C);
 
   // Description:
-  // Transpose a 3x3 matrix.
+  // Transpose a 3x3 matrix. The input matrix is A. The output
+  // is stored in AT.
   static void Transpose3x3(const float A[3][3], float AT[3][3]);
   static void Transpose3x3(const double A[3][3], double AT[3][3]);
 
   // Description:
-  // Invert a 3x3 matrix.
+  // Invert a 3x3 matrix. The input matrix is A. The output is
+  // stored in AI.
   static void Invert3x3(const float A[3][3], float AI[3][3]);
   static void Invert3x3(const double A[3][3], double AI[3][3]);
 
@@ -764,20 +868,54 @@ public:
   static void SpiralPoints(vtkIdType num, vtkPoints * offsets);
   
   // Description:
-  // Special IEEE-754 numbers used to represent positive and negative infinity and Not-A-Number (Nan).
+  // In Euclidean space, there is a unique circle passing through any given 
+  // three non-collinear points P1, P2, and P3. Using Cartesian coordinates 
+  // to represent these points as spatial vectors, it is possible to use the 
+  // dot product and cross product to calculate the radius and center of the 
+  // circle. See: http://en.wikipedia.org/wiki/Circumcircle and more
+  // specifically the section Barycentric coordinates from cross- and 
+  // dot-products
+  static double Solve3PointCircle(const double p1[3], const double p2[3], const double p3[3], double center[3]);
+
+  // Description:
+  // Special IEEE-754 number used to represent positive infinity.
   static double Inf();
+
+  // Description:
+  // Special IEEE-754 number used to represent negative infinity.
   static double NegInf();
+
+  // Description:
+  // Special IEEE-754 number used to represent Not-A-Number (Nan).
   static double Nan();
+
+  // Description:
+  // Test if a number is equal to the special floating point value infinity.
+  static int IsInf(double x);
+
+  // Test if a number is equal to the special floating point value Not-A-Number (Nan).
+  static int IsNan(double x);
 
 protected:
   vtkMath() {};
   ~vtkMath() {};
   
-  static long Seed;
+  static vtkMathInternal Internal;
 private:
   vtkMath(const vtkMath&);  // Not implemented.
   void operator=(const vtkMath&);  // Not implemented.
 };
+
+//BTX
+class vtkMathInternal
+{
+public:
+  vtkMathInternal();
+  ~vtkMathInternal();
+  vtkMinimalStandardRandomSequence *Uniform;
+  vtkBoxMuellerRandomSequence *Gaussian;
+};
+//ETX
 
 //----------------------------------------------------------------------------
 inline float vtkMath::RadiansFromDegrees( float x )
@@ -851,27 +989,6 @@ inline vtkTypeInt64 vtkMath::Factorial( int N )
     r *= N--;
     }
   return r;
-}
-
-//----------------------------------------------------------------------------
-inline double vtkMath::Random( double min, double max )
-{
-  return ( min + vtkMath::Random() * ( max - min ) );
-}
-
-//----------------------------------------------------------------------------
-inline double vtkMath::Gaussian()
-{
-  // Use the Box-Mueller transform
-  double x = vtkMath::Random();
-  double y = vtkMath::Random();
-  return sqrt( -2. * log( x ) ) * cos( vtkMath::DoubleTwoPi() * y );
-}
-
-//----------------------------------------------------------------------------
-inline double vtkMath::Gaussian( double mean, double std )
-{
-  return mean + std * vtkMath::Gaussian();
 }
 
 //----------------------------------------------------------------------------
@@ -995,7 +1112,7 @@ inline double vtkMath::Distance2BetweenPoints(const double x[3],
 }
 
 //----------------------------------------------------------------------------
-// Cross product of two 3-vectors. Result vector in z[3].
+// Cross product of two 3-vectors. Result (a x b) is stored in z[3].
 inline void vtkMath::Cross(const float x[3], const float y[3], float z[3])
 {
   float Zx = x[1] * y[2] - x[2] * y[1]; 
@@ -1005,7 +1122,7 @@ inline void vtkMath::Cross(const float x[3], const float y[3], float z[3])
 }
 
 //----------------------------------------------------------------------------
-// Cross product of two 3-vectors. Result vector in z[3].
+// Cross product of two 3-vectors. Result (a x b) is stored in z[3].
 inline void vtkMath::Cross(const double x[3], const double y[3], double z[3])
 {
   double Zx = x[1] * y[2] - x[2] * y[1]; 
@@ -1035,6 +1152,50 @@ inline double vtkMath::Determinant3x3(float A[3][3])
 inline double vtkMath::Determinant3x3(double A[3][3])
 {
   return vtkDeterminant3x3( A );
+}
+
+//----------------------------------------------------------------------------
+inline double* vtkMath::SolveCubic(double c0, double c1, double c2, double c3)
+{
+  return vtkPolynomialSolversUnivariate::SolveCubic( c0, c1, c2, c3 );
+}
+
+//----------------------------------------------------------------------------
+inline double* vtkMath::SolveQuadratic(double c0, double c1, double c2)
+{
+  return vtkPolynomialSolversUnivariate::SolveQuadratic( c0, c1, c2 );
+}
+
+//----------------------------------------------------------------------------
+inline double* vtkMath::SolveLinear(double c0, double c1)
+{
+  return vtkPolynomialSolversUnivariate::SolveLinear( c0, c1 );
+}
+
+//----------------------------------------------------------------------------
+inline int vtkMath::SolveCubic(double c0, double c1, double c2, double c3, 
+                               double *r1, double *r2, double *r3, int *num_roots)
+{
+  return vtkPolynomialSolversUnivariate::SolveCubic( c0, c1, c2, c3, r1, r2, r3, num_roots );
+}
+
+//----------------------------------------------------------------------------
+inline int vtkMath::SolveQuadratic(double c0, double c1, double c2, 
+                                   double *r1, double *r2, int *num_roots)
+{
+  return vtkPolynomialSolversUnivariate::SolveQuadratic( c0, c1, c2, r1, r2, num_roots );
+}
+  
+//----------------------------------------------------------------------------
+inline int vtkMath::SolveQuadratic( double* c, double* r, int* m )
+{
+  return vtkPolynomialSolversUnivariate::SolveQuadratic( c, r, m );
+}
+
+//----------------------------------------------------------------------------
+inline int vtkMath::SolveLinear(double c0, double c1, double *r1, int *num_roots)
+{
+  return vtkPolynomialSolversUnivariate::SolveLinear( c0, c1, r1, num_roots );
 }
 
 //----------------------------------------------------------------------------

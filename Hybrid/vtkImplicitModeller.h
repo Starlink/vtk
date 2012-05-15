@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitModeller.h,v $
+  Module:    vtkImplicitModeller.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -96,7 +96,7 @@ class vtkMultiThreader;
 class VTK_HYBRID_EXPORT vtkImplicitModeller : public vtkImageAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkImplicitModeller,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImplicitModeller,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

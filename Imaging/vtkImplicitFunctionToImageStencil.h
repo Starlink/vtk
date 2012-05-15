@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitFunctionToImageStencil.h,v $
+  Module:    vtkImplicitFunctionToImageStencil.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IMAGING_EXPORT vtkImplicitFunctionToImageStencil : public vtkImageSten
 {
 public:
   static vtkImplicitFunctionToImageStencil *New();
-  vtkTypeRevisionMacro(vtkImplicitFunctionToImageStencil, vtkImageStencilSource);
+  vtkTypeMacro(vtkImplicitFunctionToImageStencil, vtkImageStencilSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

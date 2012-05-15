@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeometryFilter.h,v $
+  Module:    vtkGeometryFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,13 +46,13 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GRAPHICS_EXPORT vtkGeometryFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkGeometryFilter *New();
-  vtkTypeRevisionMacro(vtkGeometryFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkGeometryFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -114,8 +114,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -148,7 +148,7 @@ protected:
   int ExtentClipping;
 
   int Merging;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 private:
   vtkGeometryFilter(const vtkGeometryFilter&);  // Not implemented.
   void operator=(const vtkGeometryFilter&);  // Not implemented.

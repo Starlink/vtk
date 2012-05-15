@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphere.h,v $
+  Module:    vtkSphere.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@
 class VTK_FILTERING_EXPORT vtkSphere : public vtkImplicitFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkSphere,vtkImplicitFunction);
+  vtkTypeMacro(vtkSphere,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

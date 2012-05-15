@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLight.cxx,v $
+  Module:    vtkLight.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkMatrix4x4.h"
 #include "vtkGraphicsFactory.h"
 
-vtkCxxRevisionMacro(vtkLight, "$Revision: 1.54 $");
 
 vtkCxxSetObjectMacro(vtkLight,TransformMatrix,vtkMatrix4x4);
 
@@ -76,6 +75,42 @@ vtkLight::~vtkLight()
     }
 }
 
+// ----------------------------------------------------------------------------
+vtkLight *vtkLight::ShallowClone()
+{
+  vtkLight *result=vtkLight::New();
+  
+  int i=0;
+  while(i<3)
+    {
+    result->FocalPoint[i]=this->FocalPoint[i];
+    result->Position[i]=this->Position[i];
+    result->AmbientColor[i]=this->AmbientColor[i];
+    result->DiffuseColor[i]=this->DiffuseColor[i];
+    result->SpecularColor[i]=this->SpecularColor[i];
+    result->AttenuationValues[i]=this->AttenuationValues[i];
+    result->TransformedFocalPointReturn[i]=
+      this->TransformedFocalPointReturn[i];
+    result->TransformedPositionReturn[i]=this->TransformedPositionReturn[i];
+    ++i;
+    }
+  
+  result->Intensity=this->Intensity;
+  result->Switch=this->Switch;
+  result->Positional=this->Positional;
+  result->Exponent=this->Exponent;
+  result->ConeAngle=this->ConeAngle;
+  result->LightType=this->LightType;
+  
+  result->TransformMatrix=this->TransformMatrix;
+  if(result->TransformMatrix!=0)
+    {
+    result->TransformMatrix->Register(result);
+    }
+  return result;
+}
+
+// ----------------------------------------------------------------------------
 void vtkLight::SetDirectionAngle(double elevation, double azimuth)
 {
   elevation = vtkMath::RadiansFromDegrees( elevation );
@@ -106,23 +141,29 @@ void vtkLight::SetColor(double R, double G, double B)
   this->SetSpecularColor(R, G, B);
 }
 
+#ifndef VTK_LEGACY_REMOVE
 // This method assumes that the SetColor() method was called which sets both
 // the specular and diffuse colors to the same value. In the future, we may
 // want to change this to compute the composite light color, similar to
 // vtkProperty.
 double *vtkLight::GetColor()
 {
+  VTK_LEGACY_REPLACED_BODY(vtkLight::GetColor,"VTK 5.7",
+                           vtkLight::GetDiffuseColor);
   return this->DiffuseColor;
 }
 
 void vtkLight::GetColor(double rgb[3])
 {
+  VTK_LEGACY_REPLACED_BODY(vtkLight::GetColor,"VTK 5.7",
+                           vtkLight::GetDiffuseColor);
   // May want to change this to compute the composite
   // light color, similar to vtkProperty.
   rgb[0] = this->DiffuseColor[0];
   rgb[1] = this->DiffuseColor[1];
   rgb[2] = this->DiffuseColor[2];
 }
+#endif // #ifndef VTK_LEGACY_REMOVE
 
 int vtkLight::LightTypeIsHeadlight()
 {

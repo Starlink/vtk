@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEdgeLayoutStrategy.cxx,v $
+  Module:    vtkEdgeLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 
 #include "vtkGraph.h"
 
-vtkCxxRevisionMacro(vtkEdgeLayoutStrategy, "$Revision: 1.1 $");
 
 void vtkEdgeLayoutStrategy::SetGraph(vtkGraph *graph)
 {

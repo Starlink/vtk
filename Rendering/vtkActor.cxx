@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkActor.cxx,v $
+  Module:    vtkActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkActor, "$Revision: 1.140 $");
 
 vtkCxxSetObjectMacro(vtkActor,Texture,vtkTexture);
 vtkCxxSetObjectMacro(vtkActor,Mapper,vtkMapper);
@@ -192,6 +191,10 @@ int vtkActor::RenderOpaqueGeometry(vtkViewport *vp)
       }
     this->Render(ren,this->Mapper);
     this->Property->PostRender(this, ren);
+    if (this->Texture)
+      {
+      this->Texture->PostRender(ren);
+      }
     this->EstimatedRenderTime += this->Mapper->GetTimeToDraw();
     renderedSomething = 1;
     }

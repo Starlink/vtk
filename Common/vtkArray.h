@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArray.h,v $
+  Module:    vtkArray.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -56,7 +56,7 @@
 class VTK_COMMON_EXPORT vtkArray : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkArray, vtkObject);
+  vtkTypeMacro(vtkArray, vtkObject);
   void PrintSelf(ostream &os, vtkIndent indent);
 
 //BTX
@@ -76,7 +76,11 @@ public:
   // or VTK_STRING.  The caller is responsible for the lifetime of the returned object.
   static vtkArray* CreateArray(int StorageType, int ValueType);
 
-//BTX
+  // Description:
+  // Returns true iff the underlying array storage is "dense", i.e. that GetSize() and
+  // GetNonNullSize() will always return the same value.  If not, the array is "sparse".
+  virtual bool IsDense() = 0;
+
   // Description:
   // Resizes the array to the given extents (number of dimensions and size of each dimension).
   // Note that concrete implementations of vtkArray may place constraints on the the extents
@@ -87,14 +91,23 @@ public:
   // initialize its contents accordingly.  In particular, dimension-labels will be
   // undefined, dense array values will be undefined, and sparse arrays will be
   // empty.
-  void Resize(vtkIdType i);
-  void Resize(vtkIdType i, vtkIdType j);
-  void Resize(vtkIdType i, vtkIdType j, vtkIdType k);
+  void Resize(const vtkIdType i);
+  void Resize(const vtkIdType i, const vtkIdType j);
+  void Resize(const vtkIdType i, const vtkIdType j, const vtkIdType k);
+//BTX
+  void Resize(const vtkArrayRange& i);
+  void Resize(const vtkArrayRange& i, const vtkArrayRange& j);
+  void Resize(const vtkArrayRange& i, const vtkArrayRange& j, const vtkArrayRange& k);
   void Resize(const vtkArrayExtents& extents);
+//ETX
 
+//BTX
+  // Description:
+  // Returns the extent (valid coordinate range) along the given dimension.
+  const vtkArrayRange GetExtent(vtkIdType dimension);
   // Description:
   // Returns the extents (the number of dimensions and size along each dimension) of the array.
-  virtual vtkArrayExtents GetExtents() = 0;
+  virtual const vtkArrayExtents& GetExtents() = 0;
 //ETX
 
   // Description:
@@ -114,6 +127,13 @@ public:
   // value will equal GetSize() for dense arrays, and will be less-than-or-equal
   // to GetSize() for sparse arrays.
   virtual vtkIdType GetNonNullSize() = 0;
+
+  // Description:
+  // Sets the array name.
+  void SetName(const vtkStdString& name);
+  // Description:
+  // Returns the array name.
+  vtkStdString GetName();
 
   // Description:
   // Sets the label for the i-th array dimension.
@@ -184,6 +204,10 @@ protected:
 private:
   vtkArray(const vtkArray&); // Not implemented
   void operator=(const vtkArray&); // Not implemented
+
+  // Description:
+  // Stores the array name.
+  vtkStdString Name;
 
   // Description:
   // Implemented in concrete derivatives to update their storage

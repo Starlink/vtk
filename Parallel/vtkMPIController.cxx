@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkMPIController.cxx,v $
+Module:    vtkMPIController.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -32,7 +32,7 @@ int vtkMPIController::UseSsendForRMI = 0;
 class VTK_PARALLEL_EXPORT vtkMPIOutputWindow : public vtkOutputWindow
 {
 public:
-  vtkTypeRevisionMacro(vtkMPIOutputWindow,vtkOutputWindow);
+  vtkTypeMacro(vtkMPIOutputWindow,vtkOutputWindow);
 
   void DisplayText(const char* t)
     {
@@ -70,9 +70,7 @@ void vtkMPIController::CreateOutputWindow()
   vtkOutputWindow::SetInstance(this->OutputWindow);
 }
 
-vtkCxxRevisionMacro(vtkMPIOutputWindow, "$Revision: 1.27 $");
 
-vtkCxxRevisionMacro(vtkMPIController, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkMPIController);
 
 //----------------------------------------------------------------------------
@@ -282,10 +280,13 @@ void vtkMPIController::MultipleMethodExecute()
   
   if (i < this->GetNumberOfProcesses())
     {
-    if (this->MultipleMethod[i])
+    vtkProcessFunctionType multipleMethod;
+    void *multipleData;
+    this->GetMultipleMethod(i, multipleMethod, multipleData);
+    if (multipleMethod)
       {
       vtkMultiProcessController::SetGlobalController(this);
-      (this->MultipleMethod[i])(this, this->MultipleData[i]);
+      (multipleMethod)(this, multipleData);
       }
     else
       {
@@ -316,6 +317,22 @@ vtkMPIController *vtkMPIController::CreateSubController(vtkProcessGroup *group)
   // created with MPI_COMM_NULL.  Check for that and return NULL ourselves,
   // which is not really an error condition.
   if (*(subcomm->GetMPIComm()->Handle) == MPI_COMM_NULL) return NULL;
+
+  vtkMPIController *controller = vtkMPIController::New();
+  controller->SetCommunicator(subcomm);
+  return controller;
+}
+
+//-----------------------------------------------------------------------------
+vtkMPIController *vtkMPIController::PartitionController(int localColor,
+                                                        int localKey)
+{
+  VTK_CREATE(vtkMPICommunicator, subcomm);
+
+  if (!subcomm->SplitInitialize(this->Communicator, localColor, localKey))
+    {
+    return NULL;
+    }
 
   vtkMPIController *controller = vtkMPIController::New();
   controller->SetCommunicator(subcomm);

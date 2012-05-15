@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygonalSurfaceContourLineInterpolator.h,v $
+  Module:    vtkPolygonalSurfaceContourLineInterpolator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class VTK_WIDGETS_EXPORT vtkPolygonalSurfaceContourLineInterpolator : public vtk
 public:
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkPolygonalSurfaceContourLineInterpolator, vtkPolyDataContourLineInterpolator);
+  vtkTypeMacro(vtkPolygonalSurfaceContourLineInterpolator, vtkPolyDataContourLineInterpolator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkPolygonalSurfaceContourLineInterpolator *New();

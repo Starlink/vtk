@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericCell.h,v $
+  Module:    vtkGenericCell.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ public:
   // Create handle to any type of cell; by default a vtkEmptyCell.
   static vtkGenericCell *New();
 
-  vtkTypeRevisionMacro(vtkGenericCell,vtkCell);
+  vtkTypeMacro(vtkGenericCell,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -59,12 +59,12 @@ public:
   void EvaluateLocation(int& subId, double pcoords[3],
                         double x[3], double *weights);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *connectivity,
+            vtkIncrementalPointLocator *locator, vtkCellArray *connectivity,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);
@@ -109,7 +109,9 @@ public:
   void SetCellTypeToHexagonalPrism() {this->SetCellType(VTK_HEXAGONAL_PRISM);}
   void SetCellTypeToConvexPointSet() {this->SetCellType(VTK_CONVEX_POINT_SET);}
   void SetCellTypeToQuadraticEdge() {this->SetCellType(VTK_QUADRATIC_EDGE);}
+  void SetCellTypeToCubicLine() {this->SetCellType(VTK_CUBIC_LINE);}
   void SetCellTypeToQuadraticTriangle() {this->SetCellType(VTK_QUADRATIC_TRIANGLE);}
+  void SetCellTypeToBiQuadraticTriangle() {this->SetCellType(VTK_BIQUADRATIC_TRIANGLE);}
   void SetCellTypeToQuadraticQuad() {this->SetCellType(VTK_QUADRATIC_QUAD);}
   void SetCellTypeToQuadraticTetra() {this->SetCellType(VTK_QUADRATIC_TETRA);}
   void SetCellTypeToQuadraticHexahedron() {this->SetCellType(VTK_QUADRATIC_HEXAHEDRON);}

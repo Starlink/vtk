@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLRepresentationPainter.cxx,v $
+  Module:    vtkOpenGLRepresentationPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
 vtkStandardNewMacro(vtkOpenGLRepresentationPainter);
-vtkCxxRevisionMacro(vtkOpenGLRepresentationPainter, "$Revision: 1.10 $");
 #endif
 
 //-----------------------------------------------------------------------------
@@ -100,7 +99,7 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer *renderer,
 
   if (draw_surface_with_edges)
     {
-    glPushAttrib(GL_CURRENT_BIT|GL_LIGHTING_BIT);
+    glPushAttrib(GL_CURRENT_BIT|GL_LIGHTING_BIT|GL_ENABLE_BIT);
     double color[4];
     prop->GetEdgeColor(color);
     color[0] *= prop->GetOpacity();
@@ -126,7 +125,7 @@ void vtkOpenGLRepresentationPainter::RenderInternal(vtkRenderer *renderer,
     // reset the default.
     glPolygonMode(face, GL_FILL);
 
-    glPopAttrib(); //(GL_CURRENT_BIT|GL_LIGHTING)
+    glPopAttrib(); //(GL_CURRENT_BIT|GL_LIGHTING|GL_ENABLE_BIT)
     }
 }
 //-----------------------------------------------------------------------------

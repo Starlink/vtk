@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCenteredSliderWidget.cxx,v $
+  Module:    vtkCenteredSliderWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkWidgetEvent.h"
 #include "vtkTimerLog.h"
 
-vtkCxxRevisionMacro(vtkCenteredSliderWidget, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkCenteredSliderWidget);
 
 //------------------------------------------------------------

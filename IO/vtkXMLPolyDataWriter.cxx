@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPolyDataWriter.cxx,v $
+  Module:    vtkXMLPolyDataWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkOffsetsManagerArray.h"
 #undef  vtkOffsetsManager_DoNotInclude
 
-vtkCxxRevisionMacro(vtkXMLPolyDataWriter, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkXMLPolyDataWriter);
 
 //----------------------------------------------------------------------------

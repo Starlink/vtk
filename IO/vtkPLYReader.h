@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPLYReader.h,v $
+  Module:    vtkPLYReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@
 class VTK_IO_EXPORT vtkPLYReader : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkPLYReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkPLYReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -46,6 +46,10 @@ public:
   // Specify file name of stereo lithography file.
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
+
+  // Description:
+  // A simple, non-exhaustive check to see if a file is a valid ply file.
+  static int CanReadFile(const char *filename);
 
 protected:
   vtkPLYReader();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaCoincidentTopologyResolutionPainter.cxx,v $
+  Module:    vtkMesaCoincidentTopologyResolutionPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,5 +34,4 @@
 #include "vtkOpenGLCoincidentTopologyResolutionPainter.cxx"
 #undef vtkOpenGLCoincidentTopologyResolutionPainter
 
-vtkCxxRevisionMacro(vtkMesaCoincidentTopologyResolutionPainter, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkMesaCoincidentTopologyResolutionPainter);

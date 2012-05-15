@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCollectTable.h,v $
+  Module:    vtkCollectTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_PARALLEL_EXPORT vtkCollectTable : public vtkTableAlgorithm
 {
 public:
   static vtkCollectTable *New();
-  vtkTypeRevisionMacro(vtkCollectTable, vtkTableAlgorithm);
+  vtkTypeMacro(vtkCollectTable, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

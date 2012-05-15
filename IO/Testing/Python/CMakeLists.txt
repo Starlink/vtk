@@ -6,7 +6,9 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   IF (VTK_DATA_ROOT)
     IF (VTK_PYTHON_EXE)
       SET(tests
-         dem 
+         dem
+         NetCDFReader
+         NetCDFCFSphericalCoords
          TestAVSucdReader
          TestGAMBITReader
          TestImageWriters
@@ -20,8 +22,10 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
          ParticleReader
          caffeine
          TestXYZMol
-         TestMHD
          )
+       IF(VTK_USE_METAIO)
+         SET(tests ${tests} TestMHD)
+       ENDIF(VTK_USE_METAIO)
        CONVERT_TCL_TEST_TO_PY (
          tests
          IO)

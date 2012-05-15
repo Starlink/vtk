@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkNormalizeMatrixVectors.h,v $
+  Module:    vtkNormalizeMatrixVectors.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -26,7 +26,7 @@
 
 // .NAME vtkNormalizeMatrixVectors - given a sparse input matrix, produces
 // a sparse output matrix with each vector normalized to unit length.
-
+//
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
@@ -34,7 +34,7 @@ class VTK_INFOVIS_EXPORT vtkNormalizeMatrixVectors : public vtkArrayDataAlgorith
 {
 public:
   static vtkNormalizeMatrixVectors* New();
-  vtkTypeRevisionMacro(vtkNormalizeMatrixVectors, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkNormalizeMatrixVectors, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

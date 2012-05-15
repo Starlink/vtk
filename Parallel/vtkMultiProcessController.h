@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiProcessController.h,v $
+  Module:    vtkMultiProcessController.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,6 +44,7 @@ class vtkMultiProcessController;
 class vtkMultiProcessStream;
 class vtkOutputWindow;
 class vtkProcessGroup;
+class vtkProcess;
 
 //BTX
 // The type of function that gets called when new processes are initiated.
@@ -60,7 +61,7 @@ typedef void (*vtkRMIFunctionType)(void *localArg,
 class VTK_PARALLEL_EXPORT vtkMultiProcessController : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkMultiProcessController,vtkObject);
+  vtkTypeMacro(vtkMultiProcessController,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -102,6 +103,12 @@ public:
   // when SingleMethodExecute is called.  All the processes will
   // start by calling this function.
   void SetSingleMethod(vtkProcessFunctionType, void *data);
+  
+  // Description:
+  // Object-oriented flavor of SetSingleMethod(). Instead of passing
+  // some function pointer and user data, a vtkProcess object is passed
+  // where the method to execute is Execute() and the data the object itself.
+  void SetSingleProcessObject(vtkProcess *p);
   //ETX
 
   // Description:
@@ -154,6 +161,18 @@ public:
   // returned on all process not in the group.
   virtual vtkMultiProcessController *CreateSubController(
                                                         vtkProcessGroup *group);
+
+  // Description:
+  // Partitions this controller based on a coloring.  That is, each process
+  // passes in a color.  All processes with the same color are grouped into the
+  // same partition.  The processes are ordered by their self-assigned key.
+  // Lower keys have lower process ids.  Ties are broken by the current process
+  // ids.  (For example, if all the keys are 0, then the resulting processes
+  // will be ordered in the same way.)  This method returns a new controller to
+  // each process that represents the local partition.  This is basically the
+  // same operation as MPI_Comm_split.
+  virtual vtkMultiProcessController *PartitionController(int localColor,
+                                                         int localKey);
   
   //------------------ RMIs --------------------
   //BTX
@@ -265,7 +284,6 @@ public:
 
   enum Consts 
   {
-    MAX_PROCESSES  = 8192,
     ANY_SOURCE     = -1,
     INVALID_SOURCE = -2
   };
@@ -291,6 +309,9 @@ public:
   // Description:
   // This method sends data to another process.  Tag eliminates ambiguity
   // when multiple sends or receives exist in the same process.
+  // It is recommended to use custom tag number over 100.
+  // vtkMultiProcessController has reserved tags between 1 and 4.
+  // vtkCommunicator has reserved tags between 10 and 16.
   int Send(const int* data, vtkIdType length, int remoteProcessId, int tag);
   int Send(const unsigned int* data, vtkIdType length, int remoteProcessId, int tag);
   int Send(const unsigned long* data, vtkIdType length, int remoteProcessId, 
@@ -900,11 +921,11 @@ protected:
   // instead of Send.
   virtual void TriggerRMIInternal(int remoteProcessId, 
     void* arg, int argLength, int rmiTag, bool propagate);
-  
+
   vtkProcessFunctionType      SingleMethod;
   void                       *SingleData;
-  vtkProcessFunctionType      MultipleMethod[MAX_PROCESSES];
-  void                       *MultipleData[MAX_PROCESSES];  
+
+  void GetMultipleMethod(int index, vtkProcessFunctionType &func, void *&data);
   
   vtkCollection *RMIs;
   
@@ -943,6 +964,11 @@ private:
   void operator=(const vtkMultiProcessController&);  // Not implemented.
 
   unsigned long RMICount;
+
+//BTX
+  class vtkInternal;
+  vtkInternal *Internal;
+//ETX
 };
 
 

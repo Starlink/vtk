@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageData.cxx,v $
+  Module:    vtkImageData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkCellData.h"
 #include "vtkDataArray.h"
-#include "vtkExtentTranslator.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationIntegerKey.h"
@@ -32,7 +31,6 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkImageData, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkImageData);
 
 //----------------------------------------------------------------------------
@@ -640,44 +638,40 @@ double *vtkImageData::GetPoint(vtkIdType ptId)
     return x;
     }
 
+  // "loc" holds the point x,y,z indices
+  loc[0] = loc[1] = loc[2] = 0;
+
   switch (this->DataDescription)
     {
     case VTK_EMPTY:
       return x;
 
     case VTK_SINGLE_POINT:
-      loc[0] = loc[1] = loc[2] = 0;
       break;
 
     case VTK_X_LINE:
-      loc[1] = loc[2] = 0;
       loc[0] = ptId;
       break;
 
     case VTK_Y_LINE:
-      loc[0] = loc[2] = 0;
       loc[1] = ptId;
       break;
 
     case VTK_Z_LINE:
-      loc[0] = loc[1] = 0;
       loc[2] = ptId;
       break;
 
     case VTK_XY_PLANE:
-      loc[2] = 0;
       loc[0] = ptId % dims[0];
       loc[1] = ptId / dims[0];
       break;
 
     case VTK_YZ_PLANE:
-      loc[0] = 0;
       loc[1] = ptId % dims[1];
       loc[2] = ptId / dims[1];
       break;
 
     case VTK_XZ_PLANE:
-      loc[1] = 0;
       loc[0] = ptId % dims[0];
       loc[2] = ptId / dims[0];
       break;
@@ -751,13 +745,6 @@ vtkIdType vtkImageData::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
                                  int& subId, double pcoords[3], double *weights)
 {
   int loc[3];
-  const int *extent = this->GetExtent();
-
-  // Use vtkIdType to avoid overflow on large images
-  vtkIdType dims[3];
-  dims[0] = extent[1] - extent[0] + 1;
-  dims[1] = extent[3] - extent[2] + 1;
-  dims[2] = extent[5] - extent[4] + 1;
 
   if ( this->ComputeStructuredCoordinates(x, loc, pcoords) == 0 )
     {
@@ -770,8 +757,7 @@ vtkIdType vtkImageData::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
   //  From this location get the cell id
   //
   subId = 0;
-  return loc[2] * (dims[0]-1)*(dims[1]-1) +
-         loc[1] * (dims[0]-1) + loc[0];
+  return this->ComputeCellId(loc);
 }
 
 //----------------------------------------------------------------------------
@@ -781,7 +767,7 @@ vtkCell *vtkImageData::FindAndGetCell(double x[3],
                                       double vtkNotUsed(tol2), int& subId,
                                       double pcoords[3], double *weights)
 {
-  int i, j, k, loc[3];
+  int i, j, k, ijk[3], loc[3];
   vtkIdType npts, idx;
   double xOut[3];
   int iMax = 0;
@@ -796,7 +782,6 @@ vtkCell *vtkImageData::FindAndGetCell(double x[3],
   dims[0] = extent[1] - extent[0] + 1;
   dims[1] = extent[3] - extent[2] + 1;
   dims[2] = extent[5] - extent[4] + 1;
-  vtkIdType d01 = dims[0]*dims[1];
 
   if ( this->ComputeStructuredCoordinates(x, loc, pcoords) == 0 )
     {
@@ -872,20 +857,21 @@ vtkCell *vtkImageData::FindAndGetCell(double x[3],
   npts = 0;
   for (k = loc[2]; k <= kMax; k++)
     {
+    ijk[2] = k;
     xOut[2] = origin[2] + k * spacing[2];
     for (j = loc[1]; j <= jMax; j++)
       {
+      ijk[1] = j;
       xOut[1] = origin[1] + j * spacing[1];
-      // make idx relative to the extent not the whole extent
-      idx = loc[0] + j*dims[0] + k*d01;
-//      idx = loc[0]-extent[0] + (j-extent[2])*dims[0]
-//        + (k-extent[4])*d01;
-      for (i = loc[0]; i <= iMax; i++, idx++)
+      for (i = loc[0]; i <= iMax; i++)
         {
+        ijk[0] = i;
         xOut[0] = origin[0] + i * spacing[0];
 
+        idx = this->ComputePointId(ijk);
         cell->PointIds->SetId(npts,idx);
         cell->Points->SetPoint(npts++,xOut);
+        idx++;
         }
       }
     }
@@ -994,6 +980,18 @@ void vtkImageData::GetPointGradient(int i, int j, int k, vtkDataArray *s,
 
   vtkIdType ijsize=dims[0]*dims[1];
 
+  // Adjust i,j,k to the start of the extent
+  i -= extent[0];
+  j -= extent[2];
+  k -= extent[4];
+
+  // Check for out-of-bounds
+  if (i < 0 || i >= dims[0] || j < 0 || j >= dims[1] || k < 0 || k >= dims[2])
+    {
+    g[0] = g[1] = g[2] = 0.0;
+    return;
+    }
+
   // x-direction
   if ( dims[0] == 1 )
     {
@@ -1082,7 +1080,6 @@ void vtkImageData::SetDimensions(const int dim[3])
 }
 
 
-// streaming change: ijk is in extent coordinate system.
 //----------------------------------------------------------------------------
 // Convenience function computes the structured coordinates for a point x[3].
 // The voxel is specified by the array ijk[3], and the parametric coordinates
@@ -1133,10 +1130,6 @@ int vtkImageData::ComputeStructuredCoordinates(double x[3], int ijk[3],
         pcoords[i] = 1.0;
         }
       }
-    // We now need to subtract the lower extent to shift to
-    // the correct location in the image (mapping {extent[0],
-    // extent[2], extent[4]) to (0, 0, 0)
-    ijk[i] -= extent[i*2];
     }
   return 1;
 }
@@ -1699,7 +1692,7 @@ void vtkImageData::Crop()
   int           maxX, maxY, maxZ;
   vtkIdType     outId, inId, inIdY, inIdZ, incZ, incY;
   vtkImageData  *newImage;
-  int numPts, numCells, tmp;
+  vtkIdType numPts, numCells, tmp;
   const int* extent = this->Extent;
 
   int updateExtent[6] = {0,-1,0,-1,0,-1};
@@ -2078,7 +2071,7 @@ void *vtkImageData::GetArrayPointerForExtent(vtkDataArray* array,
 void *vtkImageData::GetArrayPointer(vtkDataArray* array, int coordinate[3])
 {
   vtkIdType incs[3];
-  int idx;
+  vtkIdType idx;
 
   if (array == NULL)
     {

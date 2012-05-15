@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLPStructuredDataWriter.cxx,v $
+  Module:    vtkXMLPStructuredDataWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkErrorCode.h"
 #include "vtkDataSet.h"
 
-vtkCxxRevisionMacro(vtkXMLPStructuredDataWriter, "$Revision: 1.5 $");
 vtkCxxSetObjectMacro(vtkXMLPStructuredDataWriter, ExtentTranslator,
                      vtkExtentTranslator);
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSampleFunction.h,v $
+  Module:    vtkSampleFunction.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkDataArray;
 class VTK_IMAGING_EXPORT vtkSampleFunction : public vtkImageAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkSampleFunction,vtkImageAlgorithm);
+  vtkTypeMacro(vtkSampleFunction,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

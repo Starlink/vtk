@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBalloonWidget.cxx,v $
+  Module:    vtkBalloonWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkImageData.h"
 #include <vtkstd/map>
 
-vtkCxxRevisionMacro(vtkBalloonWidget, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkBalloonWidget);
 
 //-- Define the PIMPLd array of vtkProp and vtkString --

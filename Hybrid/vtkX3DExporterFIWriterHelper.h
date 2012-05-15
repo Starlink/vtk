@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkX3DExporterFIWriterHelper.h,v $
+  Module:    vtkX3DExporterFIWriterHelper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+// .NAME vtkX3DExporterFIWriterHelper - 
+// .SECTION Description
+
 #ifndef __vtkX3DExporterFIWriterHelper_h
 #define __vtkX3DExporterFIWriterHelper_h
 

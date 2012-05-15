@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArray.cxx,v $
+  Module:    vtkArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -24,11 +24,12 @@
 #include "vtkSparseArray.h"
 #include <vtkVariant.h>
 
+#include <vtkstd/algorithm>
+
 //
 // Standard functions
 //
 
-vtkCxxRevisionMacro(vtkArray, "$Revision: 1.1 $");
 
 //----------------------------------------------------------------------------
 
@@ -47,6 +48,9 @@ vtkArray::~vtkArray()
 void vtkArray::PrintSelf(ostream &os, vtkIndent indent)
 {
   Superclass::PrintSelf(os, indent);
+
+  os << indent << "Name: " << this->Name << endl;
+  
   os << indent << "Dimensions: " << this->GetDimensions() << endl;
   os << indent << "Extents: " << this->GetExtents() << endl;
   
@@ -133,33 +137,44 @@ vtkArray* vtkArray::CreateArray(int StorageType, int ValueType)
     return 0;
 }
 
-void vtkArray::Resize(vtkIdType i)
+void vtkArray::Resize(const vtkIdType i)
+{
+  this->Resize(vtkArrayExtents(vtkArrayRange(0, i)));
+}
+
+void vtkArray::Resize(const vtkArrayRange& i)
 {
   this->Resize(vtkArrayExtents(i));
 }
 
-void vtkArray::Resize(vtkIdType i, vtkIdType j)
+void vtkArray::Resize(const vtkIdType i, const vtkIdType j)
+{
+  this->Resize(vtkArrayExtents(vtkArrayRange(0, i), vtkArrayRange(0, j)));
+}
+
+void vtkArray::Resize(const vtkArrayRange& i, const vtkArrayRange& j)
 {
   this->Resize(vtkArrayExtents(i, j));
 }
 
-void vtkArray::Resize(vtkIdType i, vtkIdType j, vtkIdType k)
+void vtkArray::Resize(const vtkIdType i, const vtkIdType j, const vtkIdType k)
+{
+  this->Resize(vtkArrayExtents(vtkArrayRange(0, i), vtkArrayRange(0, j), vtkArrayRange(0, k)));
+}
+
+void vtkArray::Resize(const vtkArrayRange& i, const vtkArrayRange& j, const vtkArrayRange& k)
 {
   this->Resize(vtkArrayExtents(i, j, k));
 }
 
 void vtkArray::Resize(const vtkArrayExtents& extents)
 {    
-  for(vtkIdType i = 0; i != extents.GetDimensions(); ++i)
-    {
-    if(extents[i] < 0)
-      {
-      vtkErrorMacro(<< "cannot create dimension with extents < 0");
-      return;
-      }
-    }
-
   this->InternalResize(extents);
+}
+
+const vtkArrayRange vtkArray::GetExtent(vtkIdType dimension)
+{
+  return this->GetExtents()[dimension];
 }
 
 vtkIdType vtkArray::GetDimensions()
@@ -172,13 +187,33 @@ vtkIdType vtkArray::GetSize()
   return this->GetExtents().GetSize();
 }
 
-void vtkArray::SetDimensionLabel(vtkIdType i, const vtkStdString& label)
+void vtkArray::SetName(const vtkStdString& raw_name)
+{
+  // Don't allow newlines in array names ...
+  vtkStdString name(raw_name);
+  name.erase(vtkstd::remove(name.begin(), name.end(), '\r'), name.end());
+  name.erase(vtkstd::remove(name.begin(), name.end(), '\n'), name.end());
+  
+  this->Name = name;
+}
+
+vtkStdString vtkArray::GetName()
+{
+  return this->Name;
+}
+
+void vtkArray::SetDimensionLabel(vtkIdType i, const vtkStdString& raw_label)
 {
   if(i < 0 || i >= this->GetDimensions())
     {
     vtkErrorMacro("Cannot set label for dimension " << i << " of a " << this->GetDimensions() << "-way array");
     return;
     }
+
+  // Don't allow newlines in dimension labels ...
+  vtkStdString label(raw_label);
+  label.erase(vtkstd::remove(label.begin(), label.end(), '\r'), label.end());
+  label.erase(vtkstd::remove(label.begin(), label.end(), '\n'), label.end());
 
   this->InternalSetDimensionLabel(i, label);
 }

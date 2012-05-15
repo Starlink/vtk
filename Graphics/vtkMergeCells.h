@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMergeCells.h,v $
+  Module:    vtkMergeCells.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@ class vtkMergeCellsSTLCloak;
 class VTK_GRAPHICS_EXPORT vtkMergeCells : public vtkObject
 { 
 public:
-  vtkTypeRevisionMacro(vtkMergeCells, vtkObject);
+  vtkTypeMacro(vtkMergeCells, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   static vtkMergeCells *New();

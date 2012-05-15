@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayToTable.h,v $
+  Module:    vtkArrayToTable.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -26,7 +26,7 @@
 
 // .NAME vtkArrayToTable - Converts one- and two-dimensional vtkArrayData
 // objects to vtkTable
-
+//
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
@@ -34,7 +34,7 @@ class VTK_INFOVIS_EXPORT vtkArrayToTable : public vtkTableAlgorithm
 {
 public:
   static vtkArrayToTable* New();
-  vtkTypeRevisionMacro(vtkArrayToTable, vtkTableAlgorithm);
+  vtkTypeMacro(vtkArrayToTable, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

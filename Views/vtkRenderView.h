@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderView.h,v $
+  Module:    vtkRenderView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,17 +32,33 @@
 #define __vtkRenderView_h
 
 #include "vtkView.h"
+#include "vtkSmartPointer.h" // For SP ivars
 
-class vtkInteractorStyle;
+class vtkAbstractTransform;
+class vtkActor2D;
+class vtkAlgorithmOutput;
+class vtkArrayCalculator;
+class vtkBalloonRepresentation;
+class vtkDynamic2DLabelMapper;
+class vtkHardwareSelector;
+class vtkHoverWidget;
+class vtkInteractorObserver;
+class vtkLabelPlacementMapper;
+class vtkPolyDataMapper2D;
 class vtkRenderer;
 class vtkRenderWindow;
-class vtkViewTheme;
+class vtkRenderWindowInteractor;
+class vtkSelection;
+class vtkTextProperty;
+class vtkTexture;
+class vtkTexturedActor2D;
+class vtkTransformCoordinateSystems;
 
 class VTK_VIEWS_EXPORT vtkRenderView : public vtkView
 {
 public:
-  static vtkRenderView *New();
-  vtkTypeRevisionMacro(vtkRenderView, vtkView);
+  static vtkRenderView* New();
+  vtkTypeMacro(vtkRenderView, vtkView);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:
@@ -50,22 +66,54 @@ public:
   vtkGetObjectMacro(Renderer, vtkRenderer);
   
   // Description:
-  // Set up a render window to use this view.
-  // The superclass adds the renderer to the render window.
-  // Subclasses should override this to set interactor, etc.
-  virtual void SetupRenderWindow(vtkRenderWindow* win);
+  // Get a handle to the render window.
+  vtkGetObjectMacro(RenderWindow, vtkRenderWindow);
 
   // Description:
-  // Get a handle to the render window.
-  vtkRenderWindow* GetRenderWindow();
-  
+  // The render window interactor.
+  virtual vtkRenderWindowInteractor* GetInteractor();
+  virtual void SetInteractor(vtkRenderWindowInteractor *interactor);
+
   // Description:
-  // Apply a theme to the view.
+  // The interactor style associated with the render view.
+  virtual void SetInteractorStyle(vtkInteractorObserver* style);
+  virtual vtkInteractorObserver* GetInteractorStyle();
+  
+  //BTX
+  enum
+    {
+    INTERACTION_MODE_2D,
+    INTERACTION_MODE_3D,
+    INTERACTION_MODE_UNKNOWN
+    };
+  //ETX
+
+  // Description:
+  // Set the interaction mode for the view. Choices are:
+  // vtkRenderView::INTERACTION_MODE_2D - 2D interactor
+  // vtkRenderView::INTERACTION_MODE_3D - 3D interactor
+  virtual void SetInteractionMode(int mode);
+  vtkGetMacro(InteractionMode, int);
+  virtual void SetInteractionModeTo2D()
+    { this->SetInteractionMode(INTERACTION_MODE_2D); }
+  virtual void SetInteractionModeTo3D()
+    { this->SetInteractionMode(INTERACTION_MODE_3D); }
+
+  // Description:
+  // Applies a view theme to this view.
   virtual void ApplyViewTheme(vtkViewTheme* theme);
 
   // Description:
-  // Update the view.
-  virtual void Update();
+  // Set the view's transform. All vtkRenderedRepresentations
+  // added to this view should use this transform.
+  virtual void SetTransform(vtkAbstractTransform* transform);
+  vtkGetObjectMacro(Transform, vtkAbstractTransform);
+
+  // Description:
+  // Whether the view should display hover text.
+  virtual void SetDisplayHoverText(bool b);
+  vtkGetMacro(DisplayHoverText, bool);
+  vtkBooleanMacro(DisplayHoverText, bool);
 
   //BTX
   enum {
@@ -73,11 +121,93 @@ public:
     FRUSTUM = 1
   };
   //ETX
+
+  // Description:
+  // Sets the selection mode for the render view.
+  // SURFACE selection uses vtkHardwareSelector to perform a selection
+  // of visible cells.
+  // FRUSTUM selection just creates a view frustum selection, which will
+  // select everything in the frustum.
   vtkSetClampMacro(SelectionMode, int, 0, 1);
   vtkGetMacro(SelectionMode, int);
   void SetSelectionModeToSurface() { this->SetSelectionMode(SURFACE); }
   void SetSelectionModeToFrustum() { this->SetSelectionMode(FRUSTUM); }
+
+  // Description:
+  // Updates the representations, then calls Render() on the render window
+  // associated with this view.
+  virtual void Render();
   
+  // Description:
+  // Updates the representations, then calls ResetCamera() on the renderer
+  // associated with this view.
+  virtual void ResetCamera();
+  
+  // Description:
+  // Updates the representations, then calls ResetCameraClippingRange() on the renderer
+  // associated with this view.
+  virtual void ResetCameraClippingRange();
+  
+  // Description:
+  // Add labels from an input connection with an associated text
+  // property. The output must be a vtkLabelHierarchy (normally the
+  // output of vtkPointSetToLabelHierarchy).
+  virtual void AddLabels(vtkAlgorithmOutput* conn);
+
+  // Description:
+  // Remove labels from an input connection.
+  virtual void RemoveLabels(vtkAlgorithmOutput* conn);
+
+  // Description:
+  // Set the icon sheet to use for rendering icons.
+  virtual void SetIconTexture(vtkTexture* texture);
+  vtkGetObjectMacro(IconTexture, vtkTexture);
+
+  // Description:
+  // Set the size of each icon in the icon texture.
+  vtkSetVector2Macro(IconSize, int);
+  vtkGetVector2Macro(IconSize, int);
+
+  //BTX
+  enum
+    {
+    NO_OVERLAP,
+    ALL
+    };
+  //ETX
+
+  // Description:
+  // Label placement mode.
+  // NO_OVERLAP uses vtkLabelPlacementMapper, which has a faster startup time and
+  // works with 2D or 3D labels.
+  // ALL displays all labels (Warning: This may cause incredibly slow render
+  // times on datasets with more than a few hundred labels).
+  virtual void SetLabelPlacementMode(int mode);
+  virtual int GetLabelPlacementMode();
+  virtual void SetLabelPlacementModeToNoOverlap()
+    { this->SetLabelPlacementMode(NO_OVERLAP); }
+  virtual void SetLabelPlacementModeToAll()
+    { this->SetLabelPlacementMode(ALL); }
+
+  //BTX
+  enum
+    {
+    FREETYPE,
+    QT
+    };
+  //ETX
+
+  // Description:
+  // Label render mode.
+  // FREETYPE uses the freetype label rendering.
+  // QT uses more advanced Qt-based label rendering.
+  virtual void SetLabelRenderMode(int mode);
+  virtual int GetLabelRenderMode();
+  virtual void SetLabelRenderModeToFreetype()
+    { this->SetLabelRenderMode(FREETYPE); }
+  virtual void SetLabelRenderModeToQt()
+    { this->SetLabelRenderMode(QT); }
+
 protected:
   vtkRenderView();
   ~vtkRenderView();
@@ -88,29 +218,65 @@ protected:
   // This may be overridden by subclasses to process additional events.
   virtual void ProcessEvents(vtkObject* caller, unsigned long eventId, 
     void* callData);
-  
+
+  // Description:
+  // Generates the selection based on the view event and the selection mode.
+  virtual void GenerateSelection(
+    void* callData, vtkSelection* selection);
+
   // Description:
   // Called by the view when the renderer is about to render.
-  virtual void PrepareForRendering() { }
+  virtual void PrepareForRendering();
   
   // Description:
-  // Called when a representation's selection changed.
-  virtual void RepresentationSelectionChanged(
-    vtkDataRepresentation* rep,
-    vtkSelection* selection);
-  
+  // Called in PrepareForRendering to update the hover text.
+  virtual void UpdateHoverText();
+
   // Description:
-  // Allow subclasses to change the interactor style.
-  vtkGetObjectMacro(InteractorStyle, vtkInteractorStyle);
-  virtual void SetInteractorStyle(vtkInteractorStyle* style);
-  
+  // Enable or disable hovering based on DisplayHoverText ivar
+  // and interaction state.
+  virtual void UpdateHoverWidgetState();
+
+  // Description:
+  // Update the pick render for queries for drag selections
+  // or hover ballooons.
+  void UpdatePickRender();
+
+  // Description:
+  // Whether to render on every mouse move.
+  void SetRenderOnMouseMove(bool b);
+  vtkGetMacro(RenderOnMouseMove, bool);
+  vtkBooleanMacro(RenderOnMouseMove, bool);
+
   vtkRenderer* Renderer;
-  vtkInteractorStyle* InteractorStyle;
+  vtkRenderer* LabelRenderer;
+  vtkRenderWindow* RenderWindow;
   int SelectionMode;
-  
+  int InteractionMode;
+  int LabelRenderMode;
+  bool DisplayHoverText;
+  bool Interacting;
+  bool InHoverTextRender;
+  bool InPickRender;
+  bool PickRenderNeedsUpdate;
+
+  vtkAbstractTransform* Transform;
+  vtkTexture* IconTexture;
+  int IconSize[2];
+
+  //BTX
+  vtkSmartPointer<vtkBalloonRepresentation>    Balloon;
+  vtkSmartPointer<vtkLabelPlacementMapper>     LabelPlacementMapper;
+  vtkSmartPointer<vtkTexturedActor2D>          LabelActor;
+  vtkSmartPointer<vtkHoverWidget>              HoverWidget;
+  vtkSmartPointer<vtkHardwareSelector>         Selector;
+  //ETX
+
 private:
   vtkRenderView(const vtkRenderView&);  // Not implemented.
   void operator=(const vtkRenderView&);  // Not implemented.
+
+  bool RenderOnMouseMove;
 };
 
 #endif

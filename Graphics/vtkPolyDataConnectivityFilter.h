@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataConnectivityFilter.h,v $
+  Module:    vtkPolyDataConnectivityFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -57,7 +57,7 @@ class vtkIdTypeArray;
 class VTK_GRAPHICS_EXPORT vtkPolyDataConnectivityFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkPolyDataConnectivityFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkPolyDataConnectivityFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

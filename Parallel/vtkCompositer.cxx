@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositer.cxx,v $
+  Module:    vtkCompositer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
  #include <mpi.h>
 #endif
 
-vtkCxxRevisionMacro(vtkCompositer, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkCompositer);
 
 //-------------------------------------------------------------------------
@@ -77,7 +76,6 @@ void vtkCompositer::CompositeBuffer(vtkDataArray *pBuf, vtkFloatArray *zBuf,
 }
 
 //-------------------------------------------------------------------------
-
 void vtkCompositer::ResizeFloatArray(vtkFloatArray* fa, int numComp,
                                      vtkIdType size)
 {

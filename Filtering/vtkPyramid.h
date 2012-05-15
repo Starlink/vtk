@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPyramid.h,v $
+  Module:    vtkPyramid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,12 +34,13 @@ class vtkLine;
 class vtkQuad;
 class vtkTriangle;
 class vtkUnstructuredGrid;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkPyramid : public vtkCell3D
 {
 public:
   static vtkPyramid *New();
-  vtkTypeRevisionMacro(vtkPyramid,vtkCell3D);
+  vtkTypeMacro(vtkPyramid,vtkCell3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -57,7 +58,7 @@ public:
   vtkCell *GetFace(int faceId);
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator, vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);

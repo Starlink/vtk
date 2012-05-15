@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostSplitTableField.cxx,v $
+  Module:    vtkBoostSplitTableField.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,6 +17,7 @@
 
 #include "vtkAbstractArray.h"
 #include "vtkCommand.h"
+#include "vtkDataSetAttributes.h"
 #include "vtkObjectFactory.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
@@ -25,7 +26,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/tokenizer.hpp>
 
-vtkCxxRevisionMacro(vtkBoostSplitTableField, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkBoostSplitTableField);
 
 /// Ecapsulates private implementation details of vtkBoostSplitTableField
@@ -130,6 +130,10 @@ int vtkBoostSplitTableField::RequestData(
     new_column->SetName(column->GetName());
     new_column->SetNumberOfComponents(column->GetNumberOfComponents());
     output->AddColumn(new_column);
+    if(input->GetRowData()->GetPedigreeIds() == column)
+      {
+      output->GetRowData()->SetPedigreeIds(new_column);
+      }
     new_column->Delete();
     }
 

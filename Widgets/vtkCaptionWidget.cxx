@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCaptionWidget.cxx,v $
+  Module:    vtkCaptionWidget.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkCallbackCommand.h"
 #include "vtkRenderWindow.h"
 
-vtkCxxRevisionMacro(vtkCaptionWidget, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkCaptionWidget);
 
 // The point widget invokes events that we watch for. Basically

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractMapper3D.cxx,v $
+  Module:    vtkAbstractMapper3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkDataSet.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkAbstractMapper3D, "$Revision: 1.19 $");
 
 // Construct with initial range (0,1).
 vtkAbstractMapper3D::vtkAbstractMapper3D()

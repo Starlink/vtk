@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaObject.cxx,v $
+  Module:    metaObject.cxx
   Language:  C++
-  Date:      $Date: 2008-04-09 09:52:27 $
-  Version:   $Revision: 1.9 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -1044,10 +1044,10 @@ Clear(void)
   memset(m_Color, 0, 4*sizeof(float));
 
   m_ID = -1;
-  m_Color[0]=1.0;
-  m_Color[1]=1.0;
-  m_Color[2]=1.0;
-  m_Color[3]=1.0; // white by default
+  m_Color[0]=1.0f;
+  m_Color[1]=1.0f;
+  m_Color[2]=1.0f;
+  m_Color[3]=1.0f; // white by default
   m_ParentID = -1;
   strcpy(m_AcquisitionDate, "");
   m_BinaryData = false;

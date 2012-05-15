@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPointHandleRepresentation2D.h,v $
+  Module:    vtkPointHandleRepresentation2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkPointHandleRepresentation2D,vtkHandleRepresentation);
+  vtkTypeMacro(vtkPointHandleRepresentation2D,vtkHandleRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -81,6 +81,7 @@ public:
   // Description:
   // Methods to make this class behave as a vtkProp.
   virtual void ShallowCopy(vtkProp *prop);
+  virtual void DeepCopy(vtkProp *prop);
   virtual void GetActors2D(vtkPropCollection *);
   virtual void ReleaseGraphicsResources(vtkWindow *);
   virtual int RenderOverlay(vtkViewport *viewport);

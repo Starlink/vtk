@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricMobius.cxx,v $
+  Module:    vtkParametricMobius.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkParametricMobius, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkParametricMobius);
 
 //----------------------------------------------------------------------------

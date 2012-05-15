@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColorsPainter.h,v $
+  Module:    vtkScalarsToColorsPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_RENDERING_EXPORT vtkScalarsToColorsPainter : public vtkPainter
 {
 public:
   static vtkScalarsToColorsPainter* New();
-  vtkTypeRevisionMacro(vtkScalarsToColorsPainter, vtkPainter);
+  vtkTypeMacro(vtkScalarsToColorsPainter, vtkPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -125,7 +125,7 @@ protected:
  
   // Description:
   // Create a new shallow-copied clone for data with no scalars.
-  vtkDataObject* NewClone(vtkDataObject* data);
+  virtual vtkDataObject* NewClone(vtkDataObject* data);
 
   // Description:
   // Create texture coordinates for the output assuming a texture for the
@@ -202,6 +202,7 @@ protected:
   int ScalarMaterialMode;
   double LastUsedAlpha; // Essential to ensure alpha changes work correctly 
                         // for composite datasets.
+  int LastUsedMultiplyWithAlpha;
   double ScalarRange[2];
   int ScalarVisibility;
   int UseLookupTableScalarRange;

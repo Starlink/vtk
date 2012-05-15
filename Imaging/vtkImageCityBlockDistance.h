@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageCityBlockDistance.h,v $
+  Module:    vtkImageCityBlockDistance.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_IMAGING_EXPORT vtkImageCityBlockDistance : public vtkImageDecomposeFil
 {
 public:
   static vtkImageCityBlockDistance *New();
-  vtkTypeRevisionMacro(vtkImageCityBlockDistance,vtkImageDecomposeFilter);
+  vtkTypeMacro(vtkImageCityBlockDistance,vtkImageDecomposeFilter);
   
 protected:
   vtkImageCityBlockDistance();

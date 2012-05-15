@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMutexLock.cxx,v $
+  Module:    vtkMutexLock.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 # include "vtkWindows.h"
 #endif
 
-vtkCxxRevisionMacro(vtkMutexLock, "$Revision: 1.23 $");
 vtkStandardNewMacro(vtkMutexLock);
 
 // New for the SimpleMutex

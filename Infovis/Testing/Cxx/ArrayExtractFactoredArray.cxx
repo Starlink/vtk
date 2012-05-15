@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayExtractFactoredArray.cxx,v $
+  Module:    ArrayExtractFactoredArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -21,8 +21,7 @@
 
 #include <vtkArrayData.h>
 #include <vtkArrayPrint.h>
-#include <vtkExtractFactoredArray.h>
-#include <vtkFactoredArrayData.h>
+#include <vtkExtractArray.h>
 #include <vtkSmartPointer.h>
 #include <vtkSparseArray.h>
 
@@ -35,27 +34,27 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayExtractFactoredArray(int argc, char* argv[])
+int ArrayExtractFactoredArray(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
     vtkSmartPointer<vtkSparseArray<double> > a = vtkSmartPointer<vtkSparseArray<double> >::New();
     vtkSmartPointer<vtkSparseArray<double> > b = vtkSmartPointer<vtkSparseArray<double> >::New();
 
-    vtkSmartPointer<vtkFactoredArrayData> factored = vtkSmartPointer<vtkFactoredArrayData>::New();
+    vtkSmartPointer<vtkArrayData> factored = vtkSmartPointer<vtkArrayData>::New();
     factored->AddArray(a);
     factored->AddArray(b);
 
-    vtkSmartPointer<vtkExtractFactoredArray> extract = vtkSmartPointer<vtkExtractFactoredArray>::New();
+    vtkSmartPointer<vtkExtractArray> extract = vtkSmartPointer<vtkExtractArray>::New();
     extract->AddInputConnection(factored->GetProducerPort());
 
     extract->SetIndex(0);
     extract->Update();
-    test_expression(extract->GetOutput()->GetArray() == a.GetPointer());
+    test_expression(extract->GetOutput()->GetArray(static_cast<vtkIdType>(0)) == a.GetPointer());
 
     extract->SetIndex(1);
     extract->Update();
-    test_expression(extract->GetOutput()->GetArray() == b.GetPointer());
+    test_expression(extract->GetOutput()->GetArray(static_cast<vtkIdType>(0)) == b.GetPointer());
 
     return 0;
     }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSelection.h,v $
+  Module:    vtkSelection.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -35,7 +35,7 @@ struct vtkSelectionInternals;
 class VTK_FILTERING_EXPORT vtkSelection : public vtkDataObject
 {
 public:
-  vtkTypeRevisionMacro(vtkSelection,vtkDataObject);
+  vtkTypeMacro(vtkSelection,vtkDataObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkSelection* New();
 
@@ -92,6 +92,13 @@ public:
   // Description:
   // Return the MTime taking into account changes to the properties
   unsigned long GetMTime();
+
+  // Description:
+  // Dumps the contents of the selection, giving basic information only.
+  virtual void Dump();
+  //BTX
+  virtual void Dump(ostream& os);
+  //ETX
 
   // Description:
   // Retrieve a vtkSelection stored inside an invormation object.

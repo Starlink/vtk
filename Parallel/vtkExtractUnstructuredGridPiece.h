@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractUnstructuredGridPiece.h,v $
+  Module:    vtkExtractUnstructuredGridPiece.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,7 @@ class VTK_PARALLEL_EXPORT vtkExtractUnstructuredGridPiece : public vtkUnstructur
 {
 public:
   static vtkExtractUnstructuredGridPiece *New();
-  vtkTypeRevisionMacro(vtkExtractUnstructuredGridPiece, vtkUnstructuredGridAlgorithm);
+  vtkTypeMacro(vtkExtractUnstructuredGridPiece, vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

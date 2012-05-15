@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProp.cxx,v $
+  Module:    vtkProp.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkInformationKey.h"
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkProp, "$Revision: 1.29 $");
 vtkCxxSetObjectMacro(vtkProp,PropertyKeys,vtkInformation);
 
 //----------------------------------------------------------------------------

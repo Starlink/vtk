@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExplicitCell.cxx,v $
+  Module:    vtkExplicitCell.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkDataSet.h"
 
-vtkCxxRevisionMacro(vtkExplicitCell, "$Revision: 1.2 $");
 vtkCxxSetObjectMacro(vtkExplicitCell,DataSet,vtkDataSet);
 
 //----------------------------------------------------------------------------

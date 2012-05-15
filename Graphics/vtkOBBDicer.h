@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOBBDicer.h,v $
+  Module:    vtkOBBDicer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class vtkPoints;
 class VTK_GRAPHICS_EXPORT vtkOBBDicer : public vtkDicer 
 {
 public:
-  vtkTypeRevisionMacro(vtkOBBDicer,vtkDicer);
+  vtkTypeMacro(vtkOBBDicer,vtkDicer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

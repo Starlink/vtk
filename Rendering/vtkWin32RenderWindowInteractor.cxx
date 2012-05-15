@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWin32RenderWindowInteractor.cxx,v $
+  Module:    vtkWin32RenderWindowInteractor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,13 +46,13 @@ VTK_RENDERING_EXPORT LRESULT CALLBACK vtkHandleMessage2(HWND,UINT,WPARAM,LPARAM,
 #include "vtkObjectFactory.h"
 #include "vtkCommand.h"
 
-
-#ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkWin32RenderWindowInteractor, "$Revision: 1.104 $");
-vtkStandardNewMacro(vtkWin32RenderWindowInteractor);
+#ifdef VTK_USE_TDX
+#include "vtkTDxWinDevice.h"
 #endif
 
-
+#ifndef VTK_IMPLEMENT_MESA_CXX
+vtkStandardNewMacro(vtkWin32RenderWindowInteractor);
+#endif
 
 void (*vtkWin32RenderWindowInteractor::ClassExitMethod)(void *) = (void (*)(void *))NULL;
 void *vtkWin32RenderWindowInteractor::ClassExitMethodArg = (void *)NULL;
@@ -66,6 +66,10 @@ vtkWin32RenderWindowInteractor::vtkWin32RenderWindowInteractor()
   this->InstallMessageProc = 1;
   this->MouseInWindow = 0;
   this->StartedMessageLoop = 0;
+  
+#ifdef VTK_USE_TDX
+  this->Device=vtkTDxWinDevice::New();
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -95,6 +99,9 @@ vtkWin32RenderWindowInteractor::~vtkWin32RenderWindowInteractor()
       }
     this->Enabled = 0;
     }
+#ifdef VTK_USE_TDX
+  this->Device->Delete();
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -181,6 +188,16 @@ void vtkWin32RenderWindowInteractor::Enable()
       {
       vtkSetWindowLong(this->WindowId,vtkGWL_WNDPROC,(vtkLONG)vtkHandleMessage);
       }
+    
+#ifdef VTK_USE_TDX
+    if(this->UseTDx)
+      {
+      this->Device->SetInteractor(this);
+      this->Device->Initialize();
+      this->Device->StartListening();
+      }
+#endif
+    
     // in case the size of the window has changed while we were away
     int *size;
     size = ren->GetSize();
@@ -221,6 +238,12 @@ void vtkWin32RenderWindowInteractor::Disable()
       {
       vtkSetWindowLong(this->WindowId,vtkGWL_WNDPROC,(vtkLONG)this->OldProc);
       }
+#ifdef VTK_USE_TDX
+    if(this->Device->GetInitialized())
+      {
+      this->Device->Close();
+      }
+#endif
     }
   this->Enabled = 0;
   this->Modified();
@@ -633,6 +656,37 @@ void vtkWin32RenderWindowInteractor::OnChar(HWND,UINT nChar,
 }
 
 //----------------------------------------------------------------------------
+void vtkWin32RenderWindowInteractor::OnFocus(HWND,UINT)
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+  
+#ifdef VTK_USE_TDX
+  if(this->Device->GetInitialized() && !this->Device->GetIsListening())
+    {
+    this->Device->StartListening();
+    }
+#endif
+}
+
+//----------------------------------------------------------------------------
+void vtkWin32RenderWindowInteractor::OnKillFocus(HWND,UINT)
+{
+  if (!this->Enabled) 
+    {
+    return;
+    }
+#ifdef VTK_USE_TDX
+  if(this->Device->GetInitialized() && this->Device->GetIsListening())
+    {
+    this->Device->StopListening();
+    }
+#endif
+}
+
+//----------------------------------------------------------------------------
 // This is only called when InstallMessageProc is true
 LRESULT CALLBACK vtkHandleMessage(HWND hWnd,UINT uMsg, WPARAM wParam, 
                                   LPARAM lParam) 
@@ -732,12 +786,18 @@ LRESULT CALLBACK vtkHandleMessage2(HWND hWnd,UINT uMsg, WPARAM wParam,
       break;
 
     case WM_MOUSEWHEEL:
+      {
+      POINT pt;
+      pt.x = MAKEPOINTS(lParam).x;
+      pt.y = MAKEPOINTS(lParam).y;
+      ::ScreenToClient(hWnd, &pt);
       if( GET_WHEEL_DELTA_WPARAM(wParam) > 0)
-        me->OnMouseWheelForward(hWnd,wParam,MAKEPOINTS(lParam).x,MAKEPOINTS(lParam).y);
+        me->OnMouseWheelForward(hWnd,wParam,pt.x,pt.y);
       else
-        me->OnMouseWheelBackward(hWnd,wParam,MAKEPOINTS(lParam).x,MAKEPOINTS(lParam).y);
+        me->OnMouseWheelBackward(hWnd,wParam,pt.x,pt.y);
+      }
       break;
-      
+
 #ifdef WM_MCVMOUSEMOVE
     case WM_NCMOUSEMOVE:
       me->OnNCMouseMove(hWnd,wParam,MAKEPOINTS(lParam).x,MAKEPOINTS(lParam).y);
@@ -766,16 +826,37 @@ LRESULT CALLBACK vtkHandleMessage2(HWND hWnd,UINT uMsg, WPARAM wParam,
       me->OnTimer(hWnd,wParam);    
       break;
 
+    case WM_ACTIVATE:
+      if(wParam==WA_INACTIVE)
+        {
+        me->OnKillFocus(hWnd,wParam);
+        }
+      else
+        {
+        me->OnFocus(hWnd,wParam);
+        }
+      break;
+      
+    case WM_SETFOCUS:
+      // occurs when SetFocus() is called on the current window
+      me->OnFocus(hWnd,wParam);
+      break;
+      
+    case WM_KILLFOCUS:
+      // occurs when the focus was on the current window and SetFocus() is
+      // called on another window. 
+      me->OnKillFocus(hWnd,wParam);
+      break;
+      
     default:
       if (me) 
         {
         return CallWindowProc(me->OldProc,hWnd,uMsg,wParam,lParam);
         }
     };
-
+  
   return 0;
 }
-
 
 //----------------------------------------------------------------------------
 // Specify the default function to be called when an interactor needs to exit.
@@ -799,7 +880,6 @@ vtkWin32RenderWindowInteractor::SetClassExitMethod(void (*f)(void *),void *arg)
     // no call to this->Modified() since this is a class member function
     }
 }
-
 
 //----------------------------------------------------------------------------
 // Set the arg delete method.  This is used to free user memory.

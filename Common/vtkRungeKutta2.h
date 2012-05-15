@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRungeKutta2.h,v $
+  Module:    vtkRungeKutta2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@
 class VTK_COMMON_EXPORT vtkRungeKutta2 : public vtkInitialValueProblemSolver
 {
 public:
-  vtkTypeRevisionMacro(vtkRungeKutta2,vtkInitialValueProblemSolver);
+  vtkTypeMacro(vtkRungeKutta2,vtkInitialValueProblemSolver);
 
   // Description:
   // Construct a vtkRungeKutta2 with no initial FunctionSet.

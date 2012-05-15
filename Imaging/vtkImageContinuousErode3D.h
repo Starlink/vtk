@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageContinuousErode3D.h,v $
+  Module:    vtkImageContinuousErode3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ public:
   // Construct an instance of vtkImageContinuousErode3D filter.
   // By default zero values are eroded.
   static vtkImageContinuousErode3D *New();
-  vtkTypeRevisionMacro(vtkImageContinuousErode3D,vtkImageSpatialAlgorithm);
+  vtkTypeMacro(vtkImageContinuousErode3D,vtkImageSpatialAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

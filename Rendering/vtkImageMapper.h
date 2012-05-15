@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMapper.h,v $
+  Module:    vtkImageMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class vtkImageData;
 class VTK_RENDERING_EXPORT vtkImageMapper : public vtkMapper2D
 {
 public:
-  vtkTypeRevisionMacro(vtkImageMapper,vtkMapper2D);
+  vtkTypeMacro(vtkImageMapper,vtkMapper2D);
   static vtkImageMapper *New();
   void PrintSelf(ostream& os, vtkIndent indent);
 

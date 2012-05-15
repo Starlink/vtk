@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCubeSource.cxx,v $
+  Module:    vtkCubeSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkCubeSource, "$Revision: 1.53 $");
 vtkStandardNewMacro(vtkCubeSource);
 
 vtkCubeSource::vtkCubeSource(double xL, double yL, double zL)

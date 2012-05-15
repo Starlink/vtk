@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadraticPyramid.cxx,v $
+  Module:    vtkQuadraticPyramid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkQuadraticTriangle.h"
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkQuadraticPyramid, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkQuadraticPyramid);
 
 //----------------------------------------------------------------------------
@@ -372,7 +371,7 @@ void vtkQuadraticPyramid::Subdivide(vtkPointData *inPd, vtkCellData *inCd,
 //----------------------------------------------------------------------------
 void vtkQuadraticPyramid::Contour(double value, 
                                   vtkDataArray* cellScalars, 
-                                  vtkPointLocator* locator, 
+                                  vtkIncrementalPointLocator* locator,
                                   vtkCellArray *verts, 
                                   vtkCellArray* lines, 
                                   vtkCellArray* polys, 
@@ -599,7 +598,7 @@ void vtkQuadraticPyramid::Derivatives(int vtkNotUsed(subId),
 // except that it cuts the pyramid to produce tetrahedra.
 //
 void vtkQuadraticPyramid::Clip(double value, vtkDataArray* cellScalars,
-                               vtkPointLocator* locator, vtkCellArray* tets,
+                               vtkIncrementalPointLocator* locator, vtkCellArray* tets,
                                vtkPointData* inPd, vtkPointData* outPd,
                                vtkCellData* inCd, vtkIdType cellId, 
                                vtkCellData* outCd, int insideOut)

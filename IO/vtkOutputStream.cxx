@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOutputStream.cxx,v $
+  Module:    vtkOutputStream.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkOutputStream.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkOutputStream, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkOutputStream);
 
 //----------------------------------------------------------------------------

@@ -1,6 +1,9 @@
 from vtk import *
+import os.path
 
 data_dir = "../../../../VTKData/Data/Infovis/SQLite/"
+if not os.path.exists(data_dir):
+  data_dir = "../../../../../VTKData/Data/Infovis/SQLite/"
 sqlite_file = data_dir + "SmallEmailTest.db"
 
 database = vtkSQLDatabase.CreateFromURL("sqlite://" + sqlite_file)
@@ -14,9 +17,11 @@ vertex_query.SetQuery("select Name, Job, Age from employee")
 
 edge_table = vtkRowQueryToTable()
 edge_table.SetQuery(edge_query)
+edge_query.FastDelete()
 
 vertex_table = vtkRowQueryToTable()
 vertex_table.SetQuery(vertex_query)
+vertex_query.FastDelete()
 
 graph = vtkTableToGraph()
 graph.AddInputConnection(edge_table.GetOutputPort())
@@ -44,9 +49,12 @@ theme.SetLineWidth(5)
 theme.SetPointSize(10)
 view.ApplyViewTheme(theme)
 view.SetVertexLabelFontSize(20)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
-window.GetInteractor().Start()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
+view.GetInteractor().Start()
+
+database.FastDelete()
+

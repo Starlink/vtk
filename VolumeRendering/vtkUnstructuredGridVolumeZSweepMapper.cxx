@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnstructuredGridVolumeZSweepMapper.cxx,v $
+  Module:    vtkUnstructuredGridVolumeZSweepMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -2368,7 +2368,6 @@ using namespace vtkUnstructuredGridVolumeZSweepMapperNamespace;
 //-----------------------------------------------------------------------------
 // Implementation of the public class.
 
-vtkCxxRevisionMacro(vtkUnstructuredGridVolumeZSweepMapper, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkUnstructuredGridVolumeZSweepMapper);
 
 vtkCxxSetObjectMacro(vtkUnstructuredGridVolumeZSweepMapper, RayIntegrator,
@@ -2594,10 +2593,6 @@ void vtkUnstructuredGridVolumeZSweepMapper::PrintSelf(ostream& os,
   // The PrintSelf test just search for words in the PrintSelf function
   // We add here the internal variable we don't want to display:
   // this->ImageViewportSize this->ImageOrigin this->ImageInUseSize
-  
-  os << indent << "ImageOrigin="<<ImageOrigin[0]<<", "<<ImageOrigin[1]<<"\n";
-  os << indent << "ImageInUseSize="<<ImageInUseSize[0]<<", "<<ImageInUseSize[1]<<"\n";
-  os << indent << "ImageMemorySize="<<ImageMemorySize[0]<<", "<<ImageMemorySize[1]<<"\n";
   
   if (this->RayIntegrator)
     {

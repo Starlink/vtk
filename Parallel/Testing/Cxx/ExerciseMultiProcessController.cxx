@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ExerciseMultiProcessController.cxx,v $
+  Module:    ExerciseMultiProcessController.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -1043,6 +1043,22 @@ int ExerciseMultiProcessController(vtkMultiProcessController *controller)
     cout << "**** Error: Process " << controller->GetLocalProcessId()
          << " does not belong to either subgroup! ****" << endl;
     }
+  try
+    {
+    CheckSuccess(controller, !args.retval);
+    }
+  catch (ExerciseMultiProcessControllerError)
+    {
+    args.retval = 1;
+    }
+
+  int color = (group1->GetLocalProcessId() >= 0) ? 1 : 2;
+  vtkMultiProcessController *subcontroller
+    = controller->PartitionController(color, 0);
+  subcontroller->SetSingleMethod(Run, &args);
+  subcontroller->SingleMethodExecute();
+  subcontroller->Delete();
+
   try
     {
     CheckSuccess(controller, !args.retval);

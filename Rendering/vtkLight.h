@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLight.h,v $
+  Module:    vtkLight.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class vtkMatrix4x4;
 class VTK_RENDERING_EXPORT vtkLight : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkLight,vtkObject);
+  vtkTypeMacro(vtkLight,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -63,6 +63,13 @@ public:
   // TransformMatrix is NULL.
   static vtkLight *New();
 
+  // Description:
+  // Create a new light object with the same light parameters than the current
+  // object (any ivar from the superclasses (vtkObject and vtkObjectBase),
+  // like reference counting, timestamp and observers are not copied).
+  // This is a shallow clone (TransformMatrix is referenced)
+  virtual vtkLight *ShallowClone();
+  
   // Description:
   // Abstract interface to renderer. Each concrete subclass of vtkLight
   // will load its data into the graphics system in response to this method
@@ -83,8 +90,11 @@ public:
   vtkGetVectorMacro(SpecularColor,double,3);
   void SetColor(double, double, double); 
   void SetColor(double a[3]) { this->SetColor(a[0], a[1], a[2]); }
-  void GetColor(double rgb[3]);
-  double *GetColor();
+  
+  // Description:
+  // @deprecated Use GetDiffuseColor instead as of VTK 5.7.
+  VTK_LEGACY(void GetColor(double rgb[3]));
+  VTK_LEGACY(double *GetColor());
 
   // Description:
   // Set/Get the position of the light.

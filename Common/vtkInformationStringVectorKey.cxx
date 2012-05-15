@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationStringVectorKey.cxx,v $
+  Module:    vtkInformationStringVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkInformationStringVectorKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationStringVectorKey

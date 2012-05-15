@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetToStructuredPointsFilter.h,v $
+  Module:    vtkDataSetToStructuredPointsFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class vtkDataSet;
 class VTK_FILTERING_EXPORT vtkDataSetToStructuredPointsFilter : public vtkStructuredPointsSource
 {
 public:
-  vtkTypeRevisionMacro(vtkDataSetToStructuredPointsFilter,vtkStructuredPointsSource);
+  vtkTypeMacro(vtkDataSetToStructuredPointsFilter,vtkStructuredPointsSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

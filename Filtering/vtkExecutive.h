@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExecutive.h,v $
+  Module:    vtkExecutive.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,7 +42,7 @@ class vtkInformationVector;
 class VTK_FILTERING_EXPORT vtkExecutive : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkExecutive,vtkObject);
+  vtkTypeMacro(vtkExecutive,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

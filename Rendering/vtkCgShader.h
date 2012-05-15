@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCgShader.h,v $
+  Module:    vtkCgShader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -98,7 +98,7 @@ class VTK_RENDERING_EXPORT vtkCgShader : public vtkShader
 {
 public:
   static vtkCgShader *New();
-  vtkTypeRevisionMacro(vtkCgShader, vtkShader);
+  vtkTypeMacro(vtkCgShader, vtkShader);
   void PrintSelf(ostream &os, vtkIndent indent);
  
   // Called to compile the shader code.

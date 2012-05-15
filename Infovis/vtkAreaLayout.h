@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAreaLayout.h,v $
+  Module:    vtkAreaLayout.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_INFOVIS_EXPORT vtkAreaLayout : public vtkTreeAlgorithm
 {
 public:
   static vtkAreaLayout *New();
-  vtkTypeRevisionMacro(vtkAreaLayout,vtkTreeAlgorithm);
+  vtkTypeMacro(vtkAreaLayout,vtkTreeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

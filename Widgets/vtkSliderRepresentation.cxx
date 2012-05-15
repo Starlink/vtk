@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSliderRepresentation.cxx,v $
+  Module:    vtkSliderRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkCommand.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkSliderRepresentation, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------
 vtkSliderRepresentation::vtkSliderRepresentation()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataSet.cxx,v $
+  Module:    vtkGenericDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 #include <assert.h>
 
-vtkCxxRevisionMacro(vtkGenericDataSet, "$Revision: 1.8 $");
 vtkCxxSetObjectMacro(vtkGenericDataSet,Tessellator,vtkGenericCellTessellator);
 
 //----------------------------------------------------------------------------

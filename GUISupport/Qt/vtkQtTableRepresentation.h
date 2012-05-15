@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtTableRepresentation.h,v $
+  Module:    vtkQtTableRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,10 +40,11 @@
 // <li>(optionally) a vtkLookupTable to use when assigning colors.
 // </ul>
 //
-// Note that this is an abstract class.  You really want to use
-// vtkQtTableDataRepresentation or vtkQtTableMetadataRepresentation
-// instead.
+// .SECTION Caveats
 //
+// Call SetInputConnection with a table connection
+// BEFORE the representation is added to a view or strange things
+// may happen, including segfaults.
 
 #ifndef __vtkQtTableRepresentation_h
 #define __vtkQtTableRepresentation_h
@@ -60,14 +61,8 @@ class vtkQtTableModelAdapter;
 class QVTK_EXPORT vtkQtTableRepresentation : public vtkDataRepresentation
 {
 public:
-  vtkTypeRevisionMacro(vtkQtTableRepresentation, vtkDataRepresentation);
+  vtkTypeMacro(vtkQtTableRepresentation, vtkDataRepresentation);
   void PrintSelf(ostream &os, vtkIndent indent);
-
-  // Description:
-  // Hand in a connection to a vtkTable.  NOTE: This must be called
-  // BEFORE the representation is added to a view or strange things
-  // may happen, including segfaults.
-  virtual void SetInputConnection(vtkAlgorithmOutput *conn);
 
   // Description:
   // Set/get the lookup table that will be used to determine colors
@@ -78,11 +73,8 @@ public:
   // Description:
   // Set/get the name of the column that contains series names.  This
   // must be called BEFORE the representation is added to a view.
-  //vtkSetStringMacro(KeyColumn);
   void SetKeyColumn(const char* col);
-  // This wasn't actually implemented anywhere so
-  // I commented out the declaration:
-  // char* GetKeyColumn();
+  char* GetKeyColumn();
 
   // Description:
   // Set/get the name of the first data column.  This must be called
@@ -96,13 +88,13 @@ public:
   vtkSetStringMacro(LastDataColumn);
   vtkGetStringMacro(LastDataColumn);
 
-  // Description:
-  // Update the table representation
-  virtual void Update();
-
-protected:
+ protected:
   vtkQtTableRepresentation();
   ~vtkQtTableRepresentation();
+
+  // Description:
+  // Update the table representation
+  void UpdateTable();
 
   vtkSetStringMacro(KeyColumnInternal);
   vtkGetStringMacro(KeyColumnInternal);
@@ -114,6 +106,12 @@ protected:
   char *KeyColumnInternal;
   char *FirstDataColumn;
   char *LastDataColumn;
+
+  // Description:
+  // Prepare the input connections to this representation.
+  virtual int RequestData(vtkInformation* request,
+    vtkInformationVector** inputVector,
+    vtkInformationVector* outputVector);
 
   virtual void ResetModel();
   virtual void CreateSeriesColors();

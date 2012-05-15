@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalBoxDataIterator.h,v $
+  Module:    vtkHierarchicalBoxDataIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,7 @@ class VTK_FILTERING_EXPORT vtkHierarchicalBoxDataIterator : public vtkCompositeD
 {
 public:
   static vtkHierarchicalBoxDataIterator* New();
-  vtkTypeRevisionMacro(vtkHierarchicalBoxDataIterator, vtkCompositeDataIterator);
+  vtkTypeMacro(vtkHierarchicalBoxDataIterator, vtkCompositeDataIterator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

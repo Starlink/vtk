@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColorsPainter.cxx,v $
+  Module:    vtkScalarsToColorsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -66,7 +66,6 @@ static inline void vtkMultiplyColorsWithAlpha(vtkDataArray* array)
 
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkScalarsToColorsPainter);
-vtkCxxRevisionMacro(vtkScalarsToColorsPainter, "$Revision: 1.17 $");
 vtkCxxSetObjectMacro(vtkScalarsToColorsPainter, LookupTable, vtkScalarsToColors);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, USE_LOOKUP_TABLE_SCALAR_RANGE, Integer);
 vtkInformationKeyMacro(vtkScalarsToColorsPainter, SCALAR_RANGE, DoubleVector);
@@ -105,6 +104,7 @@ vtkScalarsToColorsPainter::vtkScalarsToColorsPainter()
   this->ScalarVisibility = 1;
 
   this->LastUsedAlpha = -1.0;
+  this->LastUsedMultiplyWithAlpha = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -338,6 +338,7 @@ void vtkScalarsToColorsPainter::PrepareForRendering(vtkRenderer* renderer,
       vtkDataSet::SafeDownCast(input));
     }
   this->LastUsedAlpha = actor->GetProperty()->GetOpacity();
+  this->LastUsedMultiplyWithAlpha = this->GetPremultiplyColorsWithAlpha(actor);
   this->Superclass::PrepareForRendering(renderer, actor);
 }
 
@@ -435,7 +436,17 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     this->LookupTable->SetRange(this->ScalarRange);
     }
   
-  double* range = this->LookupTable->GetRange();
+  double range[2];
+  range[0] = this->LookupTable->GetRange()[0];
+  range[1] = this->LookupTable->GetRange()[1];
+
+  bool use_log_scale = (this->LookupTable->UsingLogScale() != 0);
+  if (use_log_scale)
+    {
+    // convert range to log.
+    vtkLookupTable::GetLogRange(range, range);
+    }
+
   double orig_alpha = this->LookupTable->GetAlpha();
 
   // If the lookup table has changed, the recreate the color texture map.
@@ -444,7 +455,8 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     this->GetMTime() > this->ColorTextureMap->GetMTime() ||
     this->LookupTable->GetMTime() > this->ColorTextureMap->GetMTime() ||
     this->LookupTable->GetAlpha() != alpha ||
-    this->LastUsedAlpha != alpha)
+    this->LastUsedAlpha != alpha ||
+    this->LastUsedMultiplyWithAlpha != multiply_with_alpha)
     {
     this->LookupTable->SetAlpha(alpha);
     this->ColorTextureMap = 0;
@@ -459,6 +471,10 @@ void vtkScalarsToColorsPainter::UpdateColorTextureMap(double alpha,
     for (int i = 0; i < COLOR_TEXTURE_MAP_SIZE; ++i)
       {
       *ptr = range[0] + i * k;
+      if (use_log_scale)
+        {
+        *ptr = pow(static_cast<float>(10.0), *ptr);
+        }
       ++ptr;
       }
     this->ColorTextureMap = vtkSmartPointer<vtkImageData>::New();
@@ -555,8 +571,9 @@ void vtkScalarsToColorsPainter::MapScalars(vtkDataSet* output,
   // The LastUsedAlpha checks ensures that opacity changes are reflected
   // correctly when this->MapScalars(..) is called when iterating over a
   // composite dataset.
-  if (colors && lut->GetAlpha() == alpha &&
-    this->LastUsedAlpha == alpha)
+  if (colors && 
+    this->LastUsedAlpha == alpha &&
+    this->LastUsedMultiplyWithAlpha == multiply_with_alpha)
     {
     if (this->GetMTime() < colors->GetMTime() &&
       input->GetMTime() < colors->GetMTime() &&
@@ -633,7 +650,9 @@ void vtkScalarsToColorsPainter::CreateDefaultLookupTable()
 template<class T>
 void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
                                             vtkIdType num, int numComps, 
-                                            int component, double* range)
+                                            int component, double* range,
+                                            double* table_range,
+                                            bool use_log_scale)
 {
   double tmp, sum;
   double k = 1.0 / (range[1]-range[0]);
@@ -651,15 +670,15 @@ void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
         sum += (tmp * tmp);
         ++input;
         }
-      output[i] = k * (sqrt(sum) - range[0]);
-      if (output[i] > 1.0)
+      double magnitude = sqrt(sum);
+      if (use_log_scale)
         {
-        output[i] = 1.0;
+        magnitude = vtkLookupTable::ApplyLogScale(
+          magnitude, table_range, range);
         }
-      if (output[i] < 0.0)
-        {
-        output[i] = 0.0;
-        }
+      output[i] = k * (magnitude - range[0]);
+      output[i] = output[i] > 1.0f ? 1.0f : 
+        (output[i] < 0.0f ? 0.0f : output[i]);
       }
     }  
   else
@@ -667,15 +686,15 @@ void vtkMapperCreateColorTextureCoordinates(T* input, float* output,
     input += component;
     for (i = 0; i < num; ++i)
       {
-      output[i] = k * (static_cast<double>(*input) - range[0]);
-      if (output[i] > 1.0)
+      double input_value = static_cast<double>(*input);
+      if (use_log_scale)
         {
-        output[i] = 1.0;
+        input_value = vtkLookupTable::ApplyLogScale(
+          input_value, table_range, range);
         }
-      if (output[i] < 0.0)
-        {
-        output[i] = 0.0;
-        }
+      output[i] = k * (input_value - range[0]);
+      output[i] = output[i] > 1.0f ? 1.0f : 
+        (output[i] < 0.0f ? 0.0f : output[i]);
       input = input + numComps;
       }      
     }
@@ -694,7 +713,16 @@ void vtkScalarsToColorsPainter::MapScalarsToTexture(
     input->GetMTime() > tcoords->GetMTime() ||
     this->LookupTable->GetMTime() > tcoords->GetMTime())
     {
-    double* range = this->LookupTable->GetRange();
+    double range[2];
+    range[0] = this->LookupTable->GetRange()[0];
+    range[1] = this->LookupTable->GetRange()[1];
+    bool use_log_scale = (this->LookupTable->UsingLogScale() != 0);
+    if (use_log_scale)
+      {
+      // convert range to log.
+      vtkLookupTable::GetLogRange(range, range);
+      }
+
     // Get rid of old colors
     if ( tcoords )
       {
@@ -728,7 +756,9 @@ void vtkScalarsToColorsPainter::MapScalarsToTexture(
       vtkTemplateMacro(
         vtkMapperCreateColorTextureCoordinates(static_cast<VTK_TT*>(void_input),
           tcptr, num, numComps,
-          scalarComponent, range)
+          scalarComponent, range,
+          this->LookupTable->GetRange(),
+          use_log_scale)
       );
     case VTK_BIT:
       vtkErrorMacro("Cannot color by bit array.");

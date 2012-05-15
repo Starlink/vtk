@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderView.cxx,v $
+  Module:    vtkRenderView.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,249 +20,725 @@
 
 #include "vtkRenderView.h"
 
+#include "vtkActor2D.h"
+#include "vtkAlgorithmOutput.h"
+#include "vtkAppendPoints.h"
+#include "vtkBalloonRepresentation.h"
+#include "vtkCamera.h"
 #include "vtkCommand.h"
 #include "vtkDataRepresentation.h"
 #include "vtkDoubleArray.h"
+#include "vtkDynamic2DLabelMapper.h"
+#include "vtkFreeTypeLabelRenderStrategy.h"
 #include "vtkHardwareSelector.h"
-#include "vtkIdTypeArray.h"
-#include "vtkInformation.h"
+#include "vtkHoverWidget.h"
+#include "vtkImageData.h"
+#include "vtkInteractorStyleRubberBand2D.h"
 #include "vtkInteractorStyleRubberBand3D.h"
+#include "vtkLabelPlacementMapper.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
+#include "vtkPolyDataMapper2D.h"
+#include "vtkRenderedRepresentation.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSelection.h"
 #include "vtkSelectionNode.h"
 #include "vtkSmartPointer.h"
+#include "vtkStringArray.h"
+#include "vtkTexture.h"
+#include "vtkTexturedActor2D.h"
+#include "vtkTransform.h"
+#include "vtkTransformCoordinateSystems.h"
+#include "vtkUnicodeString.h"
 #include "vtkViewTheme.h"
 
-#include <vtksys/stl/map>
-using vtksys_stl::map;
+#ifdef VTK_USE_QT
+#include "vtkQtLabelRenderStrategy.h"
+#endif
 
-vtkCxxRevisionMacro(vtkRenderView, "$Revision: 1.10 $");
+#include <vtksys/ios/sstream>
+
 vtkStandardNewMacro(vtkRenderView);
-//----------------------------------------------------------------------------
+vtkCxxSetObjectMacro(vtkRenderView, Transform, vtkAbstractTransform);
+vtkCxxSetObjectMacro(vtkRenderView, IconTexture, vtkTexture);
+
 vtkRenderView::vtkRenderView()
 {
   this->Renderer = vtkRenderer::New();
-  this->Renderer->AddObserver(vtkCommand::StartEvent, this->GetObserver());
-  this->InteractorStyle = vtkInteractorStyleRubberBand3D::New();
-  this->InteractorStyle->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
+  this->LabelRenderer = vtkRenderer::New();
+  this->RenderWindow = vtkRenderWindow::New();
+  this->Transform = vtkTransform::New();
+  this->RenderOnMouseMove = false;
+  this->DisplayHoverText = false;
+  this->IconTexture = 0;
+  this->Interacting = false;
+  this->InteractionMode = -1;
+  this->LabelRenderMode = FREETYPE;
   this->SelectionMode = SURFACE;
-  
+  this->Selector = vtkSmartPointer<vtkHardwareSelector>::New();
+  this->Balloon = vtkSmartPointer<vtkBalloonRepresentation>::New();
+  this->LabelPlacementMapper = vtkSmartPointer<vtkLabelPlacementMapper>::New();
+  this->LabelActor = vtkSmartPointer<vtkTexturedActor2D>::New();
+  this->HoverWidget = vtkSmartPointer<vtkHoverWidget>::New();
+  this->InHoverTextRender = false;
+  this->IconSize[0] = 16;
+  this->IconSize[1] = 16;
+  this->PickRenderNeedsUpdate = true;
+  this->InPickRender = false;
+
+  vtkTransform::SafeDownCast(this->Transform)->Identity();
+
+  this->RenderWindow->AddRenderer(this->Renderer);
+  this->LabelRenderer->EraseOff();
+  this->LabelRenderer->InteractiveOff();
+  this->LabelRenderer->SetActiveCamera(this->Renderer->GetActiveCamera());
+  this->RenderWindow->AddRenderer(this->LabelRenderer);
+
+  // We will handle all interactor renders by turning off rendering
+  // in the interactor and listening to the interactor's render event.
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  iren->EnableRenderOff();
+  iren->AddObserver(vtkCommand::RenderEvent, this->GetObserver());
+  iren->AddObserver(vtkCommand::StartInteractionEvent, this->GetObserver());
+  iren->AddObserver(vtkCommand::EndInteractionEvent, this->GetObserver());
+  this->RenderWindow->SetInteractor(iren);
+
+  // Intialize the selector and listen to render events to help Selector know when to
+  // update the full-screen hardware pick.
+  this->Selector->SetRenderer(this->Renderer);
+  this->Selector->SetFieldAssociation(vtkDataObject::FIELD_ASSOCIATION_CELLS);
+  this->RenderWindow->AddObserver(vtkCommand::EndEvent, this->GetObserver());
+
+  // The interaction mode is -1 before calling SetInteractionMode,
+  // this will force an initialization of the interaction mode/style.
+  this->SetInteractionModeTo3D();
+
+  this->HoverWidget->SetInteractor(iren);
+  this->HoverWidget->AddObserver(vtkCommand::TimerEvent, this->GetObserver());
+
+  this->LabelActor->SetMapper(this->LabelPlacementMapper);
+  this->LabelActor->PickableOff();
+  this->LabelRenderer->AddActor(this->LabelActor);
+
+  this->Balloon->SetBalloonText("");
+  this->Balloon->SetOffset(1, 1);
+  this->LabelRenderer->AddViewProp(this->Balloon);
+  this->Balloon->SetRenderer(this->LabelRenderer);
+  this->Balloon->PickableOff();
+  this->Balloon->VisibilityOn();
+
   // Apply default theme
   vtkViewTheme* theme = vtkViewTheme::New();
   this->ApplyViewTheme(theme);
-  theme->Delete();  
+  theme->Delete();
 }
 
-//----------------------------------------------------------------------------
 vtkRenderView::~vtkRenderView()
 {
-  this->Renderer->Delete();
-  this->InteractorStyle->Delete();
-}
-
-//----------------------------------------------------------------------------
-void vtkRenderView::SetInteractorStyle(vtkInteractorStyle* style)
-{
-  // This is just like vtkCxxSetObjectMacro but changes the observer.
-  vtkDebugMacro(<< this->GetClassName() << " (" << this
-                << "): setting InteractorStyle to " << style );
-  if (this->InteractorStyle != style)
+  if (this->Renderer)
     {
-    vtkInteractorStyle* tempSGMacroVar = this->InteractorStyle;
-    this->InteractorStyle = style;
-    if (this->InteractorStyle != NULL)
-      {
-      this->InteractorStyle->Register(this);
-      this->InteractorStyle->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
-      }
-    if (tempSGMacroVar != NULL)
-      {
-      tempSGMacroVar->RemoveObserver(this->GetObserver());
-      tempSGMacroVar->UnRegister(this);
-      }
-    this->Modified();
+    this->Renderer->Delete();
+    }
+  if (this->LabelRenderer)
+    {
+    this->LabelRenderer->Delete();
+    }
+  if (this->RenderWindow)
+    {
+    this->RenderWindow->Delete();
+    }
+  if (this->Transform)
+    {
+    this->Transform->Delete();
+    }
+  if (this->IconTexture)
+    {
+    this->IconTexture->Delete();
     }
 }
 
-//----------------------------------------------------------------------------
-void vtkRenderView::SetupRenderWindow(vtkRenderWindow* win)
+vtkRenderWindowInteractor* vtkRenderView::GetInteractor()
 {
-  win->AddRenderer(this->Renderer);
-  if (!win->GetInteractor())
-    {
-    vtkRenderWindowInteractor* iren = vtkRenderWindowInteractor::New();
-    win->SetInteractor(iren);
-    iren->Initialize();
-    iren->Delete();
-    }
-  win->GetInteractor()->SetInteractorStyle(this->InteractorStyle);
+  return this->RenderWindow->GetInteractor();
 }
 
-//----------------------------------------------------------------------------
-vtkRenderWindow* vtkRenderView::GetRenderWindow() 
+void vtkRenderView::SetInteractor(vtkRenderWindowInteractor* interactor)
 {
-  return this->Renderer->GetRenderWindow();
+  if (!interactor)
+    {
+    vtkErrorMacro(<< "SetInteractor called with a null interactor pointer."
+                  << " That can't be right.");
+    return;
+    }
+
+  // get rid of the render observer on any current interactor
+  if (this->RenderWindow->GetInteractor())
+    {
+    this->RenderWindow->GetInteractor()->RemoveObserver(this->GetObserver());
+    }
+
+  // We need to preserve the interactor style currently present on the
+  // interactor.
+  vtkInteractorObserver *oldStyle = this->GetInteractorStyle();
+  oldStyle->Register(this);
+
+  // We will handle all interactor renders by turning off rendering
+  // in the interactor and listening to the interactor's render event.
+  interactor->EnableRenderOff();
+  interactor->AddObserver(vtkCommand::RenderEvent, this->GetObserver());
+  interactor->AddObserver(vtkCommand::StartInteractionEvent, this->GetObserver());
+  interactor->AddObserver(vtkCommand::EndInteractionEvent, this->GetObserver());
+  this->RenderWindow->SetInteractor(interactor);
+  this->HoverWidget->SetInteractor(interactor);
+
+  interactor->SetInteractorStyle(oldStyle);
+  oldStyle->UnRegister(this);
 }
 
-//----------------------------------------------------------------------------
-void vtkRenderView::ProcessEvents(vtkObject* caller, unsigned long eventId, 
-  void* callData)
+void vtkRenderView::SetInteractionMode(int mode)
 {
-  if (caller == this->Renderer && eventId == vtkCommand::StartEvent)
+  if (this->InteractionMode != mode)
     {
-    this->PrepareForRendering();
-    }
-  else if (caller == this->InteractorStyle && eventId == vtkCommand::SelectionChangedEvent)
-    {
-    unsigned int* rect = reinterpret_cast<unsigned int*>(callData);
-    unsigned int pos1X = rect[0];
-    unsigned int pos1Y = rect[1];
-    unsigned int pos2X = rect[2];
-    unsigned int pos2Y = rect[3];
-    int stretch = 2;
-    if (pos1X == pos2X && pos1Y == pos2Y)
+    this->InteractionMode = mode;
+    vtkInteractorObserver* oldStyle = this->GetInteractorStyle();
+    if (mode == INTERACTION_MODE_2D)
       {
-      pos1X = pos1X - stretch > 0 ? pos1X - stretch : 0;
-      pos1Y = pos1Y - stretch > 0 ? pos1Y - stretch : 0;
-      pos2X = pos2X + stretch;
-      pos2Y = pos2Y + stretch;
+      if (oldStyle)
+        {
+        oldStyle->RemoveObserver(this->GetObserver());
+        }
+      vtkInteractorStyleRubberBand2D* style = vtkInteractorStyleRubberBand2D::New();
+      this->RenderWindow->GetInteractor()->SetInteractorStyle(style);
+      style->SetRenderOnMouseMove(this->GetRenderOnMouseMove());
+      style->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
+      this->Renderer->GetActiveCamera()->ParallelProjectionOn();
+      style->Delete();
       }
-    unsigned int screenMinX = pos1X < pos2X ? pos1X : pos2X;
-    unsigned int screenMaxX = pos1X < pos2X ? pos2X : pos1X;
-    unsigned int screenMinY = pos1Y < pos2Y ? pos1Y : pos2Y;
-    unsigned int screenMaxY = pos1Y < pos2Y ? pos2Y : pos1Y;
-
-    vtkSelection* selection = 0; 
-    if (this->SelectionMode == SURFACE)
+    else if (mode == INTERACTION_MODE_3D)
       {
-      // Do a visible cell selection.
-      vtkHardwareSelector* vcs = vtkHardwareSelector::New();
-      vcs->SetRenderer(this->Renderer);
-      vcs->SetArea(screenMinX, screenMinY, screenMaxX, screenMaxY);
-      selection = vcs->Select();  
-      vcs->Delete();
+      if (oldStyle)
+        {
+        oldStyle->RemoveObserver(this->GetObserver());
+        }
+      vtkInteractorStyleRubberBand3D* style = vtkInteractorStyleRubberBand3D::New();
+      this->RenderWindow->GetInteractor()->SetInteractorStyle(style);
+      style->SetRenderOnMouseMove(this->GetRenderOnMouseMove());
+      style->AddObserver(vtkCommand::SelectionChangedEvent, this->GetObserver());
+      this->Renderer->GetActiveCamera()->ParallelProjectionOff();
+      style->Delete();
       }
     else
       {
-      // Do a frustum selection.
-      int displayRectangle[4] = {screenMinX, screenMinY, screenMaxX, screenMaxY};
-      vtkDoubleArray *frustcorners = vtkDoubleArray::New();
-      frustcorners->SetNumberOfComponents(4);
-      frustcorners->SetNumberOfTuples(8);
-      //convert screen rectangle to world frustum
-      vtkRenderer *renderer = this->GetRenderer();
-      double worldP[32];
-      int index=0;
-      renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[1], 0);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[1], 1);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[3], 0);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[3], 1);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[1], 0);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[1], 1);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[3], 0);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-      index++;
-      renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[3], 1);
-      renderer->DisplayToWorld();
-      renderer->GetWorldPoint(&worldP[index*4]);
-      frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
-        worldP[index*4+2], worldP[index*4+3]);
-
-      selection = vtkSelection::New();
-      vtkSmartPointer<vtkSelectionNode> node = vtkSmartPointer<vtkSelectionNode>::New();
-      node->SetContentType(vtkSelectionNode::FRUSTUM);
-      node->SetFieldType(vtkSelectionNode::CELL);
-      node->SetSelectionList(frustcorners);
-      selection->AddNode(node);
-      frustcorners->Delete();
+      vtkErrorMacro("Unknown interaction mode.");
       }
-    
+    }
+}
+
+void vtkRenderView::SetInteractorStyle(vtkInteractorObserver* style)
+{
+  if (!style)
+    {
+    vtkErrorMacro("Interactor style must not be null.");
+    return;
+    }
+  vtkInteractorObserver* oldStyle = this->GetInteractorStyle();
+  if (style != oldStyle)
+    {
+    if (oldStyle)
+      {
+      oldStyle->RemoveObserver(this->GetObserver());
+      }
+    this->RenderWindow->GetInteractor()->SetInteractorStyle(style);
+    style->AddObserver(
+      vtkCommand::SelectionChangedEvent, this->GetObserver());
+    vtkInteractorStyleRubberBand2D* style2D =
+      vtkInteractorStyleRubberBand2D::SafeDownCast(style);
+    vtkInteractorStyleRubberBand3D* style3D =
+      vtkInteractorStyleRubberBand3D::SafeDownCast(style);
+    if (style2D)
+      {
+      style2D->SetRenderOnMouseMove(this->GetRenderOnMouseMove());
+      this->InteractionMode = INTERACTION_MODE_2D;
+      }
+    else if (style3D)
+      {
+      style3D->SetRenderOnMouseMove(this->GetRenderOnMouseMove());
+      this->InteractionMode = INTERACTION_MODE_3D;
+      }
+    else
+      {
+      this->InteractionMode = INTERACTION_MODE_UNKNOWN;
+      }
+    }
+}
+
+void vtkRenderView::SetRenderOnMouseMove(bool b)
+{
+  if (b == this->RenderOnMouseMove)
+    {
+    return;
+    }
+
+  vtkInteractorObserver* style = this->GetInteractorStyle();
+  vtkInteractorStyleRubberBand2D* style2D =
+    vtkInteractorStyleRubberBand2D::SafeDownCast(style);
+  if (style2D)
+    {
+    style2D->SetRenderOnMouseMove(b);
+    }
+  vtkInteractorStyleRubberBand3D* style3D =
+    vtkInteractorStyleRubberBand3D::SafeDownCast(style);
+  if (style3D)
+    {
+    style3D->SetRenderOnMouseMove(b);
+    }
+  this->RenderOnMouseMove = b;
+}
+
+vtkInteractorObserver* vtkRenderView::GetInteractorStyle()
+{
+  return this->GetInteractor()->GetInteractorStyle();
+}
+
+void vtkRenderView::AddLabels(vtkAlgorithmOutput* conn)
+{
+  this->LabelPlacementMapper->AddInputConnection(0, conn);
+}
+
+void vtkRenderView::RemoveLabels(vtkAlgorithmOutput* conn)
+{
+  this->LabelPlacementMapper->RemoveInputConnection(0, conn);
+}
+
+void vtkRenderView::ProcessEvents(
+  vtkObject* caller, unsigned long eventId, void* callData)
+{
+  if (caller == this->GetInteractor() && eventId == vtkCommand::RenderEvent)
+    {
+    vtkDebugMacro(<< "interactor causing a render event.");
+    this->Render();
+    }
+  if (caller == this->HoverWidget.GetPointer() && eventId == vtkCommand::TimerEvent)
+    {
+    vtkDebugMacro(<< "hover widget timer causing a render event.");
+    this->UpdateHoverText();
+    this->InHoverTextRender = true;
+    this->Render();
+    this->InHoverTextRender = false;
+    }
+  if (caller == this->GetInteractor() && eventId == vtkCommand::StartInteractionEvent)
+    {
+    this->Interacting = true;
+    this->UpdateHoverWidgetState();
+    }
+  if (caller == this->GetInteractor() && eventId == vtkCommand::EndInteractionEvent)
+    {
+    this->Interacting = false;
+    this->UpdateHoverWidgetState();
+    this->PickRenderNeedsUpdate = true;
+    }
+  if (caller == this->RenderWindow && eventId == vtkCommand::EndEvent)
+    {
+    vtkDebugMacro(<< "did a render, interacting: " << this->Interacting
+         << " in pick render: " << this->InPickRender
+         << " in hover text render: " << this->InHoverTextRender);
+    if (!this->Interacting && !this->InPickRender && !this->InHoverTextRender)
+      {
+      // This will cause UpdatePickRender to create a new snapshot of the view
+      // for picking with the next drag selection or hover event.
+      this->PickRenderNeedsUpdate = true;
+      }
+    }
+  if (vtkDataRepresentation::SafeDownCast(caller) &&
+      eventId == vtkCommand::SelectionChangedEvent)
+    {
+    vtkDebugMacro("selection changed causing a render event");
+    this->Render();
+    }
+  else if (vtkDataRepresentation::SafeDownCast(caller) &&
+           eventId == vtkCommand::UpdateEvent)
+    {
+    // UpdateEvent is called from push pipeline executions from
+    // vtkExecutionScheduler. We want to automatically render the view
+    // when one of our representations is updated.
+    vtkDebugMacro("push pipeline causing a render event");
+    this->Render();
+    }
+  else if (caller == this->GetInteractorStyle() &&
+           eventId == vtkCommand::SelectionChangedEvent)
+    {
+    vtkDebugMacro("interactor style made a selection changed event");
+    vtkSmartPointer<vtkSelection> selection =
+      vtkSmartPointer<vtkSelection>::New();
+    this->GenerateSelection(callData, selection);
+
+    // This enum value is the same for 2D and 3D interactor styles
+    unsigned int* data = reinterpret_cast<unsigned int*>(callData);
+    bool extend = (data[4] == vtkInteractorStyleRubberBand2D::SELECT_UNION);
+
     // Call select on the representation(s)
     for (int i = 0; i < this->GetNumberOfRepresentations(); ++i)
       {
-      this->GetRepresentation(i)->Select(this, selection);
+      this->GetRepresentation(i)->Select(this, selection, extend);
       }
-    
-    selection->Delete();
     }
-  else if(eventId == vtkCommand::SelectionChangedEvent)
+  this->Superclass::ProcessEvents(caller, eventId, callData);
+}
+
+void vtkRenderView::UpdatePickRender()
+{
+  if (this->PickRenderNeedsUpdate)
     {
-    this->Update();
-    Superclass::ProcessEvents(caller, eventId, callData);
+    this->InPickRender = true;
+    unsigned int area[4] = {0, 0, 0, 0};
+    area[2] = static_cast<unsigned int>(this->Renderer->GetSize()[0] - 1);
+    area[3] = static_cast<unsigned int>(this->Renderer->GetSize()[1] - 1);
+    this->Selector->SetArea(area);
+    this->LabelRenderer->DrawOff();
+    this->Selector->CaptureBuffers();
+    this->LabelRenderer->DrawOn();
+    this->InPickRender = false;
+    this->PickRenderNeedsUpdate = false;
+    }
+}
+
+void vtkRenderView::GenerateSelection(void* callData, vtkSelection* sel)
+{
+  unsigned int* rect = reinterpret_cast<unsigned int*>(callData);
+  unsigned int pos1X = rect[0];
+  unsigned int pos1Y = rect[1];
+  unsigned int pos2X = rect[2];
+  unsigned int pos2Y = rect[3];
+  int stretch = 2;
+  if (pos1X == pos2X && pos1Y == pos2Y)
+    {
+    pos1X = pos1X - stretch > 0 ? pos1X - stretch : 0;
+    pos1Y = pos1Y - stretch > 0 ? pos1Y - stretch : 0;
+    pos2X = pos2X + stretch;
+    pos2Y = pos2Y + stretch;
+    }
+  unsigned int screenMinX = pos1X < pos2X ? pos1X : pos2X;
+  unsigned int screenMaxX = pos1X < pos2X ? pos2X : pos1X;
+  unsigned int screenMinY = pos1Y < pos2Y ? pos1Y : pos2Y;
+  unsigned int screenMaxY = pos1Y < pos2Y ? pos2Y : pos1Y;
+
+  if (this->SelectionMode == FRUSTUM)
+    {
+    // Do a frustum selection.
+    int displayRectangle[4] = {screenMinX, screenMinY, screenMaxX, screenMaxY};
+    vtkSmartPointer<vtkDoubleArray> frustcorners =
+      vtkSmartPointer<vtkDoubleArray>::New();
+    frustcorners->SetNumberOfComponents(4);
+    frustcorners->SetNumberOfTuples(8);
+    //convert screen rectangle to world frustum
+    vtkRenderer *renderer = this->GetRenderer();
+    double worldP[32];
+    int index=0;
+    renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[1], 0);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[1], 1);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[3], 0);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[0], displayRectangle[3], 1);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[1], 0);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[1], 1);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[3], 0);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+    index++;
+    renderer->SetDisplayPoint(displayRectangle[2], displayRectangle[3], 1);
+    renderer->DisplayToWorld();
+    renderer->GetWorldPoint(&worldP[index*4]);
+    frustcorners->SetTuple4(index,  worldP[index*4], worldP[index*4+1],
+      worldP[index*4+2], worldP[index*4+3]);
+
+    vtkSmartPointer<vtkSelectionNode> node =
+      vtkSmartPointer<vtkSelectionNode>::New();
+    node->SetContentType(vtkSelectionNode::FRUSTUM);
+    node->SetFieldType(vtkSelectionNode::CELL);
+    node->SetSelectionList(frustcorners);
+    sel->AddNode(node);
     }
   else
     {
-    this->Superclass::ProcessEvents(caller, eventId, callData);
+    this->UpdatePickRender();
+    vtkSelection* vsel = this->Selector->GenerateSelection(screenMinX, screenMinY, screenMaxX, screenMaxY);
+    sel->ShallowCopy(vsel);
+    vsel->Delete();
     }
 }
 
-//----------------------------------------------------------------------------
-void vtkRenderView::Update()
+void vtkRenderView::Render()
 {
-  if (this->Renderer->GetRenderWindow())
+  this->Update();
+  this->PrepareForRendering();
+  this->Renderer->ResetCameraClippingRange();
+  this->RenderWindow->Render();
+}
+
+void vtkRenderView::ResetCamera()
+{
+  this->Update();
+  this->PrepareForRendering();
+  this->Renderer->ResetCamera();
+}
+
+void vtkRenderView::ResetCameraClippingRange()
+{
+  this->Update();
+  this->PrepareForRendering();
+  this->Renderer->ResetCameraClippingRange();
+}
+
+void vtkRenderView::SetDisplayHoverText(bool b)
+{
+  this->Balloon->SetVisibility(b);
+  this->DisplayHoverText = b;
+}
+
+void vtkRenderView::UpdateHoverWidgetState()
+{
+  // Make sure we have a context, then ensure hover widget is
+  // enabled if we are displaying hover text.
+  this->RenderWindow->MakeCurrent();
+  if (this->RenderWindow->IsCurrent())
     {
-    this->Renderer->ResetCameraClippingRange();
-    this->Renderer->GetRenderWindow()->Render();
+    if (!this->Interacting && (this->HoverWidget->GetEnabled() ? true : false) != this->DisplayHoverText)
+      {
+      vtkDebugMacro(<< "turning " << (this->DisplayHoverText ? "on" : "off") << " hover widget");
+      this->HoverWidget->SetEnabled(this->DisplayHoverText);
+      }
+    // Disable hover text when interacting.
+    else if (this->Interacting && this->HoverWidget->GetEnabled())
+      {
+      vtkDebugMacro(<< "turning off hover widget");
+      this->HoverWidget->SetEnabled(false);
+      }
+    }
+  if (!this->HoverWidget->GetEnabled())
+    {
+    this->Balloon->SetBalloonText("");
     }
 }
 
-//----------------------------------------------------------------------------
+void vtkRenderView::PrepareForRendering()
+{
+  this->Update();
+  this->UpdateHoverWidgetState();
+
+  for (int i = 0; i < this->GetNumberOfRepresentations(); ++i)
+    {
+    vtkRenderedRepresentation* rep = vtkRenderedRepresentation::SafeDownCast(
+      this->GetRepresentation(i));
+    if (rep)
+      {
+      rep->PrepareForRendering(this);
+      }
+    }
+}
+
+void vtkRenderView::UpdateHoverText()
+{
+  this->UpdatePickRender();
+
+  int pos[2] = {0, 0};
+  unsigned int upos[2] = {0, 0};
+  double loc[2] = {0.0, 0.0};
+  if (this->RenderWindow->GetInteractor())
+    {
+    this->RenderWindow->GetInteractor()->GetEventPosition(pos);
+    loc[0] = pos[0];
+    loc[1] = pos[1];
+    upos[0] = static_cast<unsigned int>(pos[0]);
+    upos[1] = static_cast<unsigned int>(pos[1]);
+    }
+  this->Balloon->EndWidgetInteraction(loc);
+
+  // The number of pixels away from the pointer to search for hovered objects.
+  int hoverTol = 3;
+
+  // Retrieve the hovered cell from the saved buffer.
+  int process;
+  vtkIdType cell;
+  vtkProp* prop;
+  this->Selector->GetPixelInformation(upos, process, cell, prop, hoverTol);
+  if (prop == 0 || cell == -1)
+    {
+    this->Balloon->SetBalloonText("");
+    return;
+    }
+
+  // For debugging
+  //vtksys_ios::ostringstream oss;
+  //oss << "prop: " << prop << " cell: " << cell;
+  //this->Balloon->SetBalloonText(oss.str().c_str());
+  //this->Balloon->StartWidgetInteraction(loc);
+
+  vtkUnicodeString hoverText;
+  for (int i = 0; i < this->GetNumberOfRepresentations(); ++i)
+    {
+    vtkRenderedRepresentation* rep = vtkRenderedRepresentation::SafeDownCast(
+      this->GetRepresentation(i));
+    if (rep && this->RenderWindow->GetInteractor())
+      {
+      hoverText = rep->GetHoverText(this, prop, cell);
+      if (!hoverText.empty())
+        {
+        break;
+        }
+      }
+    }
+  this->Balloon->SetBalloonText(hoverText.utf8_str());
+  this->Balloon->StartWidgetInteraction(loc);
+  this->InvokeEvent(vtkCommand::HoverEvent, &hoverText);
+}
+
 void vtkRenderView::ApplyViewTheme(vtkViewTheme* theme)
 {
   this->Renderer->SetBackground(theme->GetBackgroundColor());
+  this->Renderer->SetBackground2(theme->GetBackgroundColor2());
+  this->Renderer->SetGradientBackground(true);
+  for (int i = 0; i < this->GetNumberOfRepresentations(); ++i)
+    {
+    this->GetRepresentation(i)->ApplyViewTheme(theme);
+    }
 }
 
-//----------------------------------------------------------------------------
-void vtkRenderView::RepresentationSelectionChanged(
-    vtkDataRepresentation* vtkNotUsed(rep),
-    vtkSelection* vtkNotUsed(selection))
+void vtkRenderView::SetLabelPlacementMode(int mode)
 {
-  this->Update();
+  this->LabelPlacementMapper->SetPlaceAllLabels(mode == ALL);
 }
 
-//----------------------------------------------------------------------------
+int vtkRenderView::GetLabelPlacementMode()
+{
+  return this->LabelPlacementMapper->GetPlaceAllLabels() ? ALL : NO_OVERLAP;
+}
+
+int vtkRenderView::GetLabelRenderMode()
+{
+  return vtkFreeTypeLabelRenderStrategy::SafeDownCast(
+    this->LabelPlacementMapper->GetRenderStrategy()) ? FREETYPE : QT;
+}
+
+void vtkRenderView::SetLabelRenderMode(int render_mode)
+{
+  //First, make sure the render mode is set on all the representations.
+  // TODO: Setup global labeller render mode
+  if(render_mode != this->GetLabelRenderMode())
+    {
+    // Set label render mode of all representations.
+    for (int r = 0; r < this->GetNumberOfRepresentations(); ++r)
+      {
+      vtkRenderedRepresentation* rr =
+        vtkRenderedRepresentation::SafeDownCast(this->GetRepresentation(r));
+      if (rr)
+        {
+        rr->SetLabelRenderMode(render_mode);
+        }
+      }
+    }
+
+  switch(render_mode)
+    {
+    case QT:
+      {
+#ifdef VTK_USE_QT
+      vtkSmartPointer<vtkQtLabelRenderStrategy> qts =
+        vtkSmartPointer<vtkQtLabelRenderStrategy>::New();
+      this->LabelPlacementMapper->SetRenderStrategy(qts);
+#else
+      vtkErrorMacro("Qt label rendering not supported.");
+#endif
+      break;
+      }
+    default:
+      {
+      vtkSmartPointer<vtkFreeTypeLabelRenderStrategy> fts =
+        vtkSmartPointer<vtkFreeTypeLabelRenderStrategy>::New();
+      this->LabelPlacementMapper->SetRenderStrategy(fts);
+      }
+    }
+}
+
 void vtkRenderView::PrintSelf(ostream& os, vtkIndent indent)
 {
-  this->Superclass::PrintSelf(os,indent);
-  os << indent << "Renderer: " << endl;
-  this->Renderer->PrintSelf(os, indent.GetNextIndent());
-  os << indent << "InteractorStyle: " << endl;
-  this->InteractorStyle->PrintSelf(os, indent.GetNextIndent());
+  this->Superclass::PrintSelf(os, indent);
+  os << indent << "RenderWindow: ";
+  if (this->RenderWindow)
+    {
+    os << "\n";
+    this->RenderWindow->PrintSelf(os, indent.GetNextIndent());
+    }
+  else
+    {
+    os << "(none)\n";
+    }
+  os << indent << "Renderer: ";
+  if (this->Renderer)
+    {
+    os << "\n";
+    this->Renderer->PrintSelf(os, indent.GetNextIndent());
+    }
+  else
+    {
+    os << "(none)\n";
+    }
   os << indent << "SelectionMode: " << this->SelectionMode << endl;
+  os << indent << "InteractionMode: " << this->InteractionMode << endl;
+  os << indent << "DisplayHoverText: " << this->DisplayHoverText << endl;
+  os << indent << "Transform: ";
+  if (this->Transform)
+    {
+    os << "\n";
+    this->Transform->PrintSelf(os, indent.GetNextIndent());
+    }
+  else
+    {
+    os << "(none)\n";
+    }
+  os << indent << "LabelRenderMode: " << this->LabelRenderMode << endl;
+  os << indent << "IconTexture: ";
+  if (this->IconTexture)
+    {
+    os << "\n";
+    this->IconTexture->PrintSelf(os, indent.GetNextIndent());
+    }
+  else
+    {
+    os << "(none)\n";
+    }
+  os << indent << "IconSize: " << this->IconSize[0] << "," << this->IconSize[1] << endl;
 }

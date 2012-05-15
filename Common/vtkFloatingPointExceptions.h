@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFloatingPointExceptions.h,v $
+  Module:    vtkFloatingPointExceptions.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,6 +31,10 @@ public:
   // Description:
   // Enable floating point exceptions.
   static void Enable();
+  
+  // Description:
+  // Disable floating point exceptions.
+  static void Disable();
   
 private:
   vtkFloatingPointExceptions(); // Not implemented.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUncertaintyTubeFilter.h,v $
+  Module:    vtkUncertaintyTubeFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_GRAPHICS_EXPORT vtkUncertaintyTubeFilter : public vtkPolyDataAlgorithm
 public:
   // Description:
   // Standard methods for printing and obtaining type information for instances of this class.
-  vtkTypeRevisionMacro(vtkUncertaintyTubeFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkUncertaintyTubeFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

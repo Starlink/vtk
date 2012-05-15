@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPNGReader.h,v $
+  Module:    vtkPNGReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IO_EXPORT vtkPNGReader : public vtkImageReader2
 {
 public:
   static vtkPNGReader *New();
-  vtkTypeRevisionMacro(vtkPNGReader,vtkImageReader2);
+  vtkTypeMacro(vtkPNGReader,vtkImageReader2);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

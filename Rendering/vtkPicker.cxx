@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPicker.cxx,v $
+  Module:    vtkPicker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkBox.h"
 #include "vtkImageActor.h"
 
-vtkCxxRevisionMacro(vtkPicker, "$Revision: 1.95 $");
 vtkStandardNewMacro(vtkPicker);
 
 // Construct object with initial tolerance of 1/40th of window. There are no
@@ -74,6 +73,7 @@ void vtkPicker::MarkPicked(vtkAssemblyPath *path, vtkProp3D *prop3D,
   int i;
   vtkMapper *mapper;
   vtkAbstractVolumeMapper *volumeMapper;
+  vtkImageActor *imageActor;
 
   this->SetPath(path);
   this->GlobalTMin = tMin;
@@ -90,7 +90,13 @@ void vtkPicker::MarkPicked(vtkAssemblyPath *path, vtkProp3D *prop3D,
   else if ( (volumeMapper=vtkAbstractVolumeMapper::SafeDownCast(m)) != NULL )
     {
     this->DataSet = volumeMapper->GetDataSetInput();
-    this->Mapper = volumeMapper;    }
+    this->Mapper = volumeMapper;
+    }
+  else if ( (imageActor=vtkImageActor::SafeDownCast(prop3D)) != NULL )
+    {
+    this->DataSet = imageActor->GetInput();
+    this->Mapper = NULL;
+    }
   else
     {
     this->DataSet = NULL;
@@ -99,11 +105,6 @@ void vtkPicker::MarkPicked(vtkAssemblyPath *path, vtkProp3D *prop3D,
   // The point has to be transformed back into world coordinates.
   // Note: it is assumed that the transform is in the correct state.
   this->Transform->TransformPoint(mapperPos,this->PickPosition);
-  
-  // Invoke pick method if one defined - actor goes first
-  prop3D->Pick();
-  this->InvokeEvent(vtkCommand::PickEvent,NULL);
-
 }
 
 // Perform pick operation with selection point provided. Normally the 
@@ -117,7 +118,6 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
   vtkCamera *camera;
   vtkAbstractMapper3D *mapper = NULL;
   double p1World[4], p2World[4], p1Mapper[4], p2Mapper[4];
-  int picked=0;
   int *winSize;
   double x, y, t;
   double *viewport;
@@ -133,6 +133,8 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
   double hitPosition[3];
   double cameraDOP[3];
   
+  bounds[0] = bounds[1] = bounds[2] = bounds[3] = bounds[4] = bounds[5] = 0;  
+
   //  Initialize picking process
   this->Initialize();
   this->Renderer = renderer;
@@ -326,7 +328,7 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
       //  If actor can be picked, get its composite matrix, invert it, and
       //  use the inverted matrix to transform the ray points into mapper
       //  coordinates. 
-      if ( pickable  &&  mapper != NULL )
+      if ( pickable )
         {
         vtkMatrix4x4 *lastMatrix = path->GetLastNode()->GetMatrix();
         if (lastMatrix == NULL)
@@ -355,102 +357,73 @@ int vtkPicker::Pick(double selectionX, double selectionY, double selectionZ,
         //  Get the bounding box of the modeller.  Note that the tolerance is
         //  added to the bounding box to make sure things on the edge of the
         //  bounding box are picked correctly.
-        mapper->GetBounds(bounds);
+        if ( mapper != NULL )
+          {
+          mapper->GetBounds(bounds);
+          }
+        else if ( imageActor != NULL )
+          {
+          imageActor->GetDisplayBounds(bounds);
+          }
+
         bounds[0] -= tol; bounds[1] += tol; 
         bounds[2] -= tol; bounds[3] += tol; 
         bounds[4] -= tol; bounds[5] += tol; 
-        if ( vtkBox::IntersectBox(bounds, p1Mapper, 
-                                  ray, hitPosition, t) )
+
+        if ( vtkBox::IntersectBox(bounds, p1Mapper, ray, hitPosition, t) )
           {
-          t = this->IntersectWithLine(p1Mapper, p2Mapper, 
-                                      tol*0.333*(scale[0]+scale[1]+scale[2]), path, 
-                                      static_cast<vtkProp3D *>(propCandidate), mapper);
+          t = this->IntersectWithLine(
+            p1Mapper, p2Mapper, tol*0.333*(scale[0]+scale[1]+scale[2]), 
+            path, static_cast<vtkProp3D *>(propCandidate), mapper);
+
           if ( t < VTK_DOUBLE_MAX )
             {
-            picked = 1;
-            if ( ! this->Prop3Ds->IsItemPresent(prop) )
+            double p[3];
+            p[0] = (1.0 - t)*p1World[0] + t*p2World[0];
+            p[1] = (1.0 - t)*p1World[1] + t*p2World[1];
+            p[2] = (1.0 - t)*p1World[2] + t*p2World[2];
+
+            // The IsItemPresent method returns "index+1" 
+            int prevIndex = this->Prop3Ds->IsItemPresent(prop)-1;
+
+            if (prevIndex >= 0)
+              {
+              // If already in list, set point to the closest point
+              double oldp[3];
+              this->PickedPositions->GetPoint(prevIndex, oldp);
+              if (vtkMath::Distance2BetweenPoints(p1World, p) <
+                  vtkMath::Distance2BetweenPoints(p1World, oldp))
+                {
+                this->PickedPositions->SetPoint(prevIndex, p);
+                }
+              }
+            else
               {
               this->Prop3Ds->AddItem(static_cast<vtkProp3D *>(prop));
-              }
-            this->PickedPositions->InsertNextPoint
-              ((1.0 - t)*p1World[0] + t*p2World[0],
-               (1.0 - t)*p1World[1] + t*p2World[1],
-               (1.0 - t)*p1World[2] + t*p2World[2]);
 
-            // backwards compatibility: also add to this->Actors
-            if (actor)
-              {
-              this->Actors->AddItem(actor);
+              this->PickedPositions->InsertNextPoint(p);
+
+              // backwards compatibility: also add to this->Actors
+              if (actor)
+                {
+                this->Actors->AddItem(actor);
+                }
               }
             }
           }
-        }
-      else if ( pickable && imageActor )
-        { // special case for imageActor, which has no mapper
-        vtkMatrix4x4 *lastMatrix = path->GetLastNode()->GetMatrix();
-        if (lastMatrix == NULL)
-          {
-          vtkErrorMacro (<< "Pick: Null matrix.");
-          return 0;
-          }
-        this->Transform->SetMatrix(lastMatrix);
-        this->Transform->Push();
-        this->Transform->Inverse();
-
-        this->Transform->TransformPoint(p1World,p1Mapper);
-        this->Transform->TransformPoint(p2World,p2Mapper);
-
-        this->Transform->Pop();
-
-        //  Have the ray endpoints in data space, now need to compare this
-        //  with the displayed image bounds.
-        imageActor->GetDisplayBounds(bounds);
-
-        t = VTK_DOUBLE_MAX;
-
-        for (i = 0; i < 3; i++)
-          {
-          if (bounds[2*i] == bounds[2*i+1] && p2Mapper[i] != p1Mapper[i])
-            {
-            t = (p2World[i] - bounds[2*i])/(p2Mapper[i] - p1Mapper[i]);
-            break;
-            }
-          }
-
-        if (t < VTK_DOUBLE_MAX)
-          {
-          hitPosition[0] = (1.0 - t)*p1Mapper[0] + t*p2Mapper[0];
-          hitPosition[1] = (1.0 - t)*p1Mapper[1] + t*p2Mapper[1];
-          hitPosition[2] = (1.0 - t)*p1Mapper[2] + t*p2Mapper[2];
-          if ((bounds[0] == bounds[1] || (hitPosition[0] >= bounds[0]-tol &&
-                                          hitPosition[0] <= bounds[1]+tol)) &&
-              (bounds[2] == bounds[3] || (hitPosition[1] >= bounds[2]-tol &&
-                                          hitPosition[1] <= bounds[3]+tol)) &&
-              (bounds[4] == bounds[5] || (hitPosition[2] >= bounds[4]-tol &&
-                                          hitPosition[2] <= bounds[5]+tol)))
-            {
-            picked = 1;
-
-            // the following code is handled in MarkPicked for other Prop3Ds
-            this->Mapper = mapper; // mapper is null
-            this->DataSet = imageActor->GetInput();
-            this->MapperPosition[0] = hitPosition[0];
-            this->MapperPosition[1] = hitPosition[1];
-            this->MapperPosition[2] = hitPosition[2];
-            this->Transform->TransformPoint(hitPosition,this->PickPosition);
-            imageActor->Pick();
-            this->InvokeEvent(vtkCommand::PickEvent,NULL);
-
-            this->Prop3Ds->AddItem(imageActor);
-            this->PickedPositions->InsertNextPoint
-              ((1.0 - t)*p1World[0] + t*p2World[0],
-               (1.0 - t)*p1World[1] + t*p2World[1],
-               (1.0 - t)*p1World[2] + t*p2World[2]);
-            }
-          }
-        }//if visible and pickable not transparent and has mapper
+        }//if visible and pickable and not transparent
       }//for all parts
     }//for all actors
+
+  int picked = 0;
+
+  if (this->Path)
+    {
+    // Invoke pick method if one defined - prop goes first
+    this->Path->GetFirstNode()->GetViewProp()->Pick();
+    this->InvokeEvent(vtkCommand::PickEvent,NULL);
+    picked = 1;
+    }
 
   // Invoke end pick method if defined
   this->InvokeEvent(vtkCommand::EndPickEvent,NULL);
@@ -467,9 +440,26 @@ double vtkPicker::IntersectWithLine(double p1[3], double p2[3],
 {
   int i;
   double center[3], t, ray[3], rayFactor;
+  vtkImageActor *imageActor = NULL;
 
   // Get the data from the modeler
-  mapper->GetCenter(center);
+  if ( mapper != NULL )
+    {
+    mapper->GetCenter(center);
+    }
+  else if ( (imageActor = vtkImageActor::SafeDownCast(prop3D)) != NULL)
+    {
+    double bounds[6];
+    imageActor->GetDisplayBounds(bounds);
+    for (i=0; i<3; i++)
+      {
+      center[i] = 0.5*(bounds[2*i] + bounds[2*i+1]);
+      }
+    }
+  else
+    {
+    return VTK_DOUBLE_MAX;
+    }
 
   for (i=0; i<3; i++)
     {
@@ -506,6 +496,7 @@ void vtkPicker::Initialize()
   this->MapperPosition[2] = 0.0;
 
   this->Mapper = NULL;
+  this->DataSet = NULL;
   this->GlobalTMin = VTK_DOUBLE_MAX;
 }
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLMinimumSpanningTree.cxx,v $
+  Module:    vtkPBGLMinimumSpanningTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,11 +45,13 @@
 #include "vtkStringArray.h"
 #include "vtkUndirectedGraph.h"
 
+#include <boost/graph/use_mpi.hpp>
+
 #include <boost/graph/distributed/dehne_gotz_min_spanning_tree.hpp>
 #include <boost/graph/distributed/vertex_list_adaptor.hpp>
-#include <boost/parallel/global_index_map.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/property_map/parallel/global_index_map.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 #include <vtksys/stl/utility> // for pair
@@ -57,7 +59,6 @@
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLMinimumSpanningTree, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkPBGLMinimumSpanningTree);
 
 // Constructor/Destructor
@@ -85,7 +86,7 @@ int vtkPBGLMinimumSpanningTree::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

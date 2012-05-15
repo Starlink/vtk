@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoInteractorStyle.h,v $
+  Module:    vtkGeoInteractorStyle.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,8 +44,8 @@ class VTK_GEOVIS_EXPORT vtkGeoInteractorStyle :
 {
 public:
   static vtkGeoInteractorStyle *New();
-  vtkTypeRevisionMacro(vtkGeoInteractorStyle, 
-                       vtkInteractorStyleTrackballCamera);
+  vtkTypeMacro(vtkGeoInteractorStyle,
+               vtkInteractorStyleTrackballCamera);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

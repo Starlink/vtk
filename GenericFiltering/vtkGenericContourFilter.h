@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericContourFilter.h,v $
+  Module:    vtkGenericContourFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,14 +43,14 @@
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkContourValues;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkPointData;
 class vtkCellData;
 
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericContourFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkGenericContourFilter,
+  vtkTypeMacro(vtkGenericContourFilter,
                        vtkPolyDataAlgorithm);
   
   void PrintSelf(ostream& os, vtkIndent indent);
@@ -108,8 +108,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By default, 
   // an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is
@@ -135,7 +135,7 @@ protected:
   int ComputeNormals;
   int ComputeGradients;
   int ComputeScalars;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   
   char *InputScalarsSelection;
   vtkSetStringMacro(InputScalarsSelection);

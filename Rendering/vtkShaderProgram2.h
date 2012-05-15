@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShaderProgram2.h,v $
+  Module:    vtkShaderProgram2.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,7 +47,7 @@ class VTK_RENDERING_EXPORT vtkShaderProgram2 : public vtkObject
 {
 public:
   static vtkShaderProgram2* New();
-  vtkTypeRevisionMacro(vtkShaderProgram2, vtkObject);
+  vtkTypeMacro(vtkShaderProgram2, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -85,15 +85,23 @@ public:
   bool HasVertexShaders();
   
   // Description:
+  // Tells if at least one of the shaders is a tessellation control shader.
+  bool HasTessellationControlShaders();
+  
+  // Description:
+  // Tells if at least one of the shaders is a tessellation evaluation shader.
+  bool HasTessellationEvaluationShaders();
+  
+  // Description:
+  // Tells if at least one of the shaders is a geometry shader.
+  bool HasGeometryShaders();
+  
+  // Description:
   // Tells if at least one of the shaders is a fragment shader.
   // If yes, it means the fragment processing of the fixed-pipeline is
   // bypassed.
   // If no, it means the fragment processing of the fixed-pipeline is used.
   bool HasFragmentShaders();
-  
-  // Description:
-  // Tells if at least one of the shaders is a geometry shader.
-  bool HasGeometryShaders();
   
   // Description:
   // Tell if the shader program is valid with the current OpenGL state.

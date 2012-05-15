@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQuadric.h,v $
+  Module:    vtkQuadric.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,7 @@
 class VTK_COMMON_EXPORT vtkQuadric : public vtkImplicitFunction
 {
 public:
-  vtkTypeRevisionMacro(vtkQuadric,vtkImplicitFunction);
+  vtkTypeMacro(vtkQuadric,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description

@@ -1,4 +1,4 @@
-/* $Id: tif_win32.c,v 1.4 2008-03-12 15:58:04 andinet Exp $ */
+/* Id */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -31,6 +31,7 @@
 
 #if defined ( _MSC_VER )
 #pragma warning ( disable : 4115 )
+#pragma warning(disable:4306) /* conversion from t1 to t2 of greater size */
 #endif
 
 #include "tiffiop.h"

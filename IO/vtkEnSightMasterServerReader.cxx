@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEnSightMasterServerReader.cxx,v $
+  Module:    vtkEnSightMasterServerReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <vtkstd/string>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkEnSightMasterServerReader, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkEnSightMasterServerReader);
 
 static int vtkEnSightMasterServerReaderStartsWith(const char* str1, const char* str2)

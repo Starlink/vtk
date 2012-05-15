@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkBivariateStatisticsAlgorithm.h,v $
+Module:    vtkBivariateStatisticsAlgorithm.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -43,45 +43,42 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkStatisticsAlgorithm.h"
 
-class vtkBivariateStatisticsAlgorithmPrivate;
 class vtkTable;
 
 class VTK_INFOVIS_EXPORT vtkBivariateStatisticsAlgorithm : public vtkStatisticsAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkBivariateStatisticsAlgorithm, vtkStatisticsAlgorithm);
+  vtkTypeMacro(vtkBivariateStatisticsAlgorithm, vtkStatisticsAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Reset list of column pairs of interest. 
-  void ResetColumnPairs();
-
-  // Description:
-  // Add column name pair (\p namColX, \p namColY).
-  // Warning: no name checking is performed on \p namColX nor \p namColY; it is 
-  // the user's responsibility to use valid column names.
+  // Convenience method to create a request with a single column name pair 
+  //  (\p namColX, \p namColY) in a single call; this is the preferred method to select 
+  // columns pairs, ensuring selection consistency (a pair of columns per request).
+  //
+  // Unlike SetColumnStatus(), you need not call RequestSelectedColumns() after AddColumnPair().
+  //
+  // Warning: \p namColX and \p namColY are only checked for their validity as strings;
+  // no check is made that either are valid column names.
   void AddColumnPair( const char* namColX, const char* namColY );
 
   // Description:
-  // Remove, if it is present, column name pair (\p namColX, \p namColY).
- void RemoveColumnPair( const char* namColX, const char* namColY );
-
-  // Description:
-  // Method for UI to call to add/remove columns to/from the list
-  void SetColumnStatus( const char* namCol, int status );
-
-  // Description:
-  // Execute the calculations required by the Assess option.
-  virtual void ExecuteAssess( vtkTable* inData,
-                              vtkDataObject* inMeta,
-                              vtkTable* outData,
-                              vtkDataObject* outMeta ); 
+  // Use the current column status values to produce a new request for statistics
+  // to be produced when RequestData() is called.
+  // Unlike the superclass implementation, this version adds a new request for every
+  // possible pairing of the selected columns
+  // instead of a single request containing all the columns.
+  virtual int RequestSelectedColumns();
 
 protected:
   vtkBivariateStatisticsAlgorithm();
   ~vtkBivariateStatisticsAlgorithm();
 
-  vtkBivariateStatisticsAlgorithmPrivate* Internals;
+  // Description:
+  // Execute the calculations required by the Assess option.
+  virtual void Assess( vtkTable* inData,
+                       vtkDataObject* inMeta,
+                       vtkTable* outData ); 
 
 private:
   vtkBivariateStatisticsAlgorithm(const vtkBivariateStatisticsAlgorithm&); // Not implemented

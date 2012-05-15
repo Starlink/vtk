@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalDataSetAlgorithm.h,v $
+  Module:    vtkTemporalDataSetAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_FILTERING_EXPORT vtkTemporalDataSetAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkTemporalDataSetAlgorithm *New();
-  vtkTypeRevisionMacro(vtkTemporalDataSetAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkTemporalDataSetAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

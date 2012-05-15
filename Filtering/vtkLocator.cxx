@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLocator.cxx,v $
+  Module:    vtkLocator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,17 +17,16 @@
 #include "vtkDataSet.h"
 #include "vtkGarbageCollector.h"
 
-vtkCxxRevisionMacro(vtkLocator, "$Revision: 1.4 $");
 
 vtkCxxSetObjectMacro(vtkLocator,DataSet,vtkDataSet);
 
-// Construct with automatic computation of divisions, averaging
-// 25 points per bucket.
 vtkLocator::vtkLocator()
 {
   this->DataSet = NULL;
   this->Tolerance = 0.001;
   this->Automatic = 1;
+  this->MaxLevel = 8;
+  this->Level = 8;
 }
 
 vtkLocator::~vtkLocator()

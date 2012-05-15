@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTexture.h,v $
+  Module:    vtkTexture.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,12 +29,13 @@
 // Currently only 2D texture maps are supported, even though the data pipeline
 // supports 1,2, and 3D texture coordinates. 
 // 
-// Some renderers such as OpenGL require that the texture map dimensions are
-// a power of two in each direction. Other renderers may have similar
-// (ridiculous) restrictions, so be careful out there... (Note: a recent change
-// to vtk allows use of non-power of two texture maps in OpenGL. The texture is
-// automatically resampled to a power of two in one or more directions.)
-
+// Some renderers such as old OpenGL require that the texture map dimensions
+// are a power of two in each direction. If a non-power of two texture map is
+// used, it is automatically resampled to a power of two in one or more
+// directions, at the cost of an expensive computation. If the OpenGL
+// implementation is recent enough (OpenGL>=2.0 or
+// extension GL_ARB_texture_non_power_of_two exists) there is no such
+// restriction and no extra computational cost.
 // .SECTION See Also
 // vtkActor vtkRenderer vtkOpenGLTexture
 
@@ -59,7 +60,7 @@ class VTK_RENDERING_EXPORT vtkTexture : public vtkImageAlgorithm
 {
 public:
   static vtkTexture *New();
-  vtkTypeRevisionMacro(vtkTexture,vtkImageAlgorithm);
+  vtkTypeMacro(vtkTexture,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,6 +68,11 @@ public:
   // to make sure the texture maps Input is valid, then it invokes the 
   // Load() method.
   virtual void Render(vtkRenderer *ren);
+
+  // Description:
+  // Cleans up after the texture rendering to restore the state of the
+  // graphics context.
+  virtual void PostRender(vtkRenderer *) {};
 
   // Description:
   // Release any graphics resources that are being consumed by this texture.
@@ -171,6 +177,13 @@ public:
   vtkSetMacro(BlendingMode, int);
 
   // Description:
+  // Whether the texture colors are premultiplied by alpha.
+  // Initial value is false.
+  vtkGetMacro(PremultipliedAlpha,bool);
+  vtkSetMacro(PremultipliedAlpha,bool);
+  vtkBooleanMacro(PremultipliedAlpha,bool);
+
+  // Description:
   // When the texture is forced to be a power of 2, the default behavior is
   // for the "new" image's dimensions  to be greater than or equal to with 
   // respects to the original.  Setting RestrictPowerOf2ImageSmaller to be
@@ -196,6 +209,7 @@ protected:
   int RestrictPowerOf2ImageSmaller;
   // this is to duplicated the previous behavior of SelfCreatedLookUpTable
   int SelfAdjustingTableRange;
+  bool PremultipliedAlpha;
 private:
   vtkTexture(const vtkTexture&);  // Not implemented.
   void operator=(const vtkTexture&);  // Not implemented.

@@ -3,7 +3,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkODBCDatabase.h,v $
+  Module:    vtkODBCDatabase.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -80,7 +80,7 @@ class VTK_IO_EXPORT vtkODBCDatabase : public vtkSQLDatabase
 //ETX
 
 public:
-  vtkTypeRevisionMacro(vtkODBCDatabase, vtkSQLDatabase);
+  vtkTypeMacro(vtkODBCDatabase, vtkSQLDatabase);
   void PrintSelf(ostream& os, vtkIndent indent);
   static vtkODBCDatabase *New();
 

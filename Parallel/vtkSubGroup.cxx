@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSubGroup.cxx,v $
+  Module:    vtkSubGroup.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -26,7 +26,6 @@
 #endif
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkSubGroup, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkSubGroup);
 
 vtkSubGroup::vtkSubGroup()

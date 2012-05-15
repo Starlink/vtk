@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageRGBToHSV.cxx,v $
+  Module:    vtkImageRGBToHSV.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkImageRGBToHSV, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkImageRGBToHSV);
 
 //----------------------------------------------------------------------------

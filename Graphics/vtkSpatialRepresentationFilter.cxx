@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpatialRepresentationFilter.cxx,v $
+  Module:    vtkSpatialRepresentationFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkSpatialRepresentationFilter, "$Revision: 1.37 $");
 vtkStandardNewMacro(vtkSpatialRepresentationFilter);
 vtkCxxSetObjectMacro(vtkSpatialRepresentationFilter,
                      SpatialRepresentation,vtkLocator);

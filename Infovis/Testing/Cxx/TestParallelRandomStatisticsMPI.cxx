@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: TestParallelRandomStatisticsMPI.cxx,v $
+  Module:    TestParallelRandomStatisticsMPI.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 // for implementing this test.
 
 #include <mpi.h>
-#include <time.h>
 
 #include "vtkDescriptiveStatistics.h"
 #include "vtkPDescriptiveStatistics.h"
@@ -41,6 +40,7 @@
 #include "vtkMultiBlockDataSet.h"
 #include "vtkStdString.h"
 #include "vtkTable.h"
+#include "vtkTimerLog.h"
 #include "vtkVariantArray.h"
 
 // For debugging purposes, output results of serial engines ran on each slice of the distributed data set
@@ -69,7 +69,7 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
   int myRank = com->GetLocalProcessId();
 
   // Seed random number generator
-  vtkMath::RandomSeed( static_cast<int>( time( NULL ) ) * ( myRank + 1 ) );
+  vtkMath::RandomSeed( static_cast<int>( vtkTimerLog::GetUniversalTime() ) * ( myRank + 1 ) );
 
   // Generate an input table that contains samples of mutually independent random variables over [0, 1]
   int nUniform = 2;
@@ -119,20 +119,36 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
     doubleArray[c]->Delete();
     }
 
+  // "68-95-99.7 rule"
+  // Actually testing for 1, ..., numRuleVa standard deviations
+  int numRuleVal = 6; 
+
   // Reference values
-  double sigmaRuleVal[] = { 68.27 , 95.45, 99.73 };     // "68-95-99.7 rule"
-  double sigmaRuleTol[] = { 1., .5, .1 };
+  double sigmaRuleVal[] = { 68.2689492137,
+                            95.4499736104,
+                            99.7300203937,
+                            99.9936657516,
+                            99.9999426697,
+                            99.9999998027 }; 
+
+  // Tolerances
+  double sigmaRuleTol[] = { 1.,
+                            .5,
+                            .1,
+                            .05,
+                            .01,
+                            .005 };
 
   // ************************** Descriptive Statistics ************************** 
 
   // Synchronize and start clock
   com->Barrier();
-  time_t ta;
-  time ( &ta );
+  vtkTimerLog *timer=vtkTimerLog::New();
+  timer->StartTimer();
 
   // For verification, instantiate a serial descriptive statistics engine and set its ports
   vtkDescriptiveStatistics* ds = vtkDescriptiveStatistics::New();
-  ds->SetInput( 0, inputData );
+  ds->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, inputData );
 
   // Select all columns
   for ( int c = 0; c < nVariables; ++ c )
@@ -141,25 +157,23 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
     }
 
   // Test (serially) with Learn and Derive options only
-  ds->SetLearn( true );
-  ds->SetDerive( true );
-  ds->SetAssess( true );
+  ds->SetLearnOption( true );
+  ds->SetDeriveOption( true );
+  ds->SetAssessOption( true );
   ds->Update();
 
 #if PRINT_ALL_SERIAL_STATS
   cout << "\n## Proc "
        << myRank
-       << " calculated the following statistics ( "
-       << ds->GetSampleSize()
-       << " entries per column ):\n";
-  for ( vtkIdType r = 0; r < ds->GetOutput( 1 )->GetNumberOfRows(); ++ r )
+       << " calculated the following statistics:\n";
+  for ( vtkIdType r = 0; r < ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetNumberOfRows(); ++ r )
     {
     cout << "   ";
-    for ( int i = 0; i < ds->GetOutput( 1 )->GetNumberOfColumns(); ++ i )
+    for ( int i = 0; i < ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetNumberOfColumns(); ++ i )
       {
-      cout << ds->GetOutput( 1 )->GetColumnName( i )
+      cout << ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetColumnName( i )
            << "="
-           << ds->GetOutput( 1 )->GetValue( r, i ).ToString()
+           << ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValue( r, i ).ToString()
            << "  ";
       }
     cout << "\n";
@@ -167,7 +181,7 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 #endif //PRINT_ALL_SERIAL_STATS
   
   // Collect (local) cardinalities, extrema, and means
-  int nRows = ds->GetOutput( 1 )->GetNumberOfRows();
+  int nRows = ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetNumberOfRows();
   int np = com->GetNumberOfProcesses();
   int n2Rows = 2 * nRows;
 
@@ -180,13 +194,13 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
   double dn;
   for ( vtkIdType r = 0; r < nRows; ++ r )
     {
-    dn = static_cast<double>( ds->GetSampleSize() );
+    dn = ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( r, "Cardinality" ).ToDouble();
     cardsAndMeans_l[2 * r] = dn;
-    cardsAndMeans_l[2 * r + 1] = dn * ds->GetOutput( 1 )->GetValueByName( r, "Mean" ).ToDouble();
+    cardsAndMeans_l[2 * r + 1] = dn * ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( r, "Mean" ).ToDouble();
 
-    extrema_l[2 * r] = ds->GetOutput( 1 )->GetValueByName( r, "Minimum" ).ToDouble();
+    extrema_l[2 * r] = ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( r, "Minimum" ).ToDouble();
     // Collect -max instead of max so a single reduce op. (minimum) can process both extrema at a time
-    extrema_l[2 * r + 1] = - ds->GetOutput( 1 )->GetValueByName( r, "Maximum" ).ToDouble();
+    extrema_l[2 * r + 1] = - ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( r, "Maximum" ).ToDouble();
     }
   
   // Reduce all extremal values, and gather all cardinalities and means, on process calcProc
@@ -250,8 +264,7 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Synchronize and stop clock
   com->Barrier();
-  time_t tb;
-  time ( &tb );
+  timer->StopTimer();
 
   if ( com->GetLocalProcessId() == args->ioRank )
     {
@@ -260,15 +273,15 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
          << calcProc
          << "\n"
          << "   Wall time: "
-         << difftime( tb, ta )
+         << timer->GetElapsedTime()
          << " sec.\n";
 
     for ( vtkIdType r = 0; r < nRows; ++ r )
       {
       cout << "   "
-           << ds->GetOutput( 1 )->GetColumnName( 0 )
+           << ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetColumnName( 0 )
            << "="
-           << ds->GetOutput( 1 )->GetValue( r, 0 ).ToString()
+           << ds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValue( r, 0 ).ToString()
            << "  "
            << "Cardinality"
            << "="
@@ -302,14 +315,13 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Synchronize and start clock
   com->Barrier();
-  time_t t0;
-  time ( &t0 );
+  timer->StartTimer();
   
   // Instantiate a parallel descriptive statistics engine and set its ports
   vtkPDescriptiveStatistics* pds = vtkPDescriptiveStatistics::New();
-  pds->SetInput( 0, inputData );
-  vtkTable* outputData = pds->GetOutput( 0 );
-  vtkTable* outputMeta = pds->GetOutput( 1 );
+  pds->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, inputData );
+  vtkTable* outputData = pds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
+  vtkTable* outputMeta = pds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL );
 
   // Select all columns
   for ( int c = 0; c < nVariables; ++ c )
@@ -318,25 +330,24 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
     }
 
   // Test (in parallel) with Learn, Derive, and Assess options turned on
-  pds->SetLearn( true );
-  pds->SetDerive( true );
-  pds->SetAssess( true );
+  pds->SetLearnOption( true );
+  pds->SetDeriveOption( true );
+  pds->SetAssessOption( true );
   pds->SignedDeviationsOff(); // Use unsigned deviations
   pds->Update();
 
   // Synchronize and stop clock
   com->Barrier();
-  time_t t1;
-  time ( &t1 );
+  timer->StopTimer();
 
   if ( com->GetLocalProcessId() == args->ioRank )
     {
     cout << "\n## Completed parallel calculation of descriptive statistics (with assessment):\n"
          << "   Total sample size: "
-         << pds->GetSampleSize()
+         << pds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( 0, "Cardinality" ).ToInt()   
          << " \n"
          << "   Wall time: "
-         << difftime( t1, t0 )
+         << timer->GetElapsedTime()
          << " sec.\n";
 
    for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
@@ -381,48 +392,69 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
          << ".\n";
     }
 
+  // For each normal variable, count deviations of more than 1, ..., numRuleVal standard deviations from the mean
   for ( int c = 0; c < nNormal; ++ c )
     {
-    int outsideStdv_l[] = { 0, 0, 0 };
+    // Allocate and initialize counters
+    int* outsideStdv_l = new int[numRuleVal];
+    for ( int i = 0; i < numRuleVal; ++ i )
+      {
+      outsideStdv_l[i] = 0;
+      }
+
+    // Count outliers
     double dev;
     int n = outputData->GetNumberOfRows();
     for ( vtkIdType r = 0; r < n; ++ r )
       {
       dev = relDev[c]->GetValue( r );
+
       if ( dev >= 1. )
         {
         ++ outsideStdv_l[0];
+
         if ( dev >= 2. )
           {
           ++ outsideStdv_l[1];
+
           if ( dev >= 3. )
             {
             ++ outsideStdv_l[2];
-            }
-          }
-        }
+
+            if ( dev >= 4. )
+              {
+              ++ outsideStdv_l[3];
+
+              if ( dev >= 5. )
+                {
+                ++ outsideStdv_l[4];
+                } // if ( dev >= 5. )
+              } // if ( dev >= 4. )
+            } // if ( dev >= 3. )
+          } // if ( dev >= 2. )
+        } // if ( dev >= 1. )
       }
 
     // Sum all local counters
-    int outsideStdv_g[3];
+    int* outsideStdv_g = new int[numRuleVal];
     com->AllReduce( outsideStdv_l, 
-                           outsideStdv_g, 
-                           3, 
-                           vtkCommunicator::SUM_OP );
+                    outsideStdv_g, 
+                    numRuleVal,
+                    vtkCommunicator::SUM_OP );
 
-    // Print out percentages of sample points within 1, 2, and 3 standard deviations of the mean.
+    // Print out percentages of sample points within 1, ..., numRuleVal standard deviations from the mean.
     if ( com->GetLocalProcessId() == args->ioRank )
       {
       cout << "   "
            << outputData->GetColumnName( nUniform + c )
            << ":\n";
-      for ( int i = 0; i < 3; ++ i )
+      for ( int i = 0; i < numRuleVal; ++ i )
         {
-        double testVal = ( 1. - outsideStdv_g[i] / static_cast<double>( pds->GetSampleSize() ) ) * 100.;
+        double testVal = ( 1. - outsideStdv_g[i] / static_cast<double>( pds->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( 0, "Cardinality" ).ToInt() ) ) * 100.;
 
         cout << "      " 
              << testVal
-             << "\% within "
+             << "\\% within "
              << i + 1
              << " standard deviation(s) from the mean.\n";
 
@@ -433,7 +465,11 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
           }
         }
       }
-    }
+
+    // Clean up
+    delete [] outsideStdv_l;
+    delete [] outsideStdv_g;
+    } // for ( int c = 0; c < nNormal; ++ c )
 
   // Clean up
   pds->Delete();
@@ -442,38 +478,36 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Synchronize and start clock
   com->Barrier();
-  time_t t2;
-  time ( &t2 );
+  timer->StartTimer();
 
   // Instantiate a parallel correlative statistics engine and set its ports
   vtkPCorrelativeStatistics* pcs = vtkPCorrelativeStatistics::New();
-  pcs->SetInput( 0, inputData );
-  outputData = pcs->GetOutput( 0 );
-  outputMeta = pcs->GetOutput( 1 );
+  pcs->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, inputData );
+  outputData = pcs->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
+  outputMeta = pcs->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL );
 
   // Select column pairs (uniform vs. uniform, normal vs. normal)
   pcs->AddColumnPair( columnNames[0], columnNames[1] );
   pcs->AddColumnPair( columnNames[2], columnNames[3] );
 
   // Test (in parallel) with Learn, Derive, and Assess options turned on
-  pcs->SetLearn( true );
-  pcs->SetDerive( true );
-  pcs->SetAssess( true );
+  pcs->SetLearnOption( true );
+  pcs->SetDeriveOption( true );
+  pcs->SetAssessOption( true );
   pcs->Update();
 
     // Synchronize and stop clock
   com->Barrier();
-  time_t t3;
-  time ( &t3 );
+  timer->StopTimer();
 
   if ( com->GetLocalProcessId() == args->ioRank )
     {
     cout << "\n## Completed parallel calculation of correlative statistics (with assessment):\n"
          << "   Total sample size: "
-         << pcs->GetSampleSize()
+         << pcs->GetOutput( vtkStatisticsAlgorithm::OUTPUT_MODEL )->GetValueByName( 0, "Cardinality" ).ToInt() 
          << " \n"
          << "   Wall time: "
-         << difftime( t3, t2 )
+         << timer->GetElapsedTime()
          << " sec.\n";
 
     for ( vtkIdType r = 0; r < outputMeta->GetNumberOfRows(); ++ r )
@@ -505,13 +539,12 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Synchronize and start clock
   com->Barrier();
-  time_t t4;
-  time ( &t4 );
+  timer->StartTimer();
 
   // Instantiate a parallel correlative statistics engine and set its ports
   vtkPMultiCorrelativeStatistics* pmcs = vtkPMultiCorrelativeStatistics::New();
   pmcs->SetInput( 0, inputData );
-  outputData = pmcs->GetOutput( 0 );
+  outputData = pmcs->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
 
   // Select column pairs (uniform vs. uniform, normal vs. normal)
   pmcs->SetColumnStatus( columnNames[0], true );
@@ -531,26 +564,25 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
   pmcs->RequestSelectedColumns();
 
   // Test (in parallel) with Learn, Derive, and Assess options turned on
-  pmcs->SetLearn( true );
-  pmcs->SetDerive( true );
-  pmcs->SetAssess( true );
+  pmcs->SetLearnOption( true );
+  pmcs->SetDeriveOption( true );
+  pmcs->SetAssessOption( true );
   pmcs->Update();
 
     // Synchronize and stop clock
   com->Barrier();
-  time_t t5;
-  time ( &t5 );
+  timer->StopTimer();
 
   if ( com->GetLocalProcessId() == args->ioRank )
     {
-    vtkMultiBlockDataSet* outputMetaDS = vtkMultiBlockDataSet::SafeDownCast( pmcs->GetOutputDataObject( 1 ) ); 
+    vtkMultiBlockDataSet* outputMetaDS = vtkMultiBlockDataSet::SafeDownCast( pmcs->GetOutputDataObject( vtkStatisticsAlgorithm::OUTPUT_MODEL ) ); 
 
     cout << "\n## Completed parallel calculation of multi-correlative statistics (with assessment):\n"
          << "   Total sample size: "
          << vtkTable::SafeDownCast( outputMetaDS->GetBlock( 0 ) )->GetValueByName( 0, "Entries").ToInt()
          << " \n"
          << "   Wall time: "
-         << difftime( t5, t4 )
+         << timer->GetElapsedTime()
          << " sec.\n";
 
     for ( unsigned int b = 1; b < outputMetaDS->GetNumberOfBlocks(); ++ b )
@@ -567,13 +599,12 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Synchronize and start clock
   com->Barrier();
-  time_t t6;
-  time ( &t6 );
+  timer->StartTimer();
 
   // Instantiate a parallel pca statistics engine and set its ports
   vtkPPCAStatistics* pcas = vtkPPCAStatistics::New();
-  pcas->SetInput( 0, inputData );
-  outputData = pcas->GetOutput( 0 );
+  pcas->SetInput( vtkStatisticsAlgorithm::INPUT_DATA, inputData );
+  outputData = pcas->GetOutput( vtkStatisticsAlgorithm::OUTPUT_DATA );
 
   // Select column pairs (uniform vs. uniform, normal vs. normal)
   pcas->SetColumnStatus( columnNames[0], true );
@@ -593,26 +624,25 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
   pcas->RequestSelectedColumns();
 
   // Test (in parallel) with Learn, Derive, and Assess options turned on
-  pcas->SetLearn( true );
-  pcas->SetDerive( true );
-  pcas->SetAssess( true );
+  pcas->SetLearnOption( true );
+  pcas->SetDeriveOption( true );
+  pcas->SetAssessOption( true );
   pcas->Update();
 
     // Synchronize and stop clock
   com->Barrier();
-  time_t t7;
-  time ( &t7 );
+  timer->StopTimer();
 
   if ( com->GetLocalProcessId() == args->ioRank )
     {
-    vtkMultiBlockDataSet* outputMetaDS = vtkMultiBlockDataSet::SafeDownCast( pcas->GetOutputDataObject( 1 ) ); 
+    vtkMultiBlockDataSet* outputMetaDS = vtkMultiBlockDataSet::SafeDownCast( pcas->GetOutputDataObject( vtkStatisticsAlgorithm::OUTPUT_MODEL ) ); 
 
     cout << "\n## Completed parallel calculation of pca statistics (with assessment):\n"
          << "   Total sample size: "
          << vtkTable::SafeDownCast( outputMetaDS->GetBlock( 0 ) )->GetValueByName( 0, "Entries").ToInt()
          << " \n"
          << "   Wall time: "
-         << difftime( t7, t6 )
+         << timer->GetElapsedTime()
          << " sec.\n";
 
     for ( unsigned int b = 1; b < outputMetaDS->GetNumberOfBlocks(); ++ b )
@@ -624,8 +654,8 @@ void RandomSampleStatistics( vtkMultiProcessController* controller, void* arg )
 
   // Clean up
   pcas->Delete();
-
   inputData->Delete();
+  timer->Delete();
 }
 
 //----------------------------------------------------------------------------
@@ -657,7 +687,7 @@ int main( int argc, char** argv )
 
   if ( ( ! flag ) || ( *ioPtr == MPI_PROC_NULL ) )
     {
-    // Houston, we'we had a problem: no I/O node found.
+    // Getting MPI attributes did not return any I/O node found.
     ioRank = MPI_PROC_NULL;
     vtkGenericWarningMacro("No MPI I/O nodes found.");
 
@@ -688,9 +718,9 @@ int main( int argc, char** argv )
   // ************************** Initialize test ********************************* 
   if ( com->GetLocalProcessId() == ioRank )
     {
-    cout << "\n# Houston, this is process "
+    cout << "\n# Process "
          << ioRank
-         << " speaking. I'll be the I/O node.\n";
+         << " will be the I/O node.\n";
     }
       
   // Check how many processes have been made available

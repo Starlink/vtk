@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSubPixelPositionEdgels.h,v $
+  Module:    vtkSubPixelPositionEdgels.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_GRAPHICS_EXPORT vtkSubPixelPositionEdgels : public vtkPolyDataAlgorith
 {
 public:
   static vtkSubPixelPositionEdgels *New();
-  vtkTypeRevisionMacro(vtkSubPixelPositionEdgels,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSubPixelPositionEdgels,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

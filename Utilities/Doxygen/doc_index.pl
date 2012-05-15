@@ -61,7 +61,8 @@ print "$PROGNAME $VERSION, by $AUTHOR\n";
 my %default = 
   (
    limit => 10,
-   dirs => ["../../Common",
+   dirs => ["../../Charts",
+            "../../Common",
             "../../Filtering",
             "../../GenericFiltering",
             "../../GenericFiltering/Testing/Cxx",
@@ -74,10 +75,11 @@ my %default =
             "../../Infovis",
             "../../IO",
             "../../Parallel",
-            "../../Patented",
             "../../Rendering",
+            "../../TextAnalysis",
             "../../Views",
-            "../../VolumeRendering"],
+            "../../VolumeRendering",
+            "../../Widgets"],
    project => "VTK",
    stop => "doc_index.stop",
    store => "doc_VTK_index.dox",

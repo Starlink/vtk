@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPlaneSource.cxx,v $
+  Module:    vtkPlaneSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPolyData.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkPlaneSource, "$Revision: 1.65 $");
 vtkStandardNewMacro(vtkPlaneSource);
 
 // Construct plane perpendicular to z-axis, resolution 1x1, width and height

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSobelGradientMagnitudePass.h,v $
+  Module:    vtkSobelGradientMagnitudePass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -56,7 +56,7 @@
 #ifndef __vtkSobelGradientMagnitudePass_h
 #define __vtkSobelGradientMagnitudePass_h
 
-#include "vtkRenderPass.h"
+#include "vtkImageProcessingPass.h"
 
 class vtkOpenGLRenderWindow;
 class vtkDepthPeelingPassLayerList; // Pimpl
@@ -65,31 +65,25 @@ class vtkShader2;
 class vtkFrameBufferObject;
 class vtkTextureObject;
 
-class VTK_RENDERING_EXPORT vtkSobelGradientMagnitudePass : public vtkRenderPass
+class VTK_RENDERING_EXPORT vtkSobelGradientMagnitudePass : public vtkImageProcessingPass
 {
 public:
   static vtkSobelGradientMagnitudePass *New();
-  vtkTypeRevisionMacro(vtkSobelGradientMagnitudePass,vtkRenderPass);
+  vtkTypeMacro(vtkSobelGradientMagnitudePass,vtkImageProcessingPass);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s);
+  //ETX
   
   // Description:
   // Release graphics resources and ask components to release their own
   // resources.
   // \pre w_exists: w!=0
   void ReleaseGraphicsResources(vtkWindow *w);
-  
-  // Description:
-  // Delegate for rendering the image to be blurred.
-  // If it is NULL, nothing will be rendered and a warning will be emitted.
-  // It is usually set to a vtkCameraPass or to a post-processing pass.
-  // Initial value is a NULL pointer.
-  vtkGetObjectMacro(DelegatePass,vtkRenderPass);
-  virtual void SetDelegatePass(vtkRenderPass *delegatePass);
   
  protected:
   // Description:
@@ -99,8 +93,6 @@ public:
   // Description:
   // Destructor.
   virtual ~vtkSobelGradientMagnitudePass();
-  
-  vtkRenderPass *DelegatePass;
  
   // Description:
   // Graphics resources.

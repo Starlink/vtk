@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPReflectionFilter.cxx,v $
+  Module:    vtkPReflectionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,7 +19,6 @@
 #include "vtkMultiProcessController.h"
 
 vtkStandardNewMacro(vtkPReflectionFilter);
-vtkCxxRevisionMacro(vtkPReflectionFilter, "$Revision: 1.2 $");
 vtkCxxSetObjectMacro(vtkPReflectionFilter, Controller, vtkMultiProcessController);
 //----------------------------------------------------------------------------
 vtkPReflectionFilter::vtkPReflectionFilter()

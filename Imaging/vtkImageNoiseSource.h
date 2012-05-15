@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageNoiseSource.h,v $
+  Module:    vtkImageNoiseSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_IMAGING_EXPORT vtkImageNoiseSource : public vtkImageAlgorithm
 {
 public:
   static vtkImageNoiseSource *New();
-  vtkTypeRevisionMacro(vtkImageNoiseSource,vtkImageAlgorithm);
+  vtkTypeMacro(vtkImageNoiseSource,vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

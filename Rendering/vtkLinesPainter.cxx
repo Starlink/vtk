@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLinesPainter.cxx,v $
+  Module:    vtkLinesPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkUnsignedCharArray.h"
 
 vtkStandardNewMacro(vtkLinesPainter);
-vtkCxxRevisionMacro(vtkLinesPainter, "$Revision: 1.6 $");
 //-----------------------------------------------------------------------------
 vtkLinesPainter::vtkLinesPainter()
 {

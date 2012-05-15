@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBiconnectedComponents.h,v $
+  Module:    vtkBoostBiconnectedComponents.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -45,7 +45,7 @@ class VTK_INFOVIS_EXPORT vtkBoostBiconnectedComponents : public vtkUndirectedGra
 {
 public:
   static vtkBoostBiconnectedComponents *New();
-  vtkTypeRevisionMacro(vtkBoostBiconnectedComponents, vtkUndirectedGraphAlgorithm);
+  vtkTypeMacro(vtkBoostBiconnectedComponents, vtkUndirectedGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

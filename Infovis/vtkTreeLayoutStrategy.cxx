@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeLayoutStrategy.cxx,v $
+  Module:    vtkTreeLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,6 @@
 #include "vtkTree.h"
 #include "vtkTreeDFSIterator.h"
 
-vtkCxxRevisionMacro(vtkTreeLayoutStrategy, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkTreeLayoutStrategy);
 
 vtkTreeLayoutStrategy::vtkTreeLayoutStrategy()
@@ -56,6 +55,12 @@ vtkTreeLayoutStrategy::~vtkTreeLayoutStrategy()
 // Tree layout method
 void vtkTreeLayoutStrategy::Layout()
 {
+  // Do I have a graph to lay out?  Does it have any vertices?
+  if (this->Graph == NULL || this->Graph->GetNumberOfVertices() <= 0)
+  {
+    return;
+  }
+    
   vtkTree* tree = vtkTree::SafeDownCast(this->Graph);
   if (tree == NULL)
     {
@@ -68,8 +73,15 @@ void vtkTreeLayoutStrategy::Layout()
     tree = vtkTree::New();
     tree->ShallowCopy(bfs->GetOutput());
     bfs->Delete();
+    if (tree->GetNumberOfVertices() != this->Graph->GetNumberOfVertices())
+      {
+      vtkErrorMacro("Tree layout only works on connected graphs");
+      tree->Delete();
+      return;
+      }
 #else
     vtkErrorMacro("Layout only works on vtkTree unless VTK_USE_BOOST is on.");
+    return;
 #endif
     }
 
@@ -376,7 +388,6 @@ void vtkTreeLayoutStrategy::PrintSelf(ostream& os, vtkIndent indent)
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 using namespace boost;

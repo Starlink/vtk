@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderWindow.cxx,v $
+  Module:    vtkRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,15 +24,14 @@
 #include "vtkTimerLog.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkRenderWindow, "$Revision: 1.158 $");
 
 //----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.
 vtkInstantiatorNewMacro(vtkRenderWindow);
 //----------------------------------------------------------------------------
 
-// Construct an instance of  vtkRenderWindow with its screen size 
-// set to 300x300, borders turned on, positioned at (0,0), double 
+// Construct an instance of  vtkRenderWindow with its screen size
+// set to 300x300, borders turned on, positioned at (0,0), double
 // buffering turned on, stereo capable off.
 vtkRenderWindow::vtkRenderWindow()
 {
@@ -266,7 +265,7 @@ void vtkRenderWindow::Render()
     }
 
   // CAUTION:
-  // This method uses this->GetSize() and allocates buffers using that size. 
+  // This method uses this->GetSize() and allocates buffers using that size.
   // Remember that GetSize() will returns a size scaled by the TileScale factor.
   // We should use GetActualSize() when we don't want the size to be scaled.
 
@@ -776,8 +775,8 @@ int vtkRenderWindow::CheckAbortStatus()
 {
   if (!this->InAbortCheck)
     {
-    // Only check for abort at most one every second.
-    if (vtkTimerLog::GetUniversalTime() - this->AbortCheckTime > 1.0)
+    // Only check for abort at most 5 times per second.
+    if (vtkTimerLog::GetUniversalTime() - this->AbortCheckTime > 0.2)
       {
       this->InAbortCheck = 1;
       this->InvokeEvent(vtkCommand::AbortCheckEvent,NULL);
@@ -1208,11 +1207,11 @@ void vtkRenderWindow::StereoRenderComplete(void)
       sleft = this->StereoBuffer;
       sright = this->GetPixelData(0, 0, size[0] - 1, size[1] - 1,
                                   !this->DoubleBuffer);
-    
+
       // copy right pixels onto the left pixel buffer
       for(int y = 0; y < size[1]; y = y + 1) {
         // set up the pointers
-        // right starts on x = 1 on even scanlines 
+        // right starts on x = 1 on even scanlines
         // right starts on x = 0 on odd scanlines
         if(y % 2) {
           left = sleft + y * 3 * size[0] + 3;
@@ -1225,21 +1224,21 @@ void vtkRenderWindow::StereoRenderComplete(void)
 
         // skip every other pixel
         for(int x = (y + 1) % 2; x < size[0]; x = x + 2) {
-          *left++ = *right++; 
-          *left++ = *right++; 
-          *left++ = *right++; 
+          *left++ = *right++;
+          *left++ = *right++;
+          *left++ = *right++;
 
           // skip pixel
           left = left + 3;
           right = right + 3;
         }
       }
-          
+
       // cleanup
       this->ResultFrame = sleft;
 
       this->StereoBuffer = NULL;
-      delete [] sright;      
+      delete [] sright;
     }
       break;
 

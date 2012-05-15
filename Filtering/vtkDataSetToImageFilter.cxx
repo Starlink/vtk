@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetToImageFilter.cxx,v $
+  Module:    vtkDataSetToImageFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 #include "vtkImageData.h"
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkDataSetToImageFilter, "$Revision: 1.7 $");
 
 //----------------------------------------------------------------------------
 vtkDataSetToImageFilter::vtkDataSetToImageFilter()

@@ -17,17 +17,20 @@ IF(VTK_USE_DISPLAY)
   SET(RenderingTestsWithArguments
     ${RenderingTestsWithArguments}
     LoadOpenGLExtension.cxx
-    SurfacePlusEdges.cxx
     TestActorLightingFlag.cxx
+    TestAnimationScene.cxx
     TestBlurAndSobelPasses.cxx
     TestDynamic2DLabelMapper.cxx
     TestFBO.cxx
     TestGaussianBlurPass.cxx
+    TestGPUInfo.cxx
     TestGradientBackground.cxx
     TestInteractorTimers.cxx
     TestLabelPlacer.cxx
     TestLabelPlacer2D.cxx
     TestLabelPlacerCoincidentPoints.cxx
+    TestLabelPlacementMapper2D.cxx
+    TestLabelPlacementMapperCoincidentPoints.cxx
     TestLightActor.cxx
     TestLODActor.cxx
     TestManyActors.cxx
@@ -35,12 +38,17 @@ IF(VTK_USE_DISPLAY)
     TestOpacity.cxx
     TestOSConeCxx.cxx
     TestPOVExporter.cxx
+    TestResetCameraVerticalAspectRatio.cxx
+    TestResetCameraVerticalAspectRatioParallel.cxx
     TestSobelGradientMagnitudePass.cxx
     TestShadowMapPass.cxx
     TestTextActorAlphaBlending.cxx
     TestTextActorDepthPeeling.cxx
     TestTextActor3DAlphaBlending.cxx
     TestTextActor3DDepthPeeling.cxx
+    TestTexturedBackground.cxx
+    TestTDx.cxx
+    TestTilingCxx.cxx
     TestTranslucentLUTAlphaBlending.cxx
     TestTranslucentLUTDepthPeeling.cxx
     TestTranslucentLUTDepthPeelingPass.cxx
@@ -66,6 +74,14 @@ IF(VTK_USE_DISPLAY)
       )
   ENDIF(VTK_DATA_ROOT)
 
+  IF(VTK_USE_DISPLAY AND VTK_DATA_ROOT)
+  SET(RenderingTestsWithArguments
+      ${RenderingTestsWithArguments}
+      SurfacePlusEdges.cxx
+      TestLabelPlacementMapper.cxx
+      )
+  ENDIF(VTK_USE_DISPLAY AND VTK_DATA_ROOT)
+
   IF (VTK_USE_GLSL_SHADERS)
     # Tests testing GLSL Shaders.
     SET(RenderingTestsWithArguments
@@ -74,6 +90,15 @@ IF(VTK_USE_DISPLAY)
       TestGenericVertexAttributesGLSLAlphaBlending.cxx
       TestGenericVertexAttributesGLSLDepthPeelingPass.cxx
       )
+    # Temporarily disable LIC tests on non-windows platforms
+    IF(WIN32)
+      IF (VTK_DATA_ROOT)
+        SET( RenderingTestsWithArguments
+        ${RenderingTestsWithArguments}
+        TestSurfaceLIC.cxx
+        )
+      ENDIF (VTK_DATA_ROOT)
+    ENDIF(WIN32)
   ENDIF (VTK_USE_GLSL_SHADERS)
 
 ENDIF(VTK_USE_DISPLAY)
@@ -85,7 +110,7 @@ CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
 
 SET (TEST_FBO_IMPLEMENTATION_EXE
   TestFBOImplementation)
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/TestFBOInclude.h.in 
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/TestFBOInclude.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/TestFBOInclude.h
   @ONLY IMMEDIATE ESCAPE_QUOTES)
 
@@ -95,23 +120,23 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/TestFBOInclude.h.in
 ADD_EXECUTABLE(TestFBOImplementation
   TestFBOImplementation.cxx)
 TARGET_LINK_LIBRARIES(TestFBOImplementation
-  vtkRendering)
+  vtkRendering ${OPENGL_gl_LIBRARY})
 
 ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
-TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
+TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO ${OPENGL_gl_LIBRARY})
 
 
 SET (TestsToRun ${Tests})
 REMOVE (TestsToRun ${KIT}CxxTests.cxx)
 
 #
-# Add all the executables 
+# Add all the executables
 FOREACH (test ${RenderingTests})
   GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
   ADD_TEST(${TName} ${CXX_TEST_PATH}/${KIT}CxxTests ${TName}
     -T ${VTK_BINARY_DIR}/Testing/Temporary
-    ) 
-ENDFOREACH (test) 
+    )
+ENDFOREACH (test)
 
 FOREACH (test ${RenderingTestsWithArguments})
   GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
@@ -136,7 +161,7 @@ FOREACH (exe
     VTKBenchMark
     )
   ADD_EXECUTABLE(${exe} ${exe}.cxx)
-  TARGET_LINK_LIBRARIES(${exe} vtkRendering vtkIO)
+  TARGET_LINK_LIBRARIES(${exe} vtkRendering vtkIO ${OPENGL_gl_LIBRARY})
   IF (APPLE)
     TARGET_LINK_LIBRARIES(${exe} "-framework GLUT")
   ENDIF (APPLE)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaLight.cxx,v $
+  Module:    vtkMesaLight.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,5 +39,4 @@
 #include "vtkOpenGLLight.cxx"
 #undef vtkOpenGLLight
 
-vtkCxxRevisionMacro(vtkMesaLight, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkMesaLight);

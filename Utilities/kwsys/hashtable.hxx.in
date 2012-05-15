@@ -1,16 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  KWSys - Kitware System Library
+  Copyright 2000-2009 Kitware, Inc., Insight Software Consortium
 
-  Program:   KWSys - Kitware System Library
-  Module:    $RCSfile: hashtable.hxx.in,v $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Kitware, Inc., Insight Consortium.  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 /*
  * Copyright (c) 1996
  * Silicon Graphics Computer Systems, Inc.
@@ -36,6 +34,10 @@
  * purpose.  It is provided "as is" without express or implied warranty.
  *
  */
+#ifdef __BORLANDC__
+# pragma warn -8027 /* 'for' not inlined.  */
+# pragma warn -8026 /* 'exception' not inlined.  */
+#endif 
 #ifndef @KWSYS_NAMESPACE@_hashtable_hxx
 #define @KWSYS_NAMESPACE@_hashtable_hxx
 
@@ -212,9 +214,9 @@ inline PIn hash_allocate_type(PIn (*)(TSize),
 // Define the comparison operators in terms of a base type to avoid
 // needing templated versions.
 class hash_allocator_base {};
-bool operator==(const hash_allocator_base&,
+inline bool operator==(const hash_allocator_base&,
                 const hash_allocator_base&) throw() { return true; }
-bool operator!=(const hash_allocator_base&,
+inline bool operator!=(const hash_allocator_base&,
                 const hash_allocator_base&) throw() { return false; }
 
 // Define the allocator template.

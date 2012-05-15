@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitTextureCoords.h,v $
+  Module:    vtkImplicitTextureCoords.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class vtkImplicitFunction;
 class VTK_GRAPHICS_EXPORT vtkImplicitTextureCoords : public vtkDataSetAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkImplicitTextureCoords,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkImplicitTextureCoords,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

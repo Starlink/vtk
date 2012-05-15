@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLReader.h,v $
+  Module:    vtkXMLReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class vtkInformation;
 class VTK_IO_EXPORT vtkXMLReader : public vtkAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkXMLReader,vtkAlgorithm);
+  vtkTypeMacro(vtkXMLReader,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

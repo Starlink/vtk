@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellTypes.h,v $
+  Module:    vtkCellTypes.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_FILTERING_EXPORT vtkCellTypes : public vtkObject
 {
 public:
   static vtkCellTypes *New();
-  vtkTypeRevisionMacro(vtkCellTypes,vtkObject);
+  vtkTypeMacro(vtkCellTypes,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

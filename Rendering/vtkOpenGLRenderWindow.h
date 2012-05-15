@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLRenderWindow.h,v $
+  Module:    vtkOpenGLRenderWindow.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ protected:
   long OldMonitorSetting;
 
 public:
-  vtkTypeRevisionMacro(vtkOpenGLRenderWindow,vtkRenderWindow);
+  vtkTypeMacro(vtkOpenGLRenderWindow,vtkRenderWindow);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -50,7 +50,7 @@ public:
   virtual void StereoUpdate();
 
   // Description:
-  // Set/Get the pixel data of an image, transmitted as RGBRGB... 
+  // Set/Get the pixel data of an image, transmitted as RGBRGB...
   virtual unsigned char *GetPixelData(int x,int y,int x2,int y2,int front);
   virtual int GetPixelData(int x,int y,int x2,int y2, int front,
                            vtkUnsignedCharArray *data);
@@ -60,7 +60,7 @@ public:
                            vtkUnsignedCharArray *data, int front);
 
   // Description:
-  // Set/Get the pixel data of an image, transmitted as RGBARGBA... 
+  // Set/Get the pixel data of an image, transmitted as RGBARGBA...
   virtual float *GetRGBAPixelData(int x,int y,int x2,int y2,int front);
   virtual int GetRGBAPixelData(int x,int y,int x2,int y2, int front,
                                vtkFloatArray* data);
@@ -75,10 +75,10 @@ public:
                                    vtkUnsignedCharArray *data);
   virtual int SetRGBACharPixelData(int x, int y, int x2, int y2,
                                    unsigned char *data, int front,
-                                   int blend=0);  
+                                   int blend=0);
   virtual int SetRGBACharPixelData(int x,int y,int x2,int y2,
                                    vtkUnsignedCharArray *data, int front,
-                                   int blend=0);  
+                                   int blend=0);
 
   // Description:
   // Set/Get the zbuffer data from an image
@@ -91,14 +91,6 @@ public:
                               vtkFloatArray *buffer );
 
   // Description:
-  // Make this window the current OpenGL context.
-  void MakeCurrent() = 0;
-  
-  // Description:
-  // Tells if this window is the current OpenGL context for the calling thread.
-  virtual bool IsCurrent()=0;
-  
-  // Description:
   // Register a texture name with this render window.
   void RegisterTextureResource (GLuint id);
 
@@ -110,7 +102,7 @@ public:
   // Get the size of the color buffer.
   // Returns 0 if not able to determine otherwise sets R G B and A into buffer.
   int GetColorBufferSizes(int *rgba);
-  
+
   // Description:
   // Initialize OpenGL for this window.
   virtual void OpenGLInit();
@@ -122,7 +114,7 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetBackLeftBuffer();
-  
+
   // Description:
   // Return the OpenGL name of the back right buffer.
   // It is GL_BACK_RIGHT if GL is bound to the window-system-provided
@@ -130,7 +122,7 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetBackRightBuffer();
-  
+
   // Description:
   // Return the OpenGL name of the front left buffer.
   // It is GL_FRONT_LEFT if GL is bound to the window-system-provided
@@ -138,7 +130,7 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetFrontLeftBuffer();
-  
+
   // Description:
   // Return the OpenGL name of the front right buffer.
   // It is GL_FRONT_RIGHT if GL is bound to the window-system-provided
@@ -146,7 +138,7 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetFrontRightBuffer();
-  
+
   // Description:
   // Return the OpenGL name of the back left buffer.
   // It is GL_BACK if GL is bound to the window-system-provided
@@ -154,7 +146,7 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetBackBuffer();
-  
+
   // Description:
   // Return the OpenGL name of the front left buffer.
   // It is GL_FRONT if GL is bound to the window-system-provided
@@ -162,24 +154,26 @@ public:
   // application-created framebuffer object (GPU-based offscreen rendering)
   // It is used by vtkOpenGLCamera.
   unsigned int GetFrontBuffer();
-  
+
   // Description:
   // Update graphic error status, regardless of ReportGraphicErrors flag.
   // It means this method can be used in any context and is not restricted to
   // debug mode.
   virtual void CheckGraphicError();
-  
+
   // Description:
   // Return the last graphic error status. Initial value is false.
   virtual int HasGraphicError();
-  
+
   // Description:
   // Return a string matching the last graphic error status.
   virtual const char *GetLastGraphicErrorString();
 
   // Description:
   // Get the time when the OpenGL context was created.
+//BTX
   vtkGetMacro(ContextCreationTime, vtkTimeStamp);
+//ETX
 
   // Description:
   // Returns the extension manager. A new one will be created if one hasn't
@@ -190,13 +184,18 @@ public:
   // Returns an Hardware Support object. A new one will be created if one
   // hasn't already been set up.
   vtkOpenGLHardwareSupport* GetHardwareSupport();
- 
+
   //BTX
   // Description:
   // Returns its texture unit manager object. A new one will be created if one
   // hasn't already been set up.
   vtkTextureUnitManager *GetTextureUnitManager();
   //ETX
+
+  // Description:
+  // Block the thread until the actual rendering is finished().
+  // Useful for measurement only.
+  virtual void WaitForCompletion();
   
 protected:
   vtkOpenGLRenderWindow();
@@ -208,7 +207,7 @@ protected:
   int GetRGBAPixelData(int x,int y,int x2,int y2, int front, float* data);
   int GetRGBACharPixelData(int x,int y,int x2,int y2, int front,
                            unsigned char* data);
-  
+
   // Description:
   // Create an offScreen window based on OpenGL framebuffer extension.
   // Return if the creation was successful or not.
@@ -218,50 +217,50 @@ protected:
   // \post valid_result: (result==0 || result==1)
   //                     && (result implies OffScreenUseFrameBuffer)
   int CreateHardwareOffScreenWindow(int width, int height);
-  
+
   // Description:
   // Destroy an offscreen window based on OpenGL framebuffer extension.
   // \pre initialized: OffScreenUseFrameBuffer
   // \post destroyed: !OffScreenUseFrameBuffer
   void DestroyHardwareOffScreenWindow();
-  
+
   // Description:
   // Flag telling if a framebuffer-based offscreen is currently in use.
   int OffScreenUseFrameBuffer;
-  
+
   // Description:
   // Variables used by the framebuffer-based offscreen method.
   int NumberOfFrameBuffers;
   unsigned int TextureObjects[4]; // really GLuint
   unsigned int FrameBufferObject; // really GLuint
   unsigned int DepthRenderBufferObject; // really GLuint
-  
+
   // Description:
   // Create a not-off-screen window.
   virtual void CreateAWindow()=0;
-  
+
   // Description:
   // Destroy a not-off-screen window.
   virtual void DestroyWindow()=0;
-  
+
   // Description:
   // Set the texture unit manager.
   void SetTextureUnitManager(vtkTextureUnitManager *textureUnitManager);
-  
+
   unsigned int BackLeftBuffer;
   unsigned int BackRightBuffer;
   unsigned int FrontLeftBuffer;
   unsigned int FrontRightBuffer;
   unsigned int FrontBuffer;
   unsigned int BackBuffer;
-  
+
   // Actual type is GLenum. Last value returned by glGetError().
   unsigned int LastGraphicError;
- 
+
   vtkTimeStamp ContextCreationTime;
-  
+
   vtkTextureUnitManager *TextureUnitManager;
-  
+
 private:
   vtkOpenGLRenderWindow(const vtkOpenGLRenderWindow&);  // Not implemented.
   void operator=(const vtkOpenGLRenderWindow&);  // Not implemented.

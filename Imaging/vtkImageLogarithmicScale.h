@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageLogarithmicScale.h,v $
+  Module:    vtkImageLogarithmicScale.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IMAGING_EXPORT vtkImageLogarithmicScale : public vtkThreadedImageAlgor
 {
 public:
   static vtkImageLogarithmicScale *New();
-  vtkTypeRevisionMacro(vtkImageLogarithmicScale,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageLogarithmicScale,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

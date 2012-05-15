@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyVertex.cxx,v $
+  Module:    vtkPolyVertex.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,11 +19,10 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkPoints.h"
 #include "vtkVertex.h"
 
-vtkCxxRevisionMacro(vtkPolyVertex, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkPolyVertex);
 
 //----------------------------------------------------------------------------
@@ -114,7 +113,7 @@ int vtkPolyVertex::CellBoundary(int subId, double pcoords[3], vtkIdList *pts)
 
 //----------------------------------------------------------------------------
 void vtkPolyVertex::Contour(double value, vtkDataArray *cellScalars, 
-                            vtkPointLocator *locator, vtkCellArray *verts,
+                            vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                             vtkCellArray *vtkNotUsed(lines), 
                             vtkCellArray *vtkNotUsed(polys), 
                             vtkPointData *inPd, vtkPointData *outPd,
@@ -197,7 +196,7 @@ void vtkPolyVertex::Derivatives(int vtkNotUsed(subId),
 
 //----------------------------------------------------------------------------
 void vtkPolyVertex::Clip(double value, vtkDataArray *cellScalars, 
-                         vtkPointLocator *locator, vtkCellArray *verts,
+                         vtkIncrementalPointLocator *locator, vtkCellArray *verts,
                          vtkPointData *inPd, vtkPointData *outPd,
                          vtkCellData *inCd, vtkIdType cellId,
                          vtkCellData *outCd, int insideOut)

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStructuredGridAlgorithm.cxx,v $
+  Module:    vtkStructuredGridAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStructuredGrid.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkStructuredGridAlgorithm, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkStructuredGridAlgorithm);
 
 //----------------------------------------------------------------------------

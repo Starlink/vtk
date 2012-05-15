@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFunctionParser.cxx,v $
+  Module:    vtkFunctionParser.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 
 #include <ctype.h>
 
-vtkCxxRevisionMacro(vtkFunctionParser, "$Revision: 1.43 $");
 vtkStandardNewMacro(vtkFunctionParser);
 
 static double vtkParserVectorErrorResult[3] = { VTK_PARSER_ERROR_RESULT, 
@@ -1327,7 +1326,8 @@ void vtkFunctionParser::RemoveSpaces()
   
   delete [] this->Function;
   this->Function = new char[this->FunctionLength+1];
-  strncpy(this->Function, tempString, this->FunctionLength);
+  strncpy(this->Function, tempString,
+          static_cast<size_t>(this->FunctionLength));
   this->Function[this->FunctionLength] = '\0';
   delete [] tempString;
 }
@@ -1439,7 +1439,7 @@ int vtkFunctionParser::CheckSyntax()
       }
 
     // Check for math function
-    if ((functionNumber = this->GetMathFunctionNumber(index)))
+    if ((functionNumber = this->GetMathFunctionNumberByCheckingParenthesis(index)))
       {
       if ((functionNumber == VTK_PARSER_MIN) ||
           (functionNumber == VTK_PARSER_MAX) ||
@@ -1453,14 +1453,18 @@ int vtkFunctionParser::CheckSyntax()
         }
       index += this->GetMathFunctionStringLength(functionNumber);
       currentChar = this->Function[index];
-      if ( currentChar != '(' )
-        {
-        vtkErrorMacro("Syntax error: input to math function not in "
-                      << "parentheses; see position " << index);
-        delete [] expectCommaOnParenthesisCount;
-        delete [] expectTwoCommasOnParenthesisCount;
-        return 0;
-        }
+      
+      // == currentChar should always be '(' here == a fix to Bug #9208
+      // since GetMathFunctionNumberByCheckingParenthesis() is employed above
+      
+      //if ( currentChar != '(' )
+      //  {
+      //  vtkErrorMacro("Syntax error: input to math function not in "
+      //                << "parentheses; see position " << index);
+      //  delete [] expectCommaOnParenthesisCount;
+      //  delete [] expectTwoCommasOnParenthesisCount;
+      //  return 0;
+      //  }
       }
     
     // Check for opening parenthesis
@@ -1475,7 +1479,10 @@ int vtkFunctionParser::CheckSyntax()
     if(isdigit(currentChar) ||
        (currentChar == '.' && isdigit(this->Function[index+1])))
       {
-      strtod(&this->Function[index], &ptr);
+      double value=strtod(&this->Function[index], &ptr);
+      // ignore the return value, we just try to figure out
+      // the position of the pointer after the double value.
+      static_cast<void>(value);
       index += int(ptr-&this->Function[index]);
       currentChar = this->Function[index];
       }
@@ -1722,7 +1729,7 @@ void vtkFunctionParser::BuildInternalSubstringStructure(int beginIndex,
     if (mathFunctionNum > 0)
       {
       beginIndex2 = beginIndex;
-      while (this->Function[beginIndex2] != '(')
+      while (this->Function[beginIndex2] != '(' && beginIndex2 <= endIndex)
         {
         beginIndex2++;
         }
@@ -1747,7 +1754,8 @@ void vtkFunctionParser::BuildInternalSubstringStructure(int beginIndex,
               {
               this->BuildInternalSubstringStructure(beginIndex2+1, i-1);
               this->BuildInternalSubstringStructure(i+1, endIndex-1);
-              this->AddInternalByte(mathFunctionNum);
+              this->AddInternalByte(
+                static_cast<unsigned char>(mathFunctionNum));
               this->StackPointer--;
               return;
               }
@@ -1785,7 +1793,8 @@ void vtkFunctionParser::BuildInternalSubstringStructure(int beginIndex,
                 this->BuildInternalSubstringStructure(i+1, secondCommaIndex-1);
                 // first arg
                 this->BuildInternalSubstringStructure(beginIndex2+1, i-1);
-                this->AddInternalByte(mathFunctionNum);
+                this->AddInternalByte(
+                  static_cast<unsigned char>(mathFunctionNum));
                 this->StackPointer--;
                 return;
                 }
@@ -1794,7 +1803,7 @@ void vtkFunctionParser::BuildInternalSubstringStructure(int beginIndex,
           } // VTK_PARSER_IF, ...
 
         this->BuildInternalSubstringStructure(beginIndex2+1, endIndex-1);
-        this->AddInternalByte(mathFunctionNum);
+        this->AddInternalByte(static_cast<unsigned char>(mathFunctionNum));
         return;
         } // if (this->IsSubstringCompletelyEnclosed ... )
       } // if (mathFunctionNum > 0)
@@ -1916,7 +1925,10 @@ int vtkFunctionParser::IsSubstringCompletelyEnclosed(int beginIndex,
 }
 
 int vtkFunctionParser::GetMathFunctionNumber(int currentIndex)
-{
+{ 
+  // For addition of any new math function, please update 
+  // function GetMathFunctionNumberByCheckingParenthesis()
+  
   if (strncmp(&this->Function[currentIndex], "abs", 3) == 0)
     {
     return VTK_PARSER_ABSOLUTE_VALUE;
@@ -2019,6 +2031,81 @@ int vtkFunctionParser::GetMathFunctionNumber(int currentIndex)
   return 0;
 }
 
+int vtkFunctionParser::GetMathFunctionNumberByCheckingParenthesis
+  ( int currentIndex )
+{ 
+  // This function assumes that RemoveSpaces() has been called and 
+  // hence involves the check on the '(' that immediately follows a
+  // valid function. Addressing '(' here instead of in CheckSyntax()
+  // allows for early detection of grammar errors, i.e., lack of '(',
+  // and hence simplifies the parsing process.
+  
+  // For addition of any new math function, please update NUMBFUNCS
+  // and add an entry to each of the three arrays below.
+  
+  const  int  NUMBFUNCS                =  24;
+  
+  static int  charsLens[NUMBFUNCS]     = { 4,       4,        5,       6,
+                                           3,       6,        4,       5,
+                                           4,       5,        4,       5,
+                                           4,       5,        5,       5,
+                                           5,       4,        4,       6,
+                                           5,       4,        5,       3
+                                         };
+                                  
+  static int  funcNumbs[NUMBFUNCS]     = { VTK_PARSER_ABSOLUTE_VALUE,
+                                           VTK_PARSER_EXPONENT,
+                                           VTK_PARSER_CEILING,
+                                           VTK_PARSER_FLOOR,
+                                    
+                                           VTK_PARSER_LOGARITHME,
+                                           VTK_PARSER_LOGARITHM10,
+                                           VTK_PARSER_LOGARITHM,
+                                           VTK_PARSER_SQUARE_ROOT,
+                                    
+                                           VTK_PARSER_SINE,
+                                           VTK_PARSER_HYPERBOLIC_SINE,
+                                           VTK_PARSER_COSINE,
+                                           VTK_PARSER_HYPERBOLIC_COSINE,
+                                    
+                                           VTK_PARSER_TANGENT,
+                                           VTK_PARSER_HYPERBOLIC_TANGENT,
+                                           VTK_PARSER_ARCSINE,
+                                           VTK_PARSER_ARCCOSINE,
+                                    
+                                           VTK_PARSER_ARCTANGENT,
+                                           VTK_PARSER_MIN,
+                                           VTK_PARSER_MAX,
+                                           VTK_PARSER_CROSS,
+                                    
+                                           VTK_PARSER_SIGN,
+                                           VTK_PARSER_MAGNITUDE,
+                                           VTK_PARSER_NORMALIZE,
+                                           VTK_PARSER_IF
+                                         };
+  
+  static char funcNames[NUMBFUNCS][10] = { "abs(",  "exp(",   "ceil(", "floor(", 
+                                           "ln(",   "log10(", "log(",  "sqrt(", 
+                                           "sin(",  "sinh(",  "cos(",  "cosh(",
+                                           "tan(",  "tanh(",  "asin(", "acos(",
+                                           "atan(", "min(",   "max(",  "cross(",
+                                           "sign(", "mag(",   "norm(", "if("
+                                         };
+                                  
+  int   isMatched = 0;
+  int   retNumber = 0;
+  for ( int i = 0; i < NUMBFUNCS && isMatched == 0; i ++ )
+    {
+    isMatched = (  strncmp( this->Function + currentIndex, 
+                            funcNames[i], charsLens[i] 
+                          ) == 0  
+                )  ?  1  :  0;
+    retNumber = isMatched * funcNumbs[i];
+    }
+  
+  return retNumber;
+}
+
 int vtkFunctionParser::GetMathFunctionStringLength(int mathFunctionNumber)
 {
   switch (mathFunctionNumber)
@@ -2045,6 +2132,7 @@ int vtkFunctionParser::GetMathFunctionStringLength(int mathFunctionNumber)
     case VTK_PARSER_HYPERBOLIC_COSINE:
     case VTK_PARSER_HYPERBOLIC_TANGENT:
     case VTK_PARSER_NORMALIZE:
+    case VTK_PARSER_SIGN:
       return 4;
     case VTK_PARSER_FLOOR:
     case VTK_PARSER_LOGARITHM10:
@@ -2128,7 +2216,7 @@ int vtkFunctionParser::FindEndOfMathConstant(int beginIndex)
   return beginIndex;
 }
 
-int vtkFunctionParser::GetElementaryOperatorNumber(char op)
+unsigned char vtkFunctionParser::GetElementaryOperatorNumber(char op)
 {
   static const char* const operators = "+-*/^";
   int i;
@@ -2158,7 +2246,7 @@ int vtkFunctionParser::GetElementaryOperatorNumber(char op)
     {
     if (operators[i] == op)
       {
-      return VTK_PARSER_ADD + i;
+      return static_cast<unsigned char>(VTK_PARSER_ADD + i);
       }
     }
   if (op == '.')
@@ -2169,7 +2257,7 @@ int vtkFunctionParser::GetElementaryOperatorNumber(char op)
   return 0;
 }
 
-int vtkFunctionParser::GetOperandNumber(int currentIndex)
+unsigned char vtkFunctionParser::GetOperandNumber(int currentIndex)
 {
   int i, variableIndex = -1;
 
@@ -2230,7 +2318,8 @@ int vtkFunctionParser::GetOperandNumber(int currentIndex)
     }
   if (variableIndex >= 0)
     {
-    return VTK_PARSER_BEGIN_VARIABLES + variableIndex;
+    return static_cast<unsigned char>(
+      VTK_PARSER_BEGIN_VARIABLES + variableIndex);
     }
 
   for (i = 0; i < this->NumberOfVectorVariables; i++)
@@ -2248,7 +2337,9 @@ int vtkFunctionParser::GetOperandNumber(int currentIndex)
     }
   if (variableIndex >= 0)
     {
-    return VTK_PARSER_BEGIN_VARIABLES + variableIndex + this->NumberOfScalarVariables;
+    return static_cast<unsigned char>(
+      VTK_PARSER_BEGIN_VARIABLES + variableIndex
+      + this->NumberOfScalarVariables);
     }
   
   return 0;

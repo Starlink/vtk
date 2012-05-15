@@ -1,7 +1,7 @@
 // ============================================================================
 //
 //  Program:   Visualization Toolkit
-//  Module:    $RCSfile: vtkOpenGLPropertyDefaultMain_vs.glsl,v $
+//  Module:    vtkOpenGLPropertyDefaultMain_vs.glsl
 //
 //  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 //  All rights reserved.
@@ -16,6 +16,8 @@
 // This is the default vertex shader with the main() function. It is used when
 // no main() is provided at the renderer level and some vertex shader is
 // defined by the user on a property.
+
+#version 110
 
 void propFuncVS();
 

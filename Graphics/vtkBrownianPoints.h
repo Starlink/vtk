@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBrownianPoints.h,v $
+  Module:    vtkBrownianPoints.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ public:
   // Create instance with minimum speed 0.0, maximum speed 1.0.
   static vtkBrownianPoints *New();
 
-  vtkTypeRevisionMacro(vtkBrownianPoints,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkBrownianPoints,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

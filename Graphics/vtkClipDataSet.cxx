@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipDataSet.cxx,v $
+  Module:    vtkClipDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,10 +35,10 @@
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkClipDataSet, "$Revision: 1.54 $");
 vtkStandardNewMacro(vtkClipDataSet);
 vtkCxxSetObjectMacro(vtkClipDataSet,ClipFunction,vtkImplicitFunction);
 
@@ -155,7 +155,7 @@ int vtkClipDataSet::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *realInput = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   // We have to create a copy of the input because clip requires being
@@ -327,20 +327,29 @@ int vtkClipDataSet::RequestData(
         }
       cellScalars->Delete();
       newPoints->Delete();
-      vtkErrorMacro(<<"Cannot clip without clip function or input scalars");
+      // When processing composite datasets with partial arrays, this warning is
+      // not applicable, hence disabling it.
+      // vtkErrorMacro(<<"Cannot clip without clip function or input scalars");
       return 1;
       }
     }
-    
-  if ( !this->GenerateClipScalars && 
-       !this->GetInputArrayToProcess(0,inputVector))
-    {
-    outPD->CopyScalarsOff();
-    }
-  else
-    {
-    outPD->CopyScalarsOn();
-    }
+
+  // Refer to BUG #8494 and BUG #11016. I cannot see any reason why one would
+  // want to turn CopyScalars Off. My understanding is that this was done to
+  // avoid copying of "ClipDataSetScalars" to the output when
+  // this->GenerateClipScalars is false. But, if GenerateClipScalars is false,
+  // then "ClipDataSetScalars" is not added as scalars to the input at all
+  // (refer to code above) so it's a non-issue. Leaving CopyScalars untouched
+  // i.e. ON avoids dropping of arrays (#8484) as well as segfaults (#11016).
+  //if ( !this->GenerateClipScalars &&
+  //  !this->GetInputArrayToProcess(0,inputVector))
+  //  {
+  //  outPD->CopyScalarsOff();
+  //  }
+  //else
+  //  {
+  //  outPD->CopyScalarsOn();
+  //  }
   vtkDataSetAttributes* tempDSA = vtkDataSetAttributes::New();
   tempDSA->InterpolateAllocate(inPD, 1, 2);
   outPD->InterpolateAllocate(inPD,estimatedSize,estimatedSize/2);
@@ -553,7 +562,7 @@ int vtkClipDataSet::ClipPoints(vtkDataSet* input,
 //----------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkClipDataSet::SetLocator(vtkPointLocator *locator)
+void vtkClipDataSet::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator)
     {
@@ -678,24 +687,24 @@ int vtkClipDataSet::ProcessRequest(vtkInformation* request,
     {
     // compute the priority for this UpdateExtent
     vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-    if (!inInfo)
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+    double inPriority = 1;
+    if (inInfo->Has(vtkStreamingDemandDrivenPipeline::PRIORITY()))
+      {
+      inPriority = inInfo->Get(vtkStreamingDemandDrivenPipeline::
+                            PRIORITY());
+      }
+    if (!inPriority)
       {
       return 1;
       }
-
-    double inPrior = 1;
-    if (inInfo->Has(vtkStreamingDemandDrivenPipeline::PRIORITY()))
-      {
-      inPrior = inInfo->Get(vtkStreamingDemandDrivenPipeline::
-                            PRIORITY());
-      }
-
     // Get bounds and evaluate implicit function. If all bounds
     // evaluate to a value smaller than input value, this piece
     // has priority set to 0.
 
     static double bounds[] = {-1.0,1.0, -1.0,1.0, -1.0,1.0};
-    double prior = 1;
+    double priority = 1;
 
     // determine geometric bounds of this piece
     double *wBBox = NULL;
@@ -736,8 +745,7 @@ int vtkClipDataSet::ProcessRequest(vtkInformation* request,
       else
         {
         //cerr << "Need geometric bounds meta information to evaluate priority" << endl;
-        outputVector->GetInformationObject(0)->
-          Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),inPrior);
+        outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),inPriority);
         return 1;
         }
       }
@@ -746,8 +754,7 @@ int vtkClipDataSet::ProcessRequest(vtkInformation* request,
     if (!fPtr)
       {
       //cerr << "Can not evaluate priority for that clip type" << endl;
-      outputVector->GetInformationObject(0)->
-        Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),inPrior);
+      outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),inPriority);
       return 1;
       }
 
@@ -761,22 +768,17 @@ int vtkClipDataSet::ProcessRequest(vtkInformation* request,
     fVal[6] = fPtr->EvaluateFunction(bounds[1],bounds[3],bounds[4]);
     fVal[7] = fPtr->EvaluateFunction(bounds[1],bounds[3],bounds[5]);
 
-    prior = 0;
+    priority = 0;
     int i;
     for (i=0; i<8;i++)
       {
       if (fVal[i]>this->Value)
         {
-        prior = inPrior;
+        priority = inPriority;
         break;
         }
       }
-    if (prior != inPrior)
-      {
-      //cerr << "rejected something!" << endl;
-      }
-    outputVector->GetInformationObject(0)->
-      Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),prior);
+    outInfo->Set(vtkStreamingDemandDrivenPipeline::PRIORITY(),priority);
     return 1;
     }
 

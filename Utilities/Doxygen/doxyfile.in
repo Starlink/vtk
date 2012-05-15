@@ -30,15 +30,18 @@ INCLUDED_BY_GRAPH    = YES
 CLASS_DIAGRAMS       = YES
 GENERATE_LEGEND      = YES
 GRAPHICAL_HIERARCHY  = NO        # would be too large for vtkObject
+MAX_DOT_GRAPH_DEPTH  = 3
 
 ALLEXTERNALS         = NO
 
 IMAGE_PATH           = "@VTK_SOURCE_DIR@/Utilities/Doxygen" "@VTK_BINARY_DIR@/Utilities/Doxygen/contrib" \
-                       "@VTK_SOURCE_DIR@/Rendering"
+                       "@VTK_SOURCE_DIR@/Rendering" \
+                       "@VTK_SOURCE_DIR@/Geovis"
 
 OUTPUT_DIRECTORY     = "@VTK_BINARY_DIR@/Utilities/Doxygen/doc"
 
 INPUT                = \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Charts" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Common" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Filtering" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/GenericFiltering" \
@@ -56,8 +59,10 @@ INPUT                = \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Parallel" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Widgets" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Rendering" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/TextAnalysis" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Views" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/VolumeRendering" \
+          "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/Widgets" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/doc_VTK_version.dox" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/doc_VTK_class2examples.dox" \
           "@VTK_BINARY_DIR@/Utilities/Doxygen/dox/doc_VTK_class2tests.dox" \
@@ -196,7 +201,7 @@ PREDEFINED  = "vtkSetMacro(name,type)= \
                    static int IsTypeOf(const char *type); \
                    virtual int IsA(const char *type); \
                    static thisClass* SafeDownCast(vtkObject *o);" \
-               "vtkTypeRevisionMacro(thisClass,superclass)= \
+               "vtkTypeMacro(thisClass,superclass)= \
                    typedef superclass Superclass; \
                    virtual const char *GetClassName(); \
                    static int IsTypeOf(const char *type); \

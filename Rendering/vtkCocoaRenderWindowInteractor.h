@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCocoaRenderWindowInteractor.h,v $
+  Module:    vtkCocoaRenderWindowInteractor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,10 @@
 #define __vtkCocoaRenderWindowInteractor_h
 
 #include "vtkRenderWindowInteractor.h"
-
+#include "vtkTDxConfigure.h" // defines VTK_USE_TDX
+#ifdef VTK_USE_TDX
+class vtkTDxMacDevice;
+#endif
 
 class VTK_RENDERING_EXPORT vtkCocoaRenderWindowInteractor : public vtkRenderWindowInteractor
 {
@@ -36,7 +39,7 @@ public:
   // Construct object so that light follows camera motion.
   static vtkCocoaRenderWindowInteractor *New();
 
-  vtkTypeRevisionMacro(vtkCocoaRenderWindowInteractor,vtkRenderWindowInteractor);
+  vtkTypeMacro(vtkCocoaRenderWindowInteractor,vtkRenderWindowInteractor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -127,6 +130,10 @@ protected:
   void SetCocoaManager(void *manager);
   void *GetCocoaManager();
 
+#ifdef VTK_USE_TDX
+  vtkTDxMacDevice *Device;
+#endif
+  
 private:
   vtkCocoaRenderWindowInteractor(const vtkCocoaRenderWindowInteractor&);  // Not implemented.
   void operator=(const vtkCocoaRenderWindowInteractor&);  // Not implemented.

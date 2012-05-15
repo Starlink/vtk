@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainterPolyDataMapper.h,v $
+  Module:    vtkPainterPolyDataMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_RENDERING_EXPORT vtkPainterPolyDataMapper : public vtkPolyDataMapper
 {
 public:
   static vtkPainterPolyDataMapper* New();
-  vtkTypeRevisionMacro(vtkPainterPolyDataMapper, vtkPolyDataMapper);
+  vtkTypeMacro(vtkPainterPolyDataMapper, vtkPolyDataMapper);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -103,7 +103,7 @@ protected:
 
   // Description:
   // Called when the PainterInformation becomes obsolete. 
-  // It is called before the Render is initiated on the Painter.
+  // It is called before UpdateBounds or Render is initiated on the Painter
   virtual void UpdatePainterInformation();
 
   // Description:

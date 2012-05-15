@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProjectedTerrainPath.cxx,v $
+  Module:    vtkProjectedTerrainPath.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,6 @@ typedef vtkEdgeList::iterator EdgeListIterator;
 
 // Begin vtkProjectedTerrainPath class implementation--------------------------
 //
-vtkCxxRevisionMacro(vtkProjectedTerrainPath, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkProjectedTerrainPath);
 
 //-----------------------------------------------------------------------------

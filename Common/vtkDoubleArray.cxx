@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDoubleArray.cxx,v $
+  Module:    vtkDoubleArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@ VTK_ARRAY_ITERATOR_TEMPLATE_INSTANTIATE(double);
 #include "vtkObjectFactory.h"
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkDoubleArray, "$Revision: 1.49 $");
 vtkStandardNewMacro(vtkDoubleArray);
 
 //----------------------------------------------------------------------------

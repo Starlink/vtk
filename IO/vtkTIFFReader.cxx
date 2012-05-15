@@ -17,6 +17,7 @@
 #include "vtkDataArray.h"
 #include "vtkImageData.h"
 #include "vtkPointData.h"
+#include "vtkErrorCode.h"
 #include "vtkObjectFactory.h"
 
 #include <sys/stat.h>
@@ -30,7 +31,6 @@ extern "C" {
 
 //-------------------------------------------------------------------------
 vtkStandardNewMacro(vtkTIFFReader);
-vtkCxxRevisionMacro(vtkTIFFReader, "1.53");
 
 class vtkTIFFReaderInternal
 {
@@ -313,12 +313,15 @@ void vtkTIFFReader::ExecuteInformation()
   this->ComputeInternalFileName(this->DataExtent[4]);
   if (this->InternalFileName == NULL)
     {
+    vtkErrorMacro( "Need to specify a filename" );
+    this->SetErrorCode( vtkErrorCode::NoFileNameError );
     return;
     }
 
   if ( !this->InternalImage->Open(this->InternalFileName) )
     {
     vtkErrorMacro("Unable to open file " << this->InternalFileName );
+    this->SetErrorCode( vtkErrorCode::CannotOpenFileError );
     this->DataExtent[0] = 0;
     this->DataExtent[1] = 0;
     this->DataExtent[2] = 0;
@@ -406,7 +409,7 @@ void vtkTIFFReader::ExecuteInformation()
       this->SetDataScalarTypeToUnsignedChar();
       }
     }
-  else
+  else if (this->GetInternalImage()->BitsPerSample <= 16)
     {
     if(this->GetInternalImage()->SampleFormat == 2)
       {
@@ -416,6 +419,22 @@ void vtkTIFFReader::ExecuteInformation()
       {
       this->SetDataScalarTypeToUnsignedShort();
       }
+    }
+  else if (this->GetInternalImage()->BitsPerSample <= 32)
+    {
+    if(this->GetInternalImage()->SampleFormat == 2)
+      {
+      this->SetDataScalarType( VTK_INT );
+      }
+    else
+      {
+      this->SetDataScalarTypeToUnsignedInt();
+      }
+    }
+  else
+    {
+    vtkErrorMacro( "Unhandled Bit Per Sample: " << this->GetInternalImage()->BitsPerSample );
+    return;
     }
 
   // We check if we have a Zeiss image. 
@@ -1735,7 +1754,7 @@ int vtkTIFFReader::EvaluateImageAt( void* out, void* in )
       break;
     case vtkTIFFReader::PALETTE_GRAYSCALE:
       this->GetColor(*source, &red, &green, &blue);
-      *image = static_cast<unsigned char>(red >> 8);
+      *image = static_cast<unsigned char>(red); // red >> 8
       increment = 1;
       break;
     case vtkTIFFReader::RGB:

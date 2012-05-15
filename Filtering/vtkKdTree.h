@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkKdTree.h,v $
+  Module:    vtkKdTree.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -71,7 +71,7 @@ class vtkDataSetCollection;
 class VTK_FILTERING_EXPORT vtkKdTree : public vtkLocator
 {
 public:
-  vtkTypeRevisionMacro(vtkKdTree, vtkLocator);
+  vtkTypeMacro(vtkKdTree, vtkLocator);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkKdTree *New();
@@ -91,7 +91,7 @@ public:
   //   Set/Get the number of spatial regions you want to get close
   //   to without going over.  (The number of spatial regions is normally
   //   a power of two.)  Call this before BuildLocator().  Default
-  //   is unset.
+  //   is unset (0).
 
   vtkGetMacro(NumberOfRegionsOrLess, int);
   vtkSetMacro(NumberOfRegionsOrLess, int);
@@ -100,7 +100,7 @@ public:
   //   Set/Get the number of spatial regions you want to get close
   //   to while having at least this many regions.  (The number of
   //   spatial regions is normally a power of two.)   Default
-  //   is unset.
+  //   is unset (0).
 
   vtkGetMacro(NumberOfRegionsOrMore, int);
   vtkSetMacro(NumberOfRegionsOrMore, int);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCommunicator.cxx,v $
+  Module:    vtkCommunicator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,6 +38,7 @@
 #include "vtkStructuredPointsReader.h"
 #include "vtkStructuredPointsWriter.h"
 #include "vtkTemporalDataSet.h"
+#include "vtkTypeTraits.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedLongArray.h"
 
@@ -46,7 +47,6 @@
 
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkCommunicator, "$Revision: 1.57 $");
 
 #define EXTENT_HEADER_SIZE      128
 
@@ -108,7 +108,7 @@ vtkCommunicator::vtkCommunicator()
 {
   this->LocalProcessId = 0;
   this->NumberOfProcesses = 1;
-  this->MaximumNumberOfProcesses = vtkMultiProcessController::MAX_PROCESSES;
+  this->MaximumNumberOfProcesses = vtkTypeTraits<int>::Max();
   this->Count = 0;
 }
 
@@ -236,7 +236,7 @@ int vtkCommunicator::SendMultiBlockDataSet(vtkMultiBlockDataSet* mbds,
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
     vtkDataObject* block = mbds->GetBlock(cc);
-    int dataType = (block? block->GetDataObjectType() : 0);
+    int dataType = (block? block->GetDataObjectType() : -1);
     returnCode = returnCode && this->Send(&dataType, 1, remoteHandle, tag);
     if (block)
       {
@@ -259,12 +259,12 @@ int vtkCommunicator::SendTemporalDataSet(vtkTemporalDataSet* mbds,
   for (int cc=0; cc < numblocks && returnCode; cc++)
     {
     vtkDataObject* block = mbds->GetTimeStep(cc);
-    int dataType = (block? block->GetDataObjectType() : 0);
+    int dataType = (block? block->GetDataObjectType() : -1);
     returnCode = returnCode && this->Send(&dataType, 1, remoteHandle, tag);
     if (block)
       {
       // Now, send the actual block data.
-      remoteHandle = returnCode && this->Send(block, remoteHandle, tag);
+      returnCode = returnCode && this->Send(block, remoteHandle, tag);
       }
     }
 
@@ -481,11 +481,12 @@ int vtkCommunicator::ReceiveMultiBlockDataSet(
 
   int numblocks = 0;
   returnCode = this->Receive(&numblocks, 1, remoteHandle, tag);
+  mbds->SetNumberOfBlocks(numblocks);
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
     int dataType = 0;
     returnCode = returnCode && this->Receive(&dataType, 1, remoteHandle, tag);
-    if (dataType)
+    if (dataType != -1) // 0 is a valid data type :).
       {
       vtkDataObject* dObj = vtkDataObjectTypes::NewDataObject(dataType);
       returnCode = returnCode && this->Receive(dObj, remoteHandle, tag);
@@ -505,11 +506,12 @@ int vtkCommunicator::ReceiveTemporalDataSet(
 
   int numblocks = 0;
   returnCode = this->Receive(&numblocks, 1, remoteHandle, tag);
+  mbds->SetNumberOfTimeSteps(numblocks);
   for (int cc=0; (cc < numblocks) && returnCode; cc++)
     {
-    int dataType = 0;
+    int dataType = -1;
     returnCode = returnCode && this->Receive(&dataType, 1, remoteHandle, tag);
-    if (dataType)
+    if (dataType != -1) // 0 is a valid data type :).
       {
       vtkDataObject* dObj = vtkDataObjectTypes::NewDataObject(dataType);
       returnCode = returnCode && this->Receive(dObj, remoteHandle, tag);

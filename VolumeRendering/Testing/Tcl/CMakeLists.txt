@@ -18,8 +18,12 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       volRCRotateClip
       volTM2DCropRegions
       volTM2DRotateClip
+      volTM3DCompressedCropRegions
       volTM3DCropRegions
       volTM3DRotateClip
+      VolumeOutlineSource
+      VolumePicker
+      VolumePickerCrop
     )
       ADD_TEST(${tfile}-image ${VTK_EXECUTABLE}
         ${VTK_SOURCE_DIR}/Common/Testing/Tcl/rtImageTest.tcl 

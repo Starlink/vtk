@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkSubGroup.h,v $
+  Module:    vtkSubGroup.h
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -47,7 +47,7 @@ class vtkCommunicator;
 class VTK_PARALLEL_EXPORT vtkSubGroup : public vtkObject 
 {
 public:
-  vtkTypeRevisionMacro(vtkSubGroup, vtkObject);
+  vtkTypeMacro(vtkSubGroup, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
   static vtkSubGroup *New();
 

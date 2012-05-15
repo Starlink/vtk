@@ -48,16 +48,21 @@ view2.SetColorEdges(True)
 view2.SetLayoutStrategyToSimple2D()
 
 # Make sure all views are using a pedigree id selection
-view.SetSelectionType(2)
-view2.SetSelectionType(2)
+view.GetRepresentation(0).SetSelectionType(2)
+view2.GetRepresentation(0).SetSelectionType(2)
 
 # Create a selection link and set both view to use it
-#selectionLink = vtkSelectionLink()
-#view.GetRepresentation(0).SetSelectionLink(selectionLink)
-#view2.GetRepresentation(0).SetSelectionLink(selectionLink)
+annotationLink = vtkAnnotationLink()
+view.GetRepresentation(0).SetAnnotationLink(annotationLink)
+view2.GetRepresentation(0).SetAnnotationLink(annotationLink)
+
+# Make a view updater to update the views on selection changes
+updater = vtkViewUpdater()
+updater.AddView(view)
+updater.AddView(view2)
 
 # Set the selection to be the MST
-view.GetRepresentation(0).GetSelectionLink().SetSelection(mstTreeSelection.GetOutput())
+view.GetRepresentation(0).GetAnnotationLink().SetCurrentSelection(mstTreeSelection.GetOutput())
 
 
 # Set the theme on the view
@@ -68,16 +73,15 @@ theme.SetSelectedCellColor(1,0,1)
 theme.SetSelectedPointColor(1,0,1)
 view.ApplyViewTheme(theme)
 view2.ApplyViewTheme(theme)
+theme.FastDelete()
 
-window = vtkRenderWindow()
-window.SetSize(600, 600)
-view.SetupRenderWindow(window)
-view.GetRenderer().ResetCamera()
+view.GetRenderWindow().SetSize(600, 600)
+view.ResetCamera()
+view.Render()
 
-window2 = vtkRenderWindow()
-window2.SetSize(600, 600)
-view2.SetupRenderWindow(window2)
-view2.GetRenderer().ResetCamera()
+view2.GetRenderWindow().SetSize(600, 600)
+view2.ResetCamera()
+view2.Render()
 
-window.GetInteractor().Start()
+view.GetInteractor().Start()
 

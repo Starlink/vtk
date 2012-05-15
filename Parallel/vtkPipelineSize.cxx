@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPipelineSize.cxx,v $
+  Module:    vtkPipelineSize.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtkDataSetAttributes.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkPipelineSize, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkPipelineSize);
 
 unsigned long 

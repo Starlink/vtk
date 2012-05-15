@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTStripsPainter.cxx,v $
+  Module:    vtkTStripsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,6 @@
 #include "vtkTimerLog.h"
 
 vtkStandardNewMacro(vtkTStripsPainter);
-vtkCxxRevisionMacro(vtkTStripsPainter, "$Revision: 1.5 $");
 //-----------------------------------------------------------------------------
 vtkTStripsPainter::vtkTStripsPainter()
 {

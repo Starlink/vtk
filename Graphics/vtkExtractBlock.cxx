@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractBlock.cxx,v $
+  Module:    vtkExtractBlock.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,19 +30,21 @@ class vtkExtractBlock::vtkSet : public vtkstd::set<unsigned int>
 };
 
 vtkStandardNewMacro(vtkExtractBlock);
-vtkCxxRevisionMacro(vtkExtractBlock, "$Revision: 1.4 $");
 vtkInformationKeyMacro(vtkExtractBlock, DONT_PRUNE, Integer);
 //----------------------------------------------------------------------------
 vtkExtractBlock::vtkExtractBlock()
 {
   this->Indices = new vtkExtractBlock::vtkSet();
+  this->ActiveIndices = new vtkExtractBlock::vtkSet();
   this->PruneOutput = 1;
+  this->MaintainStructure = 0;
 }
 
 //----------------------------------------------------------------------------
 vtkExtractBlock::~vtkExtractBlock()
 {
   delete this->Indices;
+  delete this->ActiveIndices;
 }
 
 //----------------------------------------------------------------------------
@@ -85,6 +87,7 @@ void vtkExtractBlock::CopySubTree(vtkCompositeDataIterator* loc,
     vtkCompositeDataSet* coutput = vtkCompositeDataSet::SafeDownCast(
       output->GetDataSet(loc));
     vtkCompositeDataIterator* iter = cinput->NewIterator();
+    iter->VisitOnlyLeavesOff();
     for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
       {
       vtkDataObject* curNode = iter->GetCurrentDataObject();
@@ -92,6 +95,9 @@ void vtkExtractBlock::CopySubTree(vtkCompositeDataIterator* loc,
       clone->ShallowCopy(curNode);
       coutput->SetDataSet(iter, clone);
       clone->Delete();
+
+      this->ActiveIndices->erase(loc->GetCurrentFlatIndex() +
+        iter->GetCurrentFlatIndex());
       }
     iter->Delete();
     }
@@ -115,19 +121,27 @@ int vtkExtractBlock::RequestData(
 
   output->CopyStructure(input);
 
+  (*this->ActiveIndices) = (*this->Indices);
+
   // Copy selected blocks over to the output.
   vtkCompositeDataIterator* iter = input->NewIterator();
   iter->VisitOnlyLeavesOff();
 
-  for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
+  for (iter->InitTraversal();
+    !iter->IsDoneWithTraversal() && this->ActiveIndices->size()>0;
+    iter->GoToNextItem())
     {
-    if (this->Indices->find(iter->GetCurrentFlatIndex()) != this->Indices->end())
+    if (this->ActiveIndices->find(iter->GetCurrentFlatIndex()) !=
+      this->ActiveIndices->end())
       {
+      this->ActiveIndices->erase(iter->GetCurrentFlatIndex());
+
+      // This removed the visited indices from this->ActiveIndices.
       this->CopySubTree(iter, output, input);
-      // TODO: avoid copying if subtree has already been copied over.
       }
     }
   iter->Delete();
+  this->ActiveIndices->clear();
 
   if (!this->PruneOutput)
     {
@@ -223,7 +237,8 @@ bool vtkExtractBlock::Prune(vtkMultiBlockDataSet* mblock)
       if (!prune)
         {
         vtkMultiBlockDataSet* prunedBlock = vtkMultiBlockDataSet::SafeDownCast(block);
-        if (prunedBlock && prunedBlock->GetNumberOfBlocks()==1)
+        if (this->MaintainStructure == 0 && 
+          prunedBlock && prunedBlock->GetNumberOfBlocks()==1)
           {
           // shrink redundant branches.
           clone->SetBlock(index, prunedBlock->GetBlock(0));
@@ -255,5 +270,6 @@ void vtkExtractBlock::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   os << indent << "PruneOutput: " << this->PruneOutput << endl;
+  os << indent << "MaintainStructure: " << this->MaintainStructure << endl;
 }
 

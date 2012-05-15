@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMathematics.cxx,v $
+  Module:    vtkImageMathematics.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkImageMathematics, "$Revision: 1.56 $");
 vtkStandardNewMacro(vtkImageMathematics);
 
 //----------------------------------------------------------------------------

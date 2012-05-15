@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRowQuery.cxx,v $
+  Module:    vtkRowQuery.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <ctype.h>
 
-vtkCxxRevisionMacro(vtkRowQuery, "$Revision: 1.7 $");
 
 vtkRowQuery::vtkRowQuery()
 {

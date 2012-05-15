@@ -2,7 +2,7 @@
 /*=========================================================================
 
   Program:   ParaView
-  Module:    $RCSfile: vtkModelMetadata.cxx,v $
+  Module:    vtkModelMetadata.cxx
 
   Copyright (c) Kitware, Inc.
   All rights reserved.
@@ -32,7 +32,6 @@
 #include "vtkPointData.h"
 #include <time.h>
 
-vtkCxxRevisionMacro(vtkModelMetadata, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkModelMetadata);
 
 #include <vtkstd/set>

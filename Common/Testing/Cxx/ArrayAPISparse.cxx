@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayAPISparse.cxx,v $
+  Module:    ArrayAPISparse.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -31,7 +31,7 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayAPISparse(int argc, char* argv[])
+int ArrayAPISparse(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -63,11 +63,11 @@ int ArrayAPISparse(int argc, char* argv[])
     // Verify that the array contains all zeros ...
     {
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(int i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(int j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(int k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           test_expression(array->GetValue(vtkArrayCoordinates(i, j, k)) == 0);
           }
@@ -79,11 +79,11 @@ int ArrayAPISparse(int argc, char* argv[])
     {
     double value = 0;
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(int i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(int j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(int k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           array->AddValue(vtkArrayCoordinates(i, j, k), value++);
           }
@@ -95,11 +95,11 @@ int ArrayAPISparse(int argc, char* argv[])
     double value = 0;
     vtkIdType index = 0;
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(int i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(int j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(int k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           test_expression(array->GetValue(vtkArrayCoordinates(i, j, k)) == value);
           test_expression(array->GetValueN(index) == value);
@@ -122,12 +122,15 @@ int ArrayAPISparse(int argc, char* argv[])
     test_expression(array->GetNonNullSize() == 6);
 
     // Verify that deep-copy works correctly ...
+    array->SetNullValue(1.0);
+    
     vtkSmartPointer<vtkSparseArray<double> > deep_copy;
     deep_copy.TakeReference(vtkSparseArray<double>::SafeDownCast(array->DeepCopy()));
     test_expression(deep_copy->GetDimensions() == array->GetDimensions());
     test_expression(deep_copy->GetSize() == array->GetSize());
     test_expression(deep_copy->GetNonNullSize() == array->GetNonNullSize());
     test_expression(deep_copy->GetExtents() == array->GetExtents());
+    test_expression(deep_copy->GetNullValue() == array->GetNullValue());
     for(int n = 0; n != deep_copy->GetNonNullSize(); ++n)
       test_expression(deep_copy->GetValueN(n) == array->GetValueN(n));
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStandardPolyDataPainter.cxx,v $
+  Module:    vtkStandardPolyDataPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -65,7 +65,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkStandardPolyDataPainter, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkStandardPolyDataPainter);
 //-----------------------------------------------------------------------------
 static inline int vtkStandardPolyDataPainterGetTotalCells(vtkPolyData* pd,
@@ -349,6 +348,29 @@ void vtkStandardPolyDataPainter::DrawCells(
 
   // skip scalars if disable_scalar_color is true.
   int start_attribute = (disable_scalar_color? 1 : 0);
+
+  // get attribute mask
+  int cell_attribute_mask = 0;
+  for(int attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES;
+      attribii++)
+    {
+      if(device->IsAttributesSupported(attribii))
+        {
+          cell_attribute_mask = cell_attribute_mask | (1 << attribii);
+        }
+    }
+
+  int point_attribute_mask = 0;
+  for(int attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES;
+      attribii++)
+    {
+      if(device->IsAttributesSupported(attribii))
+        {
+          point_attribute_mask = point_attribute_mask | (1 << attribii);
+        }
+    }
+
+
   // Note that cell attributes are overridden by point attributes.
   for (connectivity->InitTraversal(); connectivity->GetNextCell(npts, pts); count++)
     {
@@ -357,9 +379,10 @@ void vtkStandardPolyDataPainter::DrawCells(
     device->BeginPrimitive(mode);
 
     // SEND CELL ATTRIBUTES
-    for (attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES; attribii++)
+    for (attribii = start_attribute; attribii < vtkCellData::NUM_ATTRIBUTES; 
+         attribii++)
       {
-      if (!device->IsAttributesSupported(attribii))
+        if (!((cell_attribute_mask >> attribii) & 1))
         {
         // skip non-renderable attributes.
         continue;
@@ -448,9 +471,10 @@ void vtkStandardPolyDataPainter::DrawCells(
       
       // SEND POINT ATTRIBUTES.
       // Send point centered attributes.
-      for (attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES; attribii++)
+      for (attribii = start_attribute; attribii < vtkPointData::NUM_ATTRIBUTES; 
+           attribii++)
         {
-        if (!device->IsAttributesSupported(attribii))
+        if (!((point_attribute_mask >> attribii) & 1))
           {
           // skip non-renderable attributes.
           continue;

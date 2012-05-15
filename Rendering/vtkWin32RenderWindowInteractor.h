@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWin32RenderWindowInteractor.h,v $
+  Module:    vtkWin32RenderWindowInteractor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,6 +29,10 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkWindows.h" // For windows API.
 
+#include "vtkTDxConfigure.h" // defines VTK_USE_TDX
+#ifdef VTK_USE_TDX
+class vtkTDxWinDevice;
+#endif
 
 class VTK_RENDERING_EXPORT vtkWin32RenderWindowInteractor : public vtkRenderWindowInteractor 
 {
@@ -37,7 +41,7 @@ public:
   // Construct object so that light follows camera motion.
   static vtkWin32RenderWindowInteractor *New();
 
-  vtkTypeRevisionMacro(vtkWin32RenderWindowInteractor,vtkRenderWindowInteractor);
+  vtkTypeMacro(vtkWin32RenderWindowInteractor,vtkRenderWindowInteractor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -98,6 +102,8 @@ public:
   virtual void OnChar       (HWND wnd, UINT nChar, UINT nRepCnt, UINT nFlags);
   virtual void OnMouseWheelForward (HWND wnd, UINT nFlags, int X, int Y);
   virtual void OnMouseWheelBackward(HWND wnd, UINT nFlags, int X, int Y);
+  virtual void OnFocus(HWND wnd, UINT nFlags);
+  virtual void OnKillFocus(HWND wnd, UINT nFlags);
   //ETX
 
   // Description:
@@ -139,6 +145,10 @@ protected:
   virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
   virtual int InternalDestroyTimer(int platformTimerId);
 
+#ifdef VTK_USE_TDX
+  vtkTDxWinDevice *Device;
+#endif
+  
 private:
   vtkWin32RenderWindowInteractor(const vtkWin32RenderWindowInteractor&);  // Not implemented.
   void operator=(const vtkWin32RenderWindowInteractor&);  // Not implemented.

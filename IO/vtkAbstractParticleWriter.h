@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractParticleWriter.h,v $
+  Module:    vtkAbstractParticleWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@
 class VTK_IO_EXPORT vtkAbstractParticleWriter : public vtkWriter
 {
 public:
-  vtkTypeRevisionMacro(vtkAbstractParticleWriter,vtkWriter);
+  vtkTypeMacro(vtkAbstractParticleWriter,vtkWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -55,6 +55,14 @@ public:
   vtkGetStringMacro(FileName);
 
   // Description:
+  // When running in parallel, this writer may be capable of 
+  // Collective IO operations (HDF5). By default, this is off.
+  vtkSetMacro(CollectiveIO,int);
+  vtkGetMacro(CollectiveIO,int);
+  void SetWriteModeToCollective();
+  void SetWriteModeToIndependent();  
+
+  // Description:
   // Close the file after a write. This is optional but
   // may protect against data loss in between steps
   virtual void CloseFile() = 0;
@@ -64,6 +72,7 @@ protected:
   ~vtkAbstractParticleWriter();
 
   virtual void WriteData() = 0; //internal method subclasses must respond to
+  int          CollectiveIO;
   int          TimeStep;
   double       TimeValue;
   char        *FileName;

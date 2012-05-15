@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaFreeTypeTextMapper.cxx,v $
+  Module:    vtkMesaFreeTypeTextMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,5 +40,4 @@
 #include "vtkOpenGLFreeTypeTextMapper.cxx"
 #undef vtkOpenGLFreeTypeTextMapper
 
-vtkCxxRevisionMacro(vtkMesaFreeTypeTextMapper, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkMesaFreeTypeTextMapper);

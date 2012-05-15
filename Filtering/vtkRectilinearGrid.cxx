@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGrid.cxx,v $
+  Module:    vtkRectilinearGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkRectilinearGrid.h"
 
 #include "vtkCellData.h"
-#include "vtkExtentTranslator.h"
 #include "vtkDoubleArray.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
@@ -31,7 +30,6 @@
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 
-vtkCxxRevisionMacro(vtkRectilinearGrid, "$Revision: 1.10 $");
 vtkStandardNewMacro(vtkRectilinearGrid);
 
 vtkCxxSetObjectMacro(vtkRectilinearGrid,XCoordinates,vtkDataArray);
@@ -73,7 +71,8 @@ vtkRectilinearGrid::vtkRectilinearGrid()
 //----------------------------------------------------------------------------
 vtkRectilinearGrid::~vtkRectilinearGrid()
 {
-  this->Initialize();
+  this->Cleanup();
+
   this->Vertex->Delete();
   this->Line->Delete();
   this->Pixel->Delete();
@@ -82,14 +81,8 @@ vtkRectilinearGrid::~vtkRectilinearGrid()
 }
 
 //----------------------------------------------------------------------------
-void vtkRectilinearGrid::Initialize()
+void vtkRectilinearGrid::Cleanup()
 {
-  this->Superclass::Initialize();
-  if(this->Information)
-    {
-  this->SetDimensions(0,0,0);
-    }
-
   if ( this->XCoordinates ) 
     {
     this->XCoordinates->UnRegister(this);
@@ -107,6 +100,19 @@ void vtkRectilinearGrid::Initialize()
     this->ZCoordinates->UnRegister(this);
     this->ZCoordinates = NULL;
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkRectilinearGrid::Initialize()
+{
+  this->Superclass::Initialize();
+
+  if(this->Information)
+    {
+    this->SetDimensions(0,0,0);
+    }
+
+  this->Cleanup();
 }
 
 //----------------------------------------------------------------------------
@@ -599,10 +605,9 @@ vtkIdType vtkRectilinearGrid::FindPoint(double x[3])
 //
 //  From this location get the point id
 //
-  return loc[2]*this->Dimensions[0]*this->Dimensions[1] +
-         loc[1]*this->Dimensions[0] + loc[0];
-  
+  return this->ComputePointId(loc);
 }
+
 vtkIdType vtkRectilinearGrid::FindCell(double x[3], vtkCell *vtkNotUsed(cell), 
                                        vtkGenericCell *vtkNotUsed(gencell),
                                        vtkIdType vtkNotUsed(cellId), 
@@ -634,8 +639,7 @@ vtkIdType vtkRectilinearGrid::FindCell(double x[3], vtkCell *vtkNotUsed(cell),
   //  From this location get the cell id
   //
   subId = 0;
-  return loc[2] * (this->Dimensions[0]-1)*(this->Dimensions[1]-1) +
-         loc[1] * (this->Dimensions[0]-1) + loc[0];
+  return this->ComputeCellId(loc);
 }
 
 //----------------------------------------------------------------------------
@@ -661,8 +665,7 @@ vtkCell *vtkRectilinearGrid::FindAndGetCell(double x[3],
   //
   // Get the cell
   //
-  cellId = loc[2] * (this->Dimensions[0]-1)*(this->Dimensions[1]-1) +
-           loc[1] * (this->Dimensions[0]-1) + loc[0];
+  cellId = this->ComputeCellId(loc);
 
   return vtkRectilinearGrid::GetCell(cellId);
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFoo.h,v $
+  Module:    vtkImageFoo.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_MY_IMAGING_EXPORT vtkImageFoo : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageFoo *New();
-  vtkTypeRevisionMacro(vtkImageFoo,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageFoo,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

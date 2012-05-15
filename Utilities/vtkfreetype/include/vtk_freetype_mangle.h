@@ -15,7 +15,9 @@ This is the way to recreate the whole list:
 
 nm bin/libvtkfreetype.a |grep " [TRD] " | awk '{ print "#define "$3" vtk_freetype_"$3 }'
 
-In fact, you must do this on all supported platforms and merge the results,
+Before using 'nm', wrap everything below in #if 0 then build.
+
+In fact, you must do this on *all* supported platforms and merge the results,
 since some symbols may be present on only some platforms.
 
 Then alphabetise the list so that future diffs/merges work better.
@@ -29,7 +31,6 @@ used when the shared library is loaded/unloaded from an executable.
 #ifndef vtk_freetype_mangle_h
 #define vtk_freetype_mangle_h
 
-#define _debug_mem_dummy vtk_freetype__debug_mem_dummy
 #define afm_parser_funcs vtk_freetype_afm_parser_funcs
 #define bdf_cmap_class vtk_freetype_bdf_cmap_class
 #define bdf_driver_class vtk_freetype_bdf_driver_class
@@ -65,8 +66,15 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Done_Library vtk_freetype_FT_Done_Library
 #define FT_Done_Memory vtk_freetype_FT_Done_Memory
 #define FT_Done_Size vtk_freetype_FT_Done_Size
+#define FT_Face_GetCharsOfVariant vtk_freetype_FT_Face_GetCharsOfVariant
+#define FT_Face_GetCharVariantIndex vtk_freetype_FT_Face_GetCharVariantIndex
+#define FT_Face_GetCharVariantIsDefault vtk_freetype_FT_Face_GetCharVariantIsDefault
+#define FT_Face_GetVariantSelectors vtk_freetype_FT_Face_GetVariantSelectors
+#define FT_Face_GetVariantsOfChar vtk_freetype_FT_Face_GetVariantsOfChar
 #define FT_FloorFix vtk_freetype_FT_FloorFix
 #define FT_Free vtk_freetype_FT_Free
+#define FT_Get_Advance vtk_freetype_FT_Get_Advance
+#define FT_Get_Advances vtk_freetype_FT_Get_Advances
 #define FT_Get_Char_Index vtk_freetype_FT_Get_Char_Index
 #define FT_Get_Charmap_Index vtk_freetype_FT_Get_Charmap_Index
 #define FT_Get_CMap_Format vtk_freetype_FT_Get_CMap_Format
@@ -108,6 +116,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_GlyphLoader_Rewind vtk_freetype_FT_GlyphLoader_Rewind
 #define ft_glyphslot_alloc_bitmap vtk_freetype_ft_glyphslot_alloc_bitmap
 #define ft_glyphslot_free_bitmap vtk_freetype_ft_glyphslot_free_bitmap
+#define FT_GlyphSlot_Own_Bitmap vtk_freetype_FT_GlyphSlot_Own_Bitmap
 #define ft_glyphslot_set_bitmap vtk_freetype_ft_glyphslot_set_bitmap
 #define ft_grays_raster vtk_freetype_ft_grays_raster
 #define ft_highpow2 vtk_freetype_ft_highpow2
@@ -127,6 +136,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Match_Size vtk_freetype_FT_Match_Size
 #define FT_Matrix_Invert vtk_freetype_FT_Matrix_Invert
 #define FT_Matrix_Multiply vtk_freetype_FT_Matrix_Multiply
+#define FT_Matrix_Multiply_Scaled vtk_freetype_FT_Matrix_Multiply_Scaled
 #define ft_mem_alloc vtk_freetype_ft_mem_alloc
 #define ft_mem_dup vtk_freetype_ft_mem_dup
 #define ft_mem_free vtk_freetype_ft_mem_free
@@ -215,7 +225,6 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Stream_GetShortLE vtk_freetype_FT_Stream_GetShortLE
 #define FT_Stream_New vtk_freetype_FT_Stream_New
 #define FT_Stream_Open vtk_freetype_FT_Stream_Open
-#define FT_Stream_OpenGzip vtk_freetype_FT_Stream_OpenGzip
 #define FT_Stream_OpenLZW vtk_freetype_FT_Stream_OpenLZW
 #define FT_Stream_OpenMemory vtk_freetype_FT_Stream_OpenMemory
 #define FT_Stream_Pos vtk_freetype_FT_Stream_Pos
@@ -246,6 +255,7 @@ used when the shared library is loaded/unloaded from an executable.
 #define FT_Vector_Polarize vtk_freetype_FT_Vector_Polarize
 #define FT_Vector_Rotate vtk_freetype_FT_Vector_Rotate
 #define FT_Vector_Transform vtk_freetype_FT_Vector_Transform
+#define FT_Vector_Transform_Scaled vtk_freetype_FT_Vector_Transform_Scaled
 #define FT_Vector_Unit vtk_freetype_FT_Vector_Unit
 #define ftc_basic_image_cache_class vtk_freetype_ftc_basic_image_cache_class
 #define ftc_basic_image_family_class vtk_freetype_ftc_basic_image_family_class
@@ -301,6 +311,8 @@ used when the shared library is loaded/unloaded from an executable.
 #define tt_cmap0_class_rec vtk_freetype_tt_cmap0_class_rec
 #define tt_cmap10_class_rec vtk_freetype_tt_cmap10_class_rec
 #define tt_cmap12_class_rec vtk_freetype_tt_cmap12_class_rec
+#define tt_cmap13_class_rec vtk_freetype_tt_cmap13_class_rec
+#define tt_cmap14_class_rec vtk_freetype_tt_cmap14_class_rec
 #define tt_cmap2_class_rec vtk_freetype_tt_cmap2_class_rec
 #define tt_cmap4_class_rec vtk_freetype_tt_cmap4_class_rec
 #define tt_cmap6_class_rec vtk_freetype_tt_cmap6_class_rec

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWindow.cxx,v $
+  Module:    vtkWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkToolkits.h"
 
-vtkCxxRevisionMacro(vtkWindow, "$Revision: 1.30 $");
 
 //-----------------------------------------------------------------------------
 // Construct an instance of  vtkRenderWindow with its screen size 

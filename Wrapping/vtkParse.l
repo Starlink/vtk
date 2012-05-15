@@ -7,10 +7,9 @@ This file must be translated to C and modified to build everywhere.
 
 Run flex like this:
 
-  flex -olex.yy.c vtkParse.l
+  flex --nounput -olex.yy.c vtkParse.l
 
 Modify lex.yy.c:
-  - remove yyunput function
   - remove TABs
   - change yy_n_chars declarations from "int yy_n_chars;" to
     "size_t yy_n_chars;" in both the yy_buffer_state structure
@@ -219,6 +218,7 @@ Modify lex.yy.c:
 "vtkTypeMacro"         return(TypeMacro);
 "vtkTypeRevisionMacro" return(TypeMacro);
 "VTK_LEGACY"           return(VTK_LEGACY);
+"VTK_WRAP_EXTERN"      return(VTK_WRAP_EXTERN);
 "vtkTypeInt8"          return(TypeInt8);
 "vtkTypeUInt8"         return(TypeUInt8);
 "vtkTypeInt16"         return(TypeInt16);

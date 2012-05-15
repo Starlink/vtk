@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayTableToSparseArray.cxx,v $
+  Module:    ArrayTableToSparseArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -37,7 +37,7 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayTableToSparseArray(int argc, char* argv[])
+int ArrayTableToSparseArray(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -85,7 +85,8 @@ int ArrayTableToSparseArray(int argc, char* argv[])
     source->SetValueColumn("value");
     source->Update();
 
-    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(source->GetOutput()->GetArray());
+    vtkSparseArray<double>* const sparse_array = vtkSparseArray<double>::SafeDownCast(
+      source->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
     test_expression(sparse_array);
 
     cout << "sparse array:\n";

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRenderPass.h,v $
+  Module:    vtkRenderPass.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,14 +51,16 @@ class vtkRenderer;
 class VTK_RENDERING_EXPORT vtkRenderPass : public vtkObject
 {
  public:
-  vtkTypeRevisionMacro(vtkRenderPass,vtkObject);
+  vtkTypeMacro(vtkRenderPass,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //BTX
   // Description:
   // Perform rendering according to a render state \p s.
   // It modifies NumberOfRenderedProps.
   // \pre s_exists: s!=0
   virtual void Render(const vtkRenderState *s)=0;
+  //ETX
   
   // Description:
   // Number of props rendered at the last Render call.

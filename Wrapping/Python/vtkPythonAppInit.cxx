@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPythonAppInit.cxx,v $
+  Module:    vtkPythonAppInit.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,6 +52,10 @@
 
 #ifdef VTK_USE_PARALLEL
 #include "vtkParallelInstantiator.h"
+#endif
+
+#ifdef VTK_USE_CHARTS
+#include "vtkChartsInstantiator.h"
 #endif
 
 #ifdef VTK_USE_GEOVIS
@@ -202,7 +206,8 @@ static int vtkPythonAppInitDebugReport(int, char* message, int*)
 }
 void vtkPythonAppInitEnableMSVCDebugHook()
 {
-  if(getenv("DART_TEST_FROM_DART"))
+  if(getenv("DART_TEST_FROM_DART") ||
+    getenv("DASHBOARD_TEST_FROM_CTEST"))
     {
     _CrtSetReportHook(vtkPythonAppInitDebugReport);
     }

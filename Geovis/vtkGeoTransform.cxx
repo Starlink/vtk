@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoTransform.cxx,v $
+  Module:    vtkGeoTransform.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 #include "vtk_libproj4.h"
 
 vtkStandardNewMacro(vtkGeoTransform);
-vtkCxxRevisionMacro(vtkGeoTransform,"$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkGeoTransform, SourceProjection, vtkGeoProjection);
 vtkCxxSetObjectMacro(vtkGeoTransform, DestinationProjection, vtkGeoProjection);
 

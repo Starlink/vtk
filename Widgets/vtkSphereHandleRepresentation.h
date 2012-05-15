@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphereHandleRepresentation.h,v $
+  Module:    vtkSphereHandleRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkSphereHandleRepresentation,vtkHandleRepresentation);
+  vtkTypeMacro(vtkSphereHandleRepresentation,vtkHandleRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -102,6 +102,7 @@ public:
   // Description:
   // Methods to make this class behave as a vtkProp.
   virtual void ShallowCopy(vtkProp *prop);
+  virtual void DeepCopy(vtkProp *prop);
   virtual void GetActors(vtkPropCollection *);
   virtual void ReleaseGraphicsResources(vtkWindow *);
   virtual int RenderOpaqueGeometry(vtkViewport *viewport);

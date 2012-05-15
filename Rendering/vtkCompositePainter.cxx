@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositePainter.cxx,v $
+  Module:    vtkCompositePainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,6 @@
 # include "vtkOpenGL.h"
 #endif
 vtkStandardNewMacro(vtkCompositePainter);
-vtkCxxRevisionMacro(vtkCompositePainter, "$Revision: 1.2 $");
 vtkInformationKeyMacro(vtkCompositePainter, COLOR_LEAVES, Integer);
 //----------------------------------------------------------------------------
 vtkCompositePainter::vtkCompositePainter()

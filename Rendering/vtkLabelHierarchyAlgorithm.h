@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelHierarchyAlgorithm.h,v $
+  Module:    vtkLabelHierarchyAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_RENDERING_EXPORT vtkLabelHierarchyAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkLabelHierarchyAlgorithm *New();
-  vtkTypeRevisionMacro(vtkLabelHierarchyAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkLabelHierarchyAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMLWriter.cxx,v $
+  Module:    vtkXMLWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,6 +52,9 @@
 #if defined(__BORLANDC__)
 #include <ctype.h> // isalnum is defined here for some versions of Borland
 #endif
+
+#include <locale> // C++ locale
+
 
 //*****************************************************************************
 // Friend class to enable access for  template functions to the protected
@@ -211,7 +214,6 @@ int vtkXMLWriterWriteBinaryDataBlocks(vtkXMLWriter* writer,
 }
 //*****************************************************************************
 
-vtkCxxRevisionMacro(vtkXMLWriter, "$Revision: 1.74 $");
 vtkCxxSetObjectMacro(vtkXMLWriter, Compressor, vtkDataCompressor);
 //----------------------------------------------------------------------------
 vtkXMLWriter::vtkXMLWriter()
@@ -275,6 +277,33 @@ vtkXMLWriter::~vtkXMLWriter()
 
   delete this->FieldDataOM;
   delete[] this->NumberOfTimeValues;
+}
+
+//----------------------------------------------------------------------------
+void vtkXMLWriter::SetCompressorType(int compressorType)
+{
+  if (compressorType == NONE)
+    {
+    if (this->Compressor)
+      {
+      this->Compressor->Delete();
+      this->Compressor = 0;
+      this->Modified();
+      }
+    return;
+    }
+
+  if (compressorType == ZLIB)
+    {
+    if (this->Compressor && !this->Compressor->IsTypeOf("vtkZLibDataCompressor"))
+      {
+      this->Compressor->Delete();
+      }
+
+    this->Compressor = vtkZLibDataCompressor::New();
+    this->Modified();
+    return;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -616,6 +645,8 @@ int vtkXMLWriter::WriteInternal()
     return 0;
     }
 
+  (*this->Stream).imbue(vtkstd::locale::classic());
+  
   // Tell the subclass to write the data.
   int result = this->WriteData();
 
@@ -658,6 +689,8 @@ int vtkXMLWriter::StartFile()
     os << "<?xml version=\"1.0\"?>\n";
     }
 
+  os.imbue(vtkstd::locale::classic());
+  
   // Open the document-level element.  This will contain the rest of
   // the elements.
   os << "<VTKFile";

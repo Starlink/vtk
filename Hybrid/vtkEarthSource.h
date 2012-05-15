@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEarthSource.h,v $
+  Module:    vtkEarthSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_HYBRID_EXPORT vtkEarthSource : public vtkPolyDataAlgorithm
 {
 public:
   static vtkEarthSource *New();
-  vtkTypeRevisionMacro(vtkEarthSource,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkEarthSource,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

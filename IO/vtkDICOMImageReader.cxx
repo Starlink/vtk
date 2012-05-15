@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDICOMImageReader.cxx,v $
+  Module:    vtkDICOMImageReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "DICOMAppHelper.h"
 #include "DICOMParser.h"
 
-vtkCxxRevisionMacro(vtkDICOMImageReader, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkDICOMImageReader);
 
 class vtkDICOMImageReaderVector : public vtkstd::vector<vtkstd::string>
@@ -104,7 +103,7 @@ void vtkDICOMImageReader::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 int vtkDICOMImageReader::CanReadFile(const char* fname)
 {
-  bool canOpen = this->Parser->OpenFile((char*) fname);
+  bool canOpen = this->Parser->OpenFile((const char*) fname);
   if (!canOpen)
     {
     vtkErrorMacro("DICOMParser couldn't open : " << fname);
@@ -197,7 +196,7 @@ void vtkDICOMImageReader::ExecuteInformation()
          iter != this->DICOMFileNames->end();
          iter++)
       {
-      char* fn = (char*) (*iter).c_str();
+      const char* fn = iter->c_str();
       vtkDebugMacro( << "Trying : " << fn);
 
       bool couldOpen = this->Parser->OpenFile(fn);
@@ -325,7 +324,7 @@ void vtkDICOMImageReader::ExecuteData(vtkDataObject *output)
       {
       count++;
       vtkDebugMacro( << "File : " << (*fiter).c_str());
-      this->Parser->OpenFile((char*)(*fiter).c_str());
+      this->Parser->OpenFile((const char*)(*fiter).c_str());
       this->Parser->ReadHeader();
 
       void* imgData = NULL;
@@ -351,9 +350,9 @@ void vtkDICOMImageReader::ExecuteData(vtkDataObject *output)
       buffer = ((char*) buffer) + imageDataLengthInBytes;
 
       this->UpdateProgress(float(count)/float(numFiles));
-      int len = static_cast<int> (strlen((char*) (*fiter).c_str()));
+      int len = static_cast<int> (strlen((const char*) (*fiter).c_str()));
       char* filename = new char[len+1];
-      strcpy(filename, (char*) (*fiter).c_str());
+      strcpy(filename, (const char*) (*fiter).c_str());
       this->SetProgressText(filename);
       delete[] filename;
       }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataSetTessellator.h,v $
+  Module:    vtkGenericDataSetTessellator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@
 #include "vtkUnstructuredGridAlgorithm.h"
 
 class vtkPointData;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 
 class VTK_GENERIC_FILTERING_EXPORT vtkGenericDataSetTessellator : public vtkUnstructuredGridAlgorithm
 {
@@ -44,7 +44,7 @@ public:
   // Description:
   // Standard VTK methods.
   static vtkGenericDataSetTessellator *New();
-  vtkTypeRevisionMacro(vtkGenericDataSetTessellator,
+  vtkTypeMacro(vtkGenericDataSetTessellator,
                        vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -69,8 +69,8 @@ public:
   // Description:
   // Set / get a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
@@ -95,7 +95,7 @@ protected:
   vtkPointData *InternalPD;
   
   int Merging;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
   
 private:
   vtkGenericDataSetTessellator(const vtkGenericDataSetTessellator&);  // Not implemented.

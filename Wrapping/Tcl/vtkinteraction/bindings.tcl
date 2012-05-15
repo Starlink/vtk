@@ -5,7 +5,7 @@ namespace eval ::vtk {
     # -------------------------------------------------------------------
     # vtkTk(ImageViewer/Render)Widget callbacks.
     #    vtkw: Tk pathname of the widget
-    #    renwin: render window embeded in the widget
+    #    renwin: render window embedded in the widget
     #    x:      X coord, widget relative
     #    y:      X coord, widget relative
     #    w:      width of an event or update
@@ -284,7 +284,9 @@ namespace eval ::vtk {
                 $renwin SetDesiredUpdateRate [$iren GetDesiredUpdateRate]
             }
         }
-        update
+        if { ! [$renwin IsA vtkCocoaRenderWindow] } {
+          update
+        }
         $renwin Render
     }
 

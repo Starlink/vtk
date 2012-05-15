@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFreeTypeUtilities.cxx,v $
+  Module:    vtkFreeTypeUtilities.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,6 @@
 #define VTK_FTFC_DEBUG_CD 0
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkFreeTypeUtilities, "$Revision: 1.30 $");
 vtkInstantiatorNewMacro(vtkFreeTypeUtilities);
 
 //----------------------------------------------------------------------------
@@ -942,7 +941,7 @@ int vtkFreeTypeUtilities::GetBoundingBox(vtkTextProperty *tprop,
                         gindex, 
                         &glyph, 
                         vtkFreeTypeUtilities::GLYPH_REQUEST_BITMAP) ||
-        glyph->format != FT_GLYPH_FORMAT_BITMAP)
+        glyph->format != ft_glyph_format_bitmap)
       {
       continue;
       }
@@ -976,7 +975,7 @@ int vtkFreeTypeUtilities::GetBoundingBox(vtkTextProperty *tprop,
       if (face_has_kerning && previous_gindex && gindex)
         {
         FT_Get_Kerning(
-          face, previous_gindex, gindex, FT_KERNING_DEFAULT, &kerning_delta);
+          face, previous_gindex, gindex, ft_kerning_default, &kerning_delta);
         pen_x += kerning_delta.x >> 6;
         pen_y += kerning_delta.y >> 6;
         }
@@ -1182,7 +1181,7 @@ int vtkFreeTypeUtilities::PopulateImageData(vtkTextProperty *tprop,
                         gindex, 
                         &glyph, 
                         vtkFreeTypeUtilities::GLYPH_REQUEST_BITMAP) ||
-        glyph->format != FT_GLYPH_FORMAT_BITMAP)
+        glyph->format != ft_glyph_format_bitmap)
       {
       continue;
       }
@@ -1192,7 +1191,7 @@ int vtkFreeTypeUtilities::PopulateImageData(vtkTextProperty *tprop,
     bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(glyph);
     bitmap = &bitmap_glyph->bitmap;
 
-    if (bitmap->pixel_mode != FT_PIXEL_MODE_GRAY)
+    if (bitmap->pixel_mode != ft_pixel_mode_grays)
       {
       continue;
       }
@@ -1225,7 +1224,7 @@ int vtkFreeTypeUtilities::PopulateImageData(vtkTextProperty *tprop,
       if (face_has_kerning && previous_gindex && gindex)
         {
         FT_Get_Kerning(
-          face, previous_gindex, gindex, FT_KERNING_DEFAULT, &kerning_delta);
+          face, previous_gindex, gindex, ft_kerning_default, &kerning_delta);
         pen_x += kerning_delta.x >> 6;
         pen_y += kerning_delta.y >> 6;
         }

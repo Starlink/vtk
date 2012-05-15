@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWorldPointPicker.h,v $
+  Module:    vtkWorldPointPicker.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_RENDERING_EXPORT vtkWorldPointPicker : public vtkAbstractPicker
 {
 public:
   static vtkWorldPointPicker *New();
-  vtkTypeRevisionMacro(vtkWorldPointPicker,vtkAbstractPicker);
+  vtkTypeMacro(vtkWorldPointPicker,vtkAbstractPicker);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

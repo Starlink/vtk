@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInputStream.cxx,v $
+  Module:    vtkInputStream.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkInputStream.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkInputStream, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkInputStream);
 
 //----------------------------------------------------------------------------

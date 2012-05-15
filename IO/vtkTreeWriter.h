@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTreeWriter.h,v $
+  Module:    vtkTreeWriter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@ class VTK_IO_EXPORT vtkTreeWriter : public vtkDataWriter
 {
 public:
   static vtkTreeWriter *New();
-  vtkTypeRevisionMacro(vtkTreeWriter,vtkDataWriter);
+  vtkTypeMacro(vtkTreeWriter,vtkDataWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

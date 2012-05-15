@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssemblyNode.h,v $
+  Module:    vtkAssemblyNode.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -54,7 +54,7 @@ public:
   // Create an assembly node.
   static vtkAssemblyNode *New();
 
-  vtkTypeRevisionMacro(vtkAssemblyNode,vtkObject);
+  vtkTypeMacro(vtkAssemblyNode,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

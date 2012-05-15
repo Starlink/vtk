@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPerlinNoise.cxx,v $
+  Module:    vtkPerlinNoise.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkPerlinNoise, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPerlinNoise);
 
 // These functions are from Greg Ward's recursive implementation in 

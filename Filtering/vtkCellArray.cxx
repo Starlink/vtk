@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellArray.cxx,v $
+  Module:    vtkCellArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkCellArray.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkCellArray, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCellArray);
 
 //----------------------------------------------------------------------------
@@ -48,6 +47,14 @@ vtkCellArray::~vtkCellArray()
   this->Ia->Delete();
 }
 
+//----------------------------------------------------------------------------
+void vtkCellArray::Initialize() 
+{
+  this->Ia->Initialize();
+  this->NumberOfCells = 0;
+  this->InsertLocation = 0;
+  this->TraversalLocation = 0;
+}
 
 //----------------------------------------------------------------------------
 // Returns the size of the largest cell. The size is the number of points

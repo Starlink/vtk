@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayCalculator.h,v $
+  Module:    vtkArrayCalculator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -71,7 +71,7 @@ class vtkFunctionParser;
 class VTK_GRAPHICS_EXPORT vtkArrayCalculator : public vtkDataSetAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkArrayCalculator,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkArrayCalculator,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkArrayCalculator *New();
@@ -206,32 +206,31 @@ protected:
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   
-  char* Function;
-  char* ResultArrayName;
-  char** ScalarArrayNames;
-  char** VectorArrayNames;
-  char** ScalarVariableNames;
-  char** VectorVariableNames;
-  int NumberOfScalarArrays;
-  int NumberOfVectorArrays;
-  int AttributeMode;
-  int* SelectedScalarComponents;
-  int** SelectedVectorComponents;
+  char  * Function;
+  char  * ResultArrayName;
+  char ** ScalarArrayNames;
+  char ** VectorArrayNames;
+  char ** ScalarVariableNames;
+  char ** VectorVariableNames;
+  int     NumberOfScalarArrays;
+  int     NumberOfVectorArrays;
+  int     AttributeMode;
+  int   * SelectedScalarComponents;
+  int  ** SelectedVectorComponents;
   vtkFunctionParser* FunctionParser;
 
-  int ReplaceInvalidValues;
-  double ReplacementValue;
+  int     ReplaceInvalidValues;
+  double  ReplacementValue;
   
-  int CoordinateResults;
-  char** CoordinateScalarVariableNames;
-  char** CoordinateVectorVariableNames;
-  int* SelectedCoordinateScalarComponents;
-  int** SelectedCoordinateVectorComponents;
-  int NumberOfCoordinateScalarArrays;
-  int NumberOfCoordinateVectorArrays;
+  int     CoordinateResults;
+  char ** CoordinateScalarVariableNames;
+  char ** CoordinateVectorVariableNames;
+  int   * SelectedCoordinateScalarComponents;
+  int  ** SelectedCoordinateVectorComponents;
+  int     NumberOfCoordinateScalarArrays;
+  int     NumberOfCoordinateVectorArrays;
 
-  int ResultArrayType;
-
+  int     ResultArrayType;
 private:
   vtkArrayCalculator(const vtkArrayCalculator&);  // Not implemented.
   void operator=(const vtkArrayCalculator&);  // Not implemented.

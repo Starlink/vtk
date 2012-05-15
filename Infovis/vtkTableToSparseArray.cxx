@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToSparseArray.cxx,v $
+  Module:    vtkTableToSparseArray.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -43,7 +43,6 @@ public:
 
 // ----------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkTableToSparseArray, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkTableToSparseArray);
 
 // ----------------------------------------------------------------------
@@ -67,7 +66,7 @@ vtkTableToSparseArray::~vtkTableToSparseArray()
 void vtkTableToSparseArray::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
-  for(vtkIdType i = 0; i != this->Implementation->Coordinates.size(); ++i)
+  for(size_t i = 0; i != this->Implementation->Coordinates.size(); ++i)
     os << indent << "CoordinateColumn: " << this->Implementation->Coordinates[i] << endl;
   os << indent << "ValueColumn: " << this->Implementation->Values << endl;
 }
@@ -129,7 +128,7 @@ int vtkTableToSparseArray::RequestData(
   vtkTable* const table = vtkTable::GetData(inputVector[0]);
 
   vtkstd::vector<vtkAbstractArray*> coordinates(this->Implementation->Coordinates.size());
-  for(vtkIdType i = 0; i != this->Implementation->Coordinates.size(); ++i)
+  for(size_t i = 0; i != this->Implementation->Coordinates.size(); ++i)
     {
     coordinates[i] = table->GetColumnByName(this->Implementation->Coordinates[i].c_str());
     if(!coordinates[i])
@@ -137,8 +136,16 @@ int vtkTableToSparseArray::RequestData(
       vtkErrorMacro(<< "missing coordinate array: " << this->Implementation->Coordinates[i].c_str());
       }
     }
-
-  if(vtkstd::count(coordinates.begin(), coordinates.end(), static_cast<vtkAbstractArray*>(0)))
+// See http://developers.sun.com/solaris/articles/cmp_stlport_libCstd.html
+// Language Feature: Partial Specializations
+// Workaround
+  int n=0;
+#ifdef _RWSTD_NO_CLASS_PARTIAL_SPEC
+  vtkstd::count(coordinates.begin(), coordinates.end(), static_cast<vtkAbstractArray*>(0),n);
+#else
+  n=vtkstd::count(coordinates.begin(), coordinates.end(), static_cast<vtkAbstractArray*>(0));
+#endif
+  if(n!=0)
     {
     return 0;
     }
@@ -153,24 +160,25 @@ int vtkTableToSparseArray::RequestData(
   vtkSparseArray<double>* const array = vtkSparseArray<double>::New();
   array->Resize(vtkArrayExtents::Uniform(coordinates.size(), 0));
 
-  for(vtkIdType i = 0; i != coordinates.size(); ++i)
+  for(size_t i = 0; i != coordinates.size(); ++i)
     array->SetDimensionLabel(i, coordinates[i]->GetName());
 
   vtkArrayCoordinates output_coordinates;
   output_coordinates.SetDimensions(coordinates.size());
   for(vtkIdType i = 0; i != table->GetNumberOfRows(); ++i)
     {
-    for(vtkIdType j = 0; j != coordinates.size(); ++j)
+    for(size_t j = 0; j != coordinates.size(); ++j)
       {
       output_coordinates[j] = coordinates[j]->GetVariantValue(i).ToInt();
       }
     array->AddValue(output_coordinates, values->GetVariantValue(i).ToDouble());
     }
 
-  array->ResizeToContents();
+  array->SetExtentsFromContents();
 
   vtkArrayData* const output = vtkArrayData::GetData(outputVector);
-  output->SetArray(array);
+  output->ClearArrays();
+  output->AddArray(array);
   array->Delete();
 
   return 1;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPiecewiseFunctionAlgorithm.cxx,v $
+  Module:    vtkPiecewiseFunctionAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkPiecewiseFunctionAlgorithm, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkPiecewiseFunctionAlgorithm);
 
 //----------------------------------------------------------------------------

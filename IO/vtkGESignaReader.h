@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGESignaReader.h,v $
+  Module:    vtkGESignaReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IO_EXPORT vtkGESignaReader : public vtkMedicalImageReader2
 {
 public:
   static vtkGESignaReader *New();
-  vtkTypeRevisionMacro(vtkGESignaReader,vtkMedicalImageReader2);
+  vtkTypeMacro(vtkGESignaReader,vtkMedicalImageReader2);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

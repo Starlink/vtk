@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLShortestPaths.cxx,v $
+  Module:    vtkPBGLShortestPaths.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -47,16 +47,17 @@
 #include "vtkUndirectedGraph.h"
 #include "vtkVertexListIterator.h"
 
+#include <boost/graph/use_mpi.hpp>
+
 #include <boost/graph/distributed/delta_stepping_shortest_paths.hpp>
-#include <boost/parallel/algorithm.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/graph/parallel/algorithm.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkPBGLShortestPaths, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPBGLShortestPaths);
 
 // Function object used to reduce (vertex, distance) pairs to find
@@ -201,7 +202,7 @@ int vtkPBGLShortestPaths::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
       inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageGradient.cxx,v $
+  Module:    vtkImageGradient.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include <math.h>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkImageGradient, "$Revision: 1.57 $");
 vtkStandardNewMacro(vtkImageGradient);
 
 //----------------------------------------------------------------------------

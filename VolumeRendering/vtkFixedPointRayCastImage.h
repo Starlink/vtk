@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFixedPointRayCastImage.h,v $
+  Module:    vtkFixedPointRayCastImage.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkFixedPointRayCastImage : public vtkObject
 {
 public:
   static vtkFixedPointRayCastImage *New();
-  vtkTypeRevisionMacro(vtkFixedPointRayCastImage,vtkObject);
+  vtkTypeMacro(vtkFixedPointRayCastImage,vtkObject);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

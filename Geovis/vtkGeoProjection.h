@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoProjection.h,v $
+  Module:    vtkGeoProjection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_GEOVIS_EXPORT vtkGeoProjection : public vtkObject
 public:
   static vtkGeoProjection* New();
   virtual void PrintSelf( ostream& os, vtkIndent indent );
-  vtkTypeRevisionMacro(vtkGeoProjection,vtkObject);
+  vtkTypeMacro(vtkGeoProjection,vtkObject);
 
   // Description:
   // Returns the number of projections that this class offers.

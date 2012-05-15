@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkConditionVariable.h,v $
+  Module:    vtkConditionVariable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -141,7 +141,7 @@ class VTK_COMMON_EXPORT vtkConditionVariable : public vtkObject
 {
 public:
   static vtkConditionVariable* New();
-  vtkTypeRevisionMacro(vtkConditionVariable,vtkObject);
+  vtkTypeMacro(vtkConditionVariable,vtkObject);
   void PrintSelf( ostream& os, vtkIndent indent );
   
   // Description:

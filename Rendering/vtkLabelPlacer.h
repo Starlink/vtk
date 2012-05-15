@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelPlacer.h,v $
+  Module:    vtkLabelPlacer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,6 +20,9 @@
 // .NAME vtkLabelPlacer - place a prioritized hierarchy of labels in screen space
 //
 // .SECTION Description
+// <b>This class is deprecated and will be removed from VTK in a future
+// release. Use vtkLabelPlacementMapper instead.</b>
+//
 // This should probably be a mapper unto itself (given that
 // the polydata output could be large and will realistically
 // always be iterated over exactly once before being tossed
@@ -40,12 +43,13 @@
 
 class vtkRenderer;
 class vtkCoordinate;
+class vtkSelectVisiblePoints;
 
 class VTK_RENDERING_EXPORT vtkLabelPlacer : public vtkPolyDataAlgorithm
 {
 public:
   static vtkLabelPlacer* New();
-  vtkTypeRevisionMacro(vtkLabelPlacer,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkLabelPlacer,vtkPolyDataAlgorithm);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
 
   vtkGetObjectMacro(Renderer,vtkRenderer);
@@ -92,9 +96,14 @@ public:
     };
   //ETX
 
+  // Description:
+  // The placement of the label relative to the anchor point.
   virtual void SetGravity( int gravity );
   vtkGetMacro(Gravity,int);
 
+  // Description:
+  // The maximum amount of screen space labels can take up before placement
+  // terminates.
   vtkSetClampMacro(MaximumLabelFraction,double,0.,1.);
   vtkGetMacro(MaximumLabelFraction,double);
 
@@ -103,6 +112,12 @@ public:
   // May be vtkLabelHierarchy::FRUSTUM or vtkLabelHierarchy::FULL_SORT.
   vtkSetMacro(IteratorType,int);
   vtkGetMacro(IteratorType,int);
+
+  // Description:
+  // Set whether, or not, to use unicode strings.
+  vtkSetMacro(UseUnicodeStrings,bool);
+  vtkGetMacro(UseUnicodeStrings,bool);
+  vtkBooleanMacro(UseUnicodeStrings,bool);
 
   virtual unsigned long GetMTime();
 
@@ -120,6 +135,13 @@ public:
   vtkGetMacro(GeneratePerturbedLabelSpokes,bool);
   vtkSetMacro(GeneratePerturbedLabelSpokes,bool);
   vtkBooleanMacro(GeneratePerturbedLabelSpokes,bool);
+
+  // Description:
+  // Use the depth buffer to test each label to see if it should not be displayed if
+  // it would be occluded by other objects in the scene. Off by default.
+  vtkGetMacro(UseDepthBuffer,bool);
+  vtkSetMacro(UseDepthBuffer,bool);
+  vtkBooleanMacro(UseDepthBuffer,bool);
 
   // Description:
   // In the second output, output the geometry of the traversed octree nodes.
@@ -152,11 +174,14 @@ protected:
 
   vtkRenderer* Renderer;
   vtkCoordinate* AnchorTransform;
+  vtkSelectVisiblePoints* VisiblePoints;
   int Gravity;
   double MaximumLabelFraction;
   bool PositionsAsNormals;
   bool OutputTraversedBounds;
   bool GeneratePerturbedLabelSpokes;
+  bool UseDepthBuffer;
+  bool UseUnicodeStrings;
 
   int LastRendererSize[2];
   double LastCameraPosition[3];
@@ -165,7 +190,7 @@ protected:
   double LastCameraParallelScale;
   int IteratorType;
   int OutputCoordinateSystem;
-
+  
 private:
   vtkLabelPlacer( const vtkLabelPlacer& ); // Not implemented.
   void operator = ( const vtkLabelPlacer& ); // Not implemented.

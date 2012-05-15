@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLineRepresentation.h,v $
+  Module:    vtkLineRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -61,7 +61,7 @@ public:
 
   // Description:
   // Standard methods for the class.
-  vtkTypeRevisionMacro(vtkLineRepresentation,vtkWidgetRepresentation);
+  vtkTypeMacro(vtkLineRepresentation,vtkWidgetRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -105,6 +105,12 @@ public:
   vtkGetObjectMacro(EndPointProperty,vtkProperty);
   vtkGetObjectMacro(SelectedEndPointProperty,vtkProperty);
 
+  // Description:
+  // Get the end-point (sphere) properties. The properties of the end-points 
+  // when selected and unselected can be manipulated.
+  vtkGetObjectMacro(EndPoint2Property,vtkProperty);
+  vtkGetObjectMacro(SelectedEndPoint2Property,vtkProperty);
+  
   // Description:
   // Get the line properties. The properties of the line when selected
   // and unselected can be manipulated.
@@ -202,6 +208,20 @@ public:
   // Get the distance between the points.
   double GetDistance();
   
+
+  // Description:
+  // Convenience method to set the line color.
+  // Ideally one should use GetLineProperty()->SetColor().
+  void SetLineColor(double r, double g, double b);
+
+  // Description:
+  // Get the distance annotation property
+  virtual vtkProperty *GetDistanceAnnotationProperty();
+
+  // Description:
+  // Get the text actor
+  vtkGetObjectMacro(TextActor, vtkFollower);
+
 protected:
   vtkLineRepresentation();
   ~vtkLineRepresentation();
@@ -229,6 +249,8 @@ protected:
   // the manipulator in general.
   vtkProperty *EndPointProperty;
   vtkProperty *SelectedEndPointProperty;
+  vtkProperty *EndPoint2Property;
+  vtkProperty *SelectedEndPoint2Property;
   vtkProperty *LineProperty;
   vtkProperty *SelectedLineProperty;
   void         CreateDefaultProperties();

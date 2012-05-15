@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationIterator.cxx,v $
+  Module:    vtkInformationIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,16 +19,21 @@
 #include "vtkInformationKey.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkInformationIterator, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkInformationIterator);
 
 vtkCxxSetObjectMacro(vtkInformationIterator, Information, vtkInformation);
 
+class vtkInformationIteratorInternals
+{
+public:
+  vtkInformationInternals::MapType::iterator Iterator;
+};
+
 //----------------------------------------------------------------------------
 vtkInformationIterator::vtkInformationIterator()
 {
+  this->Internal = new vtkInformationIteratorInternals;
   this->Information = 0;
-  this->Index = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -38,6 +43,7 @@ vtkInformationIterator::~vtkInformationIterator()
     {
     this->Information->Delete();
     }
+  delete this->Internal;
 }
 
 //----------------------------------------------------------------------------
@@ -48,18 +54,7 @@ void vtkInformationIterator::GoToFirstItem()
     vtkErrorMacro("No information has been set.");
     return;
     }
-  this->Index = 0;
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  unsigned short tableSize = this->Information->Internal->TableSize;
-  if (!keys)
-    {
-    return;
-    }
-
-  while(this->Index < tableSize && !keys[this->Index])
-    {
-    this->Index++;
-    }
+  this->Internal->Iterator = this->Information->Internal->Map.begin();
 }
 
 //----------------------------------------------------------------------------
@@ -71,14 +66,7 @@ void vtkInformationIterator::GoToNextItem()
     return;
     }
 
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  unsigned short tableSize = this->Information->Internal->TableSize;
-
-  this->Index++;
-  while(this->Index < tableSize && !keys[this->Index])
-    {
-    this->Index++;
-    }
+  ++this->Internal->Iterator;
 }
 
 //----------------------------------------------------------------------------
@@ -90,11 +78,10 @@ int vtkInformationIterator::IsDoneWithTraversal()
     return 1;
     }
 
-  if (this->Index >= this->Information->Internal->TableSize)
+  if(this->Internal->Iterator == this->Information->Internal->Map.end())
     {
     return 1;
     }
-
   return 0;
 }
 
@@ -106,8 +93,7 @@ vtkInformationKey* vtkInformationIterator::GetCurrentKey()
     return 0;
     }
 
-  vtkInformationKey** keys = this->Information->Internal->Keys;
-  return keys[this->Index];
+  return this->Internal->Iterator->first;
 }
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPSphereSource.h,v $
+  Module:    vtkPSphereSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,7 @@
 class VTK_PARALLEL_EXPORT vtkPSphereSource : public vtkSphereSource
 {
 public:
-  vtkTypeRevisionMacro(vtkPSphereSource,vtkSphereSource);
+  vtkTypeMacro(vtkPSphereSource,vtkSphereSource);
 
   // Description:
   // Construct sphere with radius=0.5 and default resolution 8 in both Phi

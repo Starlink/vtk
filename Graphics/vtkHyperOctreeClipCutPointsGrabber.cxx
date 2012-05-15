@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeClipCutPointsGrabber.cxx,v $
+  Module:    vtkHyperOctreeClipCutPointsGrabber.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <assert.h>
 #include "vtkPoints.h"
 
-vtkCxxRevisionMacro(vtkHyperOctreeClipCutPointsGrabber, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkHyperOctreeClipCutPointsGrabber);
 
 class vtkHyperOctreeIdSet // Pimpl idiom

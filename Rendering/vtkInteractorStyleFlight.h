@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleFlight.h,v $
+  Module:    vtkInteractorStyleFlight.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -44,7 +44,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleFlight : public vtkInteractorStyle
 {
 public:
   static vtkInteractorStyleFlight *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleFlight,vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleFlight,vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

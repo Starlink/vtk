@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayAPIDense.cxx,v $
+  Module:    ArrayAPIDense.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -30,13 +30,13 @@
 { \
   if(!(expression)) \
     { \
-    vtkstd::ostringstream buffer; \
+    vtksys_ios::ostringstream buffer; \
     buffer << "Expression failed at line " << __LINE__ << ": " << #expression; \
     throw vtkstd::runtime_error(buffer.str()); \
     } \
 }
 
-int ArrayAPIDense(int argc, char* argv[])
+int ArrayAPIDense(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -60,21 +60,23 @@ int ArrayAPIDense(int argc, char* argv[])
 
     // Resize the array and verify that everything adds-up ...
     array->Resize(vtkArrayExtents(1, 2, 3));
+    array->Print(std::cout);
     test_expression(array->GetDimensions() == 3);
     test_expression(array->GetSize() == 6);
     test_expression(array->GetNonNullSize() == 6);
     test_expression(array->GetExtents() == vtkArrayExtents(1, 2, 3));
 
-    // Verify that the array contains all zeros ...
+    // Initialize the array to zero and verify that the array contains all zeros ...
     {
+    array->Fill(0.0);
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(vtkIdType i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(vtkIdType j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(vtkIdType k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
-          test_expression(array->GetValue(vtkArrayCoordinates(i, j, k)) == 0);
+          test_expression(array->GetValue(vtkArrayCoordinates(i, j, k)) == 0.0);
           }
         }
       }
@@ -84,11 +86,11 @@ int ArrayAPIDense(int argc, char* argv[])
     {
     double value = 0;
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(vtkIdType i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(vtkIdType j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(vtkIdType k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           array->SetValue(vtkArrayCoordinates(i, j, k), value++);
           }
@@ -100,11 +102,11 @@ int ArrayAPIDense(int argc, char* argv[])
     double value = 0;
     vtkIdType index = 0;
     const vtkArrayExtents extents = array->GetExtents();
-    for(int i = 0; i != extents[0]; ++i)
+    for(vtkIdType i = extents[0].GetBegin(); i != extents[0].GetEnd(); ++i)
       {
-      for(int j = 0; j != extents[1]; ++j)
+      for(vtkIdType j = extents[1].GetBegin(); j != extents[1].GetEnd(); ++j)
         {
-        for(int k = 0; k != extents[2]; ++k)
+        for(vtkIdType k = extents[2].GetBegin(); k != extents[2].GetEnd(); ++k)
           {
           test_expression(array->GetValue(vtkArrayCoordinates(i, j, k)) == value);
 
@@ -122,7 +124,7 @@ int ArrayAPIDense(int argc, char* argv[])
     array->Fill(19700827);
 
     // Test unordered access ...
-    for(int n = 0; n != array->GetNonNullSize(); ++n)
+    for(vtkIdType n = 0; n != array->GetNonNullSize(); ++n)
       test_expression(array->GetValueN(n) == 19700827);
    
     // Verify that deep-copy works correctly ...
@@ -132,7 +134,7 @@ int ArrayAPIDense(int argc, char* argv[])
     test_expression(deep_copy->GetSize() == array->GetSize());
     test_expression(deep_copy->GetNonNullSize() == array->GetNonNullSize());
     test_expression(deep_copy->GetExtents() == array->GetExtents());
-    for(int n = 0; n != deep_copy->GetNonNullSize(); ++n)
+    for(vtkIdType n = 0; n != deep_copy->GetNonNullSize(); ++n)
       test_expression(deep_copy->GetValueN(n) == 19700827);
 
     // Verify that data is organized in fortran-order ...
@@ -143,6 +145,17 @@ int ArrayAPIDense(int argc, char* argv[])
     test_expression(array->GetStorage()[0] == 2);
     test_expression(array->GetStorage()[1] == 4);
     test_expression(array->GetStorage()[2] == 6);
+
+    // Verify that external storage works correctly ...
+    double a[] = { 7, 8, 9 };
+    double b[] = { 5, 6, 7, 8 };
+    array->ExternalStorage(vtkArrayExtents(3), new vtkDenseArray<double>::StaticMemoryBlock(a));
+    test_expression(array->GetValue(0) == 7);
+    test_expression(array->GetValue(2) == 9);
+
+    array->ExternalStorage(vtkArrayExtents(2, 2), new vtkDenseArray<double>::StaticMemoryBlock(b));
+    test_expression(array->GetValue(0, 0) == 5);
+    test_expression(array->GetValue(1, 0) == 6);
     
     return 0;
     }

@@ -3,8 +3,13 @@ SET(UKIT GRAPHICS)
 SET(KIT_TCL_LIBS vtkFilteringTCL)
 SET(KIT_PYTHON_LIBS vtkFilteringPythonD)
 SET(KIT_JAVA_LIBS vtkFilteringJava)
-SET(KIT_LIBS vtkFiltering vtkverdict )
+IF(JAVA_AWT_LIBRARY)
+  SET(KIT_JAVA_LIBS ${KIT_JAVA_LIBS} ${JAVA_AWT_LIBRARY} ${JAVA_JVM_LIBRARY})
+ENDIF(JAVA_AWT_LIBRARY)
+SET(KIT_INTERFACE_LIBRARIES vtkFiltering)
+SET(KIT_LIBS vtkverdict )
 SET( Kit_SRCS
+vtkAnnotationLink.cxx
 vtkAppendCompositeDataLeaves.cxx
 vtkAppendFilter.cxx
 vtkAppendPolyData.cxx
@@ -31,7 +36,9 @@ vtkCleanPolyData.cxx
 vtkClipDataSet.cxx
 vtkClipHyperOctree.cxx
 vtkClipPolyData.cxx
+vtkClipConvexPolyData.cxx
 vtkClipVolume.cxx
+vtkCoincidentPoints.cxx
 vtkCompositeDataGeometryFilter.cxx
 vtkCompositeDataProbeFilter.cxx
 vtkConeSource.cxx
@@ -49,6 +56,8 @@ vtkDashedStreamLine.cxx
 vtkDataObjectGenerator.cxx
 vtkDataObjectToDataSetFilter.cxx
 vtkDataSetEdgeSubdivisionCriterion.cxx
+vtkDataSetGradient.cxx
+vtkDataSetGradientPrecompute.cxx
 vtkDataSetSurfaceFilter.cxx
 vtkDataSetToDataObjectFilter.cxx
 vtkDataSetTriangleFilter.cxx
@@ -56,6 +65,7 @@ vtkDecimatePolylineFilter.cxx
 vtkDecimatePro.cxx
 vtkDelaunay2D.cxx
 vtkDelaunay3D.cxx
+vtkDensifyPolyData.cxx
 vtkDicer.cxx
 vtkDijkstraGraphGeodesicPath.cxx
 vtkDijkstraImageGeodesicPath.cxx
@@ -76,13 +86,14 @@ vtkExtractGrid.cxx
 vtkExtractLevel.cxx
 vtkExtractPolyDataGeometry.cxx
 vtkExtractRectilinearGrid.cxx
-vtkExtractSelectionBase.cxx
 vtkExtractSelectedBlock.cxx
 vtkExtractSelectedFrustum.cxx
 vtkExtractSelectedIds.cxx
 vtkExtractSelectedLocations.cxx
 vtkExtractSelectedPolyDataIds.cxx
+vtkExtractSelectedRows.cxx
 vtkExtractSelectedThresholds.cxx
+vtkExtractSelectionBase.cxx
 vtkExtractSelection.cxx
 vtkExtractTemporalFieldData.cxx
 vtkExtractTensorComponents.cxx
@@ -100,6 +111,8 @@ vtkGlyphSource2D.cxx
 vtkGradientFilter.cxx
 vtkGraphGeodesicPath.cxx
 vtkGraphLayoutFilter.cxx
+vtkGraphToPoints.cxx
+vtkGraphToPolyData.cxx
 vtkGridSynchronizedTemplates3D.cxx
 vtkHedgeHog.cxx
 vtkHierarchicalDataExtractDataSets.cxx
@@ -173,7 +186,6 @@ vtkProgrammableSource.cxx
 vtkProjectedTexture.cxx
 vtkQuadraturePointInterpolator.cxx
 vtkQuadraturePointsGenerator.cxx
-vtkQuadraturePointStatistics.cxx
 vtkQuadratureSchemeDictionaryGenerator.cxx
 vtkQuadricClustering.cxx
 vtkQuadricDecimation.cxx
@@ -195,7 +207,6 @@ vtkRotationFilter.cxx
 vtkRuledSurfaceFilter.cxx
 vtkSectorSource.cxx
 vtkSelectEnclosedPoints.cxx
-vtkSelectionLink.cxx
 vtkSelectionSource.cxx
 vtkSelectPolyData.cxx
 vtkShrinkFilter.cxx
@@ -225,12 +236,14 @@ vtkSuperquadricSource.cxx
 vtkSynchronizedTemplates2D.cxx
 vtkSynchronizedTemplates3D.cxx
 vtkSynchronizedTemplatesCutter3D.cxx
+vtkTableBasedClipDataSet.cxx
 vtkTableToPolyData.cxx
 vtkTableToStructuredGrid.cxx
 vtkTemporalPathLineFilter.cxx
 vtkTemporalStatistics.cxx
 vtkTensorGlyph.cxx
 vtkTessellatorFilter.cxx
+vtkTessellatedBoxSource.cxx
 vtkTextSource.cxx
 vtkTexturedSphereSource.cxx
 vtkTextureMapToCylinder.cxx
@@ -258,6 +271,7 @@ vtkWarpScalar.cxx
 vtkWarpTo.cxx
 vtkWarpVector.cxx
 vtkWindowedSincPolyDataFilter.cxx
+vtkYoungsMaterialInterface.cxx
 )
 SET_SOURCE_FILES_PROPERTIES(
 vtkApproximatingSubdivisionFilter
@@ -271,11 +285,52 @@ vtkInterpolatingSubdivisionFilter
 vtkStreamer
 ABSTRACT
 )
+
+# Add Matlab Engine and Matlab Mex related files.
+IF(VTK_USE_MATLAB_MEX)
+  INCLUDE(${MATLAB_MEX_USE_FILE})
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkMatlabMexAdapter.cxx
+    vtkMatlabEngineInterface.cxx
+    vtkMatlabEngineFilter.cxx
+  )
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkMatlabMexAdapter.cxx
+    WRAP_EXCLUDE
+  )
+  SET(KIT_LIBS ${KIT_LIBS} ${MEX_LIBRARIES} ${MATLAB_ENGINE_LIBRARIES})
+ENDIF(VTK_USE_MATLAB_MEX)
+
+# Add Gnu R interface related files.
+IF(VTK_USE_GNU_R)
+  SET(Kit_SRCS
+    ${Kit_SRCS}
+    vtkRRandomTableSource.cxx
+    vtkRCalculatorFilter.cxx
+    vtkRInterface.cxx
+    vtkRAdapter.cxx
+  )
+  SET_SOURCE_FILES_PROPERTIES(
+    vtkRAdapter.cxx
+    WRAP_EXCLUDE
+  )
+
+  SET(KIT_LIBS ${KIT_LIBS} ${R_LIBRARIES})
+
+ENDIF(VTK_USE_GNU_R)
+
 SET(Kit_EXTRA_SRCS)
 SET(Kit_EXTRA_CMDS)
 SET(Kit_TCL_EXTRA_SRCS)
 SET(Kit_PYTHON_EXTRA_SRCS)
-SET(Kit_JAVA_EXTRA_SRCS)
+SET(Kit_JAVA_EXTRA_WRAP_SRCS
+  vtkJavaProgrammableFilter.cxx
+  )
+SET(Kit_JAVA_EXTRA_SRCS
+  ${Kit_JAVA_EXTRA_WRAP_SRCS}
+  vtkJVMManager.cxx
+  )
 SET(KIT_TCL_DEPS)
 SET(KIT_PYTHON_DEPS)
 SET(KIT_JAVA_DEPS)

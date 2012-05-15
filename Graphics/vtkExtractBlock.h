@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractBlock.h,v $
+  Module:    vtkExtractBlock.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractBlock : public vtkMultiBlockDataSetAlgorithm
 {
 public:
   static vtkExtractBlock* New();
-  vtkTypeRevisionMacro(vtkExtractBlock, vtkMultiBlockDataSetAlgorithm);
+  vtkTypeMacro(vtkExtractBlock, vtkMultiBlockDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -53,6 +53,15 @@ public:
   vtkSetMacro(PruneOutput, int);
   vtkGetMacro(PruneOutput, int);
   vtkBooleanMacro(PruneOutput, int);
+
+  // Description:
+  // This is used only when PruneOutput is ON. By default, when pruning the
+  // output i.e. remove empty blocks, if node has only 1 non-null child block,
+  // then that node is removed. To preserve these parent nodes, set this flag to
+  // true. Off by default.
+  vtkSetMacro(MaintainStructure, int);
+  vtkGetMacro(MaintainStructure, int);
+  vtkBooleanMacro(MaintainStructure, int);
 
 //BTX
 protected:
@@ -77,12 +86,14 @@ protected:
   bool Prune(vtkDataObject* mblock);
 
   int PruneOutput;
+  int MaintainStructure;
 private:
   vtkExtractBlock(const vtkExtractBlock&); // Not implemented.
   void operator=(const vtkExtractBlock&); // Not implemented.
 
   class vtkSet;
   vtkSet *Indices;
+  vtkSet *ActiveIndices;
 //ETX
 };
 

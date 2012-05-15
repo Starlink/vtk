@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPainterPolyDataMapper.cxx,v $
+  Module:    vtkPainterPolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,7 +39,6 @@
 #include "vtkgl.h"
 
 vtkStandardNewMacro(vtkPainterPolyDataMapper);
-vtkCxxRevisionMacro(vtkPainterPolyDataMapper, "$Revision: 1.22 $")
 //-----------------------------------------------------------------------------
 class vtkPainterPolyDataMapperObserver : public vtkCommand
 {
@@ -402,7 +401,13 @@ double* vtkPainterPolyDataMapper::GetBounds()
     vtkPainter *painter = this->GetPainter();
 
     if (painter)
-      {
+      {  
+      // Update Painter information if obsolete.
+      if (this->PainterUpdateTime < this->GetMTime())
+        {
+        this->UpdatePainterInformation();
+        this->PainterUpdateTime.Modified();
+        }
       painter->UpdateBounds(this->Bounds);
       }
 

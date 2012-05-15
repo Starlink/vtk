@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCellTypes.cxx,v $
+  Module:    vtkCellTypes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 #include "vtkCellTypes.h"
 #include "vtkObjectFactory.h"  
 
-vtkCxxRevisionMacro(vtkCellTypes, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkCellTypes);
 
 // This list should contain the cell class names in
@@ -56,8 +55,8 @@ static const char* vtkCellTypesStrings[] = {
   "vtkQuadraticLinearWedge",
   "vtkBiquadraticQuadraticWedge",
   "vtkBiquadraticQuadraticHexahedron",
-  "UnknownClass",
-  "UnknownClass",
+  "vtkBiQuadraticTriangle",
+  "vtkCubicLine",
   "UnknownClass",
   "UnknownClass",
   "UnknownClass",

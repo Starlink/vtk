@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartSeriesModelCollection.h,v $
+  Module:    vtkQtChartSeriesModelCollection.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -78,6 +78,15 @@ public:
   /// \return
   ///   A pointer to the series model.
   vtkQtChartSeriesModel *getSeriesModel(int index) const;
+
+  /// \brief
+  ///   Maps an index from a series model to an index in the collection.
+  /// \param model The series model, must be a member of the model collection
+  /// \param index A series index from the given series model
+  /// \return
+  ///   A series index in the series model collection.
+  ///   Returns 0 if model is not in collection.
+  int mapSeriesIndexToCollectionIndex(vtkQtChartSeriesModel* model, int index) const;
 
 protected slots:
   /// \brief

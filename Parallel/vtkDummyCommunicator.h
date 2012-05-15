@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDummyCommunicator.h,v $
+  Module:    vtkDummyCommunicator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,7 @@
 class VTK_PARALLEL_EXPORT vtkDummyCommunicator : public vtkCommunicator
 {
 public:
-  vtkTypeRevisionMacro(vtkDummyCommunicator, vtkCommunicator);
+  vtkTypeMacro(vtkDummyCommunicator, vtkCommunicator);
   static vtkDummyCommunicator *New();
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 

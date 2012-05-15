@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygon.cxx,v $
+  Module:    vtkPolygon.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,8 +27,9 @@
 #include "vtkTriangle.h"
 #include "vtkBox.h"
 #include "vtkMergePoints.h"
+#include "vtkIncrementalPointLocator.h"
+#include "vtkSmartPointer.h"
 
-vtkCxxRevisionMacro(vtkPolygon, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkPolygon);
 
 //----------------------------------------------------------------------------
@@ -55,6 +56,18 @@ vtkPolygon::~vtkPolygon()
   this->Quad->Delete();
   this->TriScalars->Delete();
   this->Line->Delete();
+}
+
+//----------------------------------------------------------------------------
+double vtkPolygon::ComputeArea()
+{
+  double normal[3]; //not used, but required for the 
+                    //following ComputeArea call
+  return vtkPolygon::ComputeArea(this->GetPoints(), 
+                                 this->GetNumberOfPoints(), 
+                                 this->GetPointIds()->GetPointer(0), 
+                                 normal);
+
 }
 
 #define VTK_POLYGON_FAILURE -1
@@ -1237,7 +1250,7 @@ int vtkPolygon::CellBoundary(int vtkNotUsed(subId), double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkPolygon::Contour(double value, vtkDataArray *cellScalars, 
-                         vtkPointLocator *locator,
+                         vtkIncrementalPointLocator *locator,
                          vtkCellArray *verts, vtkCellArray *lines, 
                          vtkCellArray *polys,
                          vtkPointData *inPd, vtkPointData *outPd,
@@ -1493,7 +1506,7 @@ void vtkPolygon::Derivatives(int vtkNotUsed(subId), double pcoords[3],
 
 //----------------------------------------------------------------------------
 void vtkPolygon::Clip(double value, vtkDataArray *cellScalars,
-                      vtkPointLocator *locator, vtkCellArray *tris,
+                      vtkIncrementalPointLocator *locator, vtkCellArray *tris,
                       vtkPointData *inPD, vtkPointData *outPD,
                       vtkCellData *inCD, vtkIdType cellId, vtkCellData *outCD,
                       int insideOut)

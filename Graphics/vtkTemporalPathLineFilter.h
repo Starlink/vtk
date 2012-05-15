@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalPathLineFilter.h,v $
+  Module:    vtkTemporalPathLineFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class VTK_GRAPHICS_EXPORT vtkTemporalPathLineFilter : public vtkPolyDataAlgorith
     // Description:
     // Standard Type-Macro
     static vtkTemporalPathLineFilter *New();
-    vtkTypeRevisionMacro(vtkTemporalPathLineFilter,vtkPolyDataAlgorithm);
+    vtkTypeMacro(vtkTemporalPathLineFilter,vtkPolyDataAlgorithm);
     void PrintSelf(ostream& os, vtkIndent indent);
 
     // Description:
@@ -73,32 +73,21 @@ class VTK_GRAPHICS_EXPORT vtkTemporalPathLineFilter : public vtkPolyDataAlgorith
     vtkGetMacro(MaxTrackLength,unsigned int);
     
     // Description:
-    // True by default. We use the index of the point as the ID.
-    // As the particle moves, the coords for each ID are updated to 
-    // create a path. If the IDs are supplied as a separate scalar array
-    // then disable this option and set the array using IdChannelArray
-    vtkSetMacro(UsePointIndexForIds,int);
-    vtkGetMacro(UsePointIndexForIds,int);
-    vtkBooleanMacro(UsePointIndexForIds,int);
-    
-    // Description:
     // Specify the name of a scalar array which will be used to fetch
     // the index of each point. This is necessary only if the particles
     // change position (Id order) on each time step. The Id can be used
-    // to identify particles at each step and hence track them properly
+    // to identify particles at each step and hence track them properly.
+    // If this array is NULL, the global point ids are used.  If an Id
+    // array cannot otherwise be found, the point index is used as the ID.
     vtkSetStringMacro(IdChannelArray);
     vtkGetStringMacro(IdChannelArray);
 
-    // Description:
-    // The particle trace can be coloured using either the time/Id
-    // or the scalar value of the particle when it passed through the point
-    // of the track. If colouring using a scalar, set the scalar 
-    // array name to use.
-    vtkSetStringMacro(ScalarArray);
-    vtkGetStringMacro(ScalarArray);
+    // DO NOT CALL.  Deprecated in VTK 5.6.  This class now tracks all scalars.
+    VTK_LEGACY(void SetScalarArray(const char *));
+    VTK_LEGACY(const char *GetScalarArray());
 
     // Description:
-    // If a particle disappears from one end of asimulation and reappears
+    // If a particle disappears from one end of a simulation and reappears
     // on the other side, the track left will be unrepresentative.
     // Set a MaxStepDistance{x,y,z} which acts as a threshold above which
     // if a step occurs larger than the value (for the dimension), the track will
@@ -139,7 +128,8 @@ class VTK_GRAPHICS_EXPORT vtkTemporalPathLineFilter : public vtkPolyDataAlgorith
     //
     // Make sure the pipeline knows what type we expect as input
     //
-    virtual int FillInputPortInformation(int port, vtkInformation* info);
+    virtual int FillInputPortInformation (int port, vtkInformation* info);
+    virtual int FillOutputPortInformation(int port, vtkInformation* info);
 
     // Description:
     // The necessary parts of the standard pipeline update mechanism
@@ -153,29 +143,27 @@ class VTK_GRAPHICS_EXPORT vtkTemporalPathLineFilter : public vtkPolyDataAlgorith
 
 //BTX
     TrailPointer GetTrail(vtkIdType i);
-    void IncrementTrail(TrailPointer trail, vtkDataSet *input, 
-      vtkDataArray *inscalars, vtkIdType i);
+    void IncrementTrail(
+      TrailPointer trail, vtkDataSet *input, vtkIdType i);
 //ETX
     // internal data variables
     int           NumberOfTimeSteps;
     int           MaskPoints;
     unsigned int  MaxTrackLength;
     unsigned int  LastTrackLength;
-    int           UsePointIndexForIds;
     int           FirstTime;
     char         *IdChannelArray;
-    char         *ScalarArray;
     double        MaxStepDistance[3];
     double        LatestTime;
     int           KeepDeadTrails;
     int           UsingSelection;
     //
 //BTX
-    vtkSmartPointer<vtkPoints>                          ParticleCoordinates;
-    vtkSmartPointer<vtkCellArray>                       ParticlePolyLines;
-    vtkSmartPointer<vtkFloatArray>                      PointOpacity;
-    vtkSmartPointer<vtkFloatArray>                      PointId;
-    vtkSmartPointer<vtkFloatArray>                      PointScalars;
+    vtkSmartPointer<vtkCellArray>                       PolyLines;
+    vtkSmartPointer<vtkCellArray>                       Vertices;
+    vtkSmartPointer<vtkPoints>                          LineCoordinates;
+    vtkSmartPointer<vtkPoints>                          VertexCoordinates;
+    vtkSmartPointer<vtkFloatArray>                      TrailId;
     vtkSmartPointer<vtkTemporalPathLineFilterInternals> Internals;
     vtkstd::set<vtkIdType>                              SelectionIds;
 //ETX

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalBoxDataSetAlgorithm.h,v $
+  Module:    vtkHierarchicalBoxDataSetAlgorithm.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_FILTERING_EXPORT vtkHierarchicalBoxDataSetAlgorithm : public vtkAlgori
 {
 public:
   static vtkHierarchicalBoxDataSetAlgorithm* New();
-  vtkTypeRevisionMacro(vtkHierarchicalBoxDataSetAlgorithm, vtkAlgorithm);
+  vtkTypeMacro(vtkHierarchicalBoxDataSetAlgorithm, vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

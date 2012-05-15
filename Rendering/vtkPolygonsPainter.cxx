@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygonsPainter.cxx,v $
+  Module:    vtkPolygonsPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkUnsignedCharArray.h"
 vtkStandardNewMacro(vtkPolygonsPainter);
-vtkCxxRevisionMacro(vtkPolygonsPainter, "$Revision: 1.4 $");
 
 #define VTK_PP_INVALID_TYPE -1
 //-----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFollower.h,v $
+  Module:    vtkFollower.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class vtkCamera;
 class VTK_RENDERING_EXPORT vtkFollower : public vtkActor
 {
  public:
-  vtkTypeRevisionMacro(vtkFollower,vtkActor);
+  vtkTypeMacro(vtkFollower,vtkActor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

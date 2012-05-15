@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageNonMaximumSuppression.h,v $
+  Module:    vtkImageNonMaximumSuppression.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_IMAGING_EXPORT vtkImageNonMaximumSuppression : public vtkThreadedImage
 {
 public:
   static vtkImageNonMaximumSuppression *New();
-  vtkTypeRevisionMacro(vtkImageNonMaximumSuppression,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageNonMaximumSuppression,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXOpenGLRenderWindow.cxx,v $
+  Module:    vtkXOpenGLRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,8 +22,14 @@
 #include "vtkOpenGLActor.h"
 #include "vtkOpenGLPolyDataMapper.h"
 #include "vtkXRenderWindowInteractor.h"
-#include <GL/gl.h>
+
+#include "vtkOpenGL.h"
+
+// define GLX_GLXEXT_LEGACY to prevent glx.h to include glxext.h provided by
+// the system
+//#define GLX_GLXEXT_LEGACY
 #include "GL/glx.h"
+
 #include "vtkgl.h"
 #else
 #include "MangleMesaInclude/osmesa.h"
@@ -111,7 +117,6 @@ vtkXOpenGLRenderWindowInternal::vtkXOpenGLRenderWindowInternal(
 
 
 #ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkXOpenGLRenderWindow, "$Revision: 1.102 $");
 vtkStandardNewMacro(vtkXOpenGLRenderWindow);
 #endif
 
@@ -466,7 +471,7 @@ void vtkXOpenGLRenderWindow::Frame()
     glFlush();
     }
 }
- 
+
 //
 // Set the variable that indicates that we want a stereo capable window
 // be created. This method can only be called before a window is realized.

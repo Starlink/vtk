@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageSkeleton2D.cxx,v $
+  Module:    vtkImageSkeleton2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkDataSetAttributes.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageSkeleton2D, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkImageSkeleton2D);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolyDataPointPlacer.cxx,v $
+  Module:    vtkPolyDataPointPlacer.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkAssemblyNode.h"
 #include "vtkInteractorObserver.h"
 
-vtkCxxRevisionMacro(vtkPolyDataPointPlacer, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkPolyDataPointPlacer);
 
 //----------------------------------------------------------------------

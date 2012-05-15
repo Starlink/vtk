@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPiecewiseFunction.cxx,v $
+  Module:    vtkPiecewiseFunction.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include <vtkstd/algorithm>
 #include <vtkstd/iterator>
 
-vtkCxxRevisionMacro(vtkPiecewiseFunction, "$Revision: 1.52 $");
 vtkStandardNewMacro(vtkPiecewiseFunction);
 
 // The Node structure
@@ -79,7 +78,7 @@ public:
   double X2;
   bool operator () ( const vtkPiecewiseFunctionNode *node )
     {
-      return ( node->X < this->X1 &&
+      return ( node->X < this->X1 ||
                node->X > this->X2 );
     } 
 };

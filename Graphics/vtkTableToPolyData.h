@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToPolyData.h,v $
+  Module:    vtkTableToPolyData.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,13 +27,18 @@ class VTK_GRAPHICS_EXPORT vtkTableToPolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkTableToPolyData* New();
-  vtkTypeRevisionMacro(vtkTableToPolyData, vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkTableToPolyData, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Set the name of the column to use as the X coordinate for the points. 
   vtkSetStringMacro(XColumn);
   vtkGetStringMacro(XColumn);
+
+  // Description:
+  // Set the index of the column to use as the X coordinate for the points. 
+  vtkSetClampMacro(XColumnIndex, int, 0, VTK_INT_MAX);
+  vtkGetMacro(XColumnIndex, int);
 
   // Description:
   // Specify the component for the column specified using SetXColumn() to
@@ -49,6 +54,11 @@ public:
   vtkGetStringMacro(YColumn);
 
   // Description:
+  // Set the index of the column to use as the Y coordinate for the points. 
+  vtkSetClampMacro(YColumnIndex, int, 0, VTK_INT_MAX);
+  vtkGetMacro(YColumnIndex, int);
+
+  // Description:
   // Specify the component for the column specified using SetYColumn() to
   // use as the Ycoordinate in case the column is a multi-component array.
   vtkSetClampMacro(YComponent, int, 0, VTK_INT_MAX);
@@ -61,10 +71,23 @@ public:
   vtkGetStringMacro(ZColumn);
 
   // Description:
+  // Set the index of the column to use as the Z coordinate for the points. 
+  vtkSetClampMacro(ZColumnIndex, int, 0, VTK_INT_MAX);
+  vtkGetMacro(ZColumnIndex, int);
+
+  // Description:
   // Specify the component for the column specified using SetZColumn() to
   // use as the Zcoordinate in case the column is a multi-component array.
   vtkSetClampMacro(ZComponent, int, 0, VTK_INT_MAX);
   vtkGetMacro(ZComponent, int);
+
+  // Description:
+  // Specify whether the points of the polydata are 3D or 2D. If this is set to
+  // true then the Z Column will be ignored and the z value of each point on the 
+  // polydata will be set to 0. By default this will be off.
+  vtkSetMacro(Create2DPoints, bool);
+  vtkGetMacro(Create2DPoints, bool);
+  vtkBooleanMacro(Create2DPoints, bool);
 
 //BTX
 protected:
@@ -83,9 +106,13 @@ protected:
   char* XColumn;
   char* YColumn;
   char* ZColumn;
+  int XColumnIndex;
+  int YColumnIndex;
+  int ZColumnIndex;
   int XComponent;
   int YComponent;
   int ZComponent;
+  bool Create2DPoints;
 private:
   vtkTableToPolyData(const vtkTableToPolyData&); // Not implemented.
   void operator=(const vtkTableToPolyData&); // Not implemented.

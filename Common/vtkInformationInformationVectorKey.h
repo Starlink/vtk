@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationInformationVectorKey.h,v $
+  Module:    vtkInformationInformationVectorKey.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class vtkInformationVector;
 class VTK_COMMON_EXPORT vtkInformationInformationVectorKey : public vtkInformationKey
 {
 public:
-  vtkTypeRevisionMacro(vtkInformationInformationVectorKey,vtkInformationKey);
+  vtkTypeMacro(vtkInformationInformationVectorKey,vtkInformationKey);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   vtkInformationInformationVectorKey(const char* name, const char* location);

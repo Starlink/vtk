@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMesaRepresentationPainter.h,v $
+  Module:    vtkMesaRepresentationPainter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_RENDERING_EXPORT vtkMesaRepresentationPainter :
 {
 public:
   static vtkMesaRepresentationPainter* New();
-  vtkTypeRevisionMacro(vtkMesaRepresentationPainter, vtkRepresentationPainter);
+  vtkTypeMacro(vtkMesaRepresentationPainter, vtkRepresentationPainter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

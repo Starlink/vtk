@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageStencil.h,v $
+  Module:    vtkImageStencil.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -29,7 +29,7 @@ class VTK_IMAGING_EXPORT vtkImageStencil : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageStencil *New();
-  vtkTypeRevisionMacro(vtkImageStencil, vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageStencil, vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

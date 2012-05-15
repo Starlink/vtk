@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractSelection.cxx,v $
+  Module:    vtkExtractSelection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -19,6 +19,7 @@
 #include "vtkExtractSelectedFrustum.h"
 #include "vtkExtractSelectedIds.h"
 #include "vtkExtractSelectedLocations.h"
+#include "vtkExtractSelectedRows.h"
 #include "vtkExtractSelectedThresholds.h"
 #include "vtkGraph.h"
 #include "vtkHierarchicalBoxDataIterator.h"
@@ -33,7 +34,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTable.h"
 
-vtkCxxRevisionMacro(vtkExtractSelection, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkExtractSelection);
 
 //----------------------------------------------------------------------------
@@ -45,6 +45,8 @@ vtkExtractSelection::vtkExtractSelection()
   this->LocationsFilter = vtkExtractSelectedLocations::New();
   this->ThresholdsFilter = vtkExtractSelectedThresholds::New();
   this->ProbeFilter = vtkProbeSelectedLocations::New();
+  this->RowsFilter = vtkExtractSelectedRows::New();
+  this->RowsFilter->AddOriginalRowIdsArrayOn();
   this->ShowBounds = 0;
   this->UseProbeForLocations = 0;
 }
@@ -58,6 +60,7 @@ vtkExtractSelection::~vtkExtractSelection()
   this->LocationsFilter->Delete();
   this->ThresholdsFilter->Delete();
   this->ProbeFilter->Delete();
+  this->RowsFilter->Delete();
 }
 
 //----------------------------------------------------------------------------
@@ -98,7 +101,7 @@ int vtkExtractSelection::RequestData(
     }
 
   // If the input is a graph, don't try to handle it
-  if ( vtkGraph::SafeDownCast(input) || vtkTable::SafeDownCast(input) )
+  if ( vtkGraph::SafeDownCast(input) )
     {
     return 1;
     }
@@ -141,20 +144,23 @@ int vtkExtractSelection::RequestData(
           iter->GetCurrentFlatIndex(),
           hbIter->GetCurrentLevel(),
           hbIter->GetCurrentIndex(),
-          vtkDataSet::SafeDownCast(iter->GetCurrentDataObject()),
+          iter->GetCurrentDataObject(),
           sel, outInfo);
         }
       else
         {
         subOutput = this->RequestDataInternal(iter->GetCurrentFlatIndex(),
-          vtkDataSet::SafeDownCast(iter->GetCurrentDataObject()), sel, outInfo);
+          iter->GetCurrentDataObject(), sel, outInfo);
         }
 
       if (subOutput)
         {
         vtkDataSet* subDS = vtkDataSet::SafeDownCast(subOutput);
-        // purge empty datasets from the output.
-        if (!subDS || subDS->GetNumberOfPoints() > 0)
+        vtkTable* subTable = vtkTable::SafeDownCast(subOutput);
+        // purge empty datasets/tables from the output.
+        if ((subDS  && subDS->GetNumberOfPoints() > 0) ||
+          (subTable && subTable->GetNumberOfRows() > 0) ||
+          (!subDS && !subTable))
           {
           cdOutput->SetDataSet(iter, subOutput);
           }
@@ -210,8 +216,6 @@ int vtkExtractSelection::RequestDataObject(
       output = vtkMultiBlockDataSet::New();
       output->SetPipelineInformation(outInfo);
       output->Delete();
-      this->GetOutputPortInformation(0)->Set(
-        vtkDataObject::DATA_EXTENT_TYPE(), output->GetExtentType());
       }
     return 1;
     }
@@ -222,13 +226,21 @@ int vtkExtractSelection::RequestDataObject(
 //-----------------------------------------------------------------------------
 vtkDataObject* vtkExtractSelection::RequestDataInternal(
   unsigned int composite_index,
-  vtkDataSet* input, vtkSelection* sel,
+  vtkDataObject* non_composite_input, vtkSelection* sel,
   vtkInformation* outInfo)
 {
-  if (!input || !sel)
+  if (non_composite_input->IsA("vtkCompositeDataSet"))
+    {
+    vtkErrorMacro(
+      "RequestDataInternal cannot be called with a composite data input.");
+    return NULL;
+    }
+
+  if (!non_composite_input || !sel)
     {
     return NULL;
     }
+
   for (unsigned int n = 0; n < sel->GetNumberOfNodes(); ++n)
     {
     vtkSelectionNode* node = sel->GetNode(n);
@@ -239,12 +251,12 @@ vtkDataObject* vtkExtractSelection::RequestDataInternal(
           nodeProperties->Get(vtkSelectionNode::COMPOSITE_INDEX()));
       if (cur_index == composite_index)
         {
-        return this->RequestDataFromBlock(input, node, outInfo);
+        return this->RequestDataFromBlock(non_composite_input, node, outInfo);
         }
       }
     else
       {
-      return this->RequestDataFromBlock(input, node, outInfo);
+      return this->RequestDataFromBlock(non_composite_input, node, outInfo);
       }
     }
   return NULL;
@@ -255,13 +267,21 @@ vtkDataObject* vtkExtractSelection::RequestDataInternal(
   unsigned int composite_index,
   unsigned int level,
   unsigned int index,
-  vtkDataSet* input, vtkSelection* sel,
+  vtkDataObject* non_composite_input, vtkSelection* sel,
   vtkInformation* outInfo)
 {
+  if (non_composite_input->IsA("vtkCompositeDataSet"))
+    {
+    vtkErrorMacro(
+      "RequestDataInternal cannot be called with a composite data input.");
+    return NULL;
+    }
+
+
   // Here either COMPOSITE_INDEX() is present or
   // (HIERARCHICAL_LEVEL(), HIERARCHICAL_INDEX()) is present.
 
-  if (!input || !sel)
+  if (!non_composite_input || !sel)
     {
     return NULL;
     }
@@ -276,7 +296,7 @@ vtkDataObject* vtkExtractSelection::RequestDataInternal(
           nodeProperties->Get(vtkSelectionNode::COMPOSITE_INDEX()));
       if (cur_index == composite_index)
         {
-        return this->RequestDataFromBlock(input, node, outInfo);
+        return this->RequestDataFromBlock(non_composite_input, node, outInfo);
         }
       }
     else if (nodeProperties->Has(vtkSelectionNode::HIERARCHICAL_LEVEL()) &&
@@ -288,12 +308,12 @@ vtkDataObject* vtkExtractSelection::RequestDataInternal(
           nodeProperties->Get(vtkSelectionNode::HIERARCHICAL_INDEX()));
       if (cur_level == level && cur_index == index)
         {
-        return this->RequestDataFromBlock(input, node, outInfo);
+        return this->RequestDataFromBlock(non_composite_input, node, outInfo);
         }
       }
     else
       {
-      return this->RequestDataFromBlock(input, node, outInfo);
+      return this->RequestDataFromBlock(non_composite_input, node, outInfo);
       }
     }
   return NULL;
@@ -303,7 +323,7 @@ vtkDataObject* vtkExtractSelection::RequestDataInternal(
 vtkDataObject* vtkExtractSelection::RequestDataFromBlock(
   vtkDataObject* input, vtkSelectionNode* sel, vtkInformation* outInfo)
 {
-  vtkExtractSelectionBase *subFilter = NULL;
+  vtkAlgorithm *subFilter = NULL;
   int seltype = sel->GetContentType();
   switch (seltype)
     {
@@ -311,7 +331,14 @@ vtkDataObject* vtkExtractSelection::RequestDataFromBlock(
   case vtkSelectionNode::PEDIGREEIDS:
   case vtkSelectionNode::VALUES:
   case vtkSelectionNode::INDICES:
-    subFilter = this->IdsFilter;
+    if (input->IsA("vtkTable"))
+      {
+      subFilter = this->RowsFilter;
+      }
+    else
+      {
+      subFilter = this->IdsFilter;
+      }
     break;
 
   case vtkSelectionNode::FRUSTUM:
@@ -338,12 +365,17 @@ vtkDataObject* vtkExtractSelection::RequestDataFromBlock(
       return NULL;
     }
 
-  // Pass flags to the subFilter.
-  subFilter->SetPreserveTopology(this->PreserveTopology);
+  if (vtkExtractSelectionBase* esb =
+    vtkExtractSelectionBase::SafeDownCast(subFilter))
+    {
+    // Pass flags to the subFilter.
+    esb->SetPreserveTopology(this->PreserveTopology);
+    }
+
   vtkSmartPointer<vtkSelection> tempSel =
     vtkSmartPointer<vtkSelection>::New();
   tempSel->AddNode(sel);
-  subFilter->SetInput(1, tempSel);
+  subFilter->SetInputConnection(1, tempSel->GetProducerPort());
 
   vtkStreamingDemandDrivenPipeline* sddp =
     vtkStreamingDemandDrivenPipeline::SafeDownCast(
@@ -379,7 +411,7 @@ vtkDataObject* vtkExtractSelection::RequestDataFromBlock(
 
   vtkDataObject* inputCopy = input->NewInstance();
   inputCopy->ShallowCopy(input);
-  subFilter->SetInput(0, inputCopy);
+  subFilter->SetInputConnection(0, inputCopy->GetProducerPort());
 
   subFilter->Update();
 
@@ -391,8 +423,8 @@ vtkDataObject* vtkExtractSelection::RequestDataFromBlock(
   inputCopy->Delete();
   ecOutput->Initialize();
 
-  subFilter->SetInput(0,static_cast<vtkDataObject*>(NULL));
-  subFilter->SetInput(1,static_cast<vtkSelection *>(NULL));
+  subFilter->SetInputConnection(0, NULL);
+  subFilter->SetInputConnection(1, NULL);
   return output;
 }
 

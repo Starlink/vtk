@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkEllipticalButtonSource.cxx,v $
+  Module:    vtkEllipticalButtonSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 #include "vtkPolyData.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkEllipticalButtonSource, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkEllipticalButtonSource);
 
 //----------------------------------------------------------------------------

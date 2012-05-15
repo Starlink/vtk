@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAffineWidget.h,v $
+  Module:    vtkAffineWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ public:
 
   // Description:
   // Standard VTK class macros.
-  vtkTypeRevisionMacro(vtkAffineWidget,vtkAbstractWidget);
+  vtkTypeMacro(vtkAffineWidget,vtkAbstractWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

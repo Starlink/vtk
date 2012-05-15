@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHyperOctreeLimiter.h,v $
+  Module:    vtkHyperOctreeLimiter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_GRAPHICS_EXPORT vtkHyperOctreeLimiter : public vtkDataSetAlgorithm
 {
 public:
   static vtkHyperOctreeLimiter *New();
-  vtkTypeRevisionMacro(vtkHyperOctreeLimiter, vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkHyperOctreeLimiter, vtkDataSetAlgorithm);
 
   // Description:
   // Return the maximum number of levels of the hyperoctree.

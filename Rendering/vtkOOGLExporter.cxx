@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOOGLExporter.cxx,v $
+  Module:    vtkOOGLExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,6 @@
 #include "vtkTexture.h"
 #include "vtkMatrix4x4.h"
 
-vtkCxxRevisionMacro(vtkOOGLExporter, "$Revision: 1.35 $");
 vtkStandardNewMacro(vtkOOGLExporter);
 
 vtkOOGLExporter::vtkOOGLExporter()
@@ -238,7 +237,7 @@ void vtkOOGLExporter::WriteALight(vtkLight *aLight, FILE *fp)
   
   pos = aLight->GetPosition();
   focus = aLight->GetFocalPoint();
-  color = aLight->GetColor();
+  color = aLight->GetDiffuseColor();
 
   dir[0] = focus[0] - pos[0];
   dir[1] = focus[1] - pos[1];

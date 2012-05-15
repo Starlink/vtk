@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariantCast.h,v $
+  Module:    vtkVariantCast.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -22,6 +22,7 @@
 #ifndef __vtkVariantCast_h
 #define __vtkVariantCast_h
 
+#include <vtkUnicodeString.h>
 
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
@@ -36,7 +37,11 @@
 template<typename T>
 T vtkVariantCast(const vtkVariant& value, bool* valid = 0)
 {
-  vtkGenericWarningMacro(<< "cannot cast vtkVariant containing " << value.GetTypeAsString() << " to unsupported type.");
+  vtkGenericWarningMacro(
+    << "Cannot convert vtkVariant containing [" << value.GetTypeAsString() << "] "
+    << "to unsupported type [" << typeid(T).name() << "].  "
+    << "Create a vtkVariantCast<> specialization to eliminate this warning."
+    );
 
   if(valid)
     *valid = false;
@@ -145,6 +150,15 @@ inline vtkStdString vtkVariantCast<vtkStdString>(const vtkVariant& value, bool* 
     *valid = true;
 
   return value.ToString();
+}
+
+template<>
+inline vtkUnicodeString vtkVariantCast<vtkUnicodeString>(const vtkVariant& value, bool* valid)
+{
+  if(valid)
+    *valid = true;
+
+  return value.ToUnicodeString();
 }
 
 template<>

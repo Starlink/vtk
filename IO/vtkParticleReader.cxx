@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParticleReader.cxx,v $
+  Module:    vtkParticleReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,6 @@
 #include <vtkstd/string>
 #include <vtksys/ios/sstream>
 
-vtkCxxRevisionMacro(vtkParticleReader, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkParticleReader);
 
 namespace {

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCachingInterpolatedVelocityField.cxx,v $
+  Module:    vtkCachingInterpolatedVelocityField.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,6 @@
  #define Custom_TreeType vtkModifiedBSPTree
 #endif
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCachingInterpolatedVelocityField, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkCachingInterpolatedVelocityField);
 //---------------------------------------------------------------------------
 const double IVFDataSetInfo::TOLERANCE_SCALE = 1.0E-8;

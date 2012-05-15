@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSTLReader.h,v $
+  Module:    vtkSTLReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,13 +36,13 @@
 
 class vtkCellArray;
 class vtkFloatArray;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkPoints;
 
 class VTK_IO_EXPORT vtkSTLReader : public vtkPolyDataAlgorithm 
 {
 public:
-  vtkTypeRevisionMacro(vtkSTLReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSTLReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -58,7 +58,7 @@ public:
   // Specify file name of stereo lithography file.
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
-
+      
   // Description:
   // Turn on/off merging of points/triangles.
   vtkSetMacro(Merging,int);
@@ -74,13 +74,13 @@ public:
   // Description:
   // Specify a spatial locator for merging points. By
   // default an instance of vtkMergePoints is used.
-  void SetLocator(vtkPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkPointLocator);
+  void SetLocator(vtkIncrementalPointLocator *locator);
+  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
 
   // Description:
   // Create default locator. Used to create one when none is specified.
   void CreateDefaultLocator();
-
+      
 protected:
   vtkSTLReader();
   ~vtkSTLReader();
@@ -88,7 +88,7 @@ protected:
   char *FileName;
   int Merging;
   int ScalarTags;
-  vtkPointLocator *Locator;
+  vtkIncrementalPointLocator *Locator;
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int ReadBinarySTL(FILE *fp, vtkPoints*, vtkCellArray*);

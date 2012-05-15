@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkIntArray.h,v $
+  Module:    vtkIntArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_COMMON_EXPORT vtkIntArray : public vtkDataArray
 {
 public:
   static vtkIntArray* New();
-  vtkTypeRevisionMacro(vtkIntArray,vtkDataArray);
+  vtkTypeMacro(vtkIntArray,vtkDataArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

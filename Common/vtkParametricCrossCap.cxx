@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricCrossCap.cxx,v $
+  Module:    vtkParametricCrossCap.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkParametricCrossCap, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkParametricCrossCap);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParseJava.c,v $
+  Module:    vtkParseJava.c
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -571,7 +571,7 @@ void outputFunction(FILE *fp, FileInfo *data)
         fprintf(fp,"\n      } catch (Exception e) {");
         fprintf(fp,"\n        e.printStackTrace();");
         fprintf(fp,"\n      }");
-        fprintf(fp,"\n      tempObj.Delete();");
+        fprintf(fp,"\n      vtkObjectBase.VTKDeleteReference(temp);");
         fprintf(fp,"\n    }");
         fprintf(fp,"\n    return obj;");
         fprintf(fp,"\n  }\n");
@@ -665,17 +665,18 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     /* if we are a base class and have a delete method */
     if (data->HasDelete)
       {
+      fprintf(fp,"\n  public static native void VTKDeleteReference(long id);");
       fprintf(fp,"\n  protected native void VTKDelete();");
       fprintf(fp,"\n  protected native void VTKRegister();");
       fprintf(fp,"\n  public void Delete() {");
       fprintf(fp,"\n    int refCount = this.GetReferenceCount();");
+      fprintf(fp,"\n    vtkGlobalJavaHash.PointerToReference.remove(new Long(this.vtkId));");
       fprintf(fp,"\n    this.VTKDelete();");
       fprintf(fp,"\n    this.vtkDeleted = true;");
       fprintf(fp,"\n    if (refCount == 1) {");
       fprintf(fp,"\n      this.vtkId = 0;");
       fprintf(fp,"\n    }");
       fprintf(fp,"\n  }");
-      fprintf(fp,"\n  protected void finalize() { if (!this.vtkDeleted) this.Delete(); }\n");
       }
     }
   /* Special case for vtkObject */
@@ -721,7 +722,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
   size_t len;
   char *dir;
   char *fname;
-  char javaDone[] = "VTKJavaWrapped";
+  /*const */char javaDone[] = "VTKJavaWrapped";
   FILE* tfp;
   fname = data->OutputFileName;
   dir = (char*)malloc(strlen(fname) + strlen(javaDone) + 2);
@@ -742,6 +743,7 @@ void vtkParseOutput(FILE *fp, FileInfo *data)
     fprintf(tfp, "File: %s\n", fname);
     fclose(tfp);
     }
+  free(dir);
   }
 }
 

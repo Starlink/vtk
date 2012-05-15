@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAssignCoordinates.h,v $
+  Module:    vtkAssignCoordinates.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_INFOVIS_EXPORT vtkAssignCoordinates : public vtkPassInputTypeAlgorithm
 public:
   static vtkAssignCoordinates *New();
 
-  vtkTypeRevisionMacro(vtkAssignCoordinates, vtkPassInputTypeAlgorithm);
+  vtkTypeMacro(vtkAssignCoordinates, vtkPassInputTypeAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXMesaRenderWindow.cxx,v $
+  Module:    vtkXMesaRenderWindow.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,5 +50,4 @@
 // now include the source for vtkXOpenGLRenderWindow
 #include "vtkXOpenGLRenderWindow.cxx"
 
-vtkCxxRevisionMacro(vtkXMesaRenderWindow, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkXMesaRenderWindow);

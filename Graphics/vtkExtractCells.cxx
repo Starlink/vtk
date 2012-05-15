@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractCells.cxx,v $
+  Module:    vtkExtractCells.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,6 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkExtractCells, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkExtractCells);
 
 #include <vtkstd/set>
@@ -122,7 +121,7 @@ int vtkExtractCells::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
@@ -510,10 +509,18 @@ void vtkExtractCells::CopyCellsDataSet(vtkIdList *ptMap, vtkDataSet *input,
   vtkCellData *oldCD = input->GetCellData();
   vtkCellData *newCD = output->GetCellData();
 
-  vtkIdTypeArray *origMap = vtkIdTypeArray::New();
-  origMap->SetNumberOfComponents(1);
-  origMap->SetName("vtkOriginalCellIds");
-  newCD->AddArray(origMap);
+  // We only create vtkOriginalCellIds for the output data set if it does not
+  // exist in the input data set.  If it is in the input data set then we
+  // let CopyData() take care of copying it over.
+  vtkIdTypeArray *origMap = 0;
+  if(oldCD->GetArray("vtkOriginalCellIds") == 0)
+    {
+    origMap = vtkIdTypeArray::New();
+    origMap->SetNumberOfComponents(1);
+    origMap->SetName("vtkOriginalCellIds");
+    newCD->AddArray(origMap);
+    origMap->Delete();
+    }
 
   vtkIdList *cellPoints = vtkIdList::New();
 
@@ -538,12 +545,13 @@ void vtkExtractCells::CopyCellsDataSet(vtkIdList *ptMap, vtkDataSet *input,
     int newId = output->InsertNextCell(input->GetCellType(cellId), cellPoints);
 
     newCD->CopyData(oldCD, cellId, newId);
-    origMap->InsertNextValue(cellId);
-
+    if(origMap)
+      {
+      origMap->InsertNextValue(cellId);
+      }
     }
 
   cellPoints->Delete();
-  origMap->Delete();
 
   return;
 }
@@ -563,11 +571,19 @@ void vtkExtractCells::CopyCellsUnstructuredGrid(vtkIdList *ptMap,
   vtkCellData *oldCD = input->GetCellData();
   vtkCellData *newCD = output->GetCellData();
 
-  vtkIdTypeArray *origMap = vtkIdTypeArray::New();
-  origMap->SetNumberOfComponents(1);
-  origMap->SetName("vtkOriginalCellIds");
-  newCD->AddArray(origMap);
-
+  // We only create vtkOriginalCellIds for the output data set if it does not
+  // exist in the input data set.  If it is in the input data set then we
+  // let CopyData() take care of copying it over.
+  vtkIdTypeArray *origMap = 0;
+  if(oldCD->GetArray("vtkOriginalCellIds") == 0)
+    {
+    origMap = vtkIdTypeArray::New();
+    origMap->SetNumberOfComponents(1);
+    origMap->SetName("vtkOriginalCellIds");
+    newCD->AddArray(origMap);
+    origMap->Delete();
+    }
+      
   int numCells = static_cast<int>(this->CellList->IdTypeSet.size());
 
   vtkCellArray *cellArray = vtkCellArray::New();                 // output
@@ -617,8 +633,10 @@ void vtkExtractCells::CopyCellsUnstructuredGrid(vtkIdList *ptMap,
       }
 
     newCD->CopyData(oldCD, oldCellId, nextCellId);
-    origMap->InsertNextValue(oldCellId);
-
+    if(origMap)
+      {
+      origMap->InsertNextValue(oldCellId);
+      }
     nextCellId++;
     }
 
@@ -628,7 +646,6 @@ void vtkExtractCells::CopyCellsUnstructuredGrid(vtkIdList *ptMap,
   locationArray->Delete();
   newcells->Delete();
   cellArray->Delete();
-  origMap->Delete();
 
   return;
 }

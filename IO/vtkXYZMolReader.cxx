@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkXYZMolReader.cxx,v $
+  Module:    vtkXYZMolReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkXYZMolReader, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkXYZMolReader);
 
 //----------------------------------------------------------------------------

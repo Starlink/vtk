@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBiQuadraticQuadraticWedge.cxx,v $
+  Module:    vtkBiQuadraticQuadraticWedge.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,9 +26,9 @@
 #include "vtkBiQuadraticQuad.h"
 #include "vtkQuadraticTriangle.h"
 #include "vtkPoints.h"
+
 #include <assert.h>
 
-vtkCxxRevisionMacro (vtkBiQuadraticQuadraticWedge, "$Revision: 1.11 $");
 vtkStandardNewMacro (vtkBiQuadraticQuadraticWedge);
 
 //----------------------------------------------------------------------------
@@ -305,7 +305,7 @@ int vtkBiQuadraticQuadraticWedge::CellBoundary (int subId,
 //----------------------------------------------------------------------------
 void vtkBiQuadraticQuadraticWedge::Contour (double value,
           vtkDataArray * cellScalars,
-          vtkPointLocator * locator,
+          vtkIncrementalPointLocator * locator,
           vtkCellArray * verts,
           vtkCellArray * lines,
           vtkCellArray * polys,
@@ -331,7 +331,7 @@ void vtkBiQuadraticQuadraticWedge::Contour (double value,
 // except that it cuts the wedge to produce tetrahedra.
 void
 vtkBiQuadraticQuadraticWedge::Clip (double value, vtkDataArray *cellScalars,
-             vtkPointLocator * locator, vtkCellArray * tets,
+             vtkIncrementalPointLocator * locator, vtkCellArray * tets,
              vtkPointData * inPd, vtkPointData * outPd,
              vtkCellData * inCd, vtkIdType cellId, vtkCellData * outCd, int insideOut)
 {

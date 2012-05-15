@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBridgeCellIterator.h,v $
+  Module:    vtkBridgeCellIterator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class VTK_BRIDGE_EXPORT vtkBridgeCellIterator : public vtkGenericCellIterator
 {
 public:
   static vtkBridgeCellIterator *New();
-  vtkTypeRevisionMacro(vtkBridgeCellIterator,vtkGenericCellIterator);
+  vtkTypeMacro(vtkBridgeCellIterator,vtkGenericCellIterator);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

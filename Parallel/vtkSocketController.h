@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSocketController.h,v $
+  Module:    vtkSocketController.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,7 +46,7 @@ class VTK_PARALLEL_EXPORT vtkSocketController : public vtkMultiProcessController
 {
 public:
   static vtkSocketController *New();
-  vtkTypeRevisionMacro(vtkSocketController,vtkMultiProcessController);
+  vtkTypeMacro(vtkSocketController,vtkMultiProcessController);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -112,8 +112,9 @@ public:
     ENDIAN_TAG=1010580540,      // 0x3c3c3c3c
     IDTYPESIZE_TAG=1027423549,  // 0x3d3d3d3d
     VERSION_TAG=1044266558,     // 0x3e3e3e3e
+    HASH_TAG=0x3f3f3f3f
   };
-
+  
 //ETX
 
 protected:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMPIController.h,v $
+  Module:    vtkMPIController.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_PARALLEL_EXPORT vtkMPIController : public vtkMultiProcessController
 public:
 
   static vtkMPIController *New();
-  vtkTypeRevisionMacro(vtkMPIController,vtkMultiProcessController);
+  vtkTypeMacro(vtkMPIController,vtkMultiProcessController);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -113,6 +113,8 @@ public:
   void SetCommunicator(vtkMPICommunicator* comm);
 
   virtual vtkMPIController *CreateSubController(vtkProcessGroup *group);
+
+  virtual vtkMPIController *PartitionController(int localColor, int localKey);
 
 //BTX
 

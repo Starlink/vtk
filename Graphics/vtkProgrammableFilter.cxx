@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableFilter.cxx,v $
+  Module:    vtkProgrammableFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,13 +20,13 @@
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkStructuredPoints.h"
+#include "vtkTable.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkRectilinearGrid.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkProgrammableFilter, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkProgrammableFilter);
 
 // Construct programmable filter with empty execute method.
@@ -87,6 +87,12 @@ vtkGraph *vtkProgrammableFilter::GetGraphInput()
   return (vtkGraph *)this->GetInput();
 }
 
+// Get the input as a concrete type.
+vtkTable *vtkProgrammableFilter::GetTableInput()
+{
+  return (vtkTable *)this->GetInput();
+}
+
 // Specify the function to use to operate on the point attribute data. Note
 // that the function takes a single (void *) argument.
 void vtkProgrammableFilter::SetExecuteMethod(void (*f)(void *), void *arg)
@@ -128,7 +134,7 @@ int vtkProgrammableFilter::RequestData(
     }
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   if (inInfo)
     {
     vtkDataObject *objInput = inInfo->Get(vtkDataObject::DATA_OBJECT());
@@ -165,6 +171,20 @@ int vtkProgrammableFilter::RequestData(
         else
           {
           graphOutput->CopyStructure( graphInput );
+          }
+        }
+      }
+    if (vtkTable::SafeDownCast(objInput))
+      {
+      vtkTable *tableInput = vtkTable::SafeDownCast(objInput);
+      vtkTable *tableOutput = vtkTable::SafeDownCast(
+        outInfo->Get(vtkDataObject::DATA_OBJECT()));
+      // First, copy the input to the output as a starting point
+      if (tableInput && tableOutput && tableInput->GetDataObjectType() == tableOutput->GetDataObjectType())
+        {
+        if (this->CopyArrays)
+          {
+          tableOutput->ShallowCopy( tableInput );
           }
         }
       }
@@ -215,10 +235,11 @@ int vtkProgrammableFilter::RequestData(
 
 int vtkProgrammableFilter::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
 {
-  // This algorithm may accept a vtkDataSet or vtkGraph.
+  // This algorithm may accept a vtkDataSet or vtkGraph or vtkTable.
   info->Remove(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE());
   info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkGraph");
+  info->Append(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkTable");
   return 1;  
 }
 

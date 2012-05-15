@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleImage.h,v $
+  Module:    vtkInteractorStyleImage.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -49,7 +49,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleImage : public vtkInteractorStyleTr
 {
 public:
   static vtkInteractorStyleImage *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleImage, vtkInteractorStyleTrackballCamera);
+  vtkTypeMacro(vtkInteractorStyleImage, vtkInteractorStyleTrackballCamera);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

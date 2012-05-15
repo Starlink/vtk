@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractGrid.h,v $
+  Module:    vtkExtractGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractGrid : public vtkStructuredGridAlgorithm
 {
 public:
   static vtkExtractGrid *New();
-  vtkTypeRevisionMacro(vtkExtractGrid,vtkStructuredGridAlgorithm);
+  vtkTypeMacro(vtkExtractGrid,vtkStructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

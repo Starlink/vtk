@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDynamicLoader.cxx,v $
+  Module:    vtkDynamicLoader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkDebugLeaks.h"
 
-vtkCxxRevisionMacro(vtkDynamicLoader, "$Revision: 1.25 $");
 
 //-----------------------------------------------------------------------------
 // Needed when we don't use the vtkStandardNewMacro.

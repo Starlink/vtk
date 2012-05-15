@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMergeFilter.cxx,v $
+  Module:    vtkMergeFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkStructuredPoints.h"
 #include "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkMergeFilter, "$Revision: 1.69 $");
 vtkStandardNewMacro(vtkMergeFilter);
 
 class vtkFieldNode
@@ -253,7 +252,7 @@ int vtkMergeFilter::RequestData(
   vtkInformation *tCoordsInfo = inputVector[4]->GetInformationObject(0);
   vtkInformation *tensorsInfo = inputVector[5]->GetInformationObject(0);
   
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkDataSet *output = vtkDataSet::SafeDownCast(

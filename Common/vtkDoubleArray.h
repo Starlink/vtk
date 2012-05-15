@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDoubleArray.h,v $
+  Module:    vtkDoubleArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_COMMON_EXPORT vtkDoubleArray : public vtkDataArray
 {
 public:
   static vtkDoubleArray* New();
-  vtkTypeRevisionMacro(vtkDoubleArray,vtkDataArray);
+  vtkTypeMacro(vtkDoubleArray,vtkDataArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

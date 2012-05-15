@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoAlignedImageRepresentation.h,v $
+  Module:    vtkGeoAlignedImageRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,12 +32,13 @@
 
 class vtkGeoImageNode;
 class vtkGeoSource;
+class vtkGeoTreeNodeCache;
 
 class VTK_GEOVIS_EXPORT vtkGeoAlignedImageRepresentation : public vtkDataRepresentation
 {
 public:
   static vtkGeoAlignedImageRepresentation *New();
-  vtkTypeRevisionMacro(vtkGeoAlignedImageRepresentation,vtkDataRepresentation);
+  vtkTypeMacro(vtkGeoAlignedImageRepresentation,vtkDataRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -80,6 +81,8 @@ protected:
   // Description:
   // Print information about the image tree.
   void PrintTree(ostream& os, vtkIndent indent, vtkGeoImageNode* root);
+
+  vtkGeoTreeNodeCache* Cache;
 
 private:
   vtkGeoAlignedImageRepresentation(const vtkGeoAlignedImageRepresentation&); // Not implemented

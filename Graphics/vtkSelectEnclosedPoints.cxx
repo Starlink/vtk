@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSelectEnclosedPoints.cxx,v $
+  Module:    vtkSelectEnclosedPoints.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,7 +30,6 @@
 #include "vtkMath.h"
 #include "vtkGarbageCollector.h"
 
-vtkCxxRevisionMacro(vtkSelectEnclosedPoints, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkSelectEnclosedPoints);
 
 //----------------------------------------------------------------------------

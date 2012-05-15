@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationKey.cxx,v $
+  Module:    vtkInformationKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkDebugLeaks.h"
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkInformationKey, "$Revision: 1.6 $");
 
 class vtkInformationKeyToInformationFriendship
 {

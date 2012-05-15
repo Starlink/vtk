@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayToTable.cxx,v $
+  Module:    vtkArrayToTable.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -23,6 +23,7 @@
 #include "vtkArrayToTable.h"
 #include "vtkDenseArray.h"
 #include "vtkDoubleArray.h"
+#include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
@@ -30,6 +31,7 @@
 #include "vtkSparseArray.h"
 #include "vtkStringArray.h"
 #include "vtkTable.h"
+#include "vtkUnicodeStringArray.h"
 
 #include <vtksys/ios/sstream>
 #include <vtksys/stl/stdexcept>
@@ -45,14 +47,14 @@ static bool ConvertVector(vtkArray* Array, vtkTable* Output)
   if(!array)
     return false;
 
-  const vtkArrayExtents extents = array->GetExtents();
+  const vtkArrayRange extents = array->GetExtent(0);
 
   ColumnT* const column = ColumnT::New();
-  column->SetNumberOfTuples(extents[0]);
-  column->SetName("0");
-  for(vtkIdType i = 0; i != extents[0]; ++i)
+  column->SetNumberOfTuples(extents.GetSize());
+  column->SetName(array->GetName());
+  for(vtkIdType i = extents.GetBegin(); i != extents.GetEnd(); ++i)
     {
-    column->SetValue(i, array->GetValue(i));
+    column->SetValue(i - extents.GetBegin(), array->GetValue(i));
     }
 
   Output->AddColumn(column);
@@ -72,24 +74,39 @@ static bool ConvertMatrix(vtkArray* Array, vtkTable* Output)
   if(!array)
     return false;
 
-  const vtkArrayExtents extents = array->GetExtents();
+  vtkSparseArray<ValueT>* const sparse_array = vtkSparseArray<ValueT>::SafeDownCast(array);
 
-  for(vtkIdType j = 0; j != extents[1]; ++j)
+  const vtkIdType non_null_count = array->GetNonNullSize();
+  const vtkArrayRange columns = array->GetExtent(1);
+  const vtkArrayRange rows = array->GetExtent(0);
+
+  vtkstd::vector<ColumnT*> new_columns;
+  for(vtkIdType j = columns.GetBegin(); j != columns.GetEnd(); ++j)
     {
     vtkstd::ostringstream column_name;
     column_name << j;
       
     ColumnT* const column = ColumnT::New();
-    column->SetNumberOfTuples(extents[0]);
+    column->SetNumberOfTuples(rows.GetSize());
     column->SetName(column_name.str().c_str());
 
-    for(vtkIdType i = 0; i != extents[0]; ++i)
+    if(sparse_array)
       {
-      column->SetValue(i, array->GetValue(i, j));
+      for(vtkIdType i = 0; i != rows.GetSize(); ++i)
+        column->SetValue(i, sparse_array->GetNullValue());
       }
 
     Output->AddColumn(column);
     column->Delete();
+    new_columns.push_back(column);
+    }
+
+  for(vtkIdType n = 0; n != non_null_count; ++n)
+    {
+    vtkArrayCoordinates coordinates;
+    array->GetCoordinatesN(n, coordinates);
+
+    new_columns[coordinates[1] - columns.GetBegin()]->SetValue(coordinates[0] - rows.GetBegin(), array->GetValueN(n));
     }
 
   return true;
@@ -97,7 +114,6 @@ static bool ConvertMatrix(vtkArray* Array, vtkTable* Output)
 
 // ----------------------------------------------------------------------
 
-vtkCxxRevisionMacro(vtkArrayToTable, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkArrayToTable);
 
 // ----------------------------------------------------------------------
@@ -143,23 +159,36 @@ int vtkArrayToTable::RequestData(
   try
     {
     vtkArrayData* const input_array_data = vtkArrayData::GetData(inputVector[0]);
-    vtkArray* const input_array = input_array_data->GetArray();
-    if(!input_array)
-      throw vtkstd::runtime_error("vtkArrayToTable missing input array.");
+    if(!input_array_data)
+      throw vtkstd::runtime_error("Missing vtkArrayData on input port 0.");
+    if(input_array_data->GetNumberOfArrays() != 1)
+      throw vtkstd::runtime_error("vtkArrayToTable requires a vtkArrayData containing exactly one array.");
+    
+    vtkArray* const input_array = input_array_data->GetArray(static_cast<vtkIdType>(0));
     if(input_array->GetDimensions() > 2)
       throw vtkstd::runtime_error("vtkArrayToTable input array must have 1 or 2 dimensions.");
     
     vtkTable* const output_table = vtkTable::GetData(outputVector);
 
     if(ConvertVector<double, vtkDoubleArray>(input_array, output_table)) return 1;
+    if(ConvertVector<vtkIdType, vtkIdTypeArray>(input_array, output_table)) return 1;
     if(ConvertVector<vtkStdString, vtkStringArray>(input_array, output_table)) return 1;
+    if(ConvertVector<vtkUnicodeString, vtkUnicodeStringArray>(input_array, output_table)) return 1;
     
     if(ConvertMatrix<double, vtkDoubleArray>(input_array, output_table)) return 1;
+    if(ConvertMatrix<vtkIdType, vtkIdTypeArray>(input_array, output_table)) return 1;
     if(ConvertMatrix<vtkStdString, vtkStringArray>(input_array, output_table)) return 1;
+    if(ConvertMatrix<vtkUnicodeString, vtkUnicodeStringArray>(input_array, output_table)) return 1;
+
+    throw vtkstd::runtime_error("Unhandled input array type.");
     }
   catch(vtkstd::exception& e)
     {
-    vtkErrorMacro(<< e.what());
+    vtkErrorMacro(<< "caught exception: " << e.what() << endl);
+    }
+  catch(...)
+    {
+    vtkErrorMacro(<< "caught unknown exception." << endl);
     }
 
   return 0;

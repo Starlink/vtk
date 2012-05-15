@@ -1,7 +1,7 @@
 /*=========================================================================
   
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkStackedTreeLayoutStrategy.cxx,v $
+  Module:    vtkStackedTreeLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,6 +22,7 @@
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkDoubleArray.h"
 #include "vtkMath.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -39,7 +40,6 @@
 #define VTK_CREATE(type, name)                                  \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-vtkCxxRevisionMacro(vtkStackedTreeLayoutStrategy, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkStackedTreeLayoutStrategy);
 
 vtkStackedTreeLayoutStrategy::vtkStackedTreeLayoutStrategy()
@@ -82,6 +82,20 @@ void vtkStackedTreeLayoutStrategy::Layout(vtkTree* inputTree,
     vtkErrorMacro("Area array not defined.");
     return;
     }
+
+  vtkDataSetAttributes* data = inputTree->GetVertexData();
+
+  VTK_CREATE(vtkDoubleArray, textRotationArray);
+  textRotationArray->SetName( "TextRotation" );
+  textRotationArray->SetNumberOfComponents(1);
+  textRotationArray->SetNumberOfTuples(inputTree->GetNumberOfVertices());
+  data->AddArray( textRotationArray );
+
+  VTK_CREATE(vtkDoubleArray, textBoundedSizeArray);
+  textBoundedSizeArray->SetName( "TextBoundedSize" );
+  textBoundedSizeArray->SetNumberOfComponents(2);
+  textBoundedSizeArray->SetNumberOfTuples(inputTree->GetNumberOfVertices());
+  data->AddArray( textBoundedSizeArray );
 
   double outer_radius = 0.0;
   if (this->Reverse)
@@ -138,13 +152,21 @@ void vtkStackedTreeLayoutStrategy::Layout(vtkTree* inputTree,
       {
       x = 0.5*(sector_coords[0] + sector_coords[1]);
       y = 0.5*(sector_coords[2] + sector_coords[3]);
-      z = 0.;
+      z = 0.;  
+
+      textRotationArray->SetValue( i, 0 );
+      textBoundedSizeArray->SetValue( 2*i, sector_coords[1] - sector_coords[0]);
+      textBoundedSizeArray->SetValue( 2*i + 1, sector_coords[3] - sector_coords[2] );
       }
     else
       {
       if( i == rootId )
         {
         x = y = z = 0.;
+
+        textRotationArray->SetValue( i, 0 );
+        textBoundedSizeArray->SetValue( 2*i, 0 );
+        textBoundedSizeArray->SetValue( 2*i + 1, 0 );
         }
       else
         {
@@ -153,6 +175,40 @@ void vtkStackedTreeLayoutStrategy::Layout(vtkTree* inputTree,
         x = r * cos( vtkMath::RadiansFromDegrees( theta ) );
         y = r * sin( vtkMath::RadiansFromDegrees( theta ) );
         z = 0.;
+        
+        double sector_arc_length = r * vtkMath::RadiansFromDegrees(sector_coords[1] - sector_coords[0]);
+        double radial_arc_length = sector_coords[3] - sector_coords[2];
+        double aspect_ratio = sector_arc_length / radial_arc_length;
+        if( aspect_ratio > 1 )
+          {
+          //sector length is greater than radial length; 
+          // align text with the sector
+          if( theta > 0. && theta < 180. )
+            {
+            textRotationArray->SetValue( i, theta - 90. );
+            }
+          else
+            {
+            textRotationArray->SetValue( i, theta + 90. );
+            }
+          textBoundedSizeArray->SetValue( 2*i, sector_arc_length );
+          textBoundedSizeArray->SetValue( 2*i + 1, radial_arc_length );
+          }
+        else
+          {
+          //radial length is greater than sector length;
+          // align text radially...
+          if( theta > 90. && theta < 270. )
+            {
+            textRotationArray->SetValue( i, theta - 180. );
+            }
+          else
+            {
+            textRotationArray->SetValue( i, theta );
+            }
+          textBoundedSizeArray->SetValue( 2*i, radial_arc_length );
+          textBoundedSizeArray->SetValue( 2*i + 1, sector_arc_length );
+          }
         }
       }
     points->SetPoint(i, x, y, z);
@@ -225,7 +281,7 @@ void vtkStackedTreeLayoutStrategy::LayoutEdgePoints(
   points->SetNumberOfPoints(numVerts);
   for( vtkIdType i = 0; i < numVerts; i++ )
     {
-    if( i == rootId )
+    if( !this->UseRectangularCoordinates && i == rootId )
       {
       points->SetPoint( i, 0, 0, 0 );
       continue;
@@ -422,6 +478,10 @@ vtkIdType vtkStackedTreeLayoutStrategy::FindVertex(
     {
     float blimits[4];
     vtkIdType vertex = otree->GetRoot();
+    if(vertex < 0)
+      {
+      return vertex;
+      }
     vtkFloatArray *boundsInfo = vtkFloatArray::SafeDownCast(array);
 
     // Now try to find the vertex that contains the point
@@ -470,6 +530,10 @@ vtkIdType vtkStackedTreeLayoutStrategy::FindVertex(
 
     float blimits[4];
     vtkIdType vertex = otree->GetRoot();
+    if(vertex < 0)
+      {
+      return vertex;
+      }
     vtkFloatArray *boundsInfo = vtkFloatArray::SafeDownCast(array);
 
     // Now try to find the vertex that contains the point
@@ -479,6 +543,8 @@ vtkIdType vtkStackedTreeLayoutStrategy::FindVertex(
       {
       // Point is at the root vertex.
       // but we don't want the root to be pickable, so return -1.
+      // This won't work for blimits spanning the 0/360 rollover, but the test below
+      // catches that case.
       return -1;
       }
 
@@ -492,7 +558,32 @@ vtkIdType vtkStackedTreeLayoutStrategy::FindVertex(
     while (it->HasNext())
       {
       child = it->Next();
+      // if the root boundary starts anywhere but zero, the root node will have passed
+      // the earlier test.  This will skip the root and prevent it from being picked.
+      if (child == vertex)
+        {
+        continue;
+        }
       boundsInfo->GetTupleValue(child, blimits); // Get the extents of the child
+
+      // the range checking below doesn't work if either or both of blimits > 360  
+      if ((blimits[0] > 360.0) && (blimits[1] > 360.0))
+        {
+        blimits[0] -= 360.0;
+        blimits[1] -= 360.0;
+        }
+      else if ((blimits[0] < 360.0) && (blimits[1] > 360.0) && (polar_location[1] < 360.0)) 
+        {  // if the range spans the rollover at 0/360 on the circle
+        if (polar_location[1] < 90.0)
+          {
+          blimits[0] = 0.0;
+          blimits[1] -= 360.0;
+          }
+        else if (polar_location[1] > 270.)
+          {
+          blimits[1] = 360.0;
+          }
+        }
       bool beyond_radial_bounds = false;
       bool beyond_angle_bounds = false;
       if( (polar_location[0] < blimits[2]) || (polar_location[0] > blimits[3]))

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageFourierFilter.h,v $
+  Module:    vtkImageFourierFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -86,7 +86,7 @@ typedef struct{
 class VTK_IMAGING_EXPORT vtkImageFourierFilter : public vtkImageDecomposeFilter
 {
 public:
-  vtkTypeRevisionMacro(vtkImageFourierFilter,vtkImageDecomposeFilter);
+  vtkTypeMacro(vtkImageFourierFilter,vtkImageDecomposeFilter);
   
   
   // public for templated functions of this object

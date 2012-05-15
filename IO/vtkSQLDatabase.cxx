@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkSQLDatabase.cxx,v $
+Module:    vtkSQLDatabase.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -19,6 +19,7 @@ PURPOSE.  See the above copyright notice for more information.
 -------------------------------------------------------------------------*/
 
 #include "vtkToolkits.h"
+#include "vtkInformationObjectBaseKey.h"
 #include "vtkSQLDatabase.h"
 #include "vtkSQLQuery.h"
 
@@ -81,7 +82,8 @@ public:
 // Used to clean up the Callbacks 
 static vtkSQLDatabaseCleanup vtkCleanupSQLDatabaseGlobal;
 
-vtkCxxRevisionMacro(vtkSQLDatabase, "$Revision: 1.49 $");
+vtkInformationKeyMacro(vtkSQLDatabase, DATABASE, ObjectBase);
+
 // ----------------------------------------------------------------------
 vtkSQLDatabase::vtkSQLDatabase()
 {

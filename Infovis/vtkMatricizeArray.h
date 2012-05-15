@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMatricizeArray.h,v $
+  Module:    vtkMatricizeArray.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -26,12 +26,12 @@
 
 // .NAME vtkMatricizeArray - Convert an array of arbitrary dimensions to a
 // matrix.
-
+//
 // .SECTION Description
 // Given a sparse input array of arbitrary dimension, creates a sparse output
 // matrix (vtkSparseArray<double>) where each column is a slice along an
 // arbitrary dimension from the source.
-
+//
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
@@ -39,7 +39,7 @@ class VTK_INFOVIS_EXPORT vtkMatricizeArray : public vtkArrayDataAlgorithm
 {
 public:
   static vtkMatricizeArray* New();
-  vtkTypeRevisionMacro(vtkMatricizeArray, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkMatricizeArray, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

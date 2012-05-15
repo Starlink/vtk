@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTulipReader.h,v $
+  Module:    vtkTulipReader.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,6 +21,8 @@
 //
 // .SECTION Description
 // vtkTulipReader reads in files in the Tulip format.
+// Definition of the Tulip file format can be found online at:
+// http://tulip.labri.fr/tlpformat.php
 // An example is the following
 // <code>
 // (nodes 0 1 2 3 4 5 6 7 8 9)
@@ -53,11 +55,11 @@ class VTK_INFOVIS_EXPORT vtkTulipReader : public vtkUndirectedGraphAlgorithm
 {
 public:
   static vtkTulipReader *New();
-  vtkTypeRevisionMacro(vtkTulipReader, vtkUndirectedGraphAlgorithm);
+  vtkTypeMacro(vtkTulipReader, vtkUndirectedGraphAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // The Chaco file name.
+  // The Tulip file name.
   vtkGetStringMacro(FileName);
   vtkSetStringMacro(FileName);
 

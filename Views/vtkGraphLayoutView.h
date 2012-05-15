@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphLayoutView.h,v $
+  Module:    vtkGraphLayoutView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,53 +39,20 @@
 #ifndef __vtkGraphLayoutView_h
 #define __vtkGraphLayoutView_h
 
-#include "vtkSmartPointer.h"    // Required for smart pointer internal ivars.
 #include "vtkRenderView.h"
 
-class vtkActor;
-class vtkActor2D;
-class vtkArcParallelEdgeStrategy;
-class vtkCircularLayoutStrategy;
-class vtkClustering2DLayoutStrategy;
-class vtkCoordinate;
-class vtkCommunity2DLayoutStrategy;
-class vtkConstrained2DLayoutStrategy;
-class vtkDynamic2DLabelMapper;
-class vtkEdgeCenters;
-class vtkEdgeLayout;
 class vtkEdgeLayoutStrategy;
-class vtkExtractSelectedGraph;
-class vtkFast2DLayoutStrategy;
-class vtkForceDirectedLayoutStrategy;
-class vtkGraphLayout;
 class vtkGraphLayoutStrategy;
-class vtkGraphMapper;
-class vtkGraphToPolyData;
-class vtkKdTreeSelector;
-class vtkLookupTable;
-class vtkPassThroughEdgeStrategy;
-class vtkPassThroughLayoutStrategy;
-class vtkPerturbCoincidentVertices;
-class vtkPolyDataMapper;
-class vtkRandomLayoutStrategy;
-class vtkScalarBarWidget;
-class vtkSelectionLink;
-class vtkSimple2DLayoutStrategy;
-class vtkTexture;
-class vtkVertexDegree;
-class vtkVertexGlyphFilter;
+class vtkRenderedGraphRepresentation;
 class vtkViewTheme;
-class vtkHardwareSelector;
-
-
 
 class VTK_VIEWS_EXPORT vtkGraphLayoutView : public vtkRenderView
 {
 public:
   static vtkGraphLayoutView *New();
-  vtkTypeRevisionMacro(vtkGraphLayoutView, vtkRenderView);
+  vtkTypeMacro(vtkGraphLayoutView, vtkRenderView);
   void PrintSelf(ostream& os, vtkIndent indent);
-  
+
   // Description:
   // The array to use for vertex labeling.  Default is "label".
   void SetVertexLabelArrayName(const char* name);
@@ -100,16 +67,32 @@ public:
   // Whether to show vertex labels.  Default is off.
   void SetVertexLabelVisibility(bool vis);
   bool GetVertexLabelVisibility();
-  void VertexLabelVisibilityOn();
-  void VertexLabelVisibilityOff();
+  vtkBooleanMacro(VertexLabelVisibility, bool);
+
+  // Description:
+  // Whether to hide vertex labels during mouse interactions.  Default is off.
+  void SetHideVertexLabelsOnInteraction(bool vis);
+  bool GetHideVertexLabelsOnInteraction();
+  vtkBooleanMacro(HideVertexLabelsOnInteraction, bool);
+
+  // Description:
+  // Whether to show the edges at all. Default is on
+  void SetEdgeVisibility(bool vis);
+  bool GetEdgeVisibility();
+  vtkBooleanMacro(EdgeVisibility, bool);
   
   // Description:
   // Whether to show edge labels.  Default is off.
   void SetEdgeLabelVisibility(bool vis);
   bool GetEdgeLabelVisibility();
-  void EdgeLabelVisibilityOn();
-  void EdgeLabelVisibilityOff();
+  vtkBooleanMacro(EdgeLabelVisibility, bool);
   
+  // Description:
+  // Whether to hide edge labels during mouse interactions.  Default is off.
+  void SetHideEdgeLabelsOnInteraction(bool vis);
+  bool GetHideEdgeLabelsOnInteraction();
+  vtkBooleanMacro(HideEdgeLabelsOnInteraction, bool);
+
   // Description:
   // The array to use for coloring vertices.  Default is "color".
   void SetVertexColorArrayName(const char* name);
@@ -119,8 +102,7 @@ public:
   // Whether to color vertices.  Default is off.
   void SetColorVertices(bool vis);
   bool GetColorVertices();
-  void ColorVerticesOn();
-  void ColorVerticesOff();
+  vtkBooleanMacro(ColorVertices, bool);
   
   // Description:
   // The array to use for coloring edges.  Default is "color".
@@ -131,8 +113,7 @@ public:
   // Whether to color edges.  Default is off.
   void SetColorEdges(bool vis);
   bool GetColorEdges();
-  void ColorEdgesOn();
-  void ColorEdgesOff();
+  vtkBooleanMacro(ColorEdges, bool);
 
   // Description:
   // The array to use for coloring edges.
@@ -179,6 +160,8 @@ public:
   //  - "Fast 2D"       A linear-time 2D layout.
   //  - "Pass Through"  Use locations assigned to the input.
   //  - "Circular"      Places vertices uniformly on a circle.
+  //  - "Cone"          Cone tree layout.
+  //  - "Span Tree"     Span Tree Layout.
   // Default is "Simple 2D".
   void SetLayoutStrategy(const char* name);
   void SetLayoutStrategyToRandom()
@@ -197,14 +180,21 @@ public:
     { this->SetLayoutStrategy("Pass Through"); }
   void SetLayoutStrategyToCircular()
     { this->SetLayoutStrategy("Circular"); }
-  const char* GetLayoutStrategyName()
-    { return this->GetLayoutStrategyNameInternal(); }
+  void SetLayoutStrategyToTree()
+    { this->SetLayoutStrategy("Tree"); }
+  void SetLayoutStrategyToCosmicTree()
+    { this->SetLayoutStrategy("Cosmic Tree"); }
+  void SetLayoutStrategyToCone()
+    { this->SetLayoutStrategy("Cone"); }
+  void SetLayoutStrategyToSpanTree()
+    { this->SetLayoutStrategy("Span Tree"); }
+  const char* GetLayoutStrategyName();
 
   // Description:
   // The layout strategy to use when performing the graph layout.
   // This signature allows an application to create a layout
   // object directly and simply set the pointer through this method.
-  vtkGetObjectMacro(LayoutStrategy,vtkGraphLayoutStrategy);
+  vtkGraphLayoutStrategy* GetLayoutStrategy();
   void SetLayoutStrategy(vtkGraphLayoutStrategy *s);
 
   // Description:
@@ -218,28 +208,15 @@ public:
     { this->SetEdgeLayoutStrategy("Arc Parallel"); }
   void SetEdgeLayoutStrategyToPassThrough()
     { this->SetEdgeLayoutStrategy("Pass Through"); }
-  const char* GetEdgeLayoutStrategyName()
-    { return this->GetEdgeLayoutStrategyNameInternal(); }
+  const char* GetEdgeLayoutStrategyName();
 
   // Description:
   // The layout strategy to use when performing the edge layout.
   // This signature allows an application to create a layout
   // object directly and simply set the pointer through this method.
-  vtkGetObjectMacro(EdgeLayoutStrategy,vtkEdgeLayoutStrategy);
+  vtkEdgeLayoutStrategy* GetEdgeLayoutStrategy();
   void SetEdgeLayoutStrategy(vtkEdgeLayoutStrategy *s);
-
-  // Description:
-  // Set the number of iterations per refresh (defaults to all)
-  // In other words, the default is to do the entire layout
-  // and then do a visual refresh. Changing this variable
-  // to something like '1', will enable an application to
-  // see the layout as it progresses.
-  void SetIterationsPerLayout(int iterations);
   
-  // Description:
-  // The icon sheet to use for textures.
-  void SetIconTexture(vtkTexture *texture);
-
   // Description: 
   // Associate the icon at index "index" in the vtkTexture to all vertices
   // containing "type" as a value in the vertex attribute array specified by
@@ -249,10 +226,6 @@ public:
   // Description:
   // Clear all icon mappings.
   void ClearIconTypes();
-
-  // Description:
-  // Each icon's size on the sheet.
-  void SetIconSize(int *size);
 
   // Description:
   // Specify where the icons should be placed in relation to the vertex.
@@ -269,14 +242,11 @@ public:
   // The array used for assigning icons
   void SetIconArrayName(const char* name);
   const char* GetIconArrayName();
-  
+
   // Description:
-  // Sets up interactor style.
-  virtual void SetupRenderWindow(vtkRenderWindow* win);
-  
-  // Description:
-  // Apply the theme to this view.
-  virtual void ApplyViewTheme(vtkViewTheme* theme);
+  // The type of glyph to use for the vertices
+  void SetGlyphType(int type);
+  int GetGlyphType();
   
   // Description:
   // The size of the font used for vertex labeling
@@ -291,10 +261,16 @@ public:
   // Description:
   // Whether the scalar bar for edges is visible.  Default is off.
   void SetEdgeScalarBarVisibility(bool vis);
+  bool GetEdgeScalarBarVisibility();
 
   // Description:
   // Whether the scalar bar for vertices is visible.  Default is off.
   void SetVertexScalarBarVisibility(bool vis);
+  bool GetVertexScalarBarVisibility();
+
+  // Description:
+  // Reset the camera based on the bounds of the selected region.
+  void ZoomToSelection();
 
   // Description:
   // Is the graph layout complete? This method is useful
@@ -319,109 +295,19 @@ protected:
   ~vtkGraphLayoutView();
 
   // Description:
-  // Called to process the user event from the interactor style.
-  virtual void ProcessEvents(vtkObject* caller, unsigned long eventId, 
-    void* callData);
-  
-  // Description:
-  // Connects the algorithm output to the internal pipeline.
-  // This view only supports a single representation.
-  virtual void AddInputConnection( int port, int item,
-    vtkAlgorithmOutput* conn,
-    vtkAlgorithmOutput* selectionConn);
-  
-  // Description:
-  // Removes the algorithm output from the internal pipeline.
-  virtual void RemoveInputConnection( int port, int item,
-    vtkAlgorithmOutput* conn,
-    vtkAlgorithmOutput* selectionConn);
-  
-  // Decsription:
-  // Prepares the view for rendering.
-  virtual void PrepareForRendering();
-
-  // Description:
-  // May a display coordinate to a world coordinate on the x-y plane.  
-  void MapToXYPlane(double displayX, double displayY, double &x, double &y);
-
-  // Description:
-  // Used to store the layout strategy name
-  vtkGetStringMacro(LayoutStrategyNameInternal);
-  vtkSetStringMacro(LayoutStrategyNameInternal);
-  char* LayoutStrategyNameInternal;
-  
-  // Description:
-  // Used to store the current layout strategy
-  vtkGraphLayoutStrategy* LayoutStrategy;
-  
-  // Description:
-  // Used to store the layout strategy name
-  vtkGetStringMacro(EdgeLayoutStrategyNameInternal);
-  vtkSetStringMacro(EdgeLayoutStrategyNameInternal);
-  char* EdgeLayoutStrategyNameInternal;
-  
-  // Description:
-  // Used to store the current edge layout strategy
-  vtkEdgeLayoutStrategy* EdgeLayoutStrategy;
-  
-  // Description:
-  // Used to store the preferred edge layout strategy
-  // when the graph layout has been been set to PassThrough
-  // so that we can change it back when needed.
-  vtkEdgeLayoutStrategy* EdgeLayoutPreference;
-
-  // Description:
-  // Used to store the icon array name
-  vtkGetStringMacro(IconArrayNameInternal);
-  vtkSetStringMacro(IconArrayNameInternal);
-  char* IconArrayNameInternal;
-  
-  //BTX
-  // Used for coordinate conversion
-  vtkSmartPointer<vtkCoordinate>                   Coordinate;
-
-  // Representation objects
-  vtkSmartPointer<vtkGraphLayout>                  GraphLayout;
-  vtkSmartPointer<vtkRandomLayoutStrategy>         RandomStrategy;
-  vtkSmartPointer<vtkForceDirectedLayoutStrategy>  ForceDirectedStrategy;
-  vtkSmartPointer<vtkSimple2DLayoutStrategy>       Simple2DStrategy;
-  vtkSmartPointer<vtkClustering2DLayoutStrategy>   Clustering2DStrategy;
-  vtkSmartPointer<vtkCommunity2DLayoutStrategy>    Community2DStrategy;
-  vtkSmartPointer<vtkConstrained2DLayoutStrategy>  Constrained2DStrategy;
-  vtkSmartPointer<vtkFast2DLayoutStrategy>         Fast2DStrategy;
-  vtkSmartPointer<vtkPassThroughLayoutStrategy>    PassThroughStrategy;
-  vtkSmartPointer<vtkCircularLayoutStrategy>       CircularStrategy;
-  vtkSmartPointer<vtkEdgeLayout>                   EdgeLayout;
-  vtkSmartPointer<vtkArcParallelEdgeStrategy>      ArcParallelStrategy;
-  vtkSmartPointer<vtkPassThroughEdgeStrategy>      PassThroughEdgeStrategy;
-  vtkSmartPointer<vtkPerturbCoincidentVertices>    PerturbCoincidentVertices;
-  vtkSmartPointer<vtkVertexDegree>                 VertexDegree;
-  vtkSmartPointer<vtkEdgeCenters>                  EdgeCenters;
-  vtkSmartPointer<vtkActor>                        GraphActor;
-  vtkSmartPointer<vtkGraphMapper>                  GraphMapper;
-  vtkSmartPointer<vtkDynamic2DLabelMapper>         VertexLabelMapper;
-  vtkSmartPointer<vtkActor2D>                      VertexLabelActor;
-  vtkSmartPointer<vtkDynamic2DLabelMapper>         EdgeLabelMapper;
-  vtkSmartPointer<vtkActor2D>                      EdgeLabelActor;
-  vtkSmartPointer<vtkScalarBarWidget>              VertexScalarBar;
-  vtkSmartPointer<vtkScalarBarWidget>              EdgeScalarBar;
-  
-  // Selection objects
-  vtkSmartPointer<vtkKdTreeSelector>               KdTreeSelector;
-  vtkSmartPointer<vtkHardwareSelector>             HardwareSelector;
-  vtkSmartPointer<vtkExtractSelectedGraph>         ExtractSelectedGraph;
-  vtkSmartPointer<vtkActor>                        SelectedGraphActor;
-  vtkSmartPointer<vtkGraphMapper>                  SelectedGraphMapper;
-
-  // Actor for edge selection
-  vtkSmartPointer<vtkGraphToPolyData>              EdgeSelectionPoly;
-  vtkSmartPointer<vtkPolyDataMapper>               EdgeSelectionMapper;
-  vtkSmartPointer<vtkActor>                        EdgeSelectionActor;
-  //ETX
+  // Overrides behavior in vtkView to create a vtkRenderedGraphRepresentation
+  // by default.
+  virtual vtkDataRepresentation* CreateDefaultRepresentation(vtkAlgorithmOutput* conn);
+  virtual vtkRenderedGraphRepresentation* GetGraphRepresentation();
+  // Called to process events.  Overrides behavior in vtkRenderView.
+  virtual void ProcessEvents(vtkObject* caller, unsigned long eventId, void* callData);
 
 private:
   vtkGraphLayoutView(const vtkGraphLayoutView&);  // Not implemented.
   void operator=(const vtkGraphLayoutView&);  // Not implemented.
+  bool VertexLabelsRequested;
+  bool EdgeLabelsRequested;
+  bool Interacting;
 };
 
 #endif

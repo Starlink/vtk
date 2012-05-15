@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitSelectionLoop.h,v $
+  Module:    vtkImplicitSelectionLoop.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -55,7 +55,7 @@ class VTK_FILTERING_EXPORT vtkImplicitSelectionLoop : public vtkImplicitFunction
 public:
   // Description:
   // Standard VTK methods for printing and type information.
-  vtkTypeRevisionMacro(vtkImplicitSelectionLoop,vtkImplicitFunction);
+  vtkTypeMacro(vtkImplicitSelectionLoop,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

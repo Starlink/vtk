@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostGraphAdapter.h,v $
+  Module:    vtkBoostGraphAdapter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,6 @@
 #include "vtkTree.h"
 #include "vtkUndirectedGraph.h"
 #include "vtkVariant.h"
-#include <stddef.h> // for ptrdiff_t
 
 namespace boost {
   //===========================================================================
@@ -132,7 +131,7 @@ namespace boost {
   }
 }
 
-#include <vtksys/stl/utility>
+#include <vtksys/stl/utility> // STL Header
 
 #include <boost/config.hpp>
 #include <boost/iterator/iterator_facade.hpp>
@@ -912,6 +911,13 @@ namespace boost {
     : property_map<vtkUndirectedGraph*, edge_index_t> { };
 
 } // namespace boost
+
+#include <boost/version.hpp>
+#if BOOST_VERSION > 104000
+#include <boost/property_map/vector_property_map.hpp>
+#else
+#include <boost/vector_property_map.hpp>
+#endif
 
 
 #endif // __vtkBoostGraphAdapter_h

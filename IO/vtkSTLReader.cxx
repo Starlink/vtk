@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSTLReader.cxx,v $
+  Module:    vtkSTLReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,18 +23,19 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkPolyData.h"
+#include "vtkErrorCode.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
 #include <ctype.h>
 #include <vtksys/SystemTools.hxx>
 
-vtkCxxRevisionMacro(vtkSTLReader, "$Revision: 1.74 $");
 vtkStandardNewMacro(vtkSTLReader);
 
 #define VTK_ASCII 0
 #define VTK_BINARY 1
 
-vtkCxxSetObjectMacro(vtkSTLReader,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkSTLReader,Locator,vtkIncrementalPointLocator);
 
 // Construct object with merging set to true.
 vtkSTLReader::vtkSTLReader()
@@ -95,6 +96,7 @@ int vtkSTLReader::RequestData(
   if (!this->FileName || (this->FileName && (0==strlen(this->FileName))))
     {
     vtkErrorMacro(<<"A FileName must be specified.");
+    this->SetErrorCode( vtkErrorCode::NoFileNameError );
     return 0;
     }
 
@@ -103,6 +105,7 @@ int vtkSTLReader::RequestData(
   if ((fp = fopen(this->FileName, "r")) == NULL)
     {
     vtkErrorMacro(<< "File " << this->FileName << " not found");
+    this->SetErrorCode( vtkErrorCode::CannotOpenFileError );
     return 0;
     }
 
@@ -310,6 +313,10 @@ int vtkSTLReader::ReadASCIISTL(FILE *fp, vtkPoints *newPts,
   fgets (line, 255, fp);
 
   done = (fscanf(fp,"%s %*s %f %f %f\n", line, x, x+1, x+2)==EOF);
+  if ((strcmp(line, "COLOR") == 0) || (strcmp(line, "color") == 0))
+    {
+      done = (fscanf(fp,"%s %*s %f %f %f\n", line, x, x+1, x+2)==EOF);
+    }
 
   //  Go into loop, reading  facet normal and vertices
   //
@@ -354,6 +361,11 @@ int vtkSTLReader::ReadASCIISTL(FILE *fp, vtkPoints *newPts,
         }
 
       done = (fscanf(fp,"%s", line)==EOF);
+      if ((strstr(line, "COLOR") == 0) || (strstr(line, "color") == 0))
+        {
+          done = (fscanf(fp,"%f %f %f\n", x,x+1,x+2)==EOF);
+          done = (fscanf(fp,"%s", line)==EOF);
+        }
       }
     if (!done) {
     done = (fscanf(fp,"%*s %f %f %f\n", x, x+1, x+2)==EOF);

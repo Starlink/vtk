@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtStatisticalBoxChartView.h,v $
+  Module:    vtkQtStatisticalBoxChartView.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,16 +20,21 @@
 #ifndef __vtkQtStatisticalBoxChartView_h
 #define __vtkQtStatisticalBoxChartView_h
 
-#include "vtkQtChartViewBase.h"
+#include "QVTKWin32Header.h"
+#include "vtkQtChartView.h"
+#include <QPointer>
 
 class vtkQtStatisticalBoxChart;
 class vtkQtChartSeriesModelCollection;
+class vtkQtChartSeriesOptions;
 
-class QVTK_EXPORT vtkQtStatisticalBoxChartView : public vtkQtChartViewBase
+class QVTK_EXPORT vtkQtStatisticalBoxChartView : public vtkQtChartView
 {
+Q_OBJECT
+
 public:
   static vtkQtStatisticalBoxChartView *New();
-  vtkTypeRevisionMacro(vtkQtStatisticalBoxChartView, vtkQtChartViewBase);
+  vtkTypeMacro(vtkQtStatisticalBoxChartView, vtkQtChartView);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -60,6 +65,14 @@ public:
   // Description:
   // Gets the statistical box chart series model.
   virtual vtkQtChartSeriesModelCollection* GetChartSeriesModel();
+
+  // Description:
+  // Gets the chart series layer
+  virtual vtkQtChartSeriesLayer* GetChartSeriesLayer();
+
+  // Description:
+  // Gets the statistical box chart series options.
+  virtual vtkQtChartSeriesOptions* GetChartSeriesOptions(int series);
   //ETX
 
 protected:

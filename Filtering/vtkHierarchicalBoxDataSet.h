@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkHierarchicalBoxDataSet.h,v $
+  Module:    vtkHierarchicalBoxDataSet.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -52,7 +52,7 @@ class VTK_FILTERING_EXPORT vtkHierarchicalBoxDataSet : public vtkCompositeDataSe
 {
 public:
   static vtkHierarchicalBoxDataSet *New();
-  vtkTypeRevisionMacro(vtkHierarchicalBoxDataSet,vtkCompositeDataSet);
+  vtkTypeMacro(vtkHierarchicalBoxDataSet,vtkCompositeDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -164,6 +164,7 @@ public:
   void GenerateVisibilityArrays();
 
   static vtkInformationIntegerVectorKey* BOX();
+  static vtkInformationIntegerKey* BOX_DIMENSIONALITY();
   static vtkInformationIntegerKey* REFINEMENT_RATIO();
   static vtkInformationIdTypeKey* NUMBER_OF_BLANKED_POINTS();
 

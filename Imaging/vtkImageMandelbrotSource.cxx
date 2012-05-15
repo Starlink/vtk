@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageMandelbrotSource.cxx,v $
+  Module:    vtkImageMandelbrotSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkPointData.h"
 
-vtkCxxRevisionMacro(vtkImageMandelbrotSource, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkImageMandelbrotSource);
 
 //----------------------------------------------------------------------------
@@ -405,7 +404,8 @@ int vtkImageMandelbrotSource::RequestData(
       {
       if (!(count%target))
         {
-        this->UpdateProgress(count/(50.0*target));
+        this->UpdateProgress(static_cast<double>(count)/
+                             (50.0*static_cast<double>(target)));
         }
       count++;
       p[a1] = static_cast<double>(origin[a1]) +

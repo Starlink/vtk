@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProjectedTexture.h,v $
+  Module:    vtkProjectedTexture.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_GRAPHICS_EXPORT vtkProjectedTexture : public vtkDataSetAlgorithm
 {
 public:
   static vtkProjectedTexture *New();
-  vtkTypeRevisionMacro(vtkProjectedTexture,vtkDataSetAlgorithm);
+  vtkTypeMacro(vtkProjectedTexture,vtkDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

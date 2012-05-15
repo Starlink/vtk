@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCaptionActor2D.h,v $
+  Module:    vtkCaptionActor2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -68,7 +68,7 @@ class vtkTextProperty;
 class VTK_HYBRID_EXPORT vtkCaptionActor2D : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkCaptionActor2D,vtkActor2D);
+  vtkTypeMacro(vtkCaptionActor2D,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkCaptionActor2D *New();

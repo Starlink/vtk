@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphLayoutStrategy.h,v $
+  Module:    vtkGraphLayoutStrategy.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class vtkGraph;
 class VTK_INFOVIS_EXPORT vtkGraphLayoutStrategy : public vtkObject 
 {
 public:
-  vtkTypeRevisionMacro(vtkGraphLayoutStrategy,vtkObject);
+  vtkTypeMacro(vtkGraphLayoutStrategy,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,11 +67,15 @@ public:
   // you should overload IsLayoutComplete()
   // otherwise it simply returns 1 by default;
   virtual int IsLayoutComplete() {return 1;}
-  
-  
+    
+  // Description:
+  // Whether to use edge weights in the layout or not.
+  virtual void SetWeightEdges(bool state);
+  vtkGetMacro(WeightEdges, bool);
+
   // Description:
   // Set/Get the field to use for the edge weights.
-  vtkSetStringMacro(EdgeWeightField);
+  virtual void SetEdgeWeightField(const char* field);
   vtkGetStringMacro(EdgeWeightField);
 
 protected:
@@ -80,7 +84,7 @@ protected:
   
   vtkGraph *Graph;
   char     *EdgeWeightField;
-
+  bool     WeightEdges;
 private:
 
   vtkGraphLayoutStrategy(const vtkGraphLayoutStrategy&);  // Not implemented.

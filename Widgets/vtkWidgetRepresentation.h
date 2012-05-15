@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkWidgetRepresentation.h,v $
+  Module:    vtkWidgetRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,7 +50,7 @@ class VTK_WIDGETS_EXPORT vtkWidgetRepresentation : public vtkProp
 public:
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkWidgetRepresentation,vtkProp);
+  vtkTypeMacro(vtkWidgetRepresentation,vtkProp);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

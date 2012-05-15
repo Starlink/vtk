@@ -1,16 +1,14 @@
-/*=========================================================================
+/*============================================================================
+  KWSys - Kitware System Library
+  Copyright 2000-2009 Kitware, Inc., Insight Software Consortium
 
-  Program:   KWSys - Kitware System Library
-  Module:    $RCSfile: SharedForward.h.in,v $
+  Distributed under the OSI-approved BSD License (the "License");
+  see accompanying file Copyright.txt for details.
 
-  Copyright (c) Kitware, Inc., Insight Consortium.  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
+  This software is distributed WITHOUT ANY WARRANTY; without even the
+  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the License for more information.
+============================================================================*/
 #ifndef @KWSYS_NAMESPACE@_SharedForward_h
 #define @KWSYS_NAMESPACE@_SharedForward_h
 
@@ -147,6 +145,7 @@
 /*--------------------------------------------------------------------------*/
 /* Include needed system headers.  */
 
+#include <stddef.h> /* size_t */
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -195,31 +194,27 @@ static const char kwsys_shared_forward_path_slash[2] = {KWSYS_SHARED_FORWARD_PAT
 # define KWSYS_SHARED_FORWARD_LDD "ldd"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # define KWSYS_SHARED_FORWARD_LDPATH "LD_LIBRARY_PATH"
-#endif
 
 /* FreeBSD */
-#if defined(__FreeBSD__)
+#elif defined(__FreeBSD__)
 # define KWSYS_SHARED_FORWARD_LDD "ldd"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # define KWSYS_SHARED_FORWARD_LDPATH "LD_LIBRARY_PATH"
-#endif
 
 /* OSX */
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
 # define KWSYS_SHARED_FORWARD_LDD "otool", "-L"
 # define KWSYS_SHARED_FORWARD_LDD_N 2
 # define KWSYS_SHARED_FORWARD_LDPATH "DYLD_LIBRARY_PATH"
-#endif
 
 /* AIX */
-#if defined(_AIX)
+#elif defined(_AIX)
 # define KWSYS_SHARED_FORWARD_LDD "dump", "-H"
 # define KWSYS_SHARED_FORWARD_LDD_N 2
 # define KWSYS_SHARED_FORWARD_LDPATH "LIBPATH"
-#endif
 
 /* SUN */
-#if defined(__sparc)
+#elif defined(__sun)
 # define KWSYS_SHARED_FORWARD_LDD "ldd"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # include <sys/isa_defs.h>
@@ -228,10 +223,9 @@ static const char kwsys_shared_forward_path_slash[2] = {KWSYS_SHARED_FORWARD_PAT
 # elif defined(_LP64)
 #  define KWSYS_SHARED_FORWARD_LDPATH "LD_LIBRARY_PATH_64"
 # endif
-#endif
 
 /* HP-UX */
-#if defined(__hpux)
+#elif defined(__hpux)
 # define KWSYS_SHARED_FORWARD_LDD "chatr"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # if defined(__LP64__)
@@ -239,10 +233,9 @@ static const char kwsys_shared_forward_path_slash[2] = {KWSYS_SHARED_FORWARD_PAT
 # else
 #  define KWSYS_SHARED_FORWARD_LDPATH "SHLIB_PATH"
 # endif
-#endif
 
 /* SGI MIPS */
-#if defined(__sgi) && defined(_MIPS_SIM)
+#elif defined(__sgi) && defined(_MIPS_SIM)
 # define KWSYS_SHARED_FORWARD_LDD "ldd"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # if _MIPS_SIM == _ABIO32
@@ -252,19 +245,19 @@ static const char kwsys_shared_forward_path_slash[2] = {KWSYS_SHARED_FORWARD_PAT
 # elif _MIPS_SIM == _ABI64
 #  define KWSYS_SHARED_FORWARD_LDPATH "LD_LIBRARY64_PATH"
 # endif
-#endif
+
+/* Cygwin */
+#elif defined(__CYGWIN__)
+# define KWSYS_SHARED_FORWARD_LDD "cygcheck" /* TODO: cygwin 1.7 has ldd */
+# define KWSYS_SHARED_FORWARD_LDD_N 1
+# define KWSYS_SHARED_FORWARD_LDPATH "PATH"
 
 /* Windows */
-#if defined(_WIN32)
-# if defined(__CYGWIN__)
-#  define KWSYS_SHARED_FORWARD_LDD "cygcheck"
-#  define KWSYS_SHARED_FORWARD_LDD_N 1
-# endif
+#elif defined(_WIN32)
 # define KWSYS_SHARED_FORWARD_LDPATH "PATH"
-#endif
 
 /* Guess on this unknown system.  */
-#if !defined(KWSYS_SHARED_FORWARD_LDPATH)
+#else
 # define KWSYS_SHARED_FORWARD_LDD "ldd"
 # define KWSYS_SHARED_FORWARD_LDD_N 1
 # define KWSYS_SHARED_FORWARD_LDPATH "LD_LIBRARY_PATH"
@@ -482,13 +475,14 @@ static void kwsys_shared_forward_strerror(char* message)
 
 /*--------------------------------------------------------------------------*/
 /* Functions to execute a child process.  */
-static void kwsys_shared_forward_execvp(const char* cmd, char* const* argv)
+static void kwsys_shared_forward_execvp(const char* cmd,
+                                        char const* const* argv)
 {
 #ifdef KWSYS_SHARED_FORWARD_ESCAPE_ARGV
   /* Count the number of arguments.  */
   int argc = 0;
   {
-  char* const* argvc;
+  char const* const* argvc;
   for(argvc = argv; *argvc; ++argvc,++argc) {}
   }
 
@@ -505,7 +499,7 @@ static void kwsys_shared_forward_execvp(const char* cmd, char* const* argv)
   nargv[argc] = 0;
 
   /* Replace the command line to be used.  */
-  argv = nargv;
+  argv = (char const* const*)nargv;
   }
 #endif
 
@@ -513,10 +507,9 @@ static void kwsys_shared_forward_execvp(const char* cmd, char* const* argv)
 #if defined(_MSC_VER)
   _execvp(cmd, argv);
 #elif defined(__MINGW32__)
-   /* Avoid incompatible pointer warning with a cast.  */
-  execvp(cmd, (char const* const*)argv);
-#else
   execvp(cmd, argv);
+#else
+  execvp(cmd, (char* const*)argv);
 #endif
 }
 
@@ -550,7 +543,7 @@ static void kwsys_shared_forward_dirname(const char* begin, char* result)
   else if(last_slash_index == 2 && begin[1] == ':')
     {
     /* Only one leading drive letter and slash.  */
-    strncpy(result, begin, last_slash_index);
+    strncpy(result, begin, (size_t)last_slash_index);
     result[last_slash_index] = KWSYS_SHARED_FORWARD_PATH_SLASH;
     result[last_slash_index+1] = 0;
     }
@@ -558,7 +551,7 @@ static void kwsys_shared_forward_dirname(const char* begin, char* result)
   else
     {
     /* A non-leading slash.  */
-    strncpy(result, begin, last_slash_index);
+    strncpy(result, begin, (size_t)last_slash_index);
     result[last_slash_index] = 0;
     }
 }
@@ -630,7 +623,7 @@ static int kwsys_shared_forward_self_path(const char* argv0, char* result)
       if(first < last)
         {
         /* Determine the length without trailing slash.  */
-        int length = (int)(last-first);
+        size_t length = (size_t)(last-first);
         if(*(last-1) == '/' || *(last-1) == '\\')
           {
           --length;
@@ -800,10 +793,10 @@ static int kwsys_shared_forward_get_settings(const char* self_path,
 
 /*--------------------------------------------------------------------------*/
 /* Function to print why execution of a command line failed.  */
-static void kwsys_shared_forward_print_failure(char** argv)
+static void kwsys_shared_forward_print_failure(char const* const* argv)
 {
   char msg[KWSYS_SHARED_FORWARD_MAXPATH];
-  char** arg = argv;
+  char const* const* arg = argv;
   kwsys_shared_forward_strerror(msg);
   fprintf(stderr, "Error running");
   for(; *arg; ++arg)
@@ -818,8 +811,9 @@ static char kwsys_shared_forward_ldpath[KWSYS_SHARED_FORWARD_MAXPATH*16] = KWSYS
 
 /*--------------------------------------------------------------------------*/
 /* Main driver function to be called from main.  */
-static int @KWSYS_NAMESPACE@_shared_forward_to_real(int argc, char** argv)
+static int @KWSYS_NAMESPACE@_shared_forward_to_real(int argc, char** argv_in)
 {
+  char const** argv = (char const**)argv_in;
   /* Get the directory containing this executable.  */
   char self_path[KWSYS_SHARED_FORWARD_MAXPATH];
   if(kwsys_shared_forward_self_path(argv[0], self_path))
@@ -877,7 +871,7 @@ static int @KWSYS_NAMESPACE@_shared_forward_to_real(int argc, char** argv)
         {
 # if defined(KWSYS_SHARED_FORWARD_LDD)
         /* Use the named ldd-like executable and arguments.  */
-        char* ldd_argv[] = {KWSYS_SHARED_FORWARD_LDD, 0, 0};
+        char const* ldd_argv[] = {KWSYS_SHARED_FORWARD_LDD, 0, 0};
         ldd_argv[KWSYS_SHARED_FORWARD_LDD_N] = exe;
         kwsys_shared_forward_execvp(ldd_argv[0], ldd_argv);
 

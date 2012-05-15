@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ProcessShader.cxx,v $
+  Module:    ProcessShader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ public:
   vtksys_ios::ostringstream Stream;
 
   int MaxLen;
-  long CurrentPosition;
+  vtksys_ios::streamoff CurrentPosition;
   int Count;
   vtkstd::string Prefix;
   vtkstd::string Suffix;

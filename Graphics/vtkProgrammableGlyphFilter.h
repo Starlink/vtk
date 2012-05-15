@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableGlyphFilter.h,v $
+  Module:    vtkProgrammableGlyphFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -67,7 +67,7 @@ class vtkPointData;
 class VTK_GRAPHICS_EXPORT vtkProgrammableGlyphFilter : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeRevisionMacro(vtkProgrammableGlyphFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkProgrammableGlyphFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGLSLShaderProgram.cxx,v $
+  Module:    vtkGLSLShaderProgram.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,6 +34,7 @@
 #include "vtkRenderer.h"
 #include "vtkTexture.h"
 #include "vtkXMLDataElement.h"
+#include "vtkWindow.h"
 
 #include <vtkstd/vector>
 #include <vtkstd/string>
@@ -64,7 +65,6 @@ int printOglError(char *vtkNotUsed(file), int vtkNotUsed(line))
 #endif
 
 //-----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkGLSLShaderProgram, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkGLSLShaderProgram);
 
 //-----------------------------------------------------------------------------
@@ -93,11 +93,11 @@ vtkShader* vtkGLSLShaderProgram::NewShader()
 //-----------------------------------------------------------------------------
 void vtkGLSLShaderProgram::ReleaseGraphicsResources(vtkWindow* w)
 {
-  if (this->IsProgram())
+  if (w && w->GetMapped() && this->IsProgram())
     {
     vtkgl::DeleteProgram(this->Program);
-    this->Program = 0;
     }
+  this->Program = 0;
   this->Superclass::ReleaseGraphicsResources(w);
 }
 

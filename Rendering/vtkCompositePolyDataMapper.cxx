@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCompositePolyDataMapper.cxx,v $
+  Module:    vtkCompositePolyDataMapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkCompositePolyDataMapper, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkCompositePolyDataMapper);
 
 class vtkCompositePolyDataMapperInternals
@@ -135,7 +134,7 @@ void vtkCompositePolyDataMapper::BuildPolyDataMapper()
         {
         if ( !warnOnce )
           {
-          vtkErrorMacro("All data in the hierachical dataset must be polydata.");
+          vtkErrorMacro("All data in the hierarchical dataset must be polydata.");
           warnOnce = 1;
           }
         }

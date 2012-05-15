@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkReferenceCount.h,v $
+  Module:    vtkReferenceCount.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,7 @@ class VTK_COMMON_EXPORT vtkReferenceCount : public vtkObject
 public:
   static vtkReferenceCount *New();
 
-  vtkTypeRevisionMacro(vtkReferenceCount,vtkObject);
+  vtkTypeMacro(vtkReferenceCount,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
   
 protected:  

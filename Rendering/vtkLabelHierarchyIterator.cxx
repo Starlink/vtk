@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelHierarchyIterator.cxx,v $
+  Module:    vtkLabelHierarchyIterator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,6 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkLabelHierarchyIterator, "$Revision: 1.7 $");
 vtkCxxSetObjectMacro(vtkLabelHierarchyIterator,Hierarchy,vtkLabelHierarchy);
 vtkCxxSetObjectMacro(vtkLabelHierarchyIterator,TraversedBounds,vtkPolyData);
 
@@ -72,12 +71,17 @@ void vtkLabelHierarchyIterator::PrintSelf( ostream& os, vtkIndent indent )
 
 void vtkLabelHierarchyIterator::GetPoint( double x[3] )
 {
-  this->Hierarchy->GetPoints()->GetPoint( this->GetLabelId(), x );
+  this->GetHierarchy()->GetPoints()->GetPoint( this->GetLabelId(), x );
 }
 
 void vtkLabelHierarchyIterator::GetSize( double sz[2] )
 {
-  vtkDataArray* labelSizeArr = this->Hierarchy->GetPointData()->GetArray( "LabelSize" );
+  if ( ! this->GetHierarchy() )
+    {
+    sz[0] = sz[1] = 0.;
+    return;
+    }
+  vtkDataArray* labelSizeArr = this->GetHierarchy()->GetSizes();
   if ( ! labelSizeArr )
     {
     sz[0] = sz[1] = 0.;
@@ -91,7 +95,11 @@ void vtkLabelHierarchyIterator::GetSize( double sz[2] )
 
 int vtkLabelHierarchyIterator::GetType()
 {
-  vtkDataArray* labelTypeArr = this->Hierarchy->GetPointData()->GetArray( "Type" );
+  if ( ! this->GetHierarchy() )
+    {
+    return -1;
+    }
+  vtkDataArray* labelTypeArr = this->GetHierarchy()->GetPointData()->GetArray( "Type" );
   if ( ! labelTypeArr )
     {
     return -1;
@@ -101,8 +109,73 @@ int vtkLabelHierarchyIterator::GetType()
     {
     return -1;
     }
+  if (labelTypeIArr->GetNumberOfTuples()==0)
+    {
+    return -1;
+    }
   vtkIdType lid = this->GetLabelId();
   return labelTypeIArr->GetValue( lid );
+}
+
+vtkStdString vtkLabelHierarchyIterator::GetLabel()
+{
+  if ( ! this->GetHierarchy() )
+    {
+    return vtkStdString();
+    }
+  vtkAbstractArray* labelArr = this->GetHierarchy()->GetLabels();
+  if (!labelArr)
+    {
+    return "";
+    }
+  return labelArr->GetVariantValue(this->GetLabelId()).ToString();
+}
+
+vtkUnicodeString vtkLabelHierarchyIterator::GetUnicodeLabel()
+{
+  if ( ! this->GetHierarchy() )
+    {
+    return vtkUnicodeString();
+    }
+  vtkAbstractArray* labelArr = this->GetHierarchy()->GetLabels();
+  if ( ! labelArr )
+    {
+    return vtkUnicodeString();
+    }
+  return labelArr->GetVariantValue(this->GetLabelId()).ToUnicodeString();
+}
+
+double vtkLabelHierarchyIterator::GetOrientation()
+{
+  if ( ! this->GetHierarchy() )
+    {
+    return 0.0;
+    }
+  vtkDataArray* arr = this->GetHierarchy()->GetOrientations();
+  if ( ! arr )
+    {
+    return 0.0;
+    }
+  return arr->GetTuple1(this->GetLabelId());
+}
+
+void vtkLabelHierarchyIterator::GetBoundedSize( double sz[2] )
+{
+  if ( ! this->GetHierarchy() )
+    {
+    sz[0] = sz[1] = 0.;
+    return;
+    }
+  vtkDataArray* boundedSizeArr = this->GetHierarchy()->GetBoundedSizes();
+  if ( ! boundedSizeArr )
+    {
+    sz[0] = sz[1] = 0.;
+    return;
+    }
+  vtkIdType lid = this->GetLabelId();
+  double* ls = boundedSizeArr->GetTuple( lid );
+  sz[0] = ls[0];
+  sz[1] = ls[1];
 }
 
 void vtkLabelHierarchyIterator::BoxNode()

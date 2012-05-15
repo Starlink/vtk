@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkArrayDataAlgorithm.h,v $
+  Module:    vtkArrayDataAlgorithm.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -54,7 +54,7 @@ class VTK_FILTERING_EXPORT vtkArrayDataAlgorithm : public vtkAlgorithm
 {
 public:
   static vtkArrayDataAlgorithm *New();
-  vtkTypeRevisionMacro(vtkArrayDataAlgorithm,vtkAlgorithm);
+  vtkTypeMacro(vtkArrayDataAlgorithm,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

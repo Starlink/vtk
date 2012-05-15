@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkScalarsToColors.cxx,v $
+  Module:    vtkScalarsToColors.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -18,7 +18,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkScalarsToColors, "$Revision: 1.26 $");
 
 //----------------------------------------------------------------------------
 vtkScalarsToColors::vtkScalarsToColors()
@@ -107,31 +106,6 @@ vtkUnsignedCharArray *vtkScalarsToColors::MapScalars(vtkDataArray *scalars,
                                   scalars->GetNumberOfComponents(), 
                                   VTK_RGBA);
     }//need to map
-
-  // Here is a bit of a hack.
-  // It is much faster to render RGB instead of RGBA when possible.
-  // I do not want to create a 3 component color array because
-  // it would be another condition.  Give the mapper a hint that
-  // the colors have no alpha by setting the name.
-  // When the mapper can handle 3 component color array,
-  // I will change this logic to use NumberOfComponents as
-  // an indicator of opacity.
-  unsigned char* alphaPtr = newColors->GetPointer(0) + 3;
-  vtkIdType idx, num;
-  int opaque = 1;
-  num = newColors->GetNumberOfTuples();
-  for (idx = 0; idx < num; ++idx)
-    {
-    if (*alphaPtr < 255)
-      {
-      opaque = 0;
-      }
-    alphaPtr += 4;
-    }
-  if (opaque)
-    {
-    newColors->SetName("Opaque Colors");
-    }
 
   return newColors;
 }

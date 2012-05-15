@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ArrayAPIDenseCoordinates.cxx,v $
+  Module:    ArrayAPIDenseCoordinates.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -35,7 +35,7 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-int ArrayAPIDenseCoordinates(int argc, char* argv[])
+int ArrayAPIDenseCoordinates(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -47,7 +47,8 @@ int ArrayAPIDenseCoordinates(int argc, char* argv[])
     source->SetSubDiagonal(-0.5);
     source->Update();
 
-    vtkDenseArray<double>* const array = vtkDenseArray<double>::SafeDownCast(source->GetOutput()->GetArray());
+    vtkDenseArray<double>* const array = vtkDenseArray<double>::SafeDownCast(
+      source->GetOutput()->GetArray(static_cast<vtkIdType>(0)));
 
     cout << "dense diagonal matrix:\n";
     vtkPrintMatrixFormat(cout, array);

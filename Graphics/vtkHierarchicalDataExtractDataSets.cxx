@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkHierarchicalDataExtractDataSets.cxx,v $
+Module:    vtkHierarchicalDataExtractDataSets.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -15,7 +15,6 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkHierarchicalDataExtractDataSets.h"
 
 #include "vtkObjectFactory.h"
-vtkCxxRevisionMacro(vtkHierarchicalDataExtractDataSets, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkHierarchicalDataExtractDataSets);
 
 //----------------------------------------------------------------------------

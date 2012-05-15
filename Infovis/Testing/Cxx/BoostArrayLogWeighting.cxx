@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: BoostArrayLogWeighting.cxx,v $
+  Module:    BoostArrayLogWeighting.cxx
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -35,12 +35,12 @@
     throw vtkstd::runtime_error("Expression failed: " #expression); \
 }
 
-static const bool close_enough(const double lhs, const double rhs)
+static bool close_enough(const double lhs, const double rhs)
 {
   return fabs(lhs - rhs) < 1.0e-12;
 }
 
-int BoostArrayLogWeighting(int argc, char* argv[])
+int BoostArrayLogWeighting(int vtkNotUsed(argc), char *vtkNotUsed(argv)[])
 {
   try
     {
@@ -54,13 +54,13 @@ int BoostArrayLogWeighting(int argc, char* argv[])
     cout << vtkstd::fixed << setprecision(1);
     cout << "sparse diagonal source:\n";
     source->Update();
-    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray()));
+    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray(0)));
 
     vtkSmartPointer<vtkBoostLogWeighting> log_weighting = vtkSmartPointer<vtkBoostLogWeighting>::New();
     log_weighting->AddInputConnection(source->GetOutputPort());
 
     log_weighting->Update();
-    vtkTypedArray<double>* weighted = vtkTypedArray<double>::SafeDownCast(log_weighting->GetOutput()->GetArray());
+    vtkTypedArray<double>* weighted = vtkTypedArray<double>::SafeDownCast(log_weighting->GetOutput()->GetArray(0));
     cout << vtkstd::fixed << setprecision(17);
     cout << "sparse weighted:\n";
     vtkPrintMatrixFormat(cout, weighted);
@@ -83,10 +83,10 @@ int BoostArrayLogWeighting(int argc, char* argv[])
     cout << vtkstd::fixed << setprecision(1);
     cout << "dense diagonal source:\n";
     source->Update();
-    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray()));
+    vtkPrintMatrixFormat(cout, vtkTypedArray<double>::SafeDownCast(source->GetOutput()->GetArray(0)));
 
     log_weighting->Update();
-    weighted = vtkTypedArray<double>::SafeDownCast(log_weighting->GetOutput()->GetArray());
+    weighted = vtkTypedArray<double>::SafeDownCast(log_weighting->GetOutput()->GetArray(0));
     cout << vtkstd::fixed << setprecision(17);
     cout << "dense weighted:\n";
     vtkPrintMatrixFormat(cout, weighted);

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkThresholdTable.h,v $
+  Module:    vtkThresholdTable.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -34,7 +34,7 @@ class VTK_INFOVIS_EXPORT vtkThresholdTable : public vtkTableAlgorithm
 {
 public:
   static vtkThresholdTable* New();
-  vtkTypeRevisionMacro(vtkThresholdTable, vtkTableAlgorithm);
+  vtkTypeMacro(vtkThresholdTable, vtkTableAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //BTX

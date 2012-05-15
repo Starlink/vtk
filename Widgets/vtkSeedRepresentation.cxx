@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSeedRepresentation.cxx,v $
+  Module:    vtkSeedRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include <vtkstd/iterator>
 #include <vtkstd/list>
 
-vtkCxxRevisionMacro(vtkSeedRepresentation, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkSeedRepresentation);
 
 vtkCxxSetObjectMacro(vtkSeedRepresentation,HandleRepresentation,vtkHandleRepresentation);
@@ -67,7 +66,8 @@ vtkSeedRepresentation::~vtkSeedRepresentation()
 }
 
 //----------------------------------------------------------------------
-vtkHandleRepresentation *vtkSeedRepresentation::GetHandleRepresentation(unsigned int num)
+vtkHandleRepresentation *vtkSeedRepresentation
+::GetHandleRepresentation(unsigned int num)
 {
   if ( num < this->Handles->size() )
     {
@@ -78,7 +78,7 @@ vtkHandleRepresentation *vtkSeedRepresentation::GetHandleRepresentation(unsigned
   else //create one
     {
     vtkHandleRepresentation *rep = this->HandleRepresentation->NewInstance();
-    rep->ShallowCopy(this->HandleRepresentation);
+    rep->DeepCopy(this->HandleRepresentation);
     this->Handles->push_back( rep );
     return rep;
     }
@@ -195,6 +195,29 @@ void vtkSeedRepresentation::RemoveLastHandle()
 }
 
 //----------------------------------------------------------------------
+void vtkSeedRepresentation::RemoveHandle( int n )
+{
+  // Remove nth handle
+  
+  if (n == this->ActiveHandle)
+    {
+    this->RemoveActiveHandle();
+    return;
+    }
+
+  if (static_cast<int>(this->Handles->size()) <= n )
+    {
+    return;
+    }
+
+  vtkHandleListIterator iter = this->Handles->begin();
+  vtkstd::advance( iter, n );
+  vtkHandleRepresentation *hr = *iter;
+  this->Handles->erase( iter );
+  hr->Delete();
+}
+
+//----------------------------------------------------------------------
 void vtkSeedRepresentation::RemoveActiveHandle()
 {
   if ( this->Handles->size() < 1 )
@@ -205,8 +228,9 @@ void vtkSeedRepresentation::RemoveActiveHandle()
     {
     vtkHandleListIterator iter = this->Handles->begin();
     vtkstd::advance( iter, this->ActiveHandle );
+    vtkHandleRepresentation *hr = *iter;
     this->Handles->erase( iter );
-    ( *iter )->Delete();
+    hr->Delete();
     this->ActiveHandle = -1;
     }
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtentTranslator.cxx,v $
+  Module:    vtkExtentTranslator.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkLargeInteger.h"
 
-vtkCxxRevisionMacro(vtkExtentTranslator, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkExtentTranslator);
 
 //----------------------------------------------------------------------------
@@ -34,11 +33,31 @@ vtkExtentTranslator::vtkExtentTranslator()
 
   // Set a default split mode to be slabs
   this->SplitMode   = vtkExtentTranslator::BLOCK_MODE;
+
+  this->SplitLen = 0;
+  this->SplitPath = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkExtentTranslator::~vtkExtentTranslator()
 {
+  this->SetSplitPath(0, NULL);
+}
+
+//----------------------------------------------------------------------------
+void vtkExtentTranslator::SetSplitPath(int len, int *sp)
+{
+  if (this->SplitPath)
+    {
+    delete[] this->SplitPath;
+    }
+  this->SplitLen = len;
+  this->SplitPath = NULL;
+  if (len && sp)
+    {
+    this->SplitPath = new int[len];
+    memcpy(this->SplitPath, sp, len*sizeof(int));
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -139,6 +158,7 @@ int vtkExtentTranslator::SplitExtent(int piece, int numPieces, int *ext,
 
   // keep splitting until we have only one piece.
   // piece and numPieces will always be relative to the current ext. 
+  int cnt = 0;
   while (numPieces > 1)
     {
     // Get the dimensions for each axis.
@@ -149,6 +169,11 @@ int vtkExtentTranslator::SplitExtent(int piece, int numPieces, int *ext,
     // if the user has requested x, y, or z slabs then try to 
     // honor that request. If that axis is already split as
     // far as it can go, then drop to block mode.
+    if (this->SplitPath && cnt<this->SplitLen)
+      {
+      splitMode = this->SplitPath[cnt];
+      cnt++;
+      }
     if (splitMode < 3 && size[splitMode] > 1)
       {
       splitAxis = splitMode;

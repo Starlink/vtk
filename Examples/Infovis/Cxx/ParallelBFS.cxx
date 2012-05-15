@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: ParallelBFS.cxx,v $
+  Module:    ParallelBFS.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -74,9 +74,7 @@ int main(int argc, char** argv)
     view->SetRepresentationFromInput(g);
     view->SetVertexColorArrayName("BFS");
     view->ColorVerticesOn();
-    vtkSmartPointer<vtkRenderWindow> win =
-      vtkSmartPointer<vtkRenderWindow>::New();
-    view->SetupRenderWindow(win);
+    vtkRenderWindow* win = view->GetRenderWindow();
     view->Update();
     view->GetRenderer()->ResetCamera();
     win->GetInteractor()->Initialize();

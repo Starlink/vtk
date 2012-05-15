@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUndirectedGraphAlgorithm.cxx,v $
+  Module:    vtkUndirectedGraphAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -27,7 +27,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkUndirectedGraphAlgorithm, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkUndirectedGraphAlgorithm);
 
 //----------------------------------------------------------------------------

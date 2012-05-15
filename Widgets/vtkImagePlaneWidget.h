@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImagePlaneWidget.h,v $
+  Module:    vtkImagePlaneWidget.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -132,7 +132,7 @@ public:
   // Instantiate the object.
   static vtkImagePlaneWidget *New();
 
-  vtkTypeRevisionMacro(vtkImagePlaneWidget,vtkPolyDataSourceWidget);
+  vtkTypeMacro(vtkImagePlaneWidget,vtkPolyDataSourceWidget);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

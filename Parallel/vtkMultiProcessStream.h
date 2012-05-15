@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiProcessStream.h,v $
+  Module:    vtkMultiProcessStream.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -42,6 +42,8 @@ public:
   vtkMultiProcessStream& operator << (char value);
   vtkMultiProcessStream& operator << (unsigned int value);
   vtkMultiProcessStream& operator << (unsigned char value);
+  vtkMultiProcessStream& operator << (vtkTypeInt64 value);
+  vtkMultiProcessStream& operator << (vtkTypeUInt64 value);
   vtkMultiProcessStream& operator << (const vtkstd::string& value);
 
   // Description:
@@ -52,6 +54,8 @@ public:
   vtkMultiProcessStream& operator >> (char &value);
   vtkMultiProcessStream& operator >> (unsigned int &value);
   vtkMultiProcessStream& operator >> (unsigned char &value);
+  vtkMultiProcessStream& operator >> (vtkTypeInt64 &value);
+  vtkMultiProcessStream& operator >> (vtkTypeUInt64 &value);
   vtkMultiProcessStream& operator >> (vtkstd::string &value);
 
   // Description:

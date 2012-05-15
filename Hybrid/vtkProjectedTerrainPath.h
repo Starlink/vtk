@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProjectedTerrainPath.h,v $
+  Module:    vtkProjectedTerrainPath.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -75,7 +75,7 @@ class VTK_HYBRID_EXPORT vtkProjectedTerrainPath : public vtkPolyDataAlgorithm
 public:
   // Description:
   // Standard methids for printing and determining type information.
-  vtkTypeRevisionMacro(vtkProjectedTerrainPath,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkProjectedTerrainPath,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

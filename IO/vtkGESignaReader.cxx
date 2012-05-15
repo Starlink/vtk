@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGESignaReader.cxx,v $
+  Module:    vtkGESignaReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkPointData.h"
 #include "vtkMedicalImageProperties.h"
 
-vtkCxxRevisionMacro(vtkGESignaReader, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkGESignaReader);
 
 

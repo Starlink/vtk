@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBarChartActor.cxx,v $
+  Module:    vtkBarChartActor.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,7 +33,6 @@
 #include <vtkstd/vector>
 
 
-vtkCxxRevisionMacro(vtkBarChartActor, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkBarChartActor);
 
 vtkCxxSetObjectMacro(vtkBarChartActor,Input,vtkDataObject);

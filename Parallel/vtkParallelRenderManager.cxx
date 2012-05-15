@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParallelRenderManager.cxx,v $
+  Module:    vtkParallelRenderManager.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -58,7 +58,6 @@ static void RenderRMI(void *arg, void *, int, int);
 static void ComputeVisiblePropBoundsRMI(void *arg, void *, int, int);
 bool vtkParallelRenderManager::DefaultRenderEventPropagation = true;
 
-vtkCxxRevisionMacro(vtkParallelRenderManager, "$Revision: 1.78 $");
 
 //----------------------------------------------------------------------------
 vtkParallelRenderManager::vtkParallelRenderManager()
@@ -618,7 +617,12 @@ void vtkParallelRenderManager::StartRender()
         }
       }
 
+    int hasActiveCamera=ren->IsActiveCameraCreated();
     vtkCamera *cam = ren->GetActiveCamera();
+    if(!hasActiveCamera)
+      {
+      this->ResetCamera(ren);
+      }
     cam->GetPosition(renInfo.CameraPosition);
     cam->GetFocalPoint(renInfo.CameraFocalPoint);
     cam->GetViewUp(renInfo.CameraViewUp);
@@ -627,6 +631,8 @@ void vtkParallelRenderManager::StartRender()
     cam->GetWindowCenter(renInfo.WindowCenter);
         
     ren->GetBackground(renInfo.Background);
+    ren->GetBackground2(renInfo.Background2);
+    renInfo.GradientBackground=ren->GetGradientBackground();
     if (cam->GetParallelProjection())
       {
       renInfo.ParallelScale = cam->GetParallelScale();
@@ -1923,6 +1929,10 @@ void vtkParallelRenderManager::SatelliteStartRender()
       ren->SetBackground(renInfo.Background[0],
                          renInfo.Background[1],
                          renInfo.Background[2]);
+      ren->SetBackground2(renInfo.Background2[0],
+                          renInfo.Background2[1],
+                          renInfo.Background2[2]);
+      ren->SetGradientBackground(renInfo.GradientBackground);
       vtkCamera *cam = ren->GetActiveCamera();
       cam->SetPosition(renInfo.CameraPosition);
       cam->SetFocalPoint(renInfo.CameraFocalPoint);
@@ -2053,29 +2063,35 @@ bool vtkParallelRenderManager::RenderWindowInfo::Restore(vtkMultiProcessStream& 
 }
 
 //----------------------------------------------------------------------------
-void vtkParallelRenderManager::RendererInfo::Save(vtkMultiProcessStream& stream)
+void vtkParallelRenderManager::RendererInfo::Save(
+  vtkMultiProcessStream& stream)
 {
+  int value=this->GradientBackground;
   stream << vtkParallelRenderManager::REN_INFO_TAG
-    << this->Draw
-    << this->NumberOfLights
-    << this->Viewport[0] << this->Viewport[1]
-    << this->Viewport[2] << this->Viewport[3]
-    << this->CameraPosition[0] << this->CameraPosition[1]
-    << this->CameraPosition[2]
-    << this->CameraFocalPoint[0] << this->CameraFocalPoint[1]
-    << this->CameraFocalPoint[2]
-    << this->CameraViewUp[0] << this->CameraViewUp[1]
-    << this->CameraViewUp[2]
-    << this->WindowCenter[0] << this->WindowCenter[1]
-    << this->CameraClippingRange[0] << this->CameraClippingRange[1]
-    << this->CameraViewAngle
-    << this->Background[0] << this->Background[1]
-    << this->Background[2]
-    << this->ParallelScale;
+         << this->Draw
+         << this->NumberOfLights
+         << this->Viewport[0] << this->Viewport[1]
+         << this->Viewport[2] << this->Viewport[3]
+         << this->CameraPosition[0] << this->CameraPosition[1]
+         << this->CameraPosition[2]
+         << this->CameraFocalPoint[0] << this->CameraFocalPoint[1]
+         << this->CameraFocalPoint[2]
+         << this->CameraViewUp[0] << this->CameraViewUp[1]
+         << this->CameraViewUp[2]
+         << this->WindowCenter[0] << this->WindowCenter[1]
+         << this->CameraClippingRange[0] << this->CameraClippingRange[1]
+         << this->CameraViewAngle
+         << this->Background[0] << this->Background[1]
+         << this->Background[2]
+         << this->Background2[0] << this->Background2[1]
+         << this->Background2[2]
+         << value
+         << this->ParallelScale;
 }
 
 //----------------------------------------------------------------------------
-bool vtkParallelRenderManager::RendererInfo::Restore(vtkMultiProcessStream& stream)
+bool vtkParallelRenderManager::RendererInfo::Restore(
+  vtkMultiProcessStream& stream)
 {
   int tag;
   stream >> tag;
@@ -2083,22 +2099,30 @@ bool vtkParallelRenderManager::RendererInfo::Restore(vtkMultiProcessStream& stre
     {
     return false;
     }
+  
+  int value;
+  
   stream >> this->Draw
-    >> this->NumberOfLights
-    >> this->Viewport[0] >> this->Viewport[1]
-    >> this->Viewport[2] >> this->Viewport[3]
-    >> this->CameraPosition[0] >> this->CameraPosition[1]
-    >> this->CameraPosition[2]
-    >> this->CameraFocalPoint[0] >> this->CameraFocalPoint[1]
-    >> this->CameraFocalPoint[2]
-    >> this->CameraViewUp[0] >> this->CameraViewUp[1]
-    >> this->CameraViewUp[2]
-    >> this->WindowCenter[0] >> this->WindowCenter[1]
-    >> this->CameraClippingRange[0] >> this->CameraClippingRange[1]
-    >> this->CameraViewAngle
-    >> this->Background[0] >> this->Background[1]
-    >> this->Background[2]
-    >> this->ParallelScale;
+         >> this->NumberOfLights
+         >> this->Viewport[0] >> this->Viewport[1]
+         >> this->Viewport[2] >> this->Viewport[3]
+         >> this->CameraPosition[0] >> this->CameraPosition[1]
+         >> this->CameraPosition[2]
+         >> this->CameraFocalPoint[0] >> this->CameraFocalPoint[1]
+         >> this->CameraFocalPoint[2]
+         >> this->CameraViewUp[0] >> this->CameraViewUp[1]
+         >> this->CameraViewUp[2]
+         >> this->WindowCenter[0] >> this->WindowCenter[1]
+         >> this->CameraClippingRange[0] >> this->CameraClippingRange[1]
+         >> this->CameraViewAngle
+         >> this->Background[0] >> this->Background[1]
+         >> this->Background[2]
+         >> this->Background2[0] >> this->Background2[1]
+         >> this->Background2[2]
+         >> value
+         >> this->ParallelScale;
+  
+  this->GradientBackground=value==1;
   return true;
 }
 

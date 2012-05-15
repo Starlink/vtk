@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkQtChartLegendManager.h,v $
+  Module:    vtkQtChartLegendManager.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -90,12 +90,6 @@ private slots:
   /// \param current The current series model.
   void changeModel(vtkQtChartSeriesModel *previous,
       vtkQtChartSeriesModel *current);
-
-  /// \brief
-  ///   Sets the visibility for the given series.
-  /// \param series The chart series index.
-  /// \param visible True if the series should be visible.
-  void updateSeriesVisibility(int series, bool visible);
 
   /// \brief
   ///   Updates the legend model for series changes.

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExporter.cxx,v $
+  Module:    vtkExporter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -16,7 +16,6 @@
 
 #include "vtkRenderWindow.h"
 
-vtkCxxRevisionMacro(vtkExporter, "$Revision: 1.20 $");
 
 vtkCxxSetObjectMacro(vtkExporter,RenderWindow,vtkRenderWindow);
 

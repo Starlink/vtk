@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: Theme.cxx,v $
+  Module:    Theme.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -39,13 +39,12 @@ int main(int, char*[])
   view->SetVertexLabelArrayName("VertexDegree");
   view->SetVertexLabelVisibility(true);
 
-  vtkRenderWindow* window = vtkRenderWindow::New();
-  view->SetupRenderWindow(window);
-  window->GetInteractor()->Start();
+  view->ResetCamera();
+  view->Render();
+  view->GetInteractor()->Start();
   
   source->Delete();
   view->Delete();
-  window->Delete();
   
   return 0;
 }

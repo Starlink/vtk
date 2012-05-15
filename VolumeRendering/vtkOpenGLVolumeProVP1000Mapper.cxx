@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLVolumeProVP1000Mapper.cxx,v $
+  Module:    vtkOpenGLVolumeProVP1000Mapper.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,7 +25,6 @@
 
 #include "vtkOpenGL.h"
 
-vtkCxxRevisionMacro(vtkOpenGLVolumeProVP1000Mapper, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkOpenGLVolumeProVP1000Mapper);
 
 void vtkOpenGLVolumeProVP1000Mapper::RenderImageBuffer(vtkRenderer  *ren,

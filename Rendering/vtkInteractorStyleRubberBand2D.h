@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorStyleRubberBand2D.h,v $
+  Module:    vtkInteractorStyleRubberBand2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ class VTK_RENDERING_EXPORT vtkInteractorStyleRubberBand2D : public vtkInteractor
 {
 public:
   static vtkInteractorStyleRubberBand2D *New();
-  vtkTypeRevisionMacro(vtkInteractorStyleRubberBand2D, vtkInteractorStyle);
+  vtkTypeMacro(vtkInteractorStyleRubberBand2D, vtkInteractorStyle);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual void OnLeftButtonDown();
@@ -55,6 +55,12 @@ public:
   virtual void OnMouseMove();
   virtual void OnMouseWheelForward();
   virtual void OnMouseWheelBackward();
+
+  // Description:
+  // Whether to invoke a render when the mouse moves.
+  vtkSetMacro(RenderOnMouseMove, bool);
+  vtkGetMacro(RenderOnMouseMove, bool);
+  vtkBooleanMacro(RenderOnMouseMove, bool);
 
   //BTX
   // Description:
@@ -98,6 +104,9 @@ protected:
   
   // The pixel array for the rubber band
   vtkUnsignedCharArray* PixelArray;
+
+  // Whether to render when the mouse moves
+  bool RenderOnMouseMove;
   
 private:
   vtkInteractorStyleRubberBand2D(const vtkInteractorStyleRubberBand2D&); // Not implemented

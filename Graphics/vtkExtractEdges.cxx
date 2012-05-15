@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractEdges.cxx,v $
+  Module:    vtkExtractEdges.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -25,8 +25,8 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkExtractEdges, "$Revision: 1.54 $");
 vtkStandardNewMacro(vtkExtractEdges);
 
 // Construct object.
@@ -54,7 +54,7 @@ int vtkExtractEdges::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -207,7 +207,7 @@ int vtkExtractEdges::RequestData(
 
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-void vtkExtractEdges::SetLocator(vtkPointLocator *locator)
+void vtkExtractEdges::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

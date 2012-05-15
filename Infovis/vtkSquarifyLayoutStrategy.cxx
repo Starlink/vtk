@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSquarifyLayoutStrategy.cxx,v $
+  Module:    vtkSquarifyLayoutStrategy.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 #include "vtkPoints.h"
 #include "vtkTree.h"
 
-vtkCxxRevisionMacro(vtkSquarifyLayoutStrategy, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkSquarifyLayoutStrategy);
 
 vtkSquarifyLayoutStrategy::vtkSquarifyLayoutStrategy()
@@ -47,7 +46,7 @@ void vtkSquarifyLayoutStrategy::Layout(
     vtkDataArray* coordsArray,
     vtkDataArray* sizeArray)
 {
-  if (!inputTree)
+  if (!inputTree || inputTree->GetNumberOfVertices() == 0)
     {
     return;
     }
@@ -61,6 +60,7 @@ void vtkSquarifyLayoutStrategy::Layout(
   vtkIdType rootId = inputTree->GetRoot();
   float coords[] = {0,1,0,1};
   coordsArray->SetTuple(rootId, coords);
+  inputTree->GetPoints()->SetPoint(rootId, 0.5, 0.5, 0.0);
 
   // Now layout the children vertices
   this->AddBorder(coords);

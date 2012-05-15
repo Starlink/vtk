@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBYUWriter.cxx,v $
+  Module:    vtkBYUWriter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 
 #include <vtkstd/string>
 
-vtkCxxRevisionMacro(vtkBYUWriter, "$Revision: 1.59 $");
 vtkStandardNewMacro(vtkBYUWriter);
 
 // Create object so that it writes displacement, scalar, and texture files

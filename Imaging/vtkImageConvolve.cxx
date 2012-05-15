@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageConvolve.cxx,v $
+  Module:    vtkImageConvolve.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageConvolve, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkImageConvolve);
 
 //----------------------------------------------------------------------------

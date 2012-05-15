@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRectilinearGridAlgorithm.cxx,v $
+  Module:    vtkRectilinearGridAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkRectilinearGridAlgorithm, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkRectilinearGridAlgorithm);
 
 //----------------------------------------------------------------------------

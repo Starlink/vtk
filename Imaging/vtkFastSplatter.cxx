@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFastSplatter.cxx,v $
+  Module:    vtkFastSplatter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,6 @@
 #define MAX(x, y)       ((x) > (y) ? (x) : (y))
 #endif
 
-vtkCxxRevisionMacro(vtkFastSplatter, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkFastSplatter);
 
 //-----------------------------------------------------------------------------

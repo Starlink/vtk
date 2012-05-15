@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenerateIndexArray.h,v $
+  Module:    vtkGenerateIndexArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -50,16 +50,16 @@ class VTK_INFOVIS_EXPORT vtkGenerateIndexArray : public vtkDataObjectAlgorithm
 public:
   static vtkGenerateIndexArray *New();
 
-  vtkTypeRevisionMacro(vtkGenerateIndexArray, vtkDataObjectAlgorithm);
+  vtkTypeMacro(vtkGenerateIndexArray, vtkDataObjectAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Control the output index array name (default: "index"). 
+  // Control the output index array name.  Default: "index". 
   vtkSetStringMacro(ArrayName);
   vtkGetStringMacro(ArrayName);
 
   // Description:
-  // Control the location where the index array will be stored
+  // Control the location where the index array will be stored.
   vtkSetMacro(FieldType, int);
   vtkGetMacro(FieldType, int);
 
@@ -67,6 +67,12 @@ public:
   // Specifies an optional reference array for index-generation.
   vtkSetStringMacro(ReferenceArrayName);
   vtkGetStringMacro(ReferenceArrayName);
+
+  // Description:
+  // Specifies whether the index array should be marked as
+  // pedigree ids.  Default: false.
+  vtkSetMacro(PedigreeID, int);
+  vtkGetMacro(PedigreeID, int);
 
 //BTX
   enum
@@ -101,6 +107,7 @@ protected:
   char* ArrayName;
   int FieldType;
   char* ReferenceArrayName;
+  int PedigreeID;
 
 private:
   vtkGenerateIndexArray(const vtkGenerateIndexArray&);  // Not implemented.

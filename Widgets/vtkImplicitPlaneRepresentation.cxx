@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImplicitPlaneRepresentation.cxx,v $
+  Module:    vtkImplicitPlaneRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,6 @@
 #include "vtkInteractorObserver.h"
 #include "vtkBox.h"
 
-vtkCxxRevisionMacro(vtkImplicitPlaneRepresentation, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkImplicitPlaneRepresentation);
 
 //----------------------------------------------------------------------------

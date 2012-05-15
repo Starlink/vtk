@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageDifference.cxx,v $
+  Module:    vtkImageDifference.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-vtkCxxRevisionMacro(vtkImageDifference, "$Revision: 1.40 $");
 vtkStandardNewMacro(vtkImageDifference);
 
 // Construct object to extract all of the input data.

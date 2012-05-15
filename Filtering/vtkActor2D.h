@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkActor2D.h,v $
+  Module:    vtkActor2D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_FILTERING_EXPORT vtkActor2D : public vtkProp
 {
 public:
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkActor2D,vtkProp);
+  vtkTypeMacro(vtkActor2D,vtkProp);
 
   // Description:
   // Creates an actor2D with the following defaults: 

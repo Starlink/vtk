@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGridTransform.h,v $
+  Module:    vtkGridTransform.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -38,7 +38,7 @@ class VTK_HYBRID_EXPORT vtkGridTransform : public vtkWarpTransform
 {
 public:
   static vtkGridTransform *New();
-  vtkTypeRevisionMacro(vtkGridTransform,vtkWarpTransform);
+  vtkTypeMacro(vtkGridTransform,vtkWarpTransform);
   virtual void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

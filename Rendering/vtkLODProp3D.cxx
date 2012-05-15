@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLODProp3D.cxx,v $
+  Module:    vtkLODProp3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,7 +26,6 @@
 
 #include <math.h>
 
-vtkCxxRevisionMacro(vtkLODProp3D, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkLODProp3D);
 
 #define VTK_INDEX_NOT_IN_USE    -1
@@ -281,8 +280,7 @@ double vtkLODProp3D::GetLODEstimatedRenderTime( int id )
 
 double vtkLODProp3D::GetLODIndexEstimatedRenderTime( int index )
 {
-  if ( this->SelectedLODIndex < 0 ||
-       this->SelectedLODIndex >= this->NumberOfEntries )
+  if ( index < 0 || index >= this->NumberOfEntries )
     {
     return 0;
     }  

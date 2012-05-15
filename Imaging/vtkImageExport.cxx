@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageExport.cxx,v $
+  Module:    vtkImageExport.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include <ctype.h>
 #include <string.h>
 
-vtkCxxRevisionMacro(vtkImageExport, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkImageExport);
 
 //----------------------------------------------------------------------------

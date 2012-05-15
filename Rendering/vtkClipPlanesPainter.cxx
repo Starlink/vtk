@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipPlanesPainter.cxx,v $
+  Module:    vtkClipPlanesPainter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPlaneCollection.h"
 
-vtkCxxRevisionMacro(vtkClipPlanesPainter, "$Revision: 1.3 $");
 vtkCxxSetObjectMacro(vtkClipPlanesPainter, ClippingPlanes, vtkPlaneCollection);
 
 // Needed when we don't use the vtkStandardNewMacro.

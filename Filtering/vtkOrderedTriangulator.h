@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOrderedTriangulator.h,v $
+  Module:    vtkOrderedTriangulator.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -90,7 +90,7 @@ class  vtkDataArray;
 class  vtkDoubleArray;
 struct vtkOTMesh;
 struct vtkOTTemplates;
-class vtkPointLocator;
+class vtkIncrementalPointLocator;
 class vtkPointData;
 class vtkCellData;
 
@@ -106,7 +106,7 @@ typedef unsigned long   TemplateIDType;
 class VTK_FILTERING_EXPORT vtkOrderedTriangulator : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkOrderedTriangulator,vtkObject);
+  vtkTypeMacro(vtkOrderedTriangulator,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -253,7 +253,7 @@ public:
   // \pre inCD_exists: inCD!=0
   // \pre outCD_exists: outCD!=0
   vtkIdType AddTetras(int classification,
-                      vtkPointLocator *locator,
+                      vtkIncrementalPointLocator *locator,
                       vtkCellArray *outConnectivity,
                       vtkPointData *inPD,
                       vtkPointData *outPD,

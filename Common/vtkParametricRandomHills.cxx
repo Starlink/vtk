@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkParametricRandomHills.cxx,v $
+  Module:    vtkParametricRandomHills.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen 
   All rights reserved.
@@ -19,7 +19,6 @@
 
 #include <time.h>
 
-vtkCxxRevisionMacro(vtkParametricRandomHills, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkParametricRandomHills);
 
 //----------------------------------------------------------------------------

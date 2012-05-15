@@ -82,6 +82,12 @@ except ImportError, exc:
     __helper.refine_import_err('widgets', 'vtkWidgetsPython', exc)
 
 try:
+    from charts import *
+    kits.append('charts')
+except ImportError, exc:
+    __helper.refine_import_err('charts', 'vtkChartsPython', exc)
+
+try:
     from geovis import *
     kits.append('geovis')
 except ImportError, exc:
@@ -92,6 +98,12 @@ try:
     kits.append('infovis')
 except ImportError, exc:
     __helper.refine_import_err('infovis', 'vtkInfovisPython', exc)
+
+try:
+    from textanalysis import *
+    kits.append('textanalysis')
+except ImportError, exc:
+    __helper.refine_import_err('textanalysis', 'vtkTextAnalysisPython', exc)
 
 try:
     from views import *

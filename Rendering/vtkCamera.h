@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCamera.h,v $
+  Module:    vtkCamera.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,17 +28,19 @@
 
 #include "vtkObject.h"
 
+class vtkHomogeneousTransform;
 class vtkMatrix4x4;
 class vtkPerspectiveTransform;
 class vtkRenderer;
 class vtkTransform;
-class vtkHomogeneousTransform;
+class vtkCallbackCommand;
+class vtkCameraCallbackCommand;
 
 class VTK_RENDERING_EXPORT vtkCamera : public vtkObject
 {
  public:
   void PrintSelf(ostream& os, vtkIndent indent);
-  vtkTypeRevisionMacro(vtkCamera,vtkObject);
+  vtkTypeMacro(vtkCamera,vtkObject);
 
   // Description:
   // Construct camera instance with its focal point at the origin, 
@@ -93,10 +95,11 @@ class VTK_RENDERING_EXPORT vtkCamera : public vtkObject
   vtkGetVector3Macro(DirectionOfProjection,double);
 
   // Description:
-  // Move the position of the camera along the direction of projection. Moving
-  // towards the focal point (e.g., greater than 1) is a dolly-in, moving away
-  // from the focal point (e.g., less than 1) is a dolly-out.
-  void Dolly(double distance);
+  // Divide the camera's distance from the focal point by the given
+  // dolly value.  Use a value greater than one to dolly-in toward
+  // the focal point, and use a value less than one to dolly-out away
+  // from the focal point.
+  void Dolly(double value);
 
   // Description:
   // Set the roll angle of the camera about the direction of projection.
@@ -104,29 +107,36 @@ class VTK_RENDERING_EXPORT vtkCamera : public vtkObject
   double GetRoll();
 
   // Description:
-  // Rotate the camera about the direction of projection.
+  // Rotate the camera about the direction of projection.  This will
+  // spin the camera about its axis.
   void Roll(double angle);
 
   // Description:
   // Rotate the camera about the view up vector centered at the focal point.
-  // Note that the view up vector is not necessarily perpendicular to the
-  // direction of projection.
+  // Note that the view up vector is whatever was set via SetViewUp, and is
+  // not necessarily perpendicular to the direction of projection.  The
+  // result is a horizontal rotation of the camera.
   void Azimuth(double angle);
 
   // Description:
-  // Rotate the focal point about the view up vector centered at the camera's
-  // position. Note that the view up vector is not necessarily perpendicular
-  // to the direction of projection.
+  // Rotate the focal point about the view up vector, using the camera's
+  // position as the center of rotation. Note that the view up vector is
+  // whatever was set via SetViewUp, and is not necessarily perpendicular
+  // to the direction of projection.  The result is a horizontal rotation
+  // of the scene.
   void Yaw(double angle);
 
   // Description:
-  // Rotate the camera about the cross product of the direction of projection
-  // and the view up vector centered on the focal point.
+  // Rotate the camera about the cross product of the negative of the
+  // direction of projection and the view up vector, using the focal point
+  // as the center of rotation.  The result is a vertical rotation of the
+  // scene.
   void Elevation(double angle);
 
   // Description:
   // Rotate the focal point about the cross product of the view up vector
-  // and the direction of projection, centered at the camera's position.
+  // and the direction of projection, using the camera's position as the
+  // center of rotation.  The result is a vertical rotation of the camera.
   void Pitch(double angle);
 
   // Description:
@@ -337,7 +347,14 @@ class VTK_RENDERING_EXPORT vtkCamera : public vtkObject
   // Description:
   // In addition to the instance variables such as position and orientation,
   // you can add an additional transformation for your own use.  This
-  // transformation is concatenated to the camera's PerspectiveTransform
+  // transformation is concatenated to the camera's ViewTransform
+  void SetUserViewTransform(vtkHomogeneousTransform *transform);
+  vtkGetObjectMacro(UserViewTransform,vtkHomogeneousTransform);
+
+  // Description:
+  // In addition to the instance variables such as position and orientation,
+  // you can add an additional transformation for your own use.  This
+  // transformation is concatenated to the camera's ProjectionTransform
   void SetUserTransform(vtkHomogeneousTransform *transform);
   vtkGetObjectMacro(UserTransform,vtkHomogeneousTransform);
 
@@ -397,6 +414,20 @@ class VTK_RENDERING_EXPORT vtkCamera : public vtkObject
   vtkSetMacro(LeftEye,int);
   vtkGetMacro(LeftEye,int);
 
+  // Description:
+  // Copy the properties of `source' into `this'.
+  // Copy pointers of matrices.
+  // \pre source_exists!=0
+  // \pre not_this: source!=this
+  void ShallowCopy(vtkCamera *source);
+  
+  // Description:
+  // Copy the properties of `source' into `this'.
+  // Copy the contents of the matrices.
+  // \pre source_exists!=0
+  // \pre not_this: source!=this
+  void DeepCopy(vtkCamera *source);
+  
 protected:
   vtkCamera();
   ~vtkCamera();
@@ -436,6 +467,13 @@ protected:
   
   void ComputeCameraLightTransform();
 
+  // Description:
+  // Copy the ivars. Do nothing for the matrices.
+  // Called by ShallowCopy() and DeepCopy()
+  // \pre source_exists!=0
+  // \pre not_this: source!=this
+  void PartialCopy(vtkCamera *source);
+  
   double WindowCenter[2];
   double ObliqueAngles[2];
   double FocalPoint[3];
@@ -455,6 +493,7 @@ protected:
   double ViewShear[3];
   int    UseHorizontalViewAngle;
   vtkHomogeneousTransform *UserTransform;
+  vtkHomogeneousTransform *UserViewTransform;
 
   vtkTransform *ViewTransform;
   vtkPerspectiveTransform *ProjectionTransform;
@@ -462,6 +501,10 @@ protected:
   vtkTransform *CameraLightTransform;
 
   double FocalDisk;
+  //BTX
+  vtkCameraCallbackCommand *UserViewTransformCallbackCommand;
+  friend class vtkCameraCallbackCommand;
+  //ETX
 
   // ViewingRaysMtime keeps track of camera modifications which will 
   // change the calculation of viewing rays for the camera before it is 

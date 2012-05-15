@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTemporalShiftScale.h,v $
+  Module:    vtkTemporalShiftScale.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_HYBRID_EXPORT vtkTemporalShiftScale : public vtkTemporalDataSetAlgorit
 {
 public:
   static vtkTemporalShiftScale *New();
-  vtkTypeRevisionMacro(vtkTemporalShiftScale, vtkTemporalDataSetAlgorithm);
+  vtkTypeMacro(vtkTemporalShiftScale, vtkTemporalDataSetAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

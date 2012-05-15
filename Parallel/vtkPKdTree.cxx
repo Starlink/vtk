@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPKdTree.cxx,v $
+  Module:    vtkPKdTree.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,6 +36,7 @@
 
 #include <vtkstd/queue>
 #include <vtkstd/algorithm>
+#include <assert.h>
 
 // Timing data ---------------------------------------------
 
@@ -78,7 +79,6 @@ static char * makeEntry(const char *s)
 
 // Timing data ---------------------------------------------
 
-vtkCxxRevisionMacro(vtkPKdTree, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkPKdTree);
 
 const int vtkPKdTree::NoRegionAssignment = 0;   // default
@@ -3431,6 +3431,8 @@ int vtkPKdTree::DepthOrderAllProcesses(double *dop, vtkIntArray *orderedList)
 int vtkPKdTree::ViewOrderAllProcessesInDirection(const double dop[3],
                                                  vtkIntArray *orderedList)
 {
+  assert("pre: orderedList_exists" && orderedList!=0);
+  
   vtkIntArray *regionList = vtkIntArray::New();
   
   this->ViewOrderAllRegionsInDirection(dop, regionList);
@@ -3461,6 +3463,8 @@ int vtkPKdTree::ViewOrderAllProcessesInDirection(const double dop[3],
 int vtkPKdTree::ViewOrderAllProcessesFromPosition(const double pos[3],
                                                   vtkIntArray *orderedList)
 {
+  assert("pre: orderedList_exists" && orderedList!=0);
+  
   vtkIntArray *regionList = vtkIntArray::New();
   
   this->ViewOrderAllRegionsFromPosition(pos, regionList);
@@ -3905,6 +3909,8 @@ void vtkPKdTree::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "MyId: " << this->MyId << endl;
 
   os << indent << "RegionAssignmentMap: " << this->RegionAssignmentMap << endl;
+  os << indent << "RegionAssignmentMapLength: "
+    << this->RegionAssignmentMapLength << endl;
   os << indent << "NumRegionsAssigned: " << this->NumRegionsAssigned << endl;
   os << indent << "NumProcessesInRegion: " << this->NumProcessesInRegion << endl;
   os << indent << "ProcessList: " << this->ProcessList << endl;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDijkstraGraphGeodesicPath.h,v $
+  Module:    vtkDijkstraGraphGeodesicPath.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ public:
 
   // Description:
   // Standard methids for printing and determining type information.
-  vtkTypeRevisionMacro(vtkDijkstraGraphGeodesicPath,vtkGraphGeodesicPath);
+  vtkTypeMacro(vtkDijkstraGraphGeodesicPath,vtkGraphGeodesicPath);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -86,6 +86,10 @@ public:
   // TODO: Get the total geodesic length.
   virtual double GetGeodesicLength() { return 0.0; }
 
+  //Description:
+  //Fill the array with the cumulative weights.
+  virtual void GetCumulativeWeights(vtkDoubleArray *weights);
+  
 protected:
   vtkDijkstraGraphGeodesicPath();
   ~vtkDijkstraGraphGeodesicPath();

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractPropPicker.cxx,v $
+  Module:    vtkAbstractPropPicker.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,7 +23,6 @@
 #include "vtkPropAssembly.h"
 #include "vtkVolume.h"
 
-vtkCxxRevisionMacro(vtkAbstractPropPicker, "$Revision: 1.12 $");
 
 vtkCxxSetObjectMacro(vtkAbstractPropPicker,Path,vtkAssemblyPath);
 

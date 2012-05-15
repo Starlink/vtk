@@ -49,7 +49,7 @@
 *
 * revision history - 
 *
-*  $Id: exgnvt.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -86,8 +86,8 @@ int ex_get_nodal_var_time (int   exoid,
     if ((status = ex_inquire (exoid, EX_INQ_TIME, &end_time_step, &fdum, cdum)) != NC_NOERR) {
       exerrval = status;
       sprintf(errmsg,
-	      "Error: failed to get number of time steps in file id %d",
-	      exoid);
+              "Error: failed to get number of time steps in file id %d",
+              exoid);
       ex_err("ex_get_nodal_var_time",errmsg,exerrval);
       return (EX_FATAL);
     }
@@ -147,8 +147,8 @@ int ex_get_nodal_var_time (int   exoid,
   if (status != NC_NOERR) {
     exerrval = status;
     sprintf(errmsg,
-	    "Error: failed to get nodal variables in file id %d",
-	    exoid);
+            "Error: failed to get nodal variables in file id %d",
+            exoid);
     ex_err("ex_get_nodal_var_time",errmsg,exerrval);
     return (EX_FATAL);
   }

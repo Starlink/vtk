@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGenericDataObjectReader.cxx,v $
+  Module:    vtkGenericDataObjectReader.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,6 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkUnstructuredGridReader.h"
 
-vtkCxxRevisionMacro(vtkGenericDataObjectReader, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkGenericDataObjectReader);
 
 template<typename ReaderT, typename DataT>
@@ -153,10 +152,8 @@ int vtkGenericDataObjectReader::RequestDataObject(
         return 0;
       }
     
-    this->GetExecutive()->SetOutputData(0, output);
+    output->SetPipelineInformation(info);
     output->Delete();
-    this->GetOutputPortInformation(0)->Set(
-      vtkDataObject::DATA_EXTENT_TYPE(), output->GetExtentType());
     }
 
   return 1;

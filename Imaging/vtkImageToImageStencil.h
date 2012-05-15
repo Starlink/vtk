@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageToImageStencil.h,v $
+  Module:    vtkImageToImageStencil.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_IMAGING_EXPORT vtkImageToImageStencil : public vtkImageStencilSource
 {
 public:
   static vtkImageToImageStencil *New();
-  vtkTypeRevisionMacro(vtkImageToImageStencil, vtkImageStencilSource);
+  vtkTypeMacro(vtkImageToImageStencil, vtkImageStencilSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

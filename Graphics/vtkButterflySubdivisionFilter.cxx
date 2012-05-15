@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkButterflySubdivisionFilter.cxx,v $
+  Module:    vtkButterflySubdivisionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -21,7 +21,6 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkButterflySubdivisionFilter, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkButterflySubdivisionFilter);
 
 static double butterflyWeights[8] =

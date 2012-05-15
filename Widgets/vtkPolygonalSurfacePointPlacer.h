@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygonalSurfacePointPlacer.h,v $
+  Module:    vtkPolygonalSurfacePointPlacer.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -62,7 +62,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkPolygonalSurfacePointPlacer,vtkPolyDataPointPlacer);
+  vtkTypeMacro(vtkPolygonalSurfacePointPlacer,vtkPolyDataPointPlacer);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Descuription:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageThreshold.cxx,v $
+  Module:    vtkImageThreshold.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkDataSetAttributes.h"
 
-vtkCxxRevisionMacro(vtkImageThreshold, "$Revision: 1.52 $");
 vtkStandardNewMacro(vtkImageThreshold);
 
 //----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSphereRepresentation.cxx,v $
+  Module:    vtkSphereRepresentation.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,6 @@
 #include "vtkObjectFactory.h"
 
 
-vtkCxxRevisionMacro(vtkSphereRepresentation, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkSphereRepresentation);
 
 //----------------------------------------------------------------------------

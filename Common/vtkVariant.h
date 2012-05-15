@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVariant.h,v $
+  Module:    vtkVariant.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -33,6 +33,7 @@
 #include "vtkSystemIncludes.h" // To define ostream
 #include "vtkSetGet.h"         // For vtkNotUsed macro
 #include "vtkStdString.h"
+#include "vtkUnicodeString.h"
 
 //
 // The following should be eventually placed in vtkSetGet.h
@@ -49,9 +50,14 @@
   vtkArrayIteratorTemplateMacroCase(VTK_VARIANT, vtkVariant, call);
 
 class vtkStdString;
+class vtkUnicodeString;
 class vtkObjectBase;
 class vtkAbstractArray;
+class vtkVariant;
 struct vtkVariantLessThan;
+
+VTK_COMMON_EXPORT ostream& operator << ( ostream& os, const vtkVariant& val );
+
 
 class VTK_COMMON_EXPORT vtkVariant
 {
@@ -68,6 +74,10 @@ public:
   // Description:
   // Copy constructor.
   vtkVariant(const vtkVariant & other);
+
+  // Description:
+  // Create a bool variant. Internally store it as char.
+  vtkVariant(bool value);
 
   // Description:
   // Create a char variant.
@@ -141,6 +151,10 @@ public:
   vtkVariant(vtkStdString value);
 
   // Description:
+  // Create a Unicode string variant
+  vtkVariant(const vtkUnicodeString& value);
+
+  // Description:
   // Create a vtkObjectBase variant.
   vtkVariant(vtkObjectBase* value);
 
@@ -155,6 +169,10 @@ public:
   // Description:
   // Get whether the variant is a string.
   bool IsString() const;
+
+  // Description:
+  // Get whether the variant is a Unicode string.
+  bool IsUnicodeString() const;
 
   // Description:
   // Get whether the variant is any numeric type.
@@ -239,6 +257,10 @@ public:
   // Description:
   // Convert the variant to a string.
   vtkStdString ToString() const;
+
+  // Description:
+  // convert the variant to a Unicode string.
+  vtkUnicodeString ToUnicodeString() const;
 
   // Description:
   // Convert the variant to a numeric type:
@@ -328,13 +350,14 @@ public:
   bool operator<=(const vtkVariant &other) const;
   bool operator>=(const vtkVariant &other) const;
 
-
+  friend VTK_COMMON_EXPORT ostream& operator << ( ostream& os, const vtkVariant& val );
 
 
 private:
   union
   {
     vtkStdString* String;
+    vtkUnicodeString* UnicodeString;
     float Float;
     double Double;
     char Char;

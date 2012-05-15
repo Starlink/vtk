@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLegendBoxActor.h,v $
+  Module:    vtkLegendBoxActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -51,7 +51,7 @@ class vtkProperty2D;
 class VTK_HYBRID_EXPORT vtkLegendBoxActor : public vtkActor2D
 {
 public:
-  vtkTypeRevisionMacro(vtkLegendBoxActor,vtkActor2D);
+  vtkTypeMacro(vtkLegendBoxActor,vtkActor2D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInteractorObserver.h,v $
+  Module:    vtkInteractorObserver.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -53,7 +53,7 @@ class vtkObserverMediator;
 class VTK_RENDERING_EXPORT vtkInteractorObserver : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkInteractorObserver,vtkObject);
+  vtkTypeMacro(vtkInteractorObserver,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

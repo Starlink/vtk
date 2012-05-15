@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkDataObjectTypes.cxx,v $
+Module:    vtkDataObjectTypes.cxx
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -17,6 +17,8 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkInstantiator.h"
 #include "vtkObjectFactory.h"
 
+#include  "vtkAnnotation.h"
+#include  "vtkAnnotationLayers.h"
 #include  "vtkCompositeDataSet.h"
 #include  "vtkDataObject.h"
 #include  "vtkDataSet.h"
@@ -43,7 +45,10 @@ PURPOSE.  See the above copyright notice for more information.
 #include  "vtkUniformGrid.h"
 #include  "vtkUnstructuredGrid.h"
 
-vtkCxxRevisionMacro(vtkDataObjectTypes, "$Revision: 1.6 $");
+#ifdef VTK_USE_N_WAY_ARRAYS
+#include  "vtkArrayData.h"
+#endif
+
 vtkStandardNewMacro(vtkDataObjectTypes);
 
 // This list should contain the data object class names in
@@ -77,6 +82,7 @@ static const char* vtkDataObjectTypesStrings[] = {
   "vtkUndirectedGraph", 
   "vtkMultiPieceDataSet",
   "vtkDirectedAcyclicGraph",
+  "vtkArrayData",
   NULL
 };
 
@@ -141,6 +147,8 @@ vtkDataObject* vtkDataObjectTypes::NewDataObject(const char* type)
 {
   if (!type)
     {
+    vtkGenericWarningMacro("NewDataObject(): You are trying to instantiate DataObjectType \"" << type 
+               << "\" which does not exist.");
     return 0;
     }
 
@@ -221,6 +229,20 @@ vtkDataObject* vtkDataObjectTypes::NewDataObject(const char* type)
     {
     return vtkDirectedAcyclicGraph::New();
     }
+  else if(strcmp(type, "vtkAnnotation") == 0)
+    {
+    return vtkAnnotation::New();
+    }
+  else if(strcmp(type, "vtkAnnotationLayers") == 0)
+    {
+    return vtkAnnotationLayers::New();
+    }
+#ifdef VTK_USE_N_WAY_ARRAYS
+  else if(strcmp(type, "vtkArrayData") == 0)
+    {
+    return vtkArrayData::New();
+    }
+#endif
   else if(vtkObject* obj = vtkInstantiator::CreateInstance(type))
     {
     vtkDataObject* data = vtkDataObject::SafeDownCast(obj);
@@ -228,8 +250,17 @@ vtkDataObject* vtkDataObjectTypes::NewDataObject(const char* type)
       {
       obj->Delete();
       }
+
+    if(data == NULL)
+      {
+      vtkGenericWarningMacro("NewDataObject(): You are trying to instantiate DataObjectType \"" << type 
+                 << "\" which does not exist.");
+      }
     return data;
     }
+
+  vtkGenericWarningMacro("NewDataObject(): You are trying to instantiate DataObjectType \"" << type 
+             << "\" which does not exist.");
 
   return 0;
 }

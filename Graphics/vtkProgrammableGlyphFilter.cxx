@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkProgrammableGlyphFilter.cxx,v $
+  Module:    vtkProgrammableGlyphFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -28,7 +28,6 @@
 #include "vtkPolyData.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkProgrammableGlyphFilter, "$Revision: 1.33 $");
 vtkStandardNewMacro(vtkProgrammableGlyphFilter);
 
 // Construct object with scaling on, scaling mode is by scalar value, 
@@ -86,7 +85,7 @@ int vtkProgrammableGlyphFilter::RequestData(
   vtkInformation *sourceInfo = inputVector[1]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkDataSet *input = vtkDataSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *source = vtkPolyData::SafeDownCast(

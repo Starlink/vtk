@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractRectilinearGrid.h,v $
+  Module:    vtkExtractRectilinearGrid.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_GRAPHICS_EXPORT vtkExtractRectilinearGrid : public vtkRectilinearGridA
 {
 public:
   static vtkExtractRectilinearGrid *New();
-  vtkTypeRevisionMacro(vtkExtractRectilinearGrid,vtkRectilinearGridAlgorithm);
+  vtkTypeMacro(vtkExtractRectilinearGrid,vtkRectilinearGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

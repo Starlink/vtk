@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageCast.h,v $
+  Module:    vtkImageCast.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,7 +32,7 @@ class VTK_IMAGING_EXPORT vtkImageCast : public vtkThreadedImageAlgorithm
 {
 public:
   static vtkImageCast *New();
-  vtkTypeRevisionMacro(vtkImageCast,vtkThreadedImageAlgorithm);
+  vtkTypeMacro(vtkImageCast,vtkThreadedImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkExtractSelectedIds.h,v $
+  Module:    vtkExtractSelectedIds.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,12 +37,15 @@ class VTK_GRAPHICS_EXPORT vtkExtractSelectedIds : public vtkExtractSelectionBase
 {
 public:
   static vtkExtractSelectedIds *New();
-  vtkTypeRevisionMacro(vtkExtractSelectedIds, vtkExtractSelectionBase);
+  vtkTypeMacro(vtkExtractSelectedIds, vtkExtractSelectionBase);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:
   vtkExtractSelectedIds();
   ~vtkExtractSelectedIds();
+
+  // Overridden to indicate that the input must be a vtkDataSet.
+  virtual int FillInputPortInformation(int port, vtkInformation* info);
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *, 

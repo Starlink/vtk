@@ -11,6 +11,7 @@
 
 #include <vtkIconGlyphFilter.h>
 
+#include <vtkApplyIcons.h>
 #include <vtkDoubleArray.h>
 #include <vtkFollower.h>
 #include <vtkGraphLayoutView.h>
@@ -22,6 +23,7 @@
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPNGReader.h>
+#include <vtkRenderedGraphRepresentation.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
@@ -97,30 +99,32 @@ int TestIconGlyphFilter( int argc, char *argv[])
   iconIndex->InsertNextTuple1(29);
 
   vtkGraphLayoutView *view = vtkGraphLayoutView::New();
+  view->DisplayHoverTextOff();
   view->SetRepresentationFromInput(graph);
   view->SetLayoutStrategyToSimple2D();
-  view->GetRenderer()->ResetCamera();
+  view->ResetCamera();
   
   vtkTexture * texture =  vtkTexture::New();
   texture->SetInputConnection(imageReader->GetOutputPort());
   view->SetIconTexture(texture);
-  view->SetIconArrayName(iconIndex->GetName());
   int size[] = {24, 24};
   view->SetIconSize(size);
-  view->IconVisibilityOn();
-  view->SetLayoutStrategyToPassThrough();
+  vtkRenderedGraphRepresentation* rep = static_cast<vtkRenderedGraphRepresentation*>(view->GetRepresentation());
+  rep->UseVertexIconTypeMapOff();
+  rep->SetVertexSelectedIcon(12);
+  rep->SetVertexIconSelectionModeToSelectedIcon();
+  rep->VertexIconVisibilityOn();
+  rep->SetVertexIconArrayName(iconIndex->GetName());
+  rep->SetLayoutStrategyToPassThrough();
 
-  vtkRenderWindow * renWin = vtkRenderWindow::New();
-  renWin->SetSize(500, 500);
-  view->SetupRenderWindow(renWin);
-  view->Update();
+  view->GetRenderWindow()->SetSize(500, 500);
 
-  renWin->GetInteractor()->Initialize();
-
-  int retVal = vtkRegressionTestImageThreshold(renWin,18);
+  view->GetInteractor()->Initialize();
+  view->Render();
+  int retVal = vtkRegressionTestImageThreshold(view->GetRenderWindow(), 18);
   if( retVal == vtkRegressionTester::DO_INTERACTOR)
     {
-    renWin->GetInteractor()->Start();
+    view->GetInteractor()->Start();
     }
 
   imageReader->Delete();
@@ -129,7 +133,6 @@ int TestIconGlyphFilter( int argc, char *argv[])
   points->Delete();
   pointData->Delete();
   view->Delete();
-  renWin->Delete();
   texture->Delete();
 
   return !retVal;

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMultiPieceDataSet.cxx,v $
+  Module:    vtkMultiPieceDataSet.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkMultiPieceDataSet);
-vtkCxxRevisionMacro(vtkMultiPieceDataSet, "$Revision: 1.2 $");
 //----------------------------------------------------------------------------
 vtkMultiPieceDataSet::vtkMultiPieceDataSet()
 {

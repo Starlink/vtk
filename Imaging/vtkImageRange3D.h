@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageRange3D.h,v $
+  Module:    vtkImageRange3D.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -31,7 +31,7 @@ class VTK_IMAGING_EXPORT vtkImageRange3D : public vtkImageSpatialAlgorithm
 {
 public:
   static vtkImageRange3D *New();
-  vtkTypeRevisionMacro(vtkImageRange3D,vtkImageSpatialAlgorithm);
+  vtkTypeMacro(vtkImageRange3D,vtkImageSpatialAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
   
   // Description:

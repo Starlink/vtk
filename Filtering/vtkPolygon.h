@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPolygon.h,v $
+  Module:    vtkPolygon.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -30,12 +30,13 @@ class vtkLine;
 class vtkPoints;
 class vtkQuad;
 class vtkTriangle;
+class vtkIncrementalPointLocator;
 
 class VTK_FILTERING_EXPORT vtkPolygon : public vtkCell
 {
 public:
   static vtkPolygon *New();
-  vtkTypeRevisionMacro(vtkPolygon,vtkCell);
+  vtkTypeMacro(vtkPolygon,vtkCell);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -48,12 +49,12 @@ public:
   vtkCell *GetFace(int) {return 0;};
   int CellBoundary(int subId, double pcoords[3], vtkIdList *pts);
   void Contour(double value, vtkDataArray *cellScalars,
-               vtkPointLocator *locator,vtkCellArray *verts,
+               vtkIncrementalPointLocator *locator,vtkCellArray *verts,
                vtkCellArray *lines, vtkCellArray *polys,
                vtkPointData *inPd, vtkPointData *outPd,
                vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd);
   void Clip(double value, vtkDataArray *cellScalars,
-            vtkPointLocator *locator, vtkCellArray *tris,
+            vtkIncrementalPointLocator *locator, vtkCellArray *tris,
             vtkPointData *inPd, vtkPointData *outPd,
             vtkCellData *inCd, vtkIdType cellId, vtkCellData *outCd,
             int insideOut);
@@ -68,6 +69,13 @@ public:
   void Derivatives(int subId, double pcoords[3], double *values,
                    int dim, double *derivs);
   int IsPrimaryCell() {return 0;}
+
+  // Description:
+  // Compute the area of a polygon. This is a convenience function
+  // which simply calls static double ComputeArea(vtkPoints *p, 
+  // vtkIdType numPts, vtkIdType *pts, double normal[3]);
+  // with the appropriate parameters from the instantiated vtkPolygon.
+  double ComputeArea();
 
   // Description:
   // Compute the interpolation functions/derivatives
@@ -101,6 +109,8 @@ public:
   // Compute the area of a polygon in 3D. The area is returned, as well as
   // the normal (a side effect of using this method). If you desire to
   // compute the area of a triangle, use vtkTriangleArea which is faster.
+  // If you already have a vtkPolygon instantiated, a convenience function,
+  // ComputeArea() is provided.
   static double ComputeArea(vtkPoints *p, vtkIdType numPts, vtkIdType *pts,
                             double normal[3]);
 

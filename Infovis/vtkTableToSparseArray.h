@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkTableToSparseArray.h,v $
+  Module:    vtkTableToSparseArray.h
   
 -------------------------------------------------------------------------
   Copyright 2008 Sandia Corporation.
@@ -37,7 +37,7 @@
 //
 // The coordinate columns will also be used to populate dimension labels
 // in the output array.
-
+//
 // .SECTION Thanks
 // Developed by Timothy M. Shead (tshead@sandia.gov) at Sandia National Laboratories.
 
@@ -45,15 +45,21 @@ class VTK_INFOVIS_EXPORT vtkTableToSparseArray : public vtkArrayDataAlgorithm
 {
 public:
   static vtkTableToSparseArray* New();
-  vtkTypeRevisionMacro(vtkTableToSparseArray, vtkArrayDataAlgorithm);
+  vtkTypeMacro(vtkTableToSparseArray, vtkArrayDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Specify the set of input table columns that will be mapped to coordinates
+  // in the output sparse array.
   void ClearCoordinateColumns();
   void AddCoordinateColumn(const char* name);
 
+  // Description:
+  // Specify the input table column that will be mapped to values in the output array.
   void SetValueColumn(const char* name);
   const char* GetValueColumn();
 
+//BTX
 protected:
   vtkTableToSparseArray();
   ~vtkTableToSparseArray();
@@ -69,11 +75,8 @@ private:
   vtkTableToSparseArray(const vtkTableToSparseArray&); // Not implemented
   void operator=(const vtkTableToSparseArray&);   // Not implemented
 
-//BTX
   class implementation;
   implementation* const Implementation;
-
-  class Generator;
 //ETX
 };
 

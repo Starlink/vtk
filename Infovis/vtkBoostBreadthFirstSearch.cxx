@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkBoostBreadthFirstSearch.cxx,v $
+  Module:    vtkBoostBreadthFirstSearch.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -46,15 +46,12 @@
 
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/breadth_first_search.hpp>
-#include <boost/property_map.hpp>
-#include <boost/vector_property_map.hpp>
 #include <boost/pending/queue.hpp>
 
 #include <vtksys/stl/utility> // for pair
 
 using namespace boost;
 
-vtkCxxRevisionMacro(vtkBoostBreadthFirstSearch, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkBoostBreadthFirstSearch);
 
 // Redefine the bfs visitor, the only visitor we
@@ -111,6 +108,7 @@ vtkBoostBreadthFirstSearch::~vtkBoostBreadthFirstSearch()
 {
   this->SetInputArrayName(0);
   this->SetOutputArrayName(0);
+  this->SetOutputSelectionType(0);
 }
 
 void vtkBoostBreadthFirstSearch::SetOriginSelection(vtkSelection* s)
@@ -193,7 +191,7 @@ int vtkBoostBreadthFirstSearch::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkGraph *input = vtkGraph::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkGraph *output = vtkGraph::SafeDownCast(
@@ -309,7 +307,7 @@ int vtkBoostBreadthFirstSearch::RequestData(
     sel->AddNode(node);
     node->SetSelectionList(ids);
     node->GetProperties()->Set(vtkSelectionNode::CONTENT_TYPE(), vtkSelectionNode::INDICES);
-    node->GetProperties()->Set(vtkSelectionNode::FIELD_TYPE(), vtkSelectionNode::POINT);
+    node->GetProperties()->Set(vtkSelectionNode::FIELD_TYPE(), vtkSelectionNode::VERTEX);
     ids->Delete();
     }
 

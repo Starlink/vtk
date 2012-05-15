@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDataSetToPolyDataFilter.cxx,v $
+  Module:    vtkDataSetToPolyDataFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkDataSet.h"
 #include "vtkInformation.h"
 
-vtkCxxRevisionMacro(vtkDataSetToPolyDataFilter, "$Revision: 1.19 $");
 
 //----------------------------------------------------------------------------
 vtkDataSetToPolyDataFilter::vtkDataSetToPolyDataFilter()

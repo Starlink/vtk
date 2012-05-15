@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUniformVariables.h,v $
+  Module:    vtkUniformVariables.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,11 +32,11 @@ class VTK_RENDERING_EXPORT vtkUniformVariables : public vtkObject
 {
 public:
   static vtkUniformVariables *New();
-  vtkTypeRevisionMacro(vtkUniformVariables,vtkObject);
+  vtkTypeMacro(vtkUniformVariables,vtkObject);
   void PrintSelf(ostream &os, vtkIndent indent);
   
   // Description:
-  // 
+  // Set an integer uniform variable.
   // \pre name_exists: name!=0
   // \pre value_exists: value!=0
   // \pre valid_numberOfComponents: numberOfComponents>=1 && numberOfComponents<=4
@@ -45,6 +45,7 @@ public:
                    int *value);
 
   // Description:
+  // Set an float uniform variable.
   // \pre name_exists: name!=0
   // \pre value_exists: value!=0
   // \pre valid_numberOfComponents: numberOfComponents>=1 && numberOfComponents<=4
@@ -53,7 +54,31 @@ public:
                    float *value);
 
   // Description:
-  //
+  // Set an array of integer uniform variables.
+  // The array `value' is of size `numberOfElements'*`numberOfComponents.'.
+  // \pre name_exists: name!=0
+  // \pre value_exists: value!=0
+  // \pre valid_numberOfComponents: numberOfComponents>=1 && numberOfComponents<=4
+  // \pre valid_numberOfElements: numberOfElements>=1
+  void SetUniformiv(const char *name,
+                    int numberOfComponents,
+                    int numberOfElements,
+                    int *value);
+  
+  // Description:
+  // Set an array of float uniform variables.
+  // The array `value' is of size `numberOfElements'*`numberOfComponents.'.
+  // \pre name_exists: name!=0
+  // \pre value_exists: value!=0
+  // \pre valid_numberOfComponents: numberOfComponents>=1 && numberOfComponents<=4
+  // \pre valid_numberOfElements: numberOfElements>=1
+  void SetUniformfv(const char *name,
+                    int numberOfComponents,
+                    int numberOfElements,
+                    float *value);
+
+  // Description:
+  // Set a matrix uniform variable.
   // \pre name_exists: name!=0
   // \pre value_exists: value!=0
   // \pre valid_rows:  rows>=2 && rows<=4
@@ -67,6 +92,10 @@ public:
   // Remove uniform `name' from the list.
   void RemoveUniform(const char *name);
   
+  // Description:
+  // Remove all uniforms from the list.
+  void RemoveAllUniforms();
+
   // Description:
   // \pre need a valid OpenGL context and a shader program in use.
   void Send(const char *name,
@@ -102,6 +131,13 @@ public:
   // \pre not_self: other!=this
   void DeepCopy(vtkUniformVariables *other);
   
+  // Description:
+  // Copy all the variables from `other'. Any existing variable will be
+  // overwritten.
+  // \pre other_exists: other!=0
+  // \pre not_self: other!=this
+  void Merge(vtkUniformVariables *other);
+
 protected:
   vtkUniformVariables();
   virtual ~vtkUniformVariables();

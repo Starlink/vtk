@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkImageActor.h,v $
+  Module:    vtkImageActor.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@ class vtkImageData;
 class VTK_RENDERING_EXPORT vtkImageActor : public vtkProp3D
 {
 public:
-  vtkTypeRevisionMacro(vtkImageActor,vtkProp3D);
+  vtkTypeMacro(vtkImageActor,vtkProp3D);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

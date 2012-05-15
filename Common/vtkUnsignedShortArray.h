@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkUnsignedShortArray.h,v $
+  Module:    vtkUnsignedShortArray.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -36,7 +36,7 @@ class VTK_COMMON_EXPORT vtkUnsignedShortArray : public vtkDataArray
 {
 public:
   static vtkUnsignedShortArray* New();
-  vtkTypeRevisionMacro(vtkUnsignedShortArray,vtkDataArray);
+  vtkTypeMacro(vtkUnsignedShortArray,vtkDataArray);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

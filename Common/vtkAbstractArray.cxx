@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkAbstractArray.cxx,v $
+  Module:    vtkAbstractArray.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -26,6 +26,7 @@
 #include "vtkShortArray.h"
 #include "vtkSignedCharArray.h"
 #include "vtkStringArray.h"
+#include "vtkUnicodeStringArray.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedIntArray.h"
 #include "vtkUnsignedLongArray.h"
@@ -44,11 +45,6 @@
 # endif
 #endif
 
-vtkCxxRevisionMacro(vtkAbstractArray, "$Revision: 1.15 $");
-
-//----------------------------------------------------------------------------
-// vtkAbstractArray::SetInformation(vtkInformation *info)
-vtkCxxSetObjectMacro(vtkAbstractArray,Information,vtkInformation);
 
 //----------------------------------------------------------------------------
 // Construct object with sane defaults.
@@ -66,6 +62,25 @@ vtkAbstractArray::~vtkAbstractArray()
 {
   this->SetName(NULL);
   this->SetInformation(NULL);
+}
+
+//----------------------------------------------------------------------------
+void vtkAbstractArray::SetInformation(vtkInformation *args)
+{
+  // Same as in vtkCxxSetObjectMacro, but no Modified() so that
+  // this doesn't cause extra pipeline updates.
+  vtkDebugMacro(<< this->GetClassName() << " (" << this
+      << "): setting Information to " << args );
+  if (this->Information != args)
+    {
+    vtkInformation* tempSGMacroVar = this->Information;
+    this->Information = args;
+    if (this->Information != NULL) { this->Information->Register(this); }
+    if (tempSGMacroVar != NULL)
+      {
+      tempSGMacroVar->UnRegister(this);
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -161,6 +176,10 @@ int vtkAbstractArray::GetDataTypeSize(int type)
       return 0;
       break;
 
+    case VTK_UNICODE_STRING:
+      return 0;
+      break;
+
     default:
       vtkGenericWarningMacro(<<"Unsupported data type!");
     }
@@ -234,6 +253,9 @@ vtkAbstractArray* vtkAbstractArray::CreateArray(int dataType)
    
     case VTK_STRING:
       return vtkStringArray::New();
+
+    case VTK_UNICODE_STRING:
+      return vtkUnicodeStringArray::New();
 
     case VTK_VARIANT:
       return vtkVariantArray::New();

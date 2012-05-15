@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOpenGLVolumeTextureMapper3D.cxx,v $
+  Module:    vtkOpenGLVolumeTextureMapper3D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -32,6 +32,7 @@
 #include "vtkMath.h"
 #include "vtkOpenGLExtensionManager.h"
 #include "vtkgl.h"
+#include "vtkOpenGLRenderWindow.h"
 
 #include "vtkVolumeTextureMapper3D_OneComponentShadeFP.h"
 #include "vtkVolumeTextureMapper3D_OneComponentNoShadeFP.h"
@@ -41,7 +42,6 @@
 #include "vtkVolumeTextureMapper3D_FourDependentShadeFP.h"
 
 //#ifndef VTK_IMPLEMENT_MESA_CXX
-vtkCxxRevisionMacro(vtkOpenGLVolumeTextureMapper3D, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkOpenGLVolumeTextureMapper3D);
 //#endif
 
@@ -54,6 +54,7 @@ vtkOpenGLVolumeTextureMapper3D::vtkOpenGLVolumeTextureMapper3D()
   this->ColorLookupIndex             =  0;
   this->AlphaLookupIndex             =  0;
   this->RenderWindow                 = NULL;
+  this->SupportsCompressedTexture    = false;
 }
 
 vtkOpenGLVolumeTextureMapper3D::~vtkOpenGLVolumeTextureMapper3D()
@@ -82,6 +83,8 @@ void vtkOpenGLVolumeTextureMapper3D::ReleaseGraphicsResources(vtkWindow
   this->Volume3Index     = 0;
   this->ColorLookupIndex = 0;
   this->RenderWindow     = NULL;
+  this->SupportsCompressedTexture=false;
+  this->SupportsNonPowerOfTwoTextures=false;
   this->Modified();
 }
 
@@ -91,7 +94,7 @@ void vtkOpenGLVolumeTextureMapper3D::Render(vtkRenderer *ren, vtkVolume *vol)
   
   if ( !this->Initialized )
     {
-    this->Initialize();
+    this->Initialize(ren);
     }
   
   if ( this->RenderMethod == vtkVolumeTextureMapper3D::NO_METHOD )
@@ -154,11 +157,29 @@ void vtkOpenGLVolumeTextureMapper3D::Render(vtkRenderer *ren, vtkVolume *vol)
   glPushMatrix();
   glMultMatrixd(matrix->Element[0]);
 
+  // If an actor turned on culling, it must be turned off here
+  glDisable (GL_CULL_FACE);
+
   glColor4f( 1.0, 1.0, 1.0, 1.0 );
 
   // Turn lighting off - the polygon textures already have illumination
   glDisable( GL_LIGHTING );
-
+  
+  if(this->UseCompressedTexture && SupportsCompressedTexture)
+    {
+    this->InternalAlpha=vtkgl::COMPRESSED_ALPHA;
+    this->InternalLA=vtkgl::COMPRESSED_LUMINANCE_ALPHA;
+    this->InternalRGB=vtkgl::COMPRESSED_RGB;
+    this->InternalRGBA=vtkgl::COMPRESSED_RGBA;
+    }
+  else
+    {
+    this->InternalAlpha=GL_ALPHA8;
+    this->InternalLA=GL_LUMINANCE8_ALPHA8;
+    this->InternalRGB=GL_RGB8;
+    this->InternalRGBA=GL_RGBA8;
+    }
+  
   vtkGraphicErrorMacro(ren->GetRenderWindow(),"Before actual render method");
   switch ( this->RenderMethod )
     {
@@ -194,14 +215,15 @@ void vtkOpenGLVolumeTextureMapper3D::Render(vtkRenderer *ren, vtkVolume *vol)
     }   
 }
 
-void vtkOpenGLVolumeTextureMapper3D::RenderFP( vtkRenderer *ren, vtkVolume *vol )
+void vtkOpenGLVolumeTextureMapper3D::RenderFP(vtkRenderer *ren,
+                                              vtkVolume *vol)
 {
   glAlphaFunc (GL_GREATER, static_cast<GLclampf>(0));
   glEnable (GL_ALPHA_TEST);
   
   glEnable( GL_BLEND );
   glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
+  
   int components = this->GetInput()->GetNumberOfScalarComponents();   
   switch ( components )
     {
@@ -212,18 +234,18 @@ void vtkOpenGLVolumeTextureMapper3D::RenderFP( vtkRenderer *ren, vtkVolume *vol 
         }
       else
         {
-  this->RenderOneIndependentShadeFP(ren,vol);
+        this->RenderOneIndependentShadeFP(ren,vol);
         }
       break;
       
     case 2:
       if ( !vol->GetProperty()->GetShade() )
         {
-  this->RenderTwoDependentNoShadeFP(ren,vol);
+        this->RenderTwoDependentNoShadeFP(ren,vol);
         }
       else
         {
-  this->RenderTwoDependentShadeFP(ren,vol);
+        this->RenderTwoDependentShadeFP(ren,vol);
         }
       break;
       
@@ -231,11 +253,11 @@ void vtkOpenGLVolumeTextureMapper3D::RenderFP( vtkRenderer *ren, vtkVolume *vol 
     case 4:
       if ( !vol->GetProperty()->GetShade() )
         {
-  this->RenderFourDependentNoShadeFP(ren,vol);
+        this->RenderFourDependentNoShadeFP(ren,vol);
         }
       else
         {
-  this->RenderFourDependentShadeFP(ren,vol);
+        this->RenderFourDependentShadeFP(ren,vol);
         }
     }
   
@@ -540,7 +562,7 @@ void vtkOpenGLVolumeTextureMapper3D::Setup3DTextureParameters( vtkVolumeProperty
 
 void vtkOpenGLVolumeTextureMapper3D::SetupOneIndependentTextures( vtkRenderer *vtkNotUsed(ren),
                     vtkVolume *vol )
-{
+{ 
   vtkgl::ActiveTexture( vtkgl::TEXTURE0 );
   glDisable( GL_TEXTURE_2D );
   glEnable( vtkgl::TEXTURE_3D );
@@ -571,8 +593,9 @@ void vtkOpenGLVolumeTextureMapper3D::SetupOneIndependentTextures( vtkRenderer *v
     this->DeleteTextureIndex(&this->Volume1Index);
     this->CreateTextureIndex(&this->Volume1Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume1Index);
-    vtkgl::TexImage3D( vtkgl::TEXTURE_3D, 0, GL_LUMINANCE8_ALPHA8, dim[0], dim[1], dim[2], 0,
-                           GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, this->Volume1 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalLA,dim[0],dim[1],
+                      dim[2],0,GL_LUMINANCE_ALPHA,GL_UNSIGNED_BYTE,
+                      this->Volume1);
     
 
     vtkgl::ActiveTexture( vtkgl::TEXTURE2 );
@@ -580,8 +603,8 @@ void vtkOpenGLVolumeTextureMapper3D::SetupOneIndependentTextures( vtkRenderer *v
     this->DeleteTextureIndex(&this->Volume2Index);
     this->CreateTextureIndex(&this->Volume2Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume2Index);
-    vtkgl::TexImage3D( vtkgl::TEXTURE_3D, 0, GL_RGBA8, dim[0], dim[1], dim[2], 0,
-                           GL_RGB, GL_UNSIGNED_BYTE, this->Volume2 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,dim[0],dim[1],
+                      dim[2],0,GL_RGB,GL_UNSIGNED_BYTE,this->Volume2);
     }
   
   vtkgl::ActiveTexture( vtkgl::TEXTURE0 );
@@ -617,7 +640,7 @@ void vtkOpenGLVolumeTextureMapper3D::SetupOneIndependentTextures( vtkRenderer *v
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, 256, 256, 0,
+    glTexImage2D( GL_TEXTURE_2D, 0,this->InternalRGBA, 256, 256, 0,
                   GL_RGBA, GL_UNSIGNED_BYTE, this->ColorLookup );    
     }
   
@@ -986,16 +1009,16 @@ void vtkOpenGLVolumeTextureMapper3D::SetupTwoDependentTextures(
     this->DeleteTextureIndex(&this->Volume1Index);
     this->CreateTextureIndex(&this->Volume1Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume1Index);
-    vtkgl::TexImage3D(vtkgl::TEXTURE_3D, 0, GL_RGB8, dim[0], dim[1], dim[2], 0,
-                      GL_RGB, GL_UNSIGNED_BYTE, this->Volume1 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,dim[0],dim[1],
+                      dim[2],0,GL_RGB,GL_UNSIGNED_BYTE,this->Volume1);
     
     vtkgl::ActiveTexture( vtkgl::TEXTURE2 );
     glBindTexture(vtkgl::TEXTURE_3D,0);
     this->DeleteTextureIndex(&this->Volume2Index);
     this->CreateTextureIndex(&this->Volume2Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume2Index);
-    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0, GL_RGBA8, dim[0], dim[1], dim[2], 0,
-                           GL_RGB, GL_UNSIGNED_BYTE, this->Volume2 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,dim[0],dim[1],
+                      dim[2],0,GL_RGB,GL_UNSIGNED_BYTE,this->Volume2);
     }
   
   vtkgl::ActiveTexture( vtkgl::TEXTURE0 );
@@ -1042,8 +1065,8 @@ void vtkOpenGLVolumeTextureMapper3D::SetupTwoDependentTextures(
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, 256, 256, 0,
-                  GL_RGB, GL_UNSIGNED_BYTE, this->ColorLookup );    
+    glTexImage2D(GL_TEXTURE_2D,0,this->InternalRGB, 256, 256, 0,
+                 GL_RGB, GL_UNSIGNED_BYTE, this->ColorLookup );    
       
     vtkgl::ActiveTexture( vtkgl::TEXTURE3 );
     glBindTexture(GL_TEXTURE_2D,0);
@@ -1056,8 +1079,8 @@ void vtkOpenGLVolumeTextureMapper3D::SetupTwoDependentTextures(
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA8, 256, 256, 0,
-                  GL_ALPHA, GL_UNSIGNED_BYTE, this->AlphaLookup );      
+    glTexImage2D(GL_TEXTURE_2D, 0,this->InternalAlpha, 256, 256, 0,
+                 GL_ALPHA, GL_UNSIGNED_BYTE, this->AlphaLookup );      
     }
   
   vtkgl::ActiveTexture( vtkgl::TEXTURE1 );
@@ -1140,25 +1163,25 @@ void vtkOpenGLVolumeTextureMapper3D::SetupFourDependentTextures(
     this->DeleteTextureIndex(&this->Volume1Index);
     this->CreateTextureIndex(&this->Volume1Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume1Index);
-    vtkgl::TexImage3D(vtkgl::TEXTURE_3D, 0, GL_RGB8, dim[0], dim[1], dim[2], 0,
-                      GL_RGB, GL_UNSIGNED_BYTE, this->Volume1 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,dim[0],dim[1],
+                      dim[2],0,GL_RGB,GL_UNSIGNED_BYTE,this->Volume1);
 
     vtkgl::ActiveTexture( vtkgl::TEXTURE1 );
     glBindTexture(vtkgl::TEXTURE_3D,0);
     this->DeleteTextureIndex(&this->Volume2Index);
     this->CreateTextureIndex(&this->Volume2Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume2Index);   
-    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,GL_LUMINANCE8_ALPHA8,dim[0],dim[1],
-                      dim[2], 0,GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE,
-                      this->Volume2 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalLA,dim[0],dim[1],
+                      dim[2],0,GL_LUMINANCE_ALPHA,GL_UNSIGNED_BYTE,
+                      this->Volume2);
 
     vtkgl::ActiveTexture( vtkgl::TEXTURE2 );
     glBindTexture(vtkgl::TEXTURE_3D,0);
     this->DeleteTextureIndex(&this->Volume3Index);
     this->CreateTextureIndex(&this->Volume3Index);
     glBindTexture(vtkgl::TEXTURE_3D, this->Volume3Index);
-    vtkgl::TexImage3D( vtkgl::TEXTURE_3D,0, GL_RGB8, dim[0], dim[1], dim[2], 0,
-                       GL_RGB, GL_UNSIGNED_BYTE, this->Volume3 );
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,dim[0],dim[1],
+                      dim[2],0,GL_RGB,GL_UNSIGNED_BYTE,this->Volume3);
     }
   
   vtkgl::ActiveTexture( vtkgl::TEXTURE0 );
@@ -1201,8 +1224,8 @@ void vtkOpenGLVolumeTextureMapper3D::SetupFourDependentTextures(
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA8, 256, 256, 0,
-                  GL_ALPHA, GL_UNSIGNED_BYTE, this->AlphaLookup );      
+    glTexImage2D(GL_TEXTURE_2D,0,this->InternalAlpha, 256, 256, 0,
+                 GL_ALPHA, GL_UNSIGNED_BYTE, this->AlphaLookup );      
     }
 
   vtkgl::ActiveTexture( vtkgl::TEXTURE3 );
@@ -1491,9 +1514,12 @@ void vtkOpenGLVolumeTextureMapper3D::GetLightInformation(
     else
       {
       float lightIntensity = light[lightIndex]->GetIntensity();
-      double lightColor[3];
-      
-      light[lightIndex]->GetColor( lightColor );
+      double lightAmbColor[3];
+      double lightDiffColor[3];
+      double lightSpecColor[3];
+      light[lightIndex]->GetAmbientColor( lightAmbColor );
+      light[lightIndex]->GetDiffuseColor( lightDiffColor );
+      light[lightIndex]->GetSpecularColor( lightSpecColor );
       
       double lightPosition[3];
       double lightFocalPoint[3];
@@ -1509,14 +1535,20 @@ void vtkOpenGLVolumeTextureMapper3D::GetLightInformation(
       
       vtkMath::Normalize( dir );
       
-      lightDiffuseColor[lightIndex][0] = lightColor[0]*diffuse*lightIntensity;
-      lightDiffuseColor[lightIndex][1] = lightColor[1]*diffuse*lightIntensity;
-      lightDiffuseColor[lightIndex][2] = lightColor[2]*diffuse*lightIntensity;
+      lightDiffuseColor[lightIndex][0] = lightDiffColor[0]*diffuse
+        *lightIntensity;
+      lightDiffuseColor[lightIndex][1] = lightDiffColor[1]*diffuse
+        *lightIntensity;
+      lightDiffuseColor[lightIndex][2] = lightDiffColor[2]*diffuse
+        *lightIntensity;
       lightDiffuseColor[lightIndex][3] = 1.0;
       
-      lightSpecularColor[lightIndex][0]= lightColor[0]*specular*lightIntensity;
-      lightSpecularColor[lightIndex][1]= lightColor[1]*specular*lightIntensity;
-      lightSpecularColor[lightIndex][2]= lightColor[2]*specular*lightIntensity;
+      lightSpecularColor[lightIndex][0]= lightSpecColor[0]*specular
+        *lightIntensity;
+      lightSpecularColor[lightIndex][1]= lightSpecColor[1]*specular
+        *lightIntensity;
+      lightSpecularColor[lightIndex][2]= lightSpecColor[2]*specular
+        *lightIntensity;
       lightSpecularColor[lightIndex][3] = 0.0;
 
       half[0] = dir[0] - viewDirection[0];
@@ -1525,9 +1557,9 @@ void vtkOpenGLVolumeTextureMapper3D::GetLightInformation(
       
       vtkMath::Normalize( half );
       
-      ambientColor[0] += ambient*lightColor[0];
-      ambientColor[1] += ambient*lightColor[1];
-      ambientColor[2] += ambient*lightColor[2];      
+      ambientColor[0] += ambient*lightAmbColor[0];
+      ambientColor[1] += ambient*lightAmbColor[1];
+      ambientColor[2] += ambient*lightAmbColor[2];
       }
 
     lightDirection[lightIndex][0] = (dir[0]+1.0)/2.0;
@@ -1618,9 +1650,12 @@ void vtkOpenGLVolumeTextureMapper3D::SetupProgramLocalsForShadingFP(
     else
       {
       float lightIntensity = light[lightIndex]->GetIntensity();
-      double lightColor[3];
-      
-      light[lightIndex]->GetColor( lightColor );
+      double lightAmbColor[3];
+      double lightDiffColor[3];
+      double lightSpecColor[3];
+      light[lightIndex]->GetAmbientColor( lightAmbColor );
+      light[lightIndex]->GetDiffuseColor( lightDiffColor );
+      light[lightIndex]->GetSpecularColor( lightSpecColor );
       
       double lightPosition[3];
       double lightFocalPoint[3];
@@ -1636,14 +1671,20 @@ void vtkOpenGLVolumeTextureMapper3D::SetupProgramLocalsForShadingFP(
       
       vtkMath::Normalize( dir );
       
-      lightDiffuseColor[lightIndex][0] = lightColor[0]*diffuse*lightIntensity;
-      lightDiffuseColor[lightIndex][1] = lightColor[1]*diffuse*lightIntensity;
-      lightDiffuseColor[lightIndex][2] = lightColor[2]*diffuse*lightIntensity;
+      lightDiffuseColor[lightIndex][0] = lightDiffColor[0]*diffuse
+        *lightIntensity;
+      lightDiffuseColor[lightIndex][1] = lightDiffColor[1]*diffuse
+        *lightIntensity;
+      lightDiffuseColor[lightIndex][2] = lightDiffColor[2]*diffuse
+        *lightIntensity;
       lightDiffuseColor[lightIndex][3] = 0.0;
       
-      lightSpecularColor[lightIndex][0]= lightColor[0]*specular*lightIntensity;
-      lightSpecularColor[lightIndex][1]= lightColor[1]*specular*lightIntensity;
-      lightSpecularColor[lightIndex][2]= lightColor[2]*specular*lightIntensity;
+      lightSpecularColor[lightIndex][0]= lightSpecColor[0]*specular
+        *lightIntensity;
+      lightSpecularColor[lightIndex][1]= lightSpecColor[1]*specular
+        *lightIntensity;
+      lightSpecularColor[lightIndex][2]= lightSpecColor[2]*specular
+        *lightIntensity;
       lightSpecularColor[lightIndex][3] = 0.0;
 
       half[0] = dir[0] - viewDirection[0];
@@ -1652,9 +1693,9 @@ void vtkOpenGLVolumeTextureMapper3D::SetupProgramLocalsForShadingFP(
       
       vtkMath::Normalize( half );
       
-      ambientColor[0] += ambient*lightColor[0];
-      ambientColor[1] += ambient*lightColor[1];
-      ambientColor[2] += ambient*lightColor[2];      
+      ambientColor[0] += ambient*lightAmbColor[0];
+      ambientColor[1] += ambient*lightAmbColor[1];
+      ambientColor[2] += ambient*lightAmbColor[2];      
       }
 
     lightDirection[lightIndex][0] = dir[0];
@@ -1708,11 +1749,12 @@ void vtkOpenGLVolumeTextureMapper3D::SetupProgramLocalsForShadingFP(
 }
 
 int  vtkOpenGLVolumeTextureMapper3D::IsRenderSupported(
-  vtkVolumeProperty *property )
+  vtkVolumeProperty *property,
+  vtkRenderer *r)
 {
   if ( !this->Initialized )
     {
-    this->Initialize();
+    this->Initialize(r);
     }
   
   if ( this->RenderMethod == vtkVolumeTextureMapper3D::NO_METHOD )
@@ -1734,11 +1776,11 @@ int  vtkOpenGLVolumeTextureMapper3D::IsRenderSupported(
   return 1;
 }
 
-void vtkOpenGLVolumeTextureMapper3D::Initialize()
+void vtkOpenGLVolumeTextureMapper3D::Initialize(vtkRenderer *r)
 {
   this->Initialized = 1;
-  vtkOpenGLExtensionManager * extensions = vtkOpenGLExtensionManager::New();
-  extensions->SetRenderWindow(NULL); // set render window to the current one.
+  vtkOpenGLExtensionManager *extensions=static_cast<vtkOpenGLRenderWindow *>(
+    r->GetRenderWindow())->GetExtensionManager();
   
   int supports_texture3D=extensions->ExtensionSupported( "GL_VERSION_1_2" );
   if(supports_texture3D)
@@ -1766,6 +1808,67 @@ void vtkOpenGLVolumeTextureMapper3D::Initialize()
     if(supports_multitexture)
       {
       extensions->LoadCorePromotedExtension("GL_ARB_multitexture");
+      }
+    }
+  
+  this->SupportsCompressedTexture=
+    extensions->ExtensionSupported("GL_VERSION_1_3")==1;
+  
+  if(!this->SupportsCompressedTexture)
+    {
+    this->SupportsCompressedTexture=
+      extensions->ExtensionSupported("GL_ARB_texture_compression")==1;
+    if(this->SupportsCompressedTexture)
+      {
+      extensions->LoadCorePromotedExtension("GL_ARB_texture_compression");
+      }
+    }
+  
+  const char *gl_version=
+    reinterpret_cast<const char *>(glGetString(GL_VERSION));
+  const char *mesa_version=strstr(gl_version,"Mesa");
+  
+  
+  // Workaround for broken Mesa
+  if(mesa_version!=0) // any Mesa
+    {
+    this->SupportsCompressedTexture=false;
+    }
+  
+  this->SupportsNonPowerOfTwoTextures=
+        extensions->ExtensionSupported("GL_VERSION_2_0")
+        || extensions->ExtensionSupported("GL_ARB_texture_non_power_of_two");
+  
+  bool brokenMesa=false;
+  
+  if(mesa_version!=0)
+    {
+    // Workaround for broken Mesa (dash16-sql):
+    // GL_VENDOR="Mesa project: www.mesa3d.org"
+    // GL_VERSION="1.4 (2.1 Mesa 7.0.4)"
+    // GL_RENDERER="Mesa GLX Indirect"
+    // there is no problem with (dash6):
+    // GL_VENDOR="Brian Paul"
+    // GL_VERSION="2.0 Mesa 7.0.4"
+    // GL_RENDERER="Mesa X11"
+    // glGetIntegerv(vtkgl::MAX_3D_TEXTURE_SIZE,&maxSize) return some
+    // uninitialized value and a loading a Luminance-alpha 16x16x16 just
+    // crashes glx.
+    int mesa_major=0;
+    int mesa_minor=0;
+    int mesa_patch=0;
+    int opengl_major=0;
+    int opengl_minor=0;
+    if(sscanf(gl_version,"%d.%d",&opengl_major, &opengl_minor)>=2)
+      {
+      if(opengl_major==1 && opengl_minor==4)
+        {
+        if(sscanf(mesa_version,"Mesa %d.%d.%d",&mesa_major,
+                  &mesa_minor,&mesa_patch)>=3)
+          {
+          brokenMesa=mesa_major==7 && mesa_minor==0 && mesa_patch==4;
+          }
+        }
       }
     }
   
@@ -1805,14 +1908,12 @@ void vtkOpenGLVolumeTextureMapper3D::Initialize()
     {
     extensions->LoadExtension( "GL_NV_register_combiners" );
     }
-
-  extensions->Delete();
-  
   
   int canDoFP = 0;
   int canDoNV = 0;
   
-  if ( supports_texture3D          &&
+  if ( !brokenMesa &&
+       supports_texture3D          &&
        supports_multitexture       &&
        supports_GL_ARB_fragment_program   &&
        supports_GL_ARB_vertex_program     &&
@@ -1828,7 +1929,8 @@ void vtkOpenGLVolumeTextureMapper3D::Initialize()
     canDoFP = 1;
     }
   
-  if ( supports_texture3D          &&
+  if ( !brokenMesa &&
+       supports_texture3D          &&
        supports_multitexture       &&
        supports_GL_NV_texture_shader2     &&
        supports_GL_NV_register_combiners2 &&
@@ -1867,74 +1969,114 @@ void vtkOpenGLVolumeTextureMapper3D::Initialize()
     }
 }
 
-int vtkOpenGLVolumeTextureMapper3D::IsTextureSizeSupported( int size[3] )
+// ----------------------------------------------------------------------------
+int vtkOpenGLVolumeTextureMapper3D::IsTextureSizeSupported(int size[3],
+                                                           int components)
 {
-  if ( this->GetInput()->GetNumberOfScalarComponents() < 4 )
-    {
-    if ( size[0]*size[1]*size[2] > 128*256*256 )
-      {
-      return 0;
-      }
-    
-    vtkgl::TexImage3D(vtkgl::PROXY_TEXTURE_3D, 0, GL_RGBA8, size[0]*2, 
-                      size[1]*2, size[2], 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                      this->Volume2 );
-    }
-  else
-    {
-    if ( size[0]*size[1]*size[2] > 128*128*128 )
-      {
-      return 0;
-      }
-    
-    vtkgl::TexImage3D( vtkgl::PROXY_TEXTURE_3D, 0, GL_RGBA8, size[0]*2,
-                       size[1]*2, size[2]*2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                       this->Volume2 );
-    }
+  GLint maxSize;
+  glGetIntegerv(vtkgl::MAX_3D_TEXTURE_SIZE,&maxSize);
   
-
-  GLint params[1];
-  glGetTexLevelParameteriv ( vtkgl::PROXY_TEXTURE_3D, 0, GL_TEXTURE_WIDTH,
-                             params ); 
-  
-  if ( params[0] != 0 ) 
-    {
-    return 1;
-    }
-  else
+  if(size[0]>maxSize || size[1]>maxSize || size[2]>maxSize)
     {
     return 0;
     }
+  
+  GLuint id1;
+  glGenTextures(1,&id1);
+  glBindTexture(vtkgl::TEXTURE_3D,id1);
+  if(components==1)
+    {
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalLA,size[0], 
+                      size[1], size[2], 0, GL_LUMINANCE_ALPHA,
+                      GL_UNSIGNED_BYTE,0);
+    }
+  else
+    {
+    vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,size[0], 
+                      size[1], size[2], 0, GL_RGB,
+                      GL_UNSIGNED_BYTE,0);
+    }
+  bool result=glGetError()==GL_NO_ERROR;
+  if(result) // ie. not GL_OUT_OF_MEMORY
+    {
+    GLuint id2;
+    glGenTextures(1,&id2);
+    glBindTexture(vtkgl::TEXTURE_3D,id2);
+    if(components==4)
+      {
+      vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalLA,size[0], 
+                        size[1], size[2], 0, GL_LUMINANCE_ALPHA,
+                        GL_UNSIGNED_BYTE,0);
+      }
+    else
+      {
+      vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,size[0], 
+                        size[1], size[2], 0, GL_RGB,
+                        GL_UNSIGNED_BYTE,0);
+      }
+    result=glGetError()==GL_NO_ERROR;
+    if(result && components==4) // ie. not GL_OUT_OF_MEMORY
+      {
+      GLuint id3;
+      glGenTextures(1,&id3);
+      glBindTexture(vtkgl::TEXTURE_3D,id3);
+      vtkgl::TexImage3D(vtkgl::TEXTURE_3D,0,this->InternalRGB,size[0], 
+                        size[1], size[2], 0, GL_RGB,
+                        GL_UNSIGNED_BYTE,0);
+      result=glGetError()==GL_NO_ERROR;
+      glBindTexture(vtkgl::TEXTURE_3D,0); // bind to default texture object.
+      glDeleteTextures(1,&id3);
+      }
+    glBindTexture(vtkgl::TEXTURE_3D,0); // bind to default texture object.
+    glDeleteTextures(1,&id2);
+    }
+  glBindTexture(vtkgl::TEXTURE_3D,0); // bind to default texture object.
+  glDeleteTextures(1,&id1);
+  return result;
 }
 
+// ----------------------------------------------------------------------------
 // Print the vtkOpenGLVolumeTextureMapper3D
 void vtkOpenGLVolumeTextureMapper3D::PrintSelf(ostream& os, vtkIndent indent)
 {
-
-  vtkOpenGLExtensionManager * extensions = vtkOpenGLExtensionManager::New();
-  extensions->SetRenderWindow(NULL); // set render window to current render window
-  
   os << indent << "Initialized " << this->Initialized << endl;
-  if ( this->Initialized )
+  if(this->RenderWindow!=0)
     {
-    os << indent << "Supports GL_VERSION_1_2:" 
-       << extensions->ExtensionSupported( "GL_VERSION_1_2" ) << endl;
-    os << indent << "Supports GL_EXT_texture3D:" 
-       << extensions->ExtensionSupported( "GL_EXT_texture3D" ) << endl;
-     os << indent << "Supports GL_VERSION_1_3:" 
-       << extensions->ExtensionSupported( "GL_VERSION_1_3" ) << endl;
-    os << indent << "Supports GL_ARB_multitexture: " 
-       << extensions->ExtensionSupported( "GL_ARB_multitexture" ) << endl;
-    os << indent << "Supports GL_NV_texture_shader2: " 
-       << extensions->ExtensionSupported( "GL_NV_texture_shader2" ) << endl;
-    os << indent << "Supports GL_NV_register_combiners2: " 
-       << extensions->ExtensionSupported( "GL_NV_register_combiners2" ) << endl;
-    os << indent << "Supports GL_ATI_fragment_shader: " 
-       << extensions->ExtensionSupported( "GL_ATI_fragment_shader" ) << endl;
-    os << indent << "Supports GL_ARB_fragment_program: "
-       << extensions->ExtensionSupported( "GL_ARB_fragment_program" ) << endl;
+    vtkOpenGLExtensionManager *extensions=
+      static_cast<vtkOpenGLRenderWindow *>(this->RenderWindow)
+      ->GetExtensionManager();
+
+    if ( this->Initialized )
+      {
+      os << indent << "Supports GL_VERSION_1_2:"
+         << extensions->ExtensionSupported( "GL_VERSION_1_2" ) << endl;
+      os << indent << "Supports GL_EXT_texture3D:"
+         << extensions->ExtensionSupported( "GL_EXT_texture3D" ) << endl;
+      os << indent << "Supports GL_VERSION_1_3:"
+         << extensions->ExtensionSupported( "GL_VERSION_1_3" ) << endl;
+      os << indent << "Supports GL_ARB_multitexture: "
+         << extensions->ExtensionSupported( "GL_ARB_multitexture" ) << endl;
+      os << indent << "Supports GL_NV_texture_shader2: "
+         << extensions->ExtensionSupported( "GL_NV_texture_shader2" ) << endl;
+      os << indent << "Supports GL_NV_register_combiners2: "
+         << extensions->ExtensionSupported( "GL_NV_register_combiners2" )
+         << endl;
+      os << indent << "Supports GL_ATI_fragment_shader: "
+         << extensions->ExtensionSupported( "GL_ATI_fragment_shader" ) << endl;
+      os << indent << "Supports GL_ARB_fragment_program: "
+         << extensions->ExtensionSupported( "GL_ARB_fragment_program" )
+         << endl;
+      os << indent << "Supports GL_ARB_texture_compression: "
+         << extensions->ExtensionSupported( "GL_ARB_texture_compression" )
+         << endl;
+      os << indent << "Supports GL_VERSION_2_0:"
+         << extensions->ExtensionSupported( "GL_VERSION_2_0" )
+         << endl;
+      os << indent << "Supports GL_ARB_texture_non_power_of_two:"
+         << extensions->ExtensionSupported( "GL_ARB_texture_non_power_of_two" )
+         << endl;
+      }
     }
-  extensions->Delete();
   
   this->Superclass::PrintSelf(os,indent);
 }

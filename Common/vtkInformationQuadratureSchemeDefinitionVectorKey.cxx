@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkInformationQuadratureSchemeDefinitionVectorKey.cxx,v $
+  Module:    vtkInformationQuadratureSchemeDefinitionVectorKey.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,10 +22,10 @@
 
 
 //============================================================================
-class vtkInformationQuadratureSchemeDefinitionVectorValue: public vtkQuadratureSchemeDefinition
+class vtkInformationQuadratureSchemeDefinitionVectorValue: public vtkObjectBase
 {
 public:
-  vtkTypeMacro(vtkInformationQuadratureSchemeDefinitionVectorValue, vtkQuadratureSchemeDefinition);
+  vtkTypeMacro(vtkInformationQuadratureSchemeDefinitionVectorValue, vtkObjectBase);
   //
   vtkInformationQuadratureSchemeDefinitionVectorValue()
   {
@@ -42,7 +42,6 @@ private:
 };
 
 //============================================================================
-vtkCxxRevisionMacro(vtkInformationQuadratureSchemeDefinitionVectorKey, "$Revision: 1.4 $");
 
 //----------------------------------------------------------------------------
 vtkInformationQuadratureSchemeDefinitionVectorKey::vtkInformationQuadratureSchemeDefinitionVectorKey(
@@ -70,7 +69,7 @@ vtkInformationQuadratureSchemeDefinitionVectorValue *
 
   // If we don't already have a vector then associated,
   // we will create it here.
-  if(base==NULL)
+  if(base == NULL)
     {
     base=new vtkInformationQuadratureSchemeDefinitionVectorValue;
     this->ConstructClass("vtkInformationQuadratureSchemeDefinitionVectorValue"); // For debug info

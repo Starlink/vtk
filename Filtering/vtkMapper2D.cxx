@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMapper2D.cxx,v $
+  Module:    vtkMapper2D.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -17,7 +17,6 @@
 #include "vtkActor2D.h"
 #include "vtkObjectFactory.h"
 
-vtkCxxRevisionMacro(vtkMapper2D, "$Revision: 1.1 $");
 
 void vtkMapper2D::PrintSelf(ostream& os, vtkIndent indent)
 {

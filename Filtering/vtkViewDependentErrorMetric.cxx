@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkViewDependentErrorMetric.cxx,v $
+  Module:    vtkViewDependentErrorMetric.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -24,7 +24,6 @@
 #include "vtkCoordinate.h"
 #include "vtkViewport.h"
 
-vtkCxxRevisionMacro(vtkViewDependentErrorMetric,"$Revision: 1.7 $");
 vtkStandardNewMacro(vtkViewDependentErrorMetric);
 
 //-----------------------------------------------------------------------------

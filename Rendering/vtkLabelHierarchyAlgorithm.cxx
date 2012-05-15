@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkLabelHierarchyAlgorithm.cxx,v $
+  Module:    vtkLabelHierarchyAlgorithm.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkTrivialProducer.h"
 
-vtkCxxRevisionMacro(vtkLabelHierarchyAlgorithm, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkLabelHierarchyAlgorithm);
 
 //----------------------------------------------------------------------------
@@ -145,8 +144,6 @@ int vtkLabelHierarchyAlgorithm::RequestDataObject(
       outInfo->Set( vtkDataObject::DATA_OBJECT(), output );
       output->FastDelete();
       output->SetPipelineInformation( outInfo );
-      this->GetOutputPortInformation( i )->Set(
-        vtkDataObject::DATA_EXTENT_TYPE(), output->GetExtentType() );
       }
     }
   return 1;

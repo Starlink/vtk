@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPBGLCollapseGraph.cxx,v $
+  Module:    vtkPBGLCollapseGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,8 @@
 #include "vtkVariantArray.h"
 #include "vtkVertexListIterator.h"
 
-vtkCxxRevisionMacro(vtkPBGLCollapseGraph, "$Revision: 1.4 $");
+#include <boost/graph/use_mpi.hpp>   // must precede all pbgl includes
+
 vtkStandardNewMacro(vtkPBGLCollapseGraph);
 
 vtkPBGLCollapseGraph::vtkPBGLCollapseGraph()

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkOrientedGlyphContourRepresentation.h,v $
+  Module:    vtkOrientedGlyphContourRepresentation.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -43,7 +43,7 @@ public:
 
   // Description:
   // Standard methods for instances of this class.
-  vtkTypeRevisionMacro(vtkOrientedGlyphContourRepresentation,vtkContourRepresentation);
+  vtkTypeMacro(vtkOrientedGlyphContourRepresentation,vtkContourRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -105,6 +105,20 @@ public:
   vtkSetMacro( AlwaysOnTop, int );
   vtkGetMacro( AlwaysOnTop, int );
   vtkBooleanMacro( AlwaysOnTop, int );
+
+  // Description:
+  // Convenience method to set the line color.
+  // Ideally one should use GetLinesProperty()->SetColor().
+  void SetLineColor(double r, double g, double b);
+  
+  // Description:
+  // A flag to indicate whether to show the Selected nodes
+  // Default is to set it to false.
+  virtual void SetShowSelectedNodes(int);
+  
+  // Description:
+  // Return the bounds of the representation
+  virtual double *GetBounds();
   
 protected:
   vtkOrientedGlyphContourRepresentation();
@@ -123,6 +137,14 @@ protected:
   vtkPoints            *FocalPoint;
   vtkPolyData          *ActiveFocalData;
   vtkPoints            *ActiveFocalPoint;
+  
+  vtkPolyData          *SelectedNodesData;
+  vtkPoints            *SelectedNodesPoints;
+  vtkActor             *SelectedNodesActor;
+  vtkPolyDataMapper    *SelectedNodesMapper;
+  vtkGlyph3D           *SelectedNodesGlypher;
+  vtkPolyData          *SelectedNodesCursorShape;
+  void CreateSelectedNodesRepresentation();
 
   vtkPolyData          *Lines;
   vtkPolyDataMapper    *LinesMapper;

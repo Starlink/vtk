@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPTableToStructuredGrid.cxx,v $
+  Module:    vtkPTableToStructuredGrid.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -66,7 +66,6 @@ static void CopyStructuredData(vtkDataSetAttributes* out, int outExtent[6],
 
 
 vtkStandardNewMacro(vtkPTableToStructuredGrid);
-vtkCxxRevisionMacro(vtkPTableToStructuredGrid, "$Revision: 1.2 $");
 vtkCxxSetObjectMacro(vtkPTableToStructuredGrid, Controller,
   vtkMultiProcessController);
 //----------------------------------------------------------------------------

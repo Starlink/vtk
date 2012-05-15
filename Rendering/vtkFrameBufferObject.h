@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFrameBufferObject.h,v $
+  Module:    vtkFrameBufferObject.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -37,7 +37,7 @@ class VTK_RENDERING_EXPORT vtkFrameBufferObject : public vtkObject
 {
 public:
   static vtkFrameBufferObject* New();
-  vtkTypeRevisionMacro(vtkFrameBufferObject, vtkObject);
+  vtkTypeMacro(vtkFrameBufferObject, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

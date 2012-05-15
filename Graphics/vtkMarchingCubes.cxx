@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkMarchingCubes.cxx,v $
+  Module:    vtkMarchingCubes.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -10,7 +10,6 @@
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
-
 
 =========================================================================*/
 #include "vtkMarchingCubes.h"
@@ -36,8 +35,8 @@
 #include "vtkUnsignedLongArray.h"
 #include "vtkUnsignedShortArray.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkMarchingCubes, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkMarchingCubes);
 
 // Description:
@@ -155,7 +154,7 @@ void vtkMarchingCubesComputePointGradient(int i, int j, int k, T *s, int dims[3]
 template <class T>
 void vtkMarchingCubesComputeGradient(vtkMarchingCubes *self,T *scalars, int dims[3], 
                                      double origin[3], double spacing[3],
-                                     vtkPointLocator *locator, 
+                                     vtkIncrementalPointLocator *locator, 
                                      vtkDataArray *newScalars, 
                                      vtkDataArray *newGradients, 
                                      vtkDataArray *newNormals, 
@@ -373,7 +372,7 @@ int vtkMarchingCubes::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkImageData *input = vtkImageData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -550,7 +549,7 @@ int vtkMarchingCubes::RequestData(
 // Description:
 // Specify a spatial locator for merging points. By default, 
 // an instance of vtkMergePoints is used.
-void vtkMarchingCubes::SetLocator(vtkPointLocator *locator)
+void vtkMarchingCubes::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator ) 
     {

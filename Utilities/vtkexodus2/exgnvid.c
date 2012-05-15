@@ -45,7 +45,7 @@
 *
 * revision history - 
 *
-*  $Id: exgnvid.c,v 1.3 2009-01-16 14:32:01 utkarsh Exp $
+*  Id
 *
 *****************************************************************************/
 
@@ -61,7 +61,7 @@ int ex_get_nodal_varid(int exoid, int *varid)
 {
   int status;
   int dimid, nvarid;
-  size_t i, num_vars;
+  size_t num_vars, i;
   char errmsg[MAX_ERR_LENGTH];
 
   exerrval = 0; /* clear error code */

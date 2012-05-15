@@ -1,10 +1,10 @@
 /*=========================================================================
 
   Program:   MetaIO
-  Module:    $RCSfile: metaContour.h,v $
+  Module:    metaContour.h
   Language:  C++
-  Date:      $Date: 2008-04-09 01:42:28 $
-  Version:   $Revision: 1.6 $
+  Date:      $Date$
+  Version:   $Revision$
 
   Copyright (c) Insight Software Consortium. All rights reserved.
   See ITKCopyright.txt or http://www.itk.org/HTML/Copyright.htm for details.
@@ -68,10 +68,10 @@ public:
     m_Id = 0;
     m_X = new float[m_Dim];
     //Color is red by default
-    m_Color[0]=1.0;
-    m_Color[1]=0.0;
-    m_Color[2]=0.0;
-    m_Color[3]=1.0;
+    m_Color[0]=1.0f;
+    m_Color[1]=0.0f;
+    m_Color[2]=0.0f;
+    m_Color[3]=1.0f;
     }
 
   ~ContourInterpolatedPnt()

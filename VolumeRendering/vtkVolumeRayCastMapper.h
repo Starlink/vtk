@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeRayCastMapper.h,v $
+  Module:    vtkVolumeRayCastMapper.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -76,7 +76,7 @@ class VTK_VOLUMERENDERING_EXPORT vtkVolumeRayCastMapper : public vtkVolumeMapper
 {
 public:
   static vtkVolumeRayCastMapper *New();
-  vtkTypeRevisionMacro(vtkVolumeRayCastMapper,vtkVolumeMapper);
+  vtkTypeMacro(vtkVolumeRayCastMapper,vtkVolumeMapper);
   void PrintSelf( ostream& os, vtkIndent indent );
 
   // Description:

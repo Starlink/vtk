@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   Visualization Toolkit
-Module:    $RCSfile: vtkFacetReader.h,v $
+Module:    vtkFacetReader.h
 
 Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 All rights reserved.
@@ -42,13 +42,15 @@ class VTK_HYBRID_EXPORT vtkFacetReader : public vtkPolyDataAlgorithm
 {
 public:
   static vtkFacetReader *New();
-  vtkTypeRevisionMacro(vtkFacetReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkFacetReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Specify file name of Facet datafile to read
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
+
+  static int CanReadFile(const char *filename);
 
 protected:
   vtkFacetReader();

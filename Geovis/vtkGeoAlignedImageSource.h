@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoAlignedImageSource.h,v $
+  Module:    vtkGeoAlignedImageSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -40,7 +40,7 @@ class VTK_GEOVIS_EXPORT vtkGeoAlignedImageSource : public vtkGeoSource
 {
 public:
   static vtkGeoAlignedImageSource *New();
-  vtkTypeRevisionMacro(vtkGeoAlignedImageSource, vtkGeoSource);
+  vtkTypeMacro(vtkGeoAlignedImageSource, vtkGeoSource);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkDiskSource.cxx,v $
+  Module:    vtkDiskSource.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,7 +22,6 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 
-vtkCxxRevisionMacro(vtkDiskSource, "$Revision: 1.35 $");
 vtkStandardNewMacro(vtkDiskSource);
 
 vtkDiskSource::vtkDiskSource()

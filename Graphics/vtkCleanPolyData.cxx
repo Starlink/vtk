@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkCleanPolyData.cxx,v $
+  Module:    vtkCleanPolyData.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -23,14 +23,14 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkIncrementalPointLocator.h"
 
-vtkCxxRevisionMacro(vtkCleanPolyData, "$Revision: 1.78 $");
 vtkStandardNewMacro(vtkCleanPolyData);
 
 //---------------------------------------------------------------------------
 // Specify a spatial locator for speeding the search process. By
 // default an instance of vtkPointLocator is used.
-vtkCxxSetObjectMacro(vtkCleanPolyData,Locator,vtkPointLocator);
+vtkCxxSetObjectMacro(vtkCleanPolyData,Locator,vtkIncrementalPointLocator);
 
 //---------------------------------------------------------------------------
 // Construct object with initial Tolerance of 0.0
@@ -116,7 +116,7 @@ int vtkCleanPolyData::RequestUpdateExtent(
       }
     else
       {
-      inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(), -1);
+      inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(), 0);
       inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
                   0);
       }
@@ -145,7 +145,7 @@ int vtkCleanPolyData::RequestData(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  // get the input and ouptut
+  // get the input and output
   vtkPolyData *input = vtkPolyData::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(
@@ -164,7 +164,8 @@ int vtkCleanPolyData::RequestData(
 
   vtkIdType numNewPts;
   vtkIdType numUsedPts=0;
-  vtkPoints *newPts = vtkPoints::New();
+  vtkPoints *newPts = input->GetPoints()->NewInstance();
+  newPts->SetDataType(input->GetPoints()->GetDataType());
   newPts->Allocate(numPts);
 
   // we'll be needing these

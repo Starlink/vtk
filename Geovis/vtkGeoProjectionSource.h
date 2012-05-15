@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeoProjectionSource.h,v $
+  Module:    vtkGeoProjectionSource.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class VTK_GEOVIS_EXPORT vtkGeoProjectionSource : public vtkGeoSource
 {
 public:
   static vtkGeoProjectionSource *New();
-  vtkTypeRevisionMacro(vtkGeoProjectionSource,vtkGeoSource);
+  vtkTypeMacro(vtkGeoProjectionSource,vtkGeoSource);
   virtual void PrintSelf( ostream& os, vtkIndent indent );
 
   vtkGeoProjectionSource();
@@ -47,7 +47,7 @@ public:
   virtual bool FetchChild(vtkGeoTreeNode* node, int index, vtkGeoTreeNode* child);
 
   // Description:
-  // The projection ID defining the projection.
+  // The projection ID defining the projection. Initial value is 0.
   vtkGetMacro(Projection, int);
   virtual void SetProjection(int projection);
 

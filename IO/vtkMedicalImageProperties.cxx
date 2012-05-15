@@ -24,7 +24,6 @@
 #include <assert.h>
 
 //----------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMedicalImageProperties, "1.21");
 vtkStandardNewMacro(vtkMedicalImageProperties);
 
 static const char *vtkMedicalImagePropertiesOrientationString[] = {
@@ -713,6 +712,39 @@ int vtkMedicalImageProperties::GetPatientAgeDay()
   return day;
 }
 
+//----------------------------------------------------------------------------
+int vtkMedicalImageProperties::GetTimeAsFields(const char *time, int &hour,
+  int &minute, int &second /* , long &milliseconds */)
+{
+  if( !time )
+    {
+    return 0;
+    }
+
+  size_t len = strlen(time);
+  if( len == 6 )
+    {
+    // DICOM V3
+    if( sscanf(time, "%02d%02d%02d", &hour, &minute, &second) != 3 )
+      {
+      return 0;
+      }
+    }
+  else if( len == 8 )
+    {
+    // Some *very* old ACR-NEMA
+    if( sscanf(time, "%02d.%02d.%02d", &hour, &minute, &second) != 3 )
+      {
+      return 0;
+      }
+    }
+  else
+    {
+    return 0;
+    }
+
+  return 1;
+}
 //----------------------------------------------------------------------------
 int vtkMedicalImageProperties::GetDateAsFields(const char *date, int &year,
   int &month, int &day)

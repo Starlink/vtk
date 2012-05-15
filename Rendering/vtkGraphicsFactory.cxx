@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGraphicsFactory.cxx,v $
+  Module:    vtkGraphicsFactory.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -93,6 +93,18 @@
 #include "vtkXMesaRenderWindow.h"
 #endif
 
+#include "vtkDummyGPUInfoList.h"
+#ifdef VTK_USE_DIRECTX // Windows
+# include "vtkDirectXGPUInfoList.h"
+#else
+# ifdef VTK_USE_CORE_GRAPHICS // Mac
+#  include "vtkCoreGraphicsGPUInfoList.h"
+# endif
+#endif
+#ifdef VTK_USE_NVCONTROL // Linux and X server extensions queries
+# include "vtkXGPUInfoList.h"
+#endif
+
 #include "vtkCriticalSection.h"
 
 #include "stdlib.h"
@@ -107,7 +119,6 @@ int vtkGraphicsFactory::OffScreenOnlyMode = 1;
 int vtkGraphicsFactory::OffScreenOnlyMode = 0;
 #endif
 
-vtkCxxRevisionMacro(vtkGraphicsFactory, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkGraphicsFactory);
 
 const char *vtkGraphicsFactory::GetRenderLibrary()
@@ -195,6 +206,23 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
     }
 #endif
 
+  if(strcmp(vtkclassname, "vtkGPUInfoList") == 0)
+      {
+#ifdef VTK_USE_DIRECTX // Windows
+      return vtkDirectXGPUInfoList::New();     
+#else
+# ifdef VTK_USE_CORE_GRAPHICS // Mac
+      return vtkCoreGraphicsGPUInfoList::New();
+# else
+#  ifdef VTK_USE_NVCONTROL // X11
+      return vtkXGPUInfoList::New();
+#  else
+      return vtkDummyGPUInfoList::New();
+#  endif
+# endif
+#endif
+      }
+
 #if defined(VTK_USE_OSMESA)
   if(strcmp(vtkclassname, "vtkRenderWindow") == 0)
     {
@@ -202,7 +230,7 @@ vtkObject* vtkGraphicsFactory::CreateInstance(const char* vtkclassname )
     }
   if(strcmp(vtkclassname, "vtkRenderWindowInteractor") == 0)
     {
-    return vtkRenderWindowInteractor::New();
+    return 0; // there is no interactor with OSMesa
     }
 #endif
 

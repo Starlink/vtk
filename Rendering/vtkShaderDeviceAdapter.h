@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkShaderDeviceAdapter.h,v $
+  Module:    vtkShaderDeviceAdapter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -35,7 +35,7 @@ class vtkShaderProgram;
 class VTK_RENDERING_EXPORT vtkShaderDeviceAdapter : public vtkObject
 {
 public:
-  vtkTypeRevisionMacro(vtkShaderDeviceAdapter, vtkObject);
+  vtkTypeMacro(vtkShaderDeviceAdapter, vtkObject);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:
