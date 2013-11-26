@@ -59,7 +59,7 @@ int TestQtDebugLeaksView(int argc, char* argv[])
     }
 
   // The rest of the test requires that VTK_DEBUG_LEAKS is enabled.
-  // The begining of this test is still useful to ensure that the widget
+  // The beginning of this test is still useful to ensure that the widget
   // opens without crashing when debug leaks is disabled.
   #ifdef VTK_DEBUG_LEAKS
 
@@ -107,7 +107,7 @@ int TestQtDebugLeaksView(int argc, char* argv[])
 
   if (referenceModel->rowCount() != 1)
     {
-    fail("Expected reference model to have exactly 1 row");    
+    fail("Expected reference model to have exactly 1 row");
     }
 
   if (referenceModel->data(referenceModel->index(0, 1)) != baseReferenceCount)
@@ -145,7 +145,7 @@ int TestQtDebugLeaksView(int argc, char* argv[])
 
   if (referenceModel->rowCount() != 2)
     {
-    fail("Expected reference model to have exactly 2 rows");    
+    fail("Expected reference model to have exactly 2 rows");
     }
 
   newReference = NULL;

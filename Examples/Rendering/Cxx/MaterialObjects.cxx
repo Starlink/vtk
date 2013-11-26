@@ -49,25 +49,25 @@ vtkActor* makeActor( const char* type, const char* material )
     vtkTexturedSphereSource *sphere = vtkTexturedSphereSource::New();
     sphere->SetThetaResolution(25);
     sphere->SetPhiResolution(25);
-    mapper->SetInput(sphere->GetOutput());
+    mapper->SetInputConnection(sphere->GetOutputPort());
     sphere->Delete();
     }
   else if( strcmp(type,"cube")==0 )
     {
     vtkCubeSource *cube= vtkCubeSource::New();
-    mapper->SetInput(cube->GetOutput());
+    mapper->SetInputConnection(cube->GetOutputPort());
     cube->Delete();
     }
   else if( strcmp(type,"cylinder")==0 )
     {
     vtkCylinderSource *cylinder= vtkCylinderSource::New();
-    mapper->SetInput(cylinder->GetOutput());
+    mapper->SetInputConnection(cylinder->GetOutputPort());
     cylinder->Delete();
     }
   else if( strcmp(type,"plane")==0 )
     {
     vtkPlaneSource *plane= vtkPlaneSource::New();
-    mapper->SetInput(plane->GetOutput());
+    mapper->SetInputConnection(plane->GetOutputPort());
     plane->Delete();
     }
 
@@ -160,7 +160,7 @@ void gridLayoutActors( std::vector<vtkActor*> actors )
 #if 0
         cout << id << " : ";
         cout << actors[id]->GetPosition()[0] << " , ";
-        cout << actors[id]->GetPosition()[1] << " , "; 
+        cout << actors[id]->GetPosition()[1] << " , ";
         cout << actors[id]->GetPosition()[2] << endl;
 #endif
         }
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
   gridLayoutActors( actors );
 
 
-  // Create the graphics structure. The renderer renders into the 
+  // Create the graphics structure. The renderer renders into the
   // render window. The render window interactor captures mouse events
   // and will perform appropriate camera or actor manipulation
   // depending on the nature of the events.
@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
 #if 0
   ren1->GetActiveCamera()->SetParallelScale(1.5);
 #endif
-  
+
   // This starts the event loop and invokes an initial render.
   //
   iren->Initialize();

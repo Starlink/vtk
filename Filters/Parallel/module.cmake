@@ -1,0 +1,18 @@
+vtk_module(vtkFiltersParallel
+  GROUPS
+    StandAlone
+  DEPENDS
+    vtkParallelCore
+    vtkFiltersExtraction
+    vtkRenderingCore
+    vtkFiltersModeling
+  TEST_DEPENDS
+    vtkParallelMPI
+    vtkTestingRendering
+    vtkInteractionStyle
+    vtkRenderingOpenGL
+    vtkRenderingParallel
+    vtkFiltersParallelMPI
+    vtkFiltersParallelImaging
+    vtkIOLegacy
+  )

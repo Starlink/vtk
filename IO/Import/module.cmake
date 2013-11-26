@@ -1,0 +1,11 @@
+vtk_module(vtkIOImport
+  GROUPS
+    StandAlone
+  DEPENDS
+    vtkCommonCore
+    vtkRenderingCore
+  TEST_DEPENDS
+    vtkRenderingOpenGL
+    vtkTestingRendering
+    vtkInteractionStyle
+  )

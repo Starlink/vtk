@@ -10,8 +10,8 @@ these:
 
 This VTK-Python test module supports image based tests with multiple
 images per test suite and multiple images per individual test as well.
-It also prints information appropriate for Dart
-(http://public.kitware.com/Dart/).
+It also prints information appropriate for CDash
+(http://open.kitware.com/).
 
 This module defines several useful classes and functions to make
 writing tests easy.  The most important of these are:
@@ -176,16 +176,20 @@ def compareImageWithSavedImage(src_img, img_fname, threshold=10):
         # generate the image
         pngw = vtk.vtkPNGWriter()
         pngw.SetFileName(_getTempImagePath(img_fname))
-        pngw.SetInput(src_img)
+        pngw.SetInputConnection(src_img.GetOutputPort())
         pngw.Write()
-        return
+        _printCDashImageNotFoundError(img_fname)
+        msg = "Missing baseline image: " + img_fname + "\nTest image created: " + _getTempImagePath(img_fname)
+        sys.tracebacklimit = 0
+        raise RuntimeError, msg
 
     pngr = vtk.vtkPNGReader()
     pngr.SetFileName(img_fname)
+    pngr.Update()
 
     idiff = vtk.vtkImageDifference()
-    idiff.SetInput(src_img)
-    idiff.SetImage(pngr.GetOutput())
+    idiff.SetInputConnection(src_img.GetOutputPort())
+    idiff.SetImageConnection(pngr.GetOutputPort())
     idiff.Update()
 
     min_err = idiff.GetThresholdedError()
@@ -229,12 +233,13 @@ def compareImageWithSavedImage(src_img, img_fname, threshold=10):
 
         if test_failed:
             _handleFailedImage(idiff, pngr, best_img)
-            # Print for Dart.
-            _printDartImageError(img_err, err_index, f_base)
+            # Print for CDash.
+            _printCDashImageError(img_err, err_index, f_base)
             msg = "Failed image test: %f\n"%idiff.GetThresholdedError()
-            raise AssertionError, msg
+            sys.tracebacklimit = 0
+            raise RuntimeError, msg
     # output the image error even if a test passed
-    _printDartImageSuccess(img_err, err_index)
+    _printCDashImageSuccess(img_err, err_index)
 
 
 def compareImage(renwin, img_fname, threshold=10):
@@ -252,11 +257,12 @@ def compareImage(renwin, img_fname, threshold=10):
     w2if = vtk.vtkWindowToImageFilter()
     w2if.ReadFrontBufferOff()
     w2if.SetInput(renwin)
-    return compareImageWithSavedImage(w2if.GetOutput(), img_fname, threshold)
+    w2if.Update()
+    return compareImageWithSavedImage(w2if, img_fname, threshold)
 
 
-def _printDartImageError(img_err, err_index, img_base):
-    """Prints the XML data necessary for Dart."""
+def _printCDashImageError(img_err, err_index, img_base):
+    """Prints the XML data necessary for CDash."""
     img_base = _getTempImagePath(img_base)
     print "Failed image test with error: %f"%img_err
     print "<DartMeasurement name=\"ImageError\" type=\"numeric/double\">",
@@ -275,8 +281,11 @@ def _printDartImageError(img_err, err_index, img_base):
     print "<DartMeasurementFile name=\"ValidImage\" type=\"image/png\">",
     print "%s </DartMeasurementFile>"%(img_base + '.valid.png')
 
+def _printCDashImageNotFoundError(img_fname):
+    """Prints the XML data necessary for Dart when the baseline image is not found."""
+    print "<DartMeasurement name=\"ImageNotFound\" type=\"text/string\">" + img_fname + "</DartMeasurement>"
 
-def _printDartImageSuccess(img_err, err_index):
+def _printCDashImageSuccess(img_err, err_index):
     "Prints XML data for Dart when image test succeeded."
     print "<DartMeasurement name=\"ImageError\" type=\"numeric/double\">",
     print "%f </DartMeasurement>"%img_err
@@ -305,12 +314,12 @@ def _handleFailedImage(idiff, pngr, img_fname):
 
     # Write out the image that was generated.  Write it out as full so that
     # it may be used as a baseline image if the tester deems it valid.
-    pngw.SetInput(idiff.GetInput())
+    pngw.SetInputConnection(idiff.GetInputConnection(0,0))
     pngw.SetFileName(_getTempImagePath(f_base + ".png"))
     pngw.Write()
 
     # write out the valid image that matched.
-    pngw.SetInput(idiff.GetImage())
+    pngw.SetInputConnection(idiff.GetInputConnection(1,0))
     pngw.SetFileName(_getTempImagePath(f_base + ".valid.png"))
     pngw.Write()
 
@@ -336,7 +345,7 @@ def main(cases):
     tot_time = timer.GetCPUTime() - s_time
     tot_wall_time = float(time.time() - s_wall_time)
 
-    # output measurements for Dart
+    # output measurements for CDash
     print "<DartMeasurement name=\"WallTime\" type=\"numeric/double\">",
     print " %f </DartMeasurement>"%tot_wall_time
     print "<DartMeasurement name=\"CPUTime\" type=\"numeric/double\">",
@@ -384,7 +393,7 @@ def usage():
           Directory containing VTK Data use for tests.  If this option
           is not set via the command line the environment variable
           VTK_DATA_ROOT is used.  If the environment variable is not
-          set the value defaults to '../../../../VTKData'.
+          set the value defaults to '../../../../../VTKData'.
 
     -B /path/to/valid/image_dir/
     --baseline-root /path/to/valid/image_dir/
@@ -402,7 +411,7 @@ def usage():
           are written.  If this option is not set via the command line
           the environment variable VTK_TEMP_DIR is used.  If the
           environment variable is not set the value defaults to
-          '../../../Testing/Temporary'.
+          '../../../../Testing/Temporary'.
 
     -v level
     --verbose level
@@ -462,7 +471,7 @@ def processCmdLine():
     try:
         VTK_DATA_ROOT = os.environ['VTK_DATA_ROOT']
     except KeyError:
-        VTK_DATA_ROOT = os.path.normpath("../../../../VTKData")
+        VTK_DATA_ROOT = os.path.normpath("../../../../../VTKData")
 
     try:
         VTK_BASELINE_ROOT = os.environ['VTK_BASELINE_ROOT']
@@ -472,7 +481,7 @@ def processCmdLine():
     try:
         VTK_TEMP_DIR = os.environ['VTK_TEMP_DIR']
     except KeyError:
-        VTK_TEMP_DIR = os.path.normpath("../../../Testing/Temporary")
+        VTK_TEMP_DIR = os.path.normpath("../../../../Testing/Temporary")
 
     for o, a in opts:
         if o in ('-D', '--data-dir'):

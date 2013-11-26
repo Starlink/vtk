@@ -1,0 +1,7 @@
+if(VTK_DATA_ROOT)
+  add_test_tcl(NetCDFCF2DBounds IO)
+  add_test_tcl(NetCDFCFSetOutputType IO)
+  add_test_tcl(NetCDFCFSphericalCoords IO)
+  add_test_tcl(NetCDFCFUnstructured IO)
+  add_test_tcl(NetCDFReader IO)
+endif()

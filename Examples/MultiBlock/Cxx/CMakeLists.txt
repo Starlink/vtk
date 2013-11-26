@@ -1,12 +1,25 @@
+cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+
 PROJECT (MultiBlock)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK REQUIRED)
-IF(NOT VTK_USE_RENDERING)
-  MESSAGE(FATAL_ERROR "Example ${PROJECT_NAME} requires VTK_USE_RENDERING.")
-ENDIF(NOT VTK_USE_RENDERING)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
+if(NOT VTK_BINARY_DIR)
+  find_package(VTK COMPONENTS
+    vtkCommonCore
+    vtkCommonDataModel
+    vtkCommonExecutionModel
+    vtkFiltersCore
+    vtkFiltersGeneral
+    vtkFiltersGeometry
+    vtkFiltersSources
+    vtkIOXML
+    vtkRenderingCore
+    vtkRenderingOpenGL
+    vtkTestingCore
+  )
+include(${VTK_USE_FILE})
+endif()
 
-ADD_EXECUTABLE(MultiBlock MultiBlock.cxx)
-TARGET_LINK_LIBRARIES(MultiBlock vtkRendering vtkIO)
+if(vtkTestingCore_LOADED)
+ add_executable(MultiBlock MACOSX_BUNDLE MultiBlock.cxx)
+ target_link_libraries(MultiBlock ${VTK_LIBRARIES})
+endif()

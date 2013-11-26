@@ -75,40 +75,6 @@ ELSE(CMAKE_COMPILER_IS_GNUCXX)
   ENDIF(CMAKE_SYSTEM MATCHES "HP-UX.*")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-IF(APPLE)
-  # Darwin versions:
-  #   6.x == Mac OSX 10.2
-  #   7.x == Mac OSX 10.3
-  #   8.x == Mac OSX 10.4
-  #   9.x == Mac OSX 10.5
-  STRING(REGEX REPLACE "^([0-9]+)\\.([0-9]+).*$" "\\1" DARWIN_MAJOR_VERSION "${CMAKE_SYSTEM_VERSION}")
-  # Starting 10.4, Tcl/Tk now uses dlopen(RLTD_LOCAL) to load dylib libraries.
-  # While they could not be convinced to use the default RLTD_GLOBAL, they
-  # suggested the workaround was to stop using -flat_namespace.
-  # see https://sourceforge.net/tracker/?func=detail&atid=110894&aid=1961211&group_id=10894
-  IF("${DARWIN_MAJOR_VERSION}" LESS 8)
-    SET(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS 
-      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS} -Wl,-flat_namespace,-U,_environ")
-    SET(CMAKE_SHARED_MODULE_CREATE_C_FLAGS 
-      "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -Wl,-flat_namespace,-U,_environ")
-  ENDIF("${DARWIN_MAJOR_VERSION}" LESS 8)
-  IF(CMAKE_COMPILER_IS_GNUCXX)
-    # -no-cpp-precomp was a compiler flag present only in Apple's gcc and not
-    # in the FSF gcc. The flag is obsolete and totally removed in gcc 4.2
-    # and later. I believe it is only needed with gcc 3.3 and earlier.
-    EXECUTE_PROCESS(COMMAND "${CMAKE_C_COMPILER}" --version
-      OUTPUT_VARIABLE _version ERROR_VARIABLE _version)
-    IF("${_version}" MATCHES "gcc.*3\\.3.*Apple")
-      SET(VTK_REQUIRED_C_FLAGS "${VTK_REQUIRED_C_FLAGS} -no-cpp-precomp")
-      SET(VTK_REQUIRED_CXX_FLAGS "${VTK_REQUIRED_CXX_FLAGS} -no-cpp-precomp")
-    ENDIF()
-    IF(NOT BUILD_SHARED_LIBS)
-      SET(VTK_REQUIRED_C_FLAGS "${VTK_REQUIRED_C_FLAGS} -mlong-branch")
-      SET(VTK_REQUIRED_CXX_FLAGS "${VTK_REQUIRED_CXX_FLAGS} -mlong-branch")
-    ENDIF(NOT BUILD_SHARED_LIBS)
-  ENDIF(CMAKE_COMPILER_IS_GNUCXX)
-ENDIF(APPLE)
-
 # figure out whether the compiler might be the Intel compiler
 SET(_MAY_BE_INTEL_COMPILER FALSE)
 IF(UNIX)
@@ -135,15 +101,15 @@ IF(_MAY_BE_INTEL_COMPILER)
 ENDIF(_MAY_BE_INTEL_COMPILER)
 
 
-IF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake|VCExpress)")
-# Use the highest warning level for visual studio.
+IF(MSVC)
+# Use the highest warning level for visual c++ compiler.
   SET(CMAKE_CXX_WARNING_LEVEL 4)
   IF(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
     STRING(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   ELSE(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
   ENDIF(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-ENDIF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake|VCExpress)")
+ENDIF(MSVC)
 
 # Disable deprecation warnings for standard C and STL functions in VS2005
 # and later

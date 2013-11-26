@@ -1,0 +1,35 @@
+find_package(MPI REQUIRED)
+mark_as_advanced(MPI_LIBRARY MPI_EXTRA_LIBRARY)
+set(vtkParallelMPI_SYSTEM_INCLUDE_DIRS ${MPI_C_INCLUDE_PATH})
+
+include(vtkTestingMPISupport)
+include(vtkTestingMacros)
+
+set(Module_SRCS
+  vtkMPICommunicator.cxx
+  vtkMPIController.cxx
+  # vtkMPIEventLog.cxx # Deprecated
+  vtkMPI.h
+  )
+
+set_source_files_properties(
+  vtkMPI
+  HEADER_FILE_ONLY
+  )
+
+set_source_files_properties(
+  vtkMPI
+  WRAP_EXCLUDE
+  )
+
+# Needed for mpich 2
+add_definitions("-DMPICH_IGNORE_CXX_SEEK")
+
+# FIXME: The ifdefs need to be removed, for now defining it to on
+set(${vtk-module}_EXPORT_CODE "#define VTK_USE_MPI")
+
+vtk_module_library(vtkParallelMPI ${Module_SRCS})
+target_link_libraries(vtkParallelMPI ${MPI_C_LIBRARIES})
+if (MPI_CXX_LIBRARIES)
+  target_link_libraries(vtkParallelMPI ${MPI_CXX_LIBRARIES})
+endif()

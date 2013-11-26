@@ -1,0 +1,6 @@
+if(VTK_DATA_ROOT)
+  add_test_tcl(TestParametricFunctions Graphics)
+endif()
+add_test_tcl(CSpline Filtering)
+add_test_tcl(KSpline Filtering)
+add_test_tcl(closedSplines Filtering)

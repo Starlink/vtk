@@ -35,7 +35,7 @@ vtkPolyData selectRect
     selectRect SetPoints pts
     selectRect SetLines rect
 vtkPolyDataMapper2D rectMapper
-    rectMapper SetInput selectRect
+    rectMapper SetInputData selectRect
 vtkActor2D rectActor
     rectActor SetMapper rectMapper
 
@@ -72,7 +72,7 @@ vtkLabeledDataMapper ldm
 #    ldm SetLabelFormat "%g"
     ldm SetLabelModeToLabelFieldData
 vtkActor2D pointLabels
-    pointLabels SetMapper ldm    
+    pointLabels SetMapper ldm
 
 # Create labels for cells
 vtkCellCenters cc
@@ -91,7 +91,7 @@ vtkLabeledDataMapper cellMapper
     cellMapper SetLabelModeToLabelFieldData
     [cellMapper GetLabelTextProperty] SetColor 0 1 0
 vtkActor2D cellLabels
-    cellLabels SetMapper cellMapper    
+    cellLabels SetMapper cellMapper
 
 # Create the RenderWindow and RenderWindowInteractor
 #

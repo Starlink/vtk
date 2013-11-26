@@ -1,0 +1,14 @@
+vtk_module(vtkIOLegacy
+  GROUPS
+    StandAlone
+  DEPENDS
+    vtkCommonDataModel
+    vtkCommonSystem
+    vtkCommonMisc
+    vtkIOCore
+  TEST_DEPENDS
+    vtkFiltersAMR
+    vtkInteractionStyle
+    vtkRenderingOpenGL
+    vtkTestingRendering
+  )

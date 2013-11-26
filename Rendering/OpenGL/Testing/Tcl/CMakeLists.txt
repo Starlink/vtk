@@ -1,0 +1,3 @@
+add_test_tcl(TestFreetypeTextMapperBigger Rendering)
+add_test_tcl(TestFreetypeTextMapper Rendering)
+add_test_tcl(TestFreetypeTextOverlay Rendering)
