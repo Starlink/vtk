@@ -175,7 +175,9 @@ Utilities/vtkjpeg/jpegDllConfig.h
 Utilities/vtklibxml2/config.h
 Utilities/vtklibxml2/libxml/
 Utilities/vtkmetaio/metaIOConfig.h
+Utilities/vtknetcdf/config.h
 Utilities/vtknetcdf/ncconfig.h
+Utilities/vtknetcdf/vtk_netcdf_config.h
 Utilities/vtkpng/pngDllConfig.h
 Utilities/vtksys/
 Utilities/vtktiff/tif_config.h
