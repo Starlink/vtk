@@ -30,7 +30,7 @@
 
 class vtkRenderer;
 class vtkVolume;
-class vtkUnstructuredGrid;
+class vtkUnstructuredGridBase;
 class vtkWindow;
 
 
@@ -42,9 +42,9 @@ public:
 
   // Description:
   // Set/Get the input data
-  virtual void SetInputData( vtkUnstructuredGrid * );
+  virtual void SetInputData( vtkUnstructuredGridBase * );
   virtual void SetInputData( vtkDataSet * );
-  vtkUnstructuredGrid *GetInput();
+  vtkUnstructuredGridBase *GetInput();
 
   vtkSetMacro( BlendMode, int );
   void SetBlendModeToComposite()
@@ -67,7 +67,7 @@ public:
   // Release any graphics resources that are being consumed by this mapper.
   // The parameter window could be used to determine which graphic
   // resources to release.
-  virtual void ReleaseGraphicsResources(vtkWindow *) {};
+  virtual void ReleaseGraphicsResources(vtkWindow *) {}
 
   enum
   {

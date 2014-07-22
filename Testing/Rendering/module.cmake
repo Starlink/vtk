@@ -3,4 +3,7 @@ vtk_module(vtkTestingRendering
     vtkTestingCore
     vtkRenderingCore
     vtkImagingCore
+  PRIVATE_DEPENDS
+    vtksys
+    vtkIOImage
   )

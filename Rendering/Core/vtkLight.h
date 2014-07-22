@@ -76,7 +76,7 @@ public:
   // will load its data into the graphics system in response to this method
   // invocation. The actual loading is performed by a vtkLightDevice
   // subclass, which will get created automatically.
-  virtual void Render(vtkRenderer *, int) {};
+  virtual void Render(vtkRenderer *, int) {}
 
   // Description:
   // Set/Get the color of the light. It is possible to set the ambient,
@@ -90,7 +90,7 @@ public:
   vtkSetVector3Macro(SpecularColor,double);
   vtkGetVectorMacro(SpecularColor,double,3);
   void SetColor(double, double, double);
-  void SetColor(double a[3]) { this->SetColor(a[0], a[1], a[2]); }
+  void SetColor(const double a[3]) { this->SetColor(a[0], a[1], a[2]); }
 
   // Description:
   // Set/Get the position of the light.
@@ -100,7 +100,7 @@ public:
   // vtkGetTransformedPosition() instead of vtkGetPosition().
   vtkSetVector3Macro(Position,double);
   vtkGetVectorMacro(Position,double,3);
-  void SetPosition(float *a) {this->SetPosition(a[0],a[1],a[2]);};
+  void SetPosition(const float *a) {this->SetPosition(a[0],a[1],a[2]);};
 
   // Description:
   // Set/Get the point at which the light is shining.
@@ -110,7 +110,7 @@ public:
   // vtkGetTransformedFocalPoint() instead of vtkGetFocalPoint().
   vtkSetVector3Macro(FocalPoint,double);
   vtkGetVectorMacro(FocalPoint,double,3);
-  void SetFocalPoint(float *a) {this->SetFocalPoint(a[0],a[1],a[2]);};
+  void SetFocalPoint(const float *a) {this->SetFocalPoint(a[0],a[1],a[2]);};
 
   // Description:
   // Set/Get the brightness of the light (from one to zero).
@@ -176,7 +176,7 @@ public:
   // Angles are given in degrees.  If the light is a
   // positional light, it is made directional instead.
   void SetDirectionAngle(double elevation, double azimuth);
-  void SetDirectionAngle(double ang[2]) {
+  void SetDirectionAngle(const double ang[2]) {
     this->SetDirectionAngle(ang[0], ang[1]); };
 
   // Description:

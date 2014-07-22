@@ -7,14 +7,10 @@ SET(Module_SRCS
   vtkCastToConcrete.cxx
   vtkCompositeDataPipeline.cxx
   vtkCompositeDataSetAlgorithm.cxx
-  vtkComputingResources.cxx
   vtkDataObjectAlgorithm.cxx
   vtkDataSetAlgorithm.cxx
   vtkDemandDrivenPipeline.cxx
   vtkDirectedGraphAlgorithm.cxx
-  vtkExecutionScheduler.cxx
-  vtkExecutionSchedulerManager.cxx
-  vtkExecutiveCollection.cxx
   vtkExecutive.cxx
   vtkExtentSplitter.cxx
   vtkFilteringInformationKeyManager.cxx
@@ -45,12 +41,14 @@ SET(Module_SRCS
   vtkStructuredGridAlgorithm.cxx
   vtkTableAlgorithm.cxx
   vtkTableExtentTranslator.cxx
+  vtkSMPProgressObserver.cxx
+  vtkThreadedCompositeDataPipeline.cxx
   vtkThreadedImageAlgorithm.cxx
-  vtkThreadedStreamingPipeline.cxx
   vtkTreeAlgorithm.cxx
   vtkTrivialProducer.cxx
   vtkUndirectedGraphAlgorithm.cxx
   vtkUnstructuredGridAlgorithm.cxx
+  vtkProgressObserver.cxx
   vtkSelectionAlgorithm.cxx
   vtkExtentRCBPartitioner.cxx
   vtkUniformGridPartitioner.cxx
@@ -78,6 +76,7 @@ set_source_files_properties(
   vtkExecutionSchedulerManager
   vtkFilteringInformationKeyManager
   vtkImageProgressIterator
+  vtkSMPProgressObserver
   WRAP_EXCLUDE
   )
 

@@ -126,9 +126,16 @@ public:
   vtkGetMacro(Toroidal,int);
   vtkSetMacro(Toroidal,int);
 
+  // Description:
+  // Set/get the desired precision for the output points.
+  // vtkAlgorithm::SINGLE_PRECISION - Output single-precision floating point.
+  // vtkAlgorithm::DOUBLE_PRECISION - Output double-precision floating point.
+  vtkSetMacro(OutputPointsPrecision,int);
+  vtkGetMacro(OutputPointsPrecision,int);
+
 protected:
   vtkSuperquadricSource(int res=16);
-  ~vtkSuperquadricSource() {};
+  ~vtkSuperquadricSource() {}
 
   int Toroidal;
   int AxisOfSymmetry;
@@ -141,6 +148,7 @@ protected:
   double Scale[3];
   int ThetaResolution;
   int PhiResolution;
+  int OutputPointsPrecision;
 
 private:
   vtkSuperquadricSource(const vtkSuperquadricSource&);  // Not implemented.

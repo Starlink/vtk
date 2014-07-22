@@ -48,6 +48,8 @@ vtkTubeFilter::vtkTubeFilter()
   this->GenerateTCoords = VTK_TCOORDS_OFF;
   this->TextureLength = 1.0;
 
+  this->OutputPointsPrecision = vtkAlgorithm::DEFAULT_PRECISION;
+
   // by default process active point scalars
   this->SetInputArrayToProcess(0,0,0,vtkDataObject::FIELD_ASSOCIATION_POINTS,
                                vtkDataSetAttributes::SCALARS);
@@ -113,6 +115,21 @@ int vtkTubeFilter::RequestData(
   // Create the geometry and topology
   numNewPts = numPts * this->NumberOfSides;
   newPts = vtkPoints::New();
+
+  // Set the desired precision for the points in the output.
+  if(this->OutputPointsPrecision == vtkAlgorithm::DEFAULT_PRECISION)
+    {
+    newPts->SetDataType(inPts->GetDataType());
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::SINGLE_PRECISION)
+    {
+    newPts->SetDataType(VTK_FLOAT);
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::DOUBLE_PRECISION)
+    {
+    newPts->SetDataType(VTK_DOUBLE);
+    }
+
   newPts->Allocate(numNewPts);
   newNormals = vtkFloatArray::New();
   newNormals->SetName("TubeNormals");
@@ -199,7 +216,9 @@ int vtkTubeFilter::RequestData(
   //
   this->Theta = 2.0*vtkMath::Pi() / this->NumberOfSides;
   vtkPolyLine *lineNormalGenerator = vtkPolyLine::New();
-  for (inCellId=0, inLines->InitTraversal();
+  // the line cellIds start after the last vert cellId
+  inCellId = input->GetNumberOfVerts();
+  for (inLines->InitTraversal();
        inLines->GetNextCell(npts,pts) && !abort; inCellId++)
     {
     this->UpdateProgress((double)inCellId/numLines);
@@ -692,7 +711,7 @@ void vtkTubeFilter::GenerateTextureCoords(vtkIdType offset,
       tc = len / length;
       for ( k=0; k < numSides; k++)
         {
-        newTCoords->InsertTuple2(offset+i*2+k,tc,0.0);
+        newTCoords->InsertTuple2(offset+i*numSides+k,tc,0.0);
         }
       xPrev[0]=x[0]; xPrev[1]=x[1]; xPrev[2]=x[2];
       }
@@ -804,4 +823,6 @@ void vtkTubeFilter::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Generate TCoords: "
      << this->GetGenerateTCoordsAsString() << endl;
   os << indent << "Texture Length: " << this->TextureLength << endl;
+  os << indent << "Output Points Precision: " << this->OutputPointsPrecision
+     << endl;
 }

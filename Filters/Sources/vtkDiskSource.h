@@ -54,15 +54,23 @@ public:
   vtkSetClampMacro(CircumferentialResolution,int,3,VTK_INT_MAX)
   vtkGetMacro(CircumferentialResolution,int);
 
+  // Description:
+  // Set/get the desired precision for the output points.
+  // vtkAlgorithm::SINGLE_PRECISION - Output single-precision floating point.
+  // vtkAlgorithm::DOUBLE_PRECISION - Output double-precision floating point.
+  vtkSetMacro(OutputPointsPrecision,int);
+  vtkGetMacro(OutputPointsPrecision,int);
+
 protected:
   vtkDiskSource();
-  ~vtkDiskSource() {};
+  ~vtkDiskSource() {}
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   double InnerRadius;
   double OuterRadius;
   int RadialResolution;
   int CircumferentialResolution;
+  int OutputPointsPrecision;
 
 private:
   vtkDiskSource(const vtkDiskSource&);  // Not implemented.

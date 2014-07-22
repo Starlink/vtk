@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkContourFilter.h"
 
+#include "vtkCallbackCommand.h"
 #include "vtkCell.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -27,9 +28,11 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMergePoints.h"
+#include "vtkNew.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPolyDataNormals.h"
 #include "vtkRectilinearGrid.h"
 #include "vtkRectilinearSynchronizedTemplates.h"
 #include "vtkSimpleScalarTree.h"
@@ -39,7 +42,6 @@
 #include "vtkSynchronizedTemplates3D.h"
 #include "vtkTimerLog.h"
 #include "vtkUniformGrid.h"
-#include "vtkUnstructuredGrid.h"
 #include "vtkIncrementalPointLocator.h"
 #include "vtkContourHelper.h"
 
@@ -54,7 +56,10 @@ vtkContourFilter::vtkContourFilter()
 {
   this->ContourValues = vtkContourValues::New();
 
-  this->ComputeNormals = 1;
+  // -1 == uninitialized. This is so we know if ComputeNormals has been set
+  // by the user, so that we can preserve old (broken) behavior that ignored
+  // this setting for certain dataset types.
+  this->ComputeNormals = -1;
   this->ComputeGradients = 0;
   this->ComputeScalars = 1;
 
@@ -71,6 +76,20 @@ vtkContourFilter::vtkContourFilter()
   this->SynchronizedTemplates3D = vtkSynchronizedTemplates3D::New();
   this->GridSynchronizedTemplates = vtkGridSynchronizedTemplates3D::New();
   this->RectilinearSynchronizedTemplates = vtkRectilinearSynchronizedTemplates::New();
+
+  this->InternalProgressCallbackCommand = vtkCallbackCommand::New();
+  this->InternalProgressCallbackCommand->SetCallback(
+    &vtkContourFilter::InternalProgressCallbackFunction);
+  this->InternalProgressCallbackCommand->SetClientData(this);
+
+  this->SynchronizedTemplates2D->AddObserver(vtkCommand::ProgressEvent,
+                                             this->InternalProgressCallbackCommand);
+  this->SynchronizedTemplates3D->AddObserver(vtkCommand::ProgressEvent,
+                                             this->InternalProgressCallbackCommand);
+  this->GridSynchronizedTemplates->AddObserver(vtkCommand::ProgressEvent,
+                                               this->InternalProgressCallbackCommand);
+  this->RectilinearSynchronizedTemplates->AddObserver(vtkCommand::ProgressEvent,
+                                                      this->InternalProgressCallbackCommand);
 
   // by default process active point scalars
   this->SetInputArrayToProcess(0,0,0,vtkDataObject::FIELD_ASSOCIATION_POINTS,
@@ -97,6 +116,7 @@ vtkContourFilter::~vtkContourFilter()
   this->SynchronizedTemplates3D->Delete();
   this->GridSynchronizedTemplates->Delete();
   this->RectilinearSynchronizedTemplates->Delete();
+  this->InternalProgressCallbackCommand->Delete();
 }
 
 // Overload standard modified time function. If contour values are modified,
@@ -440,6 +460,10 @@ int vtkContourFilter::RequestData(
         {
         newPts->SetDataType(inputPointSet->GetPoints()->GetDataType());
         }
+      else
+        {
+        newPts->SetDataType(VTK_FLOAT);
+        }
       }
     else if(this->OutputPointsPrecision == vtkAlgorithm::SINGLE_PRECISION)
       {
@@ -466,7 +490,8 @@ int vtkContourFilter::RequestData(
       this->CreateDefaultLocator();
       }
     this->Locator->InitPointInsertion (newPts,
-                                       input->GetBounds(),estimatedSize);
+                                       input->GetBounds(),
+                                       input->GetNumberOfPoints());
 
     // interpolate data along edge
     // if we did not ask for scalars to be computed, don't copy them
@@ -600,6 +625,27 @@ int vtkContourFilter::RequestData(
       output->SetPolys(newPolys);
       }
     newPolys->Delete();
+
+    // -1 == uninitialized. This setting used to be ignored, and we preserve the
+    // old behavior for backward compatibility. Normals will be computed here
+    // if and only if the user has explicitly set the option.
+    if (this->ComputeNormals != 0 && this->ComputeNormals != -1)
+      {
+      vtkNew<vtkPolyDataNormals> normalsFilter;
+      normalsFilter->SetOutputPointsPrecision(this->OutputPointsPrecision);
+      vtkNew<vtkPolyData> tempInput;
+      tempInput->ShallowCopy(output);
+      normalsFilter->SetInputData(tempInput.GetPointer());
+      normalsFilter->SetFeatureAngle(180.);
+      normalsFilter->SetUpdateExtent(
+        0,
+        info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER()),
+        info->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()),
+        info->Get(vtkStreamingDemandDrivenPipeline::
+                  UPDATE_NUMBER_OF_GHOST_LEVELS()));
+      normalsFilter->Update();
+      output->ShallowCopy(normalsFilter->GetOutput());
+      }
 
     this->Locator->Initialize();//releases leftover memory
     output->Squeeze();
@@ -803,4 +849,15 @@ void vtkContourFilter::ReportReferences(vtkGarbageCollector* collector)
   // These filters share our input and are therefore involved in a
   // reference loop.
   vtkGarbageCollectorReport(collector, this->ScalarTree, "ScalarTree");
+}
+
+//----------------------------------------------------------------------------
+void vtkContourFilter::InternalProgressCallbackFunction(vtkObject *vtkNotUsed(caller),
+                                                        unsigned long vtkNotUsed(eid),
+                                                        void *clientData,
+                                                        void *callData)
+{
+  vtkContourFilter *contourFilter = static_cast<vtkContourFilter *>(clientData);
+  double progress = *static_cast<double *>(callData);
+  contourFilter->UpdateProgress(progress);
 }

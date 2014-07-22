@@ -12,6 +12,30 @@ if(UNIX AND VTK_BUILD_FORWARDING_EXECUTABLES)
   include(vtkForwardingExecutable)
 endif()
 
+# vtk_module(<name>)
+#
+# Main function for declaring a VTK module, usually in a module.cmake file in
+# the module search path. The module name is the only required argument, all
+# others are optional named arguments that will be outlined below. The following
+# named options take one (or more) arguments, such as the names of dependent
+# modules:
+#  DEPENDS = Modules that will be publicly linked to this module
+#  PRIVATE_DEPENDS = Modules that will be privately linked to this module
+#  COMPILE_DEPENDS = Modules that are needed at compile time by this module
+#  TEST_DEPENDS = Modules that are needed by this modules testing executables
+#  DESCRIPTION = Free text description of the module
+#  TCL_NAME = Alternative name for the TCL wrapping (cannot contain numbers)
+#  IMPLEMENTS = Modules that this module implements, using the auto init feature
+#  GROUPS = Module groups this module should be included in
+#  TEST_LABELS = Add labels to the tests for the module
+#
+# The following options take no arguments:
+#  EXCLUDE_FROM_ALL = Exclude this module from the build all modules flag
+#  EXCLUDE_FROM_WRAPPING = Do not attempt to wrap this module in any language
+#  EXCLUDE_FROM_WRAP_HIERARCHY = Do not attempt to process with wrap hierarchy
+#
+# This macro will ensure the module name is compliant, and set the appropriate
+# module variables as declared in the module.cmake file.
 macro(vtk_module _name)
   vtk_module_check_name(${_name})
   set(vtk-module ${_name})
@@ -21,6 +45,7 @@ macro(vtk_module _name)
   set(${vtk-module-test}_DECLARED 1)
   set(${vtk-module}_DEPENDS "")
   set(${vtk-module}_COMPILE_DEPENDS "")
+  set(${vtk-module}_PRIVATE_DEPENDS "")
   set(${vtk-module-test}_DEPENDS "${vtk-module}")
   set(${vtk-module}_IMPLEMENTS "")
   set(${vtk-module}_DESCRIPTION "description")
@@ -30,7 +55,7 @@ macro(vtk_module _name)
   set(${vtk-module}_EXCLUDE_FROM_WRAP_HIERARCHY 0)
   set(${vtk-module}_TEST_LABELS "")
   foreach(arg ${ARGN})
-  if("${arg}" MATCHES "^((|COMPILE_|TEST_|)DEPENDS|DESCRIPTION|TCL_NAME|IMPLEMENTS|DEFAULT|GROUPS|TEST_LABELS)$")
+    if("${arg}" MATCHES "^((|COMPILE_|PRIVATE_|TEST_|)DEPENDS|DESCRIPTION|TCL_NAME|IMPLEMENTS|DEFAULT|GROUPS|TEST_LABELS)$")
       set(_doing "${arg}")
     elseif("${arg}" MATCHES "^EXCLUDE_FROM_ALL$")
       set(_doing "")
@@ -53,6 +78,8 @@ macro(vtk_module _name)
       list(APPEND ${vtk-module-test}_DEPENDS "${arg}")
     elseif("${_doing}" MATCHES "^COMPILE_DEPENDS$")
       list(APPEND ${vtk-module}_COMPILE_DEPENDS "${arg}")
+    elseif("${_doing}" MATCHES "^PRIVATE_DEPENDS$")
+      list(APPEND ${vtk-module}_PRIVATE_DEPENDS "${arg}")
     elseif("${_doing}" MATCHES "^DESCRIPTION$")
       set(_doing "")
       set(${vtk-module}_DESCRIPTION "${arg}")
@@ -77,7 +104,9 @@ macro(vtk_module _name)
   endforeach()
   list(SORT ${vtk-module}_DEPENDS) # Deterministic order.
   set(${vtk-module}_LINK_DEPENDS "${${vtk-module}_DEPENDS}")
-  list(APPEND ${vtk-module}_DEPENDS ${${vtk-module}_COMPILE_DEPENDS})
+  list(APPEND ${vtk-module}_DEPENDS
+    ${${vtk-module}_COMPILE_DEPENDS}
+    ${${vtk-module}_PRIVATE_DEPENDS})
   unset(${vtk-module}_COMPILE_DEPENDS)
   list(SORT ${vtk-module}_DEPENDS) # Deterministic order.
   list(SORT ${vtk-module-test}_DEPENDS) # Deterministic order.
@@ -88,12 +117,17 @@ macro(vtk_module _name)
   endif()
 endmacro()
 
+# vtk_module_check_name(<name>)
+#
+# Check if the proposed module name is compliant.
 macro(vtk_module_check_name _name)
-  if( NOT "${_name}" MATCHES "^[a-zA-Z][a-zA-Z0-9]*$")
+  if(NOT "${_name}" MATCHES "^[a-zA-Z][a-zA-Z0-9]*$")
     message(FATAL_ERROR "Invalid module name: ${_name}")
   endif()
 endmacro()
 
+# vtk_module_impl()
+#
 # This macro provides module implementation, setting up important variables
 # necessary to build a module. It assumes we are in the directory of the module.
 macro(vtk_module_impl)
@@ -110,7 +144,6 @@ macro(vtk_module_impl)
   endif()
 
   if(NOT DEFINED ${vtk-module}_LIBRARIES)
-    set(${vtk-module}_LIBRARIES "")
     foreach(dep IN LISTS ${vtk-module}_LINK_DEPENDS)
       list(APPEND ${vtk-module}_LIBRARIES "${${dep}_LIBRARIES}")
     endforeach()
@@ -121,8 +154,8 @@ macro(vtk_module_impl)
 
   list(APPEND ${vtk-module}_INCLUDE_DIRS
     ${${vtk-module}_BINARY_DIR}
-    ${${vtk-module}_SOURCE_DIR}
-    )
+    ${${vtk-module}_SOURCE_DIR})
+  list(REMOVE_DUPLICATES ${vtk-module}_INCLUDE_DIRS)
 
   if(${vtk-module}_INCLUDE_DIRS)
     include_directories(${${vtk-module}_INCLUDE_DIRS})
@@ -140,7 +173,11 @@ macro(vtk_module_impl)
   endif()
 endmacro()
 
-# Export just the essential data from a module such as name, include directory.
+# vtk_module_export_info()
+#
+# Export just the essential data from a module such as name, include directory,
+# libraries provided by the module, and any custom variables that are part of
+# the module configuration.
 macro(vtk_module_export_info)
   vtk_module_impl()
   # First gather and configure the high level module information.
@@ -171,13 +208,22 @@ macro(vtk_module_export_info)
     list(APPEND vtk-module-INCLUDE_DIRS-build "${${vtk-module}_SYSTEM_INCLUDE_DIRS}")
     list(APPEND vtk-module-INCLUDE_DIRS-install "${${vtk-module}_SYSTEM_INCLUDE_DIRS}")
   endif()
+  if(WIN32)
+    set(vtk-module-RUNTIME_LIBRARY_DIRS-build "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    set(vtk-module-RUNTIME_LIBRARY_DIRS-install "\${VTK_INSTALL_PREFIX}/${VTK_INSTALL_RUNTIME_DIR}")
+  else()
+    set(vtk-module-RUNTIME_LIBRARY_DIRS-build "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+    set(vtk-module-RUNTIME_LIBRARY_DIRS-install "\${VTK_INSTALL_PREFIX}/${VTK_INSTALL_LIBRARY_DIR}")
+  endif()
   set(vtk-module-LIBRARY_DIRS "${${vtk-module}_SYSTEM_LIBRARY_DIRS}")
+  set(vtk-module-RUNTIME_LIBRARY_DIRS "${vtk-module-RUNTIME_LIBRARY_DIRS-build}")
   set(vtk-module-INCLUDE_DIRS "${vtk-module-INCLUDE_DIRS-build}")
   set(vtk-module-EXPORT_CODE "${vtk-module-EXPORT_CODE-build}")
   set(vtk-module-WRAP_HIERARCHY_FILE "${${vtk-module}_WRAP_HIERARCHY_FILE}")
   configure_file(${_VTKModuleMacros_DIR}/vtkModuleInfo.cmake.in
     ${VTK_MODULES_DIR}/${vtk-module}.cmake @ONLY)
   set(vtk-module-INCLUDE_DIRS "${vtk-module-INCLUDE_DIRS-install}")
+  set(vtk-module-RUNTIME_LIBRARY_DIRS "${vtk-module-RUNTIME_LIBRARY_DIRS-install}")
   set(vtk-module-EXPORT_CODE "${vtk-module-EXPORT_CODE-install}")
   set(vtk-module-WRAP_HIERARCHY_FILE
     "\${CMAKE_CURRENT_LIST_DIR}/${vtk-module}Hierarchy.txt")
@@ -203,8 +249,12 @@ macro(vtk_module_export_info)
   endif()
 endmacro()
 
+# vtk_module_export(<sources>)
+#
 # Export data from a module such as name, include directory and header level
-# information useful for wrapping.
+# information useful for wrapping. This calls vtk_module_export_info() and then
+# exports additional information in a supplemental file useful for wrapping
+# generators.
 function(vtk_module_export sources)
   vtk_module_export_info()
   # Now iterate through the headers in the module to get header level information.
@@ -283,12 +333,14 @@ macro(vtk_target_label _target_name)
   set_property(TARGET ${_target_name} PROPERTY LABELS ${_label})
 endmacro()
 
+# vtk_target_name(<name>)
+#
 # This macro does some basic checking for library naming, and also adds a suffix
 # to the output name with the VTK version by default. Setting the variable
 # VTK_CUSTOM_LIBRARY_SUFFIX will override the suffix.
 macro(vtk_target_name _name)
   get_property(_type TARGET ${_name} PROPERTY TYPE)
-  if(NOT "${_type}" STREQUAL EXECUTABLE)
+  if(NOT "${_type}" STREQUAL EXECUTABLE AND NOT VTK_JAVA_INSTALL)
     set_property(TARGET ${_name} PROPERTY VERSION 1)
     set_property(TARGET ${_name} PROPERTY SOVERSION 1)
   endif()
@@ -314,6 +366,9 @@ endmacro()
 
 macro(vtk_target_install _name)
   if(NOT VTK_INSTALL_NO_LIBRARIES)
+    if(APPLE AND VTK_JAVA_INSTALL)
+       set_target_properties(${_name} PROPERTIES SUFFIX ".jnilib")
+    endif(APPLE AND VTK_JAVA_INSTALL)
     install(TARGETS ${_name}
       EXPORT ${VTK_INSTALL_EXPORT_NAME}
       RUNTIME DESTINATION ${VTK_INSTALL_RUNTIME_DIR} COMPONENT RuntimeLibraries
@@ -408,7 +463,7 @@ macro(vtk_module_test_executable test_exe_name)
   vtk_module_test()
   # No forwarding or export for test executables.
   add_executable(${test_exe_name} MACOSX_BUNDLE ${ARGN})
-  target_link_libraries(${test_exe_name} ${${vtk-module-test}-Cxx_LIBRARIES})
+  target_link_libraries(${test_exe_name} LINK_PRIVATE ${${vtk-module-test}-Cxx_LIBRARIES})
 
   if(${vtk-module-test}-Cxx_DEFINITIONS)
     set_property(TARGET ${test_exe_name} APPEND PROPERTY COMPILE_DEFINITIONS
@@ -476,7 +531,21 @@ function(vtk_module_library name)
 
   vtk_add_library(${vtk-module} ${ARGN} ${_hdrs} ${_instantiator_SRCS} ${_hierarchy})
   foreach(dep IN LISTS ${vtk-module}_LINK_DEPENDS)
-    target_link_libraries(${vtk-module} ${${dep}_LIBRARIES})
+    target_link_libraries(${vtk-module} LINK_PUBLIC ${${dep}_LIBRARIES})
+    if(_help_vs7 AND ${dep}_LIBRARIES)
+      add_dependencies(${vtk-module} ${${dep}_LIBRARIES})
+    endif()
+  endforeach()
+
+  # Handle the private dependencies, setting up link/include directories.
+  foreach(dep IN LISTS ${vtk-module}_PRIVATE_DEPENDS)
+    if(${dep}_INCLUDE_DIRS)
+      include_directories(${${dep}_INCLUDE_DIRS})
+    endif()
+    if(${dep}_LIBRARY_DIRS)
+      link_directories(${${dep}_LIBRARY_DIRS})
+    endif()
+    target_link_libraries(${vtk-module} LINK_PRIVATE ${${dep}_LIBRARIES})
     if(_help_vs7 AND ${dep}_LIBRARIES)
       add_dependencies(${vtk-module} ${${dep}_LIBRARIES})
     endif()
@@ -646,6 +715,19 @@ macro(vtk_module_third_party _pkg)
     else()
       set(vtk${_lower}_LIBRARIES "${${_upper}_LIBRARIES}")
     endif()
+
+    #a workaround for bad FindHDF5 behavior in which deb or opt can
+    #end up empty. cmake >= 2.8.12.2 makes this uneccessary
+    string(REGEX MATCH "debug;.*optimized;.*"
+           _remove_deb_opt "${vtk${_lower}_LIBRARIES}")
+    if (_remove_deb_opt)
+      set(_tmp ${vtk${_lower}_LIBRARIES})
+      list(REMOVE_ITEM _tmp "debug")
+      list(REMOVE_ITEM _tmp "optimized")
+      list(REMOVE_DUPLICATES _tmp)
+      set(vtk${_lower}_LIBRARIES ${_tmp})
+    endif()
+
     set(vtk${_lower}_INCLUDE_DIRS "")
   else()
     if(_nolibs)

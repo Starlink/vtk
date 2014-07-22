@@ -1,9 +1,17 @@
-create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
+# Tell TestSystemInformation where to find the build trees.
+set(TestSystemInformation_ARGS ${CMAKE_BINARY_DIR})
+
+# Tell TestXMLFileOutputWindow where to write test file
+set(TestXMLFileOutputWindow_ARGS ${CMAKE_BINARY_DIR}/Testing/Temporary/XMLFileOutputWindow.txt)
+
+vtk_add_test_cxx(NO_DATA NO_VALID NO_OUTPUT
   TestArrayAPI.cxx
   TestArrayAPIConvenience.cxx
   TestArrayAPIDense.cxx
   TestArrayAPISparse.cxx
   TestArrayBool.cxx
+  TestAtomic.cxx
+  TestScalarsToColors.cxx
   # TestArrayCasting.cxx # Uses Boost in its own separate test.
   TestArrayExtents.cxx
   TestArrayInterpolationDense.cxx
@@ -18,6 +26,7 @@ create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
   # TestCxxFeatures.cxx # This is in its own exe too.
   TestDataArray.cxx
   TestDataArrayComponentNames.cxx
+  TestDataArrayIterators.cxx
   TestGarbageCollector.cxx
   # TestInstantiator.cxx # Have not enabled instantiators.
   TestLookupTable.cxx
@@ -27,6 +36,7 @@ create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
   TestObjectFactory.cxx
   TestObservers.cxx
   TestObserversPerformance.cxx
+  TestSMP.cxx
   TestSmartPointer.cxx
   TestSortDataArray.cxx
   TestSparseArrayValidation.cxx
@@ -46,24 +56,7 @@ create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
   #otherLookupTable.cxx
   #otherLookupTableWithEnabling.cxx
   otherStringArray.cxx
+  )
 
-  EXTRA_INCLUDE vtkTestDriver.h
-)
-
-vtk_module_test_executable(${vtk-module}CxxTests ${Tests}
+vtk_test_cxx_executable(${vtk-module}CxxTests
   vtkTestNewVar.cxx)
-
-set(TestsToRun ${Tests})
-list(REMOVE_ITEM TestsToRun ${vtk-module}CxxTests.cxx)
-
-# Tell TestSystemInformation where to find the build trees.
-set(TestSystemInformation_ARGS ${CMAKE_BINARY_DIR})
-
-# Tell TestXMLFileOutputWindow where to write test file
-set(TestXMLFileOutputWindow_ARGS ${CMAKE_BINARY_DIR}/Testing/Temporary/XMLFileOutputWindow.txt)
-
-# Add all the executables
-foreach(test ${TestsToRun})
-  get_filename_component(TName ${test} NAME_WE)
-  add_test(NAME ${vtk-module}-${TName} COMMAND ${vtk-module}CxxTests ${TName} ${${TName}_ARGS})
-endforeach()

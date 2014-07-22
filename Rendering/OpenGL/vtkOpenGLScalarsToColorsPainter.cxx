@@ -31,6 +31,7 @@
 #include "vtkRenderWindow.h"
 
 #include "vtkOpenGL.h"
+#include "vtkOpenGLError.h"
 #include "vtkOpenGLExtensionManager.h"
 
 #include "vtkgl.h" // vtkgl namespace
@@ -103,6 +104,8 @@ void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer *renderer,
                                                      unsigned long typeflags,
                                                      bool forceCompileOnly)
 {
+  vtkOpenGLClearErrorMacro();
+
   // If we have not yet set the alpha bit planes, do it based on the
   // render window so we're not querying GL in the middle of render.
   if (this->AlphaBitPlanes < 0)
@@ -231,11 +234,18 @@ void vtkOpenGLScalarsToColorsPainter::RenderInternal(vtkRenderer *renderer,
 
   this->Superclass::RenderInternal(renderer, actor, typeflags, forceCompileOnly);
 
+  if (this->InterpolateScalarsBeforeMapping && this->SupportsSeparateSpecularColor)
+    {
+    glLightModeli(vtkgl::LIGHT_MODEL_COLOR_CONTROL, vtkgl::SINGLE_COLOR);
+    glDisable(vtkgl::COLOR_SUM);
+    }
+
   if (pre_multiplied_by_alpha || this->InterpolateScalarsBeforeMapping)
     {
     // restore the blend function & lights
     glPopAttrib();
     }
+  vtkOpenGLCheckErrorMacro("failed after RenderInternal");
 }
 
 //-----------------------------------------------------------------------------

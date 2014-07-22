@@ -41,6 +41,16 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Set the points object to use for this cell. This updates the internal cell
+  // storage as well as the public member variable Points.
+  void SetPoints(vtkPoints *points);
+
+  // Description:
+  // Set the point ids to use for this cell. This updates the internal cell
+  // storage as well as the public member variable PointIds.
+  void SetPointIds(vtkIdList *pointIds);
+
+  // Description:
   // See the vtkCell API for descriptions of these methods.
   void ShallowCopy(vtkCell *c);
   void DeepCopy(vtkCell *c);
@@ -118,6 +128,7 @@ public:
   void SetCellTypeToQuadraticTriangle() {this->SetCellType(VTK_QUADRATIC_TRIANGLE);}
   void SetCellTypeToBiQuadraticTriangle() {this->SetCellType(VTK_BIQUADRATIC_TRIANGLE);}
   void SetCellTypeToQuadraticQuad() {this->SetCellType(VTK_QUADRATIC_QUAD);}
+  void SetCellTypeToQuadraticPolygon() {this->SetCellType(VTK_QUADRATIC_POLYGON);}
   void SetCellTypeToQuadraticTetra() {this->SetCellType(VTK_QUADRATIC_TETRA);}
   void SetCellTypeToQuadraticHexahedron() {this->SetCellType(VTK_QUADRATIC_HEXAHEDRON);}
   void SetCellTypeToQuadraticWedge() {this->SetCellType(VTK_QUADRATIC_WEDGE);}

@@ -198,7 +198,7 @@ void vtkObjectBase::RegisterInternal(vtkObjectBase*, int check)
   if(!(check &&
        vtkObjectBaseToGarbageCollectorFriendship::TakeReference(this)))
     {
-    ++this->ReferenceCount;
+    this->ReferenceCount++;
     }
 }
 

@@ -1,29 +1,17 @@
+# Tests with data
 # VS6 builds do not handle out-of-range double assignment to float
 # properly. Do not run TestMultiBlockExodusWrite on VS6 builds.
 #
+vtk_add_test_cxx(TestExodusAttributes.cxx NO_VALID NO_OUTPUT)
+vtk_add_test_cxx(TestExodusSideSets.cxx NO_VALID NO_OUTPUT)
 if(NOT CMAKE_GENERATOR MATCHES "Visual Studio 6")
-  set(MyTests ${MyTests}
+  vtk_add_test_cxx(
     TestMultiBlockExodusWrite.cxx
     )
 endif()
 
+vtk_add_test_cxx(NO_VALID
+  TestInSituExodus.cxx
+  )
 
-# Tests with data
-if(VTK_DATA_ROOT)
-  # Use the testing object factory, to reduce boilerplate code in tests.
-  include(vtkTestingObjectFactory)
-  vtk_module_test_executable(${vtk-module}CxxTests ${Tests})
-
-  set(TestsToRun ${Tests})
-  list(REMOVE_ITEM TestsToRun CxxTests.cxx)
-
-  # Add all the executables
-  foreach(test ${TestsToRun})
-    get_filename_component(TName ${test} NAME_WE)
-      add_test(NAME ${vtk-module}-${TName}
-        COMMAND ${vtk-module}CxxTests ${TName}
-          -D ${VTK_DATA_ROOT}
-          -T ${VTK_TEST_OUTPUT_DIR}
-          -V Baseline/Parallel/${TName}.png)
-  endforeach ()
-endif()
+vtk_test_cxx_executable(${vtk-module}CxxTests RENDERING_FACTORY)

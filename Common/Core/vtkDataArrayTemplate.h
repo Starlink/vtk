@@ -22,17 +22,49 @@
 #define __vtkDataArrayTemplate_h
 
 #include "vtkCommonCoreModule.h" // For export macro
-#include "vtkDataArray.h"
+#include "vtkTypedDataArray.h"
+#include "vtkTypeTemplate.h" // For templated vtkObject API
+#include <cassert> // for assert()
 
 template <class T>
 class vtkDataArrayTemplateLookup;
 
 template <class T>
-class VTKCOMMONCORE_EXPORT vtkDataArrayTemplate: public vtkDataArray
+class VTKCOMMONCORE_EXPORT vtkDataArrayTemplate:
+    public vtkTypeTemplate<vtkDataArrayTemplate<T>, vtkTypedDataArray<T> >
 {
 public:
-  typedef vtkDataArray Superclass;
+  typedef vtkTypedDataArray<T> Superclass;
+  typedef typename Superclass::ValueType ValueType;
   void PrintSelf(ostream& os, vtkIndent indent);
+
+  // Description:
+  // Typedef to a suitable iterator class.
+  // Rather than using this member directly, consider using
+  // vtkDataArrayIteratorMacro for safety and efficiency.
+  typedef ValueType* Iterator;
+
+  // Description:
+  // Return an iterator initialized to the first element of the data.
+  // Rather than using this member directly, consider using
+  // vtkDataArrayIteratorMacro for safety and efficiency.
+  Iterator Begin() { return Iterator(this->GetVoidPointer(0)); }
+
+  // Description:
+  // Return an iterator initialized to first element past the end of the data.
+  // Rather than using this member directly, consider using
+  // vtkDataArrayIteratorMacro for safety and efficiency.
+  Iterator End() { return Iterator(this->GetVoidPointer(this->MaxId + 1)); }
+
+  // Description:
+  // Perform a fast, safe cast from a vtkAbstractArray to a
+  // vtkDataArrayTemplate.
+  // This method checks if:
+  // - source->GetArrayType() is appropriate, and
+  // - source->GetDataType() matches vtkTypeTraits<ValueType>::VTK_TYPE_ID
+  // if these conditions are met, the method performs a static_cast to return
+  // source as a vtkTypedDataArray pointer. Otherwise, NULL is returned.
+  static vtkDataArrayTemplate<T>* FastDownCast(vtkAbstractArray *src);
 
   // Description:
   // Allocate memory for this array. Delete old storage only if necessary.
@@ -62,6 +94,13 @@ public:
   // Insert the jth tuple in the source array, at ith location in this array.
   // Note that memory allocation is performed as necessary to hold the data.
   virtual void InsertTuple(vtkIdType i, vtkIdType j, vtkAbstractArray* source);
+
+  // Description:
+  // Copy the tuples indexed in srcIds from the source array to the tuple
+  // locations indexed by dstIds in this array.
+  // Note that memory allocation is performed as necessary to hold the data.
+  virtual void InsertTuples(vtkIdList *destIds, vtkIdList *srcIds,
+                            vtkAbstractArray *source);
 
   // Description:
   // Insert the jth tuple in the source array, at the end in this array.
@@ -115,6 +154,14 @@ public:
     }
 
   // Description:
+  // Get the range of array values for the 0th component in the
+  // native data type.
+  T *GetValueRange()
+    { return this->GetValueRange(0); }
+  void GetValueRange(T range[2])
+    { this->GetValueRange(range, 0); }
+
+  // Description:
   // Resize object to just fit data requirement. Reclaims extra memory.
   void Squeeze() { this->ResizeAndExtend (this->MaxId+1); }
 
@@ -131,13 +178,16 @@ public:
 
   // Description:
   // Get the data at a particular index.
-  T GetValue(vtkIdType id) { return this->Array[id]; }
+  T GetValue(vtkIdType id)
+    { assert(id >= 0 && id < this->Size); return this->Array[id]; }
+  T& GetValueReference(vtkIdType id)
+    { assert(id >= 0 && id < this->Size); return this->Array[id]; }
 
   // Description:
   // Set the data at a particular index. Does not do range checking. Make sure
   // you use the method SetNumberOfValues() before inserting data.
   void SetValue(vtkIdType id, T value)
-    { this->Array[id] = value;};
+    { assert(id >= 0 && id < this->Size); this->Array[id] = value;};
 
   // Description:
   // Specify the number of values for this object to hold. Does an
@@ -194,14 +244,11 @@ public:
   // Description:
   // Get the address of a particular data index. Performs no checks
   // to verify that the memory has been allocated etc.
+  // If the data is simply being iterated over, consider using
+  // vtkDataArrayIteratorMacro for safety and efficiency, rather than using this
+  // member directly.
   T* GetPointer(vtkIdType id) { return this->Array + id; }
   virtual void* GetVoidPointer(vtkIdType id) { return this->GetPointer(id); }
-
-  // Description:
-  // Deep copy of another double array.
-  void DeepCopy(vtkDataArray* da);
-  void DeepCopy(vtkAbstractArray* aa)
-    { this->Superclass::DeepCopy(aa); }
 
 //BTX
   enum DeleteMethod
@@ -250,6 +297,10 @@ public:
   virtual void LookupValue(vtkVariant value, vtkIdList* ids);
   vtkIdType LookupValue(T value);
   void LookupValue(T value, vtkIdList* ids);
+  vtkIdType LookupTypedValue(T value)
+    { return this->LookupValue(value); }
+  void LookupTypedValue(T value, vtkIdList* ids)
+    { this->LookupValue(value, ids); }
 
   // Description:
   // Tell the array explicitly that the data has changed.
@@ -272,8 +323,12 @@ public:
   // function.
   virtual void ClearLookup();
 
+  // Description:
+  // Method for type-checking in FastDownCast implementations.
+  virtual int GetArrayType() { return vtkAbstractArray::DataArrayTemplate; }
+
 protected:
-  vtkDataArrayTemplate(vtkIdType numComp);
+  vtkDataArrayTemplate();
   ~vtkDataArrayTemplate();
 
   T* Array;   // pointer to data
@@ -294,6 +349,7 @@ private:
   void operator=(const vtkDataArrayTemplate&);  // Not implemented.
 
   vtkDataArrayTemplateLookup<T>* Lookup;
+  bool RebuildLookup;
   void UpdateLookup();
 
   void DeleteArray();
@@ -306,6 +362,35 @@ private:
 # include "vtkDataArrayTemplateImplicit.txx"
 # define VTK_DATA_ARRAY_TEMPLATE_INSTANTIATE(T)
 #endif
+
+// This macro is used by the subclasses to create dummy
+// declarations for these functions such that the wrapper
+// can see them. The wrappers ignore vtkDataArrayTemplate.
+#define vtkCreateWrappedArrayInterface(T) \
+  int GetDataType(); \
+  void GetTupleValue(vtkIdType i, T* tuple); \
+  void SetTupleValue(vtkIdType i, const T* tuple); \
+  void InsertTupleValue(vtkIdType i, const T* tuple); \
+  vtkIdType InsertNextTupleValue(const T* tuple); \
+  T GetValue(vtkIdType id); \
+  void SetValue(vtkIdType id, T value); \
+  void SetNumberOfValues(vtkIdType number); \
+  void InsertValue(vtkIdType id, T f); \
+  vtkIdType InsertNextValue(T f); \
+  T *GetValueRange(int comp); \
+  T *GetValueRange(); \
+  T* WritePointer(vtkIdType id, vtkIdType number); \
+  T* GetPointer(vtkIdType id)/*; \
+
+  * These methods are not wrapped to avoid wrappers exposing these
+  * easy-to-get-wrong methods because passing in the wrong value for 'save' is
+  * guaranteed to cause a memory issue down the line. Either the wrappers
+  * didn't use malloc to allocate the memory or the memory isn't actually
+  * persisted because a temporary array is used that doesn't persist like this
+  * method expects.
+
+  void SetArray(T* array, vtkIdType size, int save); \
+  void SetArray(T* array, vtkIdType size, int save, int deleteMethod) */
 
 #endif // !defined(__vtkDataArrayTemplate_h)
 

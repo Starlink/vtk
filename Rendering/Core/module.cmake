@@ -4,17 +4,14 @@ vtk_module(vtkRenderingCore
   DEPENDS
     vtkCommonExecutionModel
     vtkCommonTransforms
+  PRIVATE_DEPENDS
     vtkFiltersSources
-    vtkFiltersGeneral
     vtkFiltersGeometry
     vtkFiltersExtraction
-    vtkIOImage
-    vtkIOXMLParser
-  COMPILE_DEPENDS
-    vtkUtilitiesMaterialLibrary
+    vtksys
   TEST_DEPENDS
     vtkIOXML
     vtkTestingCore
     vtkTestingRendering
-    vtkRenderingContext2D
+    vtkRenderingOpenGL
   )

@@ -32,7 +32,7 @@ vtkCxxSetObjectMacro(vtkPlot, XAxis, vtkAxis);
 vtkCxxSetObjectMacro(vtkPlot, YAxis, vtkAxis);
 
 //-----------------------------------------------------------------------------
-vtkPlot::vtkPlot()
+vtkPlot::vtkPlot() : ShiftScale(0.0, 0.0, 1.0, 1.0)
 {
   this->Pen = vtkSmartPointer<vtkPen>::New();
   this->Pen->SetWidth(2.0);
@@ -76,7 +76,7 @@ vtkIdType vtkPlot::GetNearestPoint(const vtkVector2f&, const vtkVector2f&,
 }
 
 //-----------------------------------------------------------------------------
-vtkStdString vtkPlot::GetTooltipLabel(const vtkVector2f &plotPos,
+vtkStdString vtkPlot::GetTooltipLabel(const vtkVector2d &plotPos,
                                       vtkIdType seriesIndex,
                                       vtkIdType)
 {
@@ -164,12 +164,20 @@ vtkStdString vtkPlot::GetNumber(double position, vtkAxis *axis)
 //-----------------------------------------------------------------------------
 bool vtkPlot::SelectPoints(const vtkVector2f&, const vtkVector2f&)
 {
+  if (this->Selection)
+    {
+    this->Selection->SetNumberOfTuples(0);
+    }
   return false;
 }
 
 //-----------------------------------------------------------------------------
 bool vtkPlot::SelectPointsInPolygon(const vtkContextPolygon &)
 {
+  if (this->Selection)
+    {
+    this->Selection->SetNumberOfTuples(0);
+    }
   return false;
 }
 
@@ -446,6 +454,22 @@ void vtkPlot::SetInputArray(int index, const vtkStdString &name)
                                      vtkDataObject::FIELD_ASSOCIATION_ROWS,
                                      name.c_str());
   this->AutoLabels = 0; // No longer valid
+}
+
+//-----------------------------------------------------------------------------
+void vtkPlot::SetShiftScale(const vtkRectd &shiftScale)
+{
+  if (shiftScale != this->ShiftScale)
+    {
+    this->Modified();
+    this->ShiftScale = shiftScale;
+    }
+}
+
+//-----------------------------------------------------------------------------
+vtkRectd vtkPlot::GetShiftScale()
+{
+  return this->ShiftScale;
 }
 
 //-----------------------------------------------------------------------------

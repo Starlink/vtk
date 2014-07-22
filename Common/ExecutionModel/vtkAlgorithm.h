@@ -45,6 +45,7 @@ class vtkInformationIntegerKey;
 class vtkInformationStringKey;
 class vtkInformationStringVectorKey;
 class vtkInformationVector;
+class vtkProgressObserver;
 
 class VTKCOMMONEXECUTIONMODEL_EXPORT vtkAlgorithm : public vtkObject
 {
@@ -55,8 +56,12 @@ public:
 
   // Description:
   // Values used for setting the desired output precision for various
-  // algorithms. Currently, only a few algorithms (vtkContourFilter,
-  // vtkThreshold) support changing their output precision.
+  // algorithms. Currently, the following algorithms support changing their
+  // output precision: vtkAppendFilter, vtkAppendPoints, vtkContourFilter,
+  // vtkContourGrid, vtkCutter, vtkGridSynchronizedTemplates3D,
+  // vtkPolyDataNormals, vtkSynchronizedTemplatesCutter3D,
+  // vtkTableBasedClipDataSet, vtkThreshold, vtkTransformFilter, and
+  // vtkTransformPolyData.
   //
   // SINGLE_PRECISION - Output single-precision floating-point (i.e. float)
   // DOUBLE_PRECISION - Output double-precision floating-point (i.e. double)
@@ -561,6 +566,17 @@ public:
   }
   int GetUpdateGhostLevel(int port);
 
+  // Description:
+  // If an ProgressObserver is set, the algorithm will report
+  // progress through it rather than directly. This means that
+  // it will call UpdateProgress() on the ProgressObserver rather
+  // than itself report it and set progress.
+  // This is most useful in situations where multiple threads
+  // are executing an algorithm at the same time and want to
+  // handle progress locally.
+  void SetProgressObserver(vtkProgressObserver*);
+  vtkGetObjectMacro(ProgressObserver, vtkProgressObserver);
+
 protected:
   vtkAlgorithm();
   ~vtkAlgorithm();
@@ -729,6 +745,8 @@ protected:
     { this->SetInputDataObject(port, input); }
   void AddInputDataInternal(int port, vtkDataObject *input)
     { this->AddInputDataObject(port, input); }
+
+  vtkProgressObserver* ProgressObserver;
 
 private:
   vtkExecutive* Executive;

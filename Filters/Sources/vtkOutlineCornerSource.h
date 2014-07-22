@@ -39,13 +39,21 @@ public:
   vtkSetClampMacro(CornerFactor, double, 0.001, 0.5);
   vtkGetMacro(CornerFactor, double);
 
+  // Description:
+  // Set/get the desired precision for the output points.
+  // vtkAlgorithm::SINGLE_PRECISION - Output single-precision floating point.
+  // vtkAlgorithm::DOUBLE_PRECISION - Output double-precision floating point.
+  vtkSetMacro(OutputPointsPrecision,int);
+  vtkGetMacro(OutputPointsPrecision,int);
+
 protected:
   vtkOutlineCornerSource();
-  ~vtkOutlineCornerSource() {};
+  ~vtkOutlineCornerSource() {}
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   double CornerFactor;
+  int OutputPointsPrecision;
 private:
   vtkOutlineCornerSource(const vtkOutlineCornerSource&);  // Not implemented.
   void operator=(const vtkOutlineCornerSource&);  // Not implemented.

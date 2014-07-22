@@ -1,31 +1,11 @@
-
-create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
-  TestUsePiston
-  EXTRA_INCLUDE vtkTestDriver.h
+vtk_add_test_cxx(
+  TestUsePiston.cxx
 )
 
-vtk_module_test_executable(${vtk-module}CxxTests ${Tests})
+vtk_test_cxx_executable(${vtk-module}CxxTests)
 
-set(TestsToRun ${Tests})
-list(REMOVE_ITEM TestsToRun ${vtk-module}CxxTests.cxx)
-string (REPLACE "vtk" "" _baselinedname ${vtk-module})
-
-# Add all the executables
-foreach(test ${TestsToRun})
-  get_filename_component(TName ${test} NAME_WE)
-  if(VTK_DATA_ROOT)
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName}
-        -D ${VTK_DATA_ROOT}
-        -T ${VTK_TEST_OUTPUT_DIR}
-        -V Baseline/${_baselinedname}/${TName}.png)
-  else()
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName})
-  endif()
-endforeach()
-
-if(VTK_DATA_ROOT AND (VTK_MPI_MAX_NUMPROCS GREATER 1))
+if(VTK_MPI_MAX_NUMPROCS GREATER 1)
+  include(vtkMPI)
   find_package(MPI REQUIRED)
   include_directories(${MPI_INCLUDE_PATH})
 
@@ -34,20 +14,15 @@ if(VTK_DATA_ROOT AND (VTK_MPI_MAX_NUMPROCS GREATER 1))
   foreach(test ${PistonMPITests})
 
     vtk_module_test_executable(${vtk-module}Cxx-${test} ${test}.cxx)
-    if(VTK_DATA_ROOT)
-      add_test(NAME ${vtk-module}Cxx-${test}
-        COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
-        $<TARGET_FILE:${vtk-module}Cxx-${test}>
-        -D ${VTK_DATA_ROOT}
-        -T ${VTK_TEST_OUTPUT_DIR}
-        -V Baseline/${_baselinedname}/${test}.png
-        ${VTK_MPI_POSTFLAGS})
-    else()
-      add_test(NAME ${vtk-module}Cxx-${test}
-        COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
-        $<TARGET_FILE:${vtk-module}Cxx-${test}>
-        ${VTK_MPI_POSTFLAGS})
-    endif()
+    ExternalData_add_test(VTKData
+      NAME ${vtk-module}Cxx-${test}
+      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+      $<TARGET_FILE:${vtk-module}Cxx-${test}>
+      -D ${VTK_TEST_DATA_DIR}
+      -T ${VTK_TEST_OUTPUT_DIR}
+      -V DATA{../Data/Baseline/${test}.png,:}
+      ${VTK_MPI_POSTFLAGS})
+    vtk_mpi_link(${vtk-module}Cxx-${test})
   endforeach()
 
 endif()

@@ -29,8 +29,8 @@ vtkAbstractTransform::vtkAbstractTransform()
   this->MyInverse = NULL;
   this->DependsOnInverse = 0;
   this->InUnRegister = 0;
-  this->UpdateMutex = vtkSimpleCriticalSection::New();
-  this->InverseMutex = vtkSimpleCriticalSection::New();
+  this->UpdateMutex = new vtkSimpleCriticalSection;
+  this->InverseMutex = new vtkSimpleCriticalSection;
 }
 
 //----------------------------------------------------------------------------
@@ -40,14 +40,8 @@ vtkAbstractTransform::~vtkAbstractTransform()
     {
     this->MyInverse->Delete();
     }
-  if (this->UpdateMutex)
-    {
-    this->UpdateMutex->Delete();
-    }
-  if (this->InverseMutex)
-    {
-    this->InverseMutex->Delete();
-    }
+  delete this->UpdateMutex;
+  delete this->InverseMutex;
 }
 
 //----------------------------------------------------------------------------
@@ -335,7 +329,7 @@ void vtkAbstractTransform::UnRegister(vtkObjectBase *o)
   if (this->InUnRegister)
     { // we don't want to go into infinite recursion...
     vtkDebugMacro(<<"UnRegister: circular reference eliminated");
-    this->ReferenceCount--;
+    --this->ReferenceCount;
     return;
     }
 
@@ -417,10 +411,7 @@ vtkTransformConcatenation::~vtkTransformConcatenation()
         }
       }
     }
-  if (this->TransformList)
-    {
-    delete [] this->TransformList;
-    }
+  delete [] this->TransformList;
 }
 
 //----------------------------------------------------------------------------
@@ -453,10 +444,7 @@ void vtkTransformConcatenation::Concatenate(vtkAbstractTransform *trans)
       transList[i].ForwardTransform = this->TransformList[i].ForwardTransform;
       transList[i].InverseTransform = this->TransformList[i].InverseTransform;
       }
-    if (this->TransformList)
-      {
-      delete [] this->TransformList;
-      }
+    delete [] this->TransformList;
     this->TransformList = transList;
     this->MaxNumberOfTransforms = nMax;
     }
@@ -755,10 +743,7 @@ void vtkTransformConcatenation::DeepCopy(vtkTransformConcatenation *concat)
       newList[i].ForwardTransform = NULL;
       newList[i].InverseTransform = NULL;
       }
-    if (this->TransformList)
-      {
-      delete [] this->TransformList;
-      }
+    delete [] this->TransformList;
     this->MaxNumberOfTransforms = newMax;
     this->TransformList = newList;
     }
@@ -866,10 +851,12 @@ void vtkTransformConcatenation::DeepCopy(vtkTransformConcatenation *concat)
     if (this->TransformList[i].ForwardTransform)
       {
       this->TransformList[i].ForwardTransform->Delete();
+      this->TransformList[i].ForwardTransform = NULL;
       }
     if (this->TransformList[i].InverseTransform)
       {
       this->TransformList[i].InverseTransform->Delete();
+      this->TransformList[i].InverseTransform = NULL;
       }
     }
 
@@ -1020,10 +1007,7 @@ vtkTransformConcatenationStack::~vtkTransformConcatenationStack()
     this->StackBottom[i]->Delete();
     }
 
-  if (this->StackBottom)
-    {
-    delete [] this->StackBottom;
-    }
+  delete [] this->StackBottom;
 }
 
 //----------------------------------------------------------------------------
@@ -1061,10 +1045,7 @@ void vtkTransformConcatenationStack::Push(vtkTransformConcatenation **concat)
       {
       newStackBottom[i] = this->StackBottom[i];
       }
-    if (this->StackBottom)
-      {
-      delete [] this->StackBottom;
-      }
+    delete [] this->StackBottom;
     this->StackBottom = newStackBottom;
     this->Stack = this->StackBottom+this->StackSize;
     this->StackSize = newStackSize;
@@ -1095,10 +1076,7 @@ void vtkTransformConcatenationStack::DeepCopy(
       {
       newStackBottom[j] = this->StackBottom[j];
       }
-    if (this->StackBottom)
-      {
-      delete [] this->StackBottom;
-      }
+    delete [] this->StackBottom;
     this->StackBottom = newStackBottom;
     this->Stack = this->StackBottom+this->StackSize;
     this->StackSize = newStackSize;

@@ -51,13 +51,24 @@ public:
     LINE,
     POINTS,
     BAR,
-    STACKED};
+    STACKED,
+    BAG,
+    FUNCTIONALBAG};
 
   // Description:
-  // Enum of valid chart action types
+  // Enum of valid chart action types.
+  //
+  // PAN - moves the axis range
+  // ZOOM - zooms to a selected rectangle
+  // ZOOM_AXIS - zooms the x and y axis range
+  // SELECT_RECTANGLE - selects points within a rectangle
+  // SELECT_POLYGON - selects points within a polygon
+  // SELECT - alias for SELECT_RECTANGLE
+  // NOTIFY - Post vtkCommand::InteractionEvent on selection of a point
   enum {
     PAN = 0,
     ZOOM,
+    ZOOM_AXIS,
     SELECT,
     SELECT_RECTANGLE = SELECT,
     SELECT_POLYGON,
@@ -293,6 +304,11 @@ protected:
                               vtkTransform2D *transform);
 
   // Description:
+  // Calculate the unshifted, and unscaled plot transform for the x and y axis.
+  bool CalculateUnscaledPlotTransform(vtkAxis *x, vtkAxis *y,
+                                      vtkTransform2D *transform);
+
+  // Description:
   // Attach axis range listener so we can forward those events at the chart level
   void AttachAxisRangeListener(vtkAxis*);
 
@@ -348,11 +364,12 @@ protected:
     {
   public:
     MouseActions();
-    enum { MaxAction = 4 };
+    enum { MaxAction = 5 };
     short& Pan() { return Data[0]; }
     short& Zoom() { return Data[1]; }
-    short& Select() { return Data[2]; }
-    short& SelectPolygon() { return Data[3]; }
+    short& ZoomAxis() { return Data[2]; }
+    short& Select() { return Data[3]; }
+    short& SelectPolygon() { return Data[4]; }
     short& operator[](int index) { return Data[index]; }
     short Data[MaxAction];
     };

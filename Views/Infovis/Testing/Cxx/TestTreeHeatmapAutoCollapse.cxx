@@ -15,6 +15,7 @@
 
 #include "vtkTreeHeatmapItem.h"
 #include "vtkDataSetAttributes.h"
+#include "vtkDendrogramItem.h"
 #include "vtkDoubleArray.h"
 #include "vtkMutableDirectedGraph.h"
 #include "vtkNew.h"
@@ -120,9 +121,13 @@ int TestTreeHeatmapAutoCollapse(int argc, char* argv[])
   vtkNew<vtkTreeHeatmapItem> treeItem;
   treeItem->SetTree(tree.GetPointer());
   treeItem->SetTable(table.GetPointer());
+  treeItem->GetDendrogram()->DisplayNumberOfCollapsedLeafNodesOff();
 
   vtkNew<vtkContextTransform> trans;
   trans->SetInteractive(true);
+  // center the item within the render window
+  trans->Translate(20, 30);
+  trans->Scale(2.5, 2.5);
   trans->AddItem(treeItem.GetPointer());
   actor->GetScene()->AddItem(trans.GetPointer());
 

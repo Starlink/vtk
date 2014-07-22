@@ -17,7 +17,10 @@
 // vtkGDALVectorReader is a source object that reads vector files and uses
 // GDAL as the underlying library for the task. GDAL is required for this
 // reader. The output of the reader is a vtkMultiBlockDataSet
-
+//
+// This filter uses the ActiveLayer member to only load entries from the
+// specified layer (when ActiveLayer >= 0).
+//
 // .SECTION See Also
 // vtkMultiBlockDataSet
 
@@ -60,7 +63,9 @@ public:
   int GetActiveLayerFeatureCount();
 
   // Description:
-  // Set and Get the active layer
+  // Set and Get the active layer.
+  // If ActiveLayer is less than 0 (the default is -1), then all
+  // layers are read. Otherwise, only the specified layer is read.
   vtkSetMacro(ActiveLayer,int);
   vtkGetMacro(ActiveLayer,int);
 
@@ -83,6 +88,19 @@ public:
   // Return projection string belong to a layer.
   const char* GetLayerProjection(int layerIndex);
 
+  // Description:
+  // Set/get whether feature IDs should be generated.
+  // Some GDAL primitives (e.g., a polygon with a hole
+  // in its interior) are represented by multiple VTK
+  // cells. If you wish to identify the primitive
+  // responsible for a VTK cell, turn this on. It is
+  // off by default for backwards compatibility.
+  // The array of feature IDs will be the active
+  // cell-data pedigree IDs.
+  vtkSetMacro(AddFeatureIds,int);
+  vtkGetMacro(AddFeatureIds,int);
+  vtkBooleanMacro(AddFeatureIds,int);
+
 protected:
   vtkGDALVectorReader();
   virtual ~vtkGDALVectorReader();
@@ -97,6 +115,7 @@ protected:
 
   int ActiveLayer;
   int AppendFeatures;
+  int AddFeatureIds;
 
   //BTX
   class Internal;

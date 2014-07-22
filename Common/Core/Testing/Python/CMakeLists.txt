@@ -8,6 +8,7 @@ if(VTK_PYTHON_EXE)
     TestMutable
     TestNumpySupport
     TestOperators
+    TestPointers
     TestStrings
     TestSubClass
     TestTerminationCrash
@@ -15,8 +16,6 @@ if(VTK_PYTHON_EXE)
     TestWeakref
     TestCommand
     )
-    add_test(NAME ${vtk-module}Python-${tfile}
-      COMMAND ${VTK_PYTHON_EXE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/${tfile}.py)
+    vtk_add_test_python(${tfile}.py NO_DATA NO_VALID NO_OUTPUT)
   endforeach()
 endif()

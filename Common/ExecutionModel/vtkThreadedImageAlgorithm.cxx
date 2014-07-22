@@ -125,7 +125,7 @@ int vtkThreadedImageAlgorithm::SplitExtent(int splitExt[6],
 // the ThreadedExecute method after setting the correct
 // extent for this thread. Its just a pain to calculate
 // the correct extent.
-VTK_THREAD_RETURN_TYPE vtkThreadedImageAlgorithmThreadedExecute( void *arg )
+static VTK_THREAD_RETURN_TYPE vtkThreadedImageAlgorithmThreadedExecute( void *arg )
 {
   vtkImageThreadStruct *str;
   int ext[6], splitExt[6], total;
@@ -295,20 +295,10 @@ int vtkThreadedImageAlgorithm::RequestData(
   // free up the arrays
   for (i = 0; i < this->GetNumberOfInputPorts(); ++i)
     {
-    if (str.Inputs[i])
-      {
-      delete [] str.Inputs[i];
-      }
+    delete [] str.Inputs[i];
     }
-  // note the check isn't required by C++ standard but due to bad compilers
-  if (str.Inputs)
-    {
-    delete [] str.Inputs;
-    }
-  if (str.Outputs)
-    {
-    delete [] str.Outputs;
-    }
+  delete [] str.Inputs;
+  delete [] str.Outputs;
 
   return 1;
 }

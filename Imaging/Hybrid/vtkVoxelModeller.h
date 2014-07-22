@@ -65,7 +65,7 @@ public:
   // Description:
   // Specify the position in space to perform the voxelization.
   // Default is (0, 0, 0, 0, 0, 0)
-  void SetModelBounds(double bounds[6]);
+  void SetModelBounds(const double bounds[6]);
   void SetModelBounds(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
   vtkGetVectorMacro(ModelBounds,double,6);
 
@@ -106,7 +106,7 @@ public:
   vtkGetMacro(BackgroundValue, double);
 protected:
   vtkVoxelModeller();
-  ~vtkVoxelModeller() {};
+  ~vtkVoxelModeller() {}
 
   virtual int RequestInformation (vtkInformation *,
                                   vtkInformationVector **,

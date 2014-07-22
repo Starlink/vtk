@@ -36,6 +36,7 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkQuadraticTriangle.h"
 #include "vtkQuadraticQuad.h"
+#include "vtkQuadraticPolygon.h"
 #include "vtkQuadraticTetra.h"
 #include "vtkQuadraticHexahedron.h"
 #include "vtkQuadraticWedge.h"
@@ -303,6 +304,9 @@ vtkCell *vtkGenericCell::InstantiateCell(int cellType)
   case VTK_QUADRATIC_QUAD:
     cell = vtkQuadraticQuad::New();
     break;
+  case VTK_QUADRATIC_POLYGON:
+    cell = vtkQuadraticPolygon::New();
+    break;
   case VTK_QUADRATIC_TETRA:
     cell = vtkQuadraticTetra::New();
     break;
@@ -396,5 +400,33 @@ void vtkGenericCell::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Cell:\n";
   this->Cell->PrintSelf(os,indent.GetNextIndent());
+}
+
+//----------------------------------------------------------------------------
+void vtkGenericCell::SetPoints(vtkPoints *points)
+{
+  if (points != this->Points)
+    {
+    this->Points->Delete();
+    this->Points = points;
+    this->Points->Register(this);
+    this->Cell->Points->Delete();
+    this->Cell->Points = points;
+    this->Cell->Points->Register(this);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkGenericCell::SetPointIds(vtkIdList *pointIds)
+{
+  if (pointIds != this->PointIds)
+    {
+    this->PointIds->Delete();
+    this->PointIds = pointIds;
+    this->PointIds->Register(this);
+    this->Cell->PointIds->Delete();
+    this->Cell->PointIds = pointIds;
+    this->Cell->PointIds->Register(this);
+    }
 }
 

@@ -93,14 +93,6 @@ octree_iterator<T_,R_,P_,O_,OP_,d_>::octree_iterator( const const_iterator& it )
   this->_M_current_node = it._M_current_node;
 }
 
-/**\brief Destructor.
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_iterator<T_,R_,P_,O_,OP_,d_>::~octree_iterator()
-{
-}
-
 /**\brief Utility routine used to advance the iterator if possible.
   *
   */
@@ -267,30 +259,6 @@ void octree_iterator<T_,R_,P_,O_,OP_,d_>::immediate_family( bool val )
   *    bool& octree_iterator<T_,R_,P_,O_,OP_,d_>::immediate_family()
   *\brief Return whether the iterator is set to traverse the entire tree or just the siblings of the current node.
   */
-
-/**\brief Assignment operator (for copying iterators of mutable nodes).
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_iterator< T_, R_, P_, O_, OP_, d_ >& octree_iterator<T_,R_,P_,O_,OP_,d_>::operator = ( const iterator& it )
-{
-  this->octree_path<T_,R_,P_,O_,OP_,d_>::operator=( it );
-  this->_M_immediate_family = it._M_immediate_family;
-  this->_M_only_leaf_nodes = it._M_only_leaf_nodes;
-  return *this;
-}
-
-/**\brief Assignment operator (for copying iterators of immutable nodes).
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_iterator< T_, R_, P_, O_, OP_, d_ >& octree_iterator<T_,R_,P_,O_,OP_,d_>::operator = ( const const_iterator& it )
-{
-  this->octree_path<T_,R_,P_,O_,OP_,d_>::operator=( it );
-  this->_M_immediate_family = it._M_immediate_family;
-  this->_M_only_leaf_nodes = it._M_only_leaf_nodes;
-  return *this;
-}
 
 /**\fn template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ > \
   *    self_iterator& octree_iterator<T_,R_,P_,O_,OP_,d_>::operator ++ ()

@@ -1,63 +1,35 @@
-set(MyTests
-  TestGraphWeightEuclideanDistanceFilter.cxx
+vtk_add_test_cxx(
   BoxClipPolyData.cxx
   BoxClipTetrahedra.cxx
-  BoxClipTriangulate.cxx
   BoxClipTriangulateAndInterpolate.cxx
-  TestBooleanOperationPolyDataFilter.cxx
+  BoxClipTriangulate.cxx,NO_VALID
+  TestAppendPoints.cxx,NO_VALID
   TestBooleanOperationPolyDataFilter2.cxx
+  TestBooleanOperationPolyDataFilter.cxx
   TestContourTriangulatorCutter.cxx
+  TestContourTriangulator.cxx
+  TestContourTriangulatorMarching.cxx
   TestDeformPointSet.cxx
-  TestDensifyPolyData.cxx
+  TestDensifyPolyData.cxx,-E15
   TestDistancePolyDataFilter.cxx
-  TestImageDataToPointSet.cxx
+  TestGraphWeightEuclideanDistanceFilter.cxx,NO_VALID
+  TestImageDataToPointSet.cxx,NO_VALID
+  TestIntersectionPolyDataFilter2.cxx,NO_VALID
   TestIntersectionPolyDataFilter.cxx
-  TestIntersectionPolyDataFilter2.cxx
-  TestRectilinearGridToPointSet.cxx
-  TestReflectionFilter.cxx
+  TestRectilinearGridToPointSet.cxx,NO_VALID
+  TestReflectionFilter.cxx,NO_VALID
+  TestTableSplitColumnComponents.cxx,NO_VALID
+  TestTransformFilter.cxx,NO_VALID
+  TestTransformPolyDataFilter.cxx,NO_VALID
   TestUncertaintyTubeFilter.cxx
-)
+  )
+
 # Tests with data
-if(VTK_DATA_ROOT)
-  set(MyTests
-    ${MyTests}
-    TestContourTriangulator.cxx
-    TestContourTriangulatorMarching.cxx
-    TestGradientAndVorticity.cxx
-    TestIconGlyphFilterGravity.cxx
-    TestQuadraturePoints.cxx
-    TestYoungsMaterialInterface.cxx
-    )
-endif()
+vtk_add_test_cxx(
+  TestGradientAndVorticity.cxx,NO_VALID
+  TestIconGlyphFilterGravity.cxx
+  TestQuadraturePoints.cxx
+  TestYoungsMaterialInterface.cxx
+  )
 
-# Set the tolerance higher for a few tests that need it
-set(TestDensifyPolyDataError 15)
-
-# Use the testing object factory, to reduce boilerplate code in tests.
-include(vtkTestingObjectFactory)
-
-vtk_module_test_executable(${vtk-module}CxxTests ${Tests})
-
-set(TestsToRun ${Tests})
-list(REMOVE_ITEM TestsToRun CxxTests.cxx)
-
-# Add all the executables
-foreach(test ${TestsToRun})
-  get_filename_component(TName ${test} NAME_WE)
-  if(VTK_DATA_ROOT)
-    if(${${TName}Error})
-      set(_error_threshold ${${TName}Error})
-    else()
-      set(_error_threshold 10)
-    endif()
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName}
-        -D ${VTK_DATA_ROOT}
-        -T ${VTK_TEST_OUTPUT_DIR}
-        -V Baseline/Graphics/${TName}.png
-        -E ${_error_threshold})
- else()
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName})
- endif()
-endforeach()
+vtk_test_cxx_executable(${vtk-module}CxxTests RENDERING_FACTORY)

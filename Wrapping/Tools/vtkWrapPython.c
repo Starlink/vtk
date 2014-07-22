@@ -134,7 +134,7 @@ static void vtkWrapPython_OverloadMethodDef(
 static void vtkWrapPython_OverloadMasterMethod(
   FILE *fp, const char *classname, int *overloadMap, int maxArgs,
   FunctionInfo **wrappedFunctions, int numberOfWrappedFunctions, int fnum,
-  int numberOfOccurrences, int is_vtkobject, int all_legacy);
+  int is_vtkobject, int all_legacy);
 
 /* output the MethodDef table for this class */
 static void vtkWrapPython_ClassMethodDef(
@@ -183,7 +183,7 @@ static char *vtkWrapPython_FormatString(
   FunctionInfo *currentFunction);
 
 /* weed out methods that will never be called */
-static void vtkWrapPython_RemovePreceededMethods(
+static void vtkWrapPython_RemovePrecededMethods(
   FunctionInfo *wrappedFunctions[],
   int numberWrapped, int fnum);
 
@@ -657,7 +657,8 @@ static void vtkWrapPython_DeclareVariables(
       }
 
     /* temps for arrays */
-    if (vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg))
+    if (vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg) ||
+        vtkWrap_IsPODPointer(arg))
       {
       storageSize = 4;
       if (!vtkWrap_IsConst(arg) &&
@@ -667,7 +668,7 @@ static void vtkWrapPython_DeclareVariables(
         vtkWrap_DeclareVariable(fp, arg, "save", i, VTK_WRAP_ARG);
         storageSize *= 2;
         }
-      if (arg->CountHint)
+      if (arg->CountHint || vtkWrap_IsPODPointer(arg))
         {
         fprintf(fp,
                 "  %s small%d[%d];\n",
@@ -702,54 +703,64 @@ static void vtkWrapPython_GetSizesForArrays(
   FILE *fp, FunctionInfo *theFunc, int is_vtkobject)
 {
   int i, j, n;
-  const char *ndnt;
+  const char *indentation = "";
   const char *mtwo;
-
-  /* the indentation amount */
-  ndnt = (is_vtkobject ? "  " : "");
+  ValueInfo *arg;
 
   n = vtkWrap_CountWrappedParameters(theFunc);
 
-  j = (is_vtkobject ? 1 : 0);
+  j = ((is_vtkobject && !theFunc->IsStatic) ? 1 : 0);
   for (i = 0; i < n; i++)
     {
-    if (theFunc->Parameters[i]->CountHint)
+    arg = theFunc->Parameters[i];
+
+    if (arg->CountHint || vtkWrap_IsPODPointer(arg))
       {
       if (j == 1)
         {
         fprintf(fp,
                 "  if (op)\n"
                 "    {\n");
+        indentation = "  ";
         }
       j += 2;
-      fprintf(fp,
-              "  %ssize%d = op->%s;\n",
-              ((j & 1) != 0 ? "  " : ""), i,
-              theFunc->Parameters[i]->CountHint);
+      if (arg->CountHint)
+        {
+        fprintf(fp,
+              "%s  size%d = op->%s;\n",
+              indentation, i, arg->CountHint);
+        }
+      else
+        {
+        fprintf(fp,
+              "%s  size%d = ap.GetArgSize(%d);\n",
+              indentation, i, i);
+        }
 
       /* for non-const arrays, alloc twice as much space */
       mtwo = "";
-      if (!vtkWrap_IsConst(theFunc->Parameters[i]) &&
-          !vtkWrap_IsSetVectorMethod(theFunc))
+      if (!vtkWrap_IsConst(arg) && !vtkWrap_IsSetVectorMethod(theFunc))
         {
         mtwo = "2*";
         }
 
       fprintf(fp,
-              "  %stemp%d = small%d;\n"
-              "  %sif (size%d > 4)\n"
-              "    %s{\n"
-              "    %stemp%d = new %s[%ssize%d];\n"
-              "    %s}\n",
-              ndnt, i, i, ndnt, i, ndnt, ndnt,
-              i, vtkWrap_GetTypeName(theFunc->Parameters[i]), mtwo, i,
-              ndnt);
+              "%s  temp%d = small%d;\n"
+              "%s  if (size%d > 4)\n"
+              "%s    {\n"
+              "%s    temp%d = new %s[%ssize%d];\n"
+              "%s    }\n",
+              indentation, i, i,
+              indentation, i,
+              indentation,
+              indentation, i, vtkWrap_GetTypeName(arg), mtwo, i,
+              indentation);
 
       if (*mtwo)
         {
         fprintf(fp,
-              "  %ssave%d = &temp%d[size%d];\n",
-              ndnt, i, i, i);
+              "%s  save%d = &temp%d[size%d];\n",
+              indentation, i, i, i);
         }
       }
     }
@@ -849,6 +860,11 @@ static void vtkWrapPython_GetSingleArgument(
             i, arg->NumberOfDimensions, i);
     }
   else if (vtkWrap_IsArray(arg))
+    {
+    fprintf(fp, "%sGetArray(%stemp%d, size%d)",
+            prefix, argname, i, i);
+    }
+  else if (vtkWrap_IsPODPointer(arg))
     {
     fprintf(fp, "%sGetArray(%stemp%d, size%d)",
             prefix, argname, i, i);
@@ -1307,7 +1323,8 @@ static char *vtkWrapPython_ArgCheckString(
       currPos += strlen(pythonname);
       }
 
-    else if (vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg))
+    else if (vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg) ||
+             vtkWrap_IsPODPointer(arg))
       {
       result[currPos++] = ' ';
       result[currPos++] = '*';
@@ -1340,7 +1357,7 @@ static char *vtkWrapPython_ArgCheckString(
  * The type closest to the native Python type wins.
  */
 
-void vtkWrapPython_RemovePreceededMethods(
+void vtkWrapPython_RemovePrecededMethods(
   FunctionInfo *wrappedFunctions[],
   int numberOfWrappedFunctions, int fnum)
 {
@@ -1350,6 +1367,7 @@ void vtkWrapPython_RemovePreceededMethods(
   FunctionInfo *sig2;
   ValueInfo *val1;
   ValueInfo *val2;
+  int dim1, dim2;
   int vote1 = 0;
   int vote2 = 0;
   int occ1, occ2;
@@ -1387,7 +1405,11 @@ void vtkWrapPython_RemovePreceededMethods(
             argmatch = 0;
             val1 = sig1->Parameters[i];
             val2 = sig2->Parameters[i];
-            if (val1->NumberOfDimensions != val2->NumberOfDimensions)
+            dim1 = (val1->NumberOfDimensions > 0 ? val1->NumberOfDimensions :
+                    (vtkWrap_IsPODPointer(val1) || vtkWrap_IsArray(val1)));
+            dim2 = (val2->NumberOfDimensions > 0 ? val2->NumberOfDimensions :
+                    (vtkWrap_IsPODPointer(val2) || vtkWrap_IsArray(val2)));
+            if (dim1 != dim2)
               {
               vote1 = 0;
               vote2 = 0;
@@ -1699,12 +1721,13 @@ void vtkWrapPython_SaveArrayArgs(FILE *fp, FunctionInfo *currentFunction)
     {
     arg = currentFunction->Parameters[i];
     n = arg->NumberOfDimensions;
-    if (n < 1 && vtkWrap_IsArray(arg))
+    if (n < 1 && (vtkWrap_IsArray(arg) || vtkWrap_IsPODPointer(arg)))
       {
       n = 1;
       }
 
-    if ((vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg)) &&
+    if ((vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg) ||
+         vtkWrap_IsPODPointer(arg)) &&
         (arg->Type & VTK_PARSE_CONST) == 0)
       {
       noneDone = 0;
@@ -1952,7 +1975,7 @@ static void vtkWrapPython_WriteBackToArgs(
     {
     arg = currentFunction->Parameters[i];
     n = arg->NumberOfDimensions;
-    if (n < 1 && vtkWrap_IsArray(arg))
+    if (n < 1 && (vtkWrap_IsArray(arg) || vtkWrap_IsPODPointer(arg)))
       {
       n = 1;
       }
@@ -1968,7 +1991,8 @@ static void vtkWrapPython_WriteBackToArgs(
               i, i);
       }
 
-    else if ((vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg)) &&
+    else if ((vtkWrap_IsArray(arg) || vtkWrap_IsNArray(arg) ||
+              vtkWrap_IsPODPointer(arg)) &&
              !vtkWrap_IsConst(arg) &&
              !vtkWrap_IsSetVectorMethod(currentFunction))
       {
@@ -2028,7 +2052,7 @@ static void vtkWrapPython_FreeAllocatedArrays(
     {
     arg = currentFunction->Parameters[i];
 
-    if (arg->CountHint)
+    if (arg->CountHint || vtkWrap_IsPODPointer(arg))
       {
       fprintf(fp,
               "  if (temp%d && temp%d != small%d)\n"
@@ -2164,10 +2188,11 @@ static void vtkWrapPython_OverloadMethodDef(
       }
 
     fprintf(fp,
-            "  {NULL, Py%s_%s%s, 1,\n"
+            "  {NULL, Py%s_%s%s, METH_VARARGS%s,\n"
             "   (char*)\"%s\"},\n",
             classname, wrappedFunctions[occ]->Name,
             occSuffix,
+            theOccurrence->IsStatic ? " | METH_STATIC" : "",
             vtkWrapPython_ArgCheckString(
               (is_vtkobject && !theOccurrence->IsStatic),
               wrappedFunctions[occ]));
@@ -2199,11 +2224,12 @@ static void vtkWrapPython_OverloadMethodDef(
 static void vtkWrapPython_OverloadMasterMethod(
   FILE *fp, const char *classname, int *overloadMap, int maxArgs,
   FunctionInfo **wrappedFunctions, int numberOfWrappedFunctions, int fnum,
-  int numberOfOccurrences, int is_vtkobject, int all_legacy)
+  int is_vtkobject, int all_legacy)
 {
   FunctionInfo *currentFunction;
+  FunctionInfo *theOccurrence;
   int overlap = 0;
-  int occ;
+  int occ, occCounter;
   int i;
   int foundOne;
   int any_static = 0;
@@ -2258,24 +2284,45 @@ static void vtkWrapPython_OverloadMasterMethod(
           "  switch(nargs)\n"
           "    {\n");
 
-  for (occ = 1; occ <= numberOfOccurrences; occ++)
+  /* find all occurrences of this method */
+  occCounter = 0;
+  for (occ = fnum; occ < numberOfWrappedFunctions; occ++)
     {
-    foundOne = 0;
-    for (i = 0; i <= maxArgs; i++)
+    theOccurrence = wrappedFunctions[occ];
+
+    /* is it the same name */
+    if (theOccurrence->Name &&
+        strcmp(currentFunction->Name, theOccurrence->Name) == 0)
       {
-      if (overloadMap[i] == occ)
+      occCounter++;
+
+      foundOne = 0;
+      for (i = 0; i <= maxArgs; i++)
+        {
+        if (overloadMap[i] == occCounter)
+          {
+          if (!foundOne && theOccurrence->IsLegacy && !all_legacy)
+            {
+            fprintf(fp,
+                 "#if !defined(VTK_LEGACY_REMOVE)\n");
+            }
+          fprintf(fp,
+                  "    case %d:\n",
+                  i);
+          foundOne = 1;
+          }
+        }
+      if (foundOne)
         {
         fprintf(fp,
-                "    case %d:\n",
-                i);
-        foundOne = 1;
+                "      return Py%s_%s_s%d(self, args);\n",
+                classname, currentFunction->Name, occCounter);
+        if (theOccurrence->IsLegacy && !all_legacy)
+          {
+          fprintf(fp,
+                "#endif\n");
+          }
         }
-      }
-    if (foundOne)
-      {
-      fprintf(fp,
-              "      return Py%s_%s_s%d(self, args);\n",
-              classname, currentFunction->Name, occ);
       }
     }
 
@@ -2507,7 +2554,7 @@ void vtkWrapPython_GenerateOneMethod(
     vtkWrapPython_OverloadMasterMethod(
       fp, classname, overloadMap, maxArgs,
       wrappedFunctions, numberOfWrappedFunctions,
-      fnum, numberOfOccurrences, is_vtkobject, all_legacy);
+      fnum, is_vtkobject, all_legacy);
     }
 
   /* set the legacy flag */
@@ -2594,7 +2641,7 @@ static void vtkWrapPython_GenerateMethods(
 
     /* check for type precedence, don't need a "float" method if a
        "double" method exists */
-    vtkWrapPython_RemovePreceededMethods(
+    vtkWrapPython_RemovePrecededMethods(
       wrappedFunctions, numberOfWrappedFunctions, fnum);
 
     /* if theFunc wasn't removed, process all its signatures */
@@ -2654,9 +2701,10 @@ static void vtkWrapPython_ClassMethodDef(
         comment, maxlen - strlen(signatures));
 
       fprintf(fp,
-              "  {(char*)\"%s\", Py%s_%s, 1,\n",
+              "  {(char*)\"%s\", Py%s_%s, METH_VARARGS%s,\n",
               wrappedFunctions[fnum]->Name, classname,
-              wrappedFunctions[fnum]->Name);
+              wrappedFunctions[fnum]->Name,
+              wrappedFunctions[fnum]->IsStatic ? " | METH_STATIC" : "");
 
       fprintf(fp,
               "   (char*)\"%s\\n\\n%s\"},\n",
@@ -2796,7 +2844,8 @@ static int vtkWrapPython_IsValueWrappable(
   else if (vtkWrap_IsPointer(val))
     {
     if (vtkWrap_IsCharPointer(val) ||
-        vtkWrap_IsVoidPointer(val))
+        vtkWrap_IsVoidPointer(val) ||
+        vtkWrap_IsPODPointer(val))
       {
       return 1;
       }
@@ -4172,7 +4221,11 @@ static void vtkWrapPython_GenerateSpecialType(
       "#define DECLARED_Py%s_Type\n"
       "#endif\n"
       "\n",
+#if defined(VTK_BUILD_SHARED_LIBS)
       supername, (is_external ? "VTK_ABI_IMPORT" : "VTK_ABI_EXPORT"),
+#else
+      supername, "VTK_ABI_EXPORT",
+#endif
       supername, supername);
     }
 

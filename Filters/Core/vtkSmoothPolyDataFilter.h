@@ -171,9 +171,16 @@ public:
   void SetSourceData(vtkPolyData *source);
   vtkPolyData *GetSource();
 
+  // Description:
+  // Set/get the desired precision for the output types. See the documentation
+  // for the vtkAlgorithm::DesiredOutputPrecision enum for an explanation of
+  // the available precision settings.
+  vtkSetMacro(OutputPointsPrecision,int);
+  vtkGetMacro(OutputPointsPrecision,int);
+
 protected:
   vtkSmoothPolyDataFilter();
-  ~vtkSmoothPolyDataFilter() {};
+  ~vtkSmoothPolyDataFilter() {}
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   virtual int FillInputPortInformation(int port, vtkInformation *info);
@@ -187,6 +194,7 @@ protected:
   int BoundarySmoothing;
   int GenerateErrorScalars;
   int GenerateErrorVectors;
+  int OutputPointsPrecision;
 
   vtkSmoothPoints *SmoothPoints;
 private:

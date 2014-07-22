@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.7 FATAL_ERROR)
 
 PROJECT(VTKExamples)
 include_regular_expression("^.*$")
@@ -10,20 +10,18 @@ else()
   find_package(VTK REQUIRED)
 endif()
 
-include(${VTK_USE_FILE})
-
 if (NOT vtkRenderingCore_LOADED)
   message(STATUS "vtkRenderingCore not found. No examples will be built")
 else()
   add_subdirectory(AMR/Cxx)
   add_subdirectory(Annotation/Cxx/LabeledMesh)
-  add_subdirectory(MultiBlock/Cxx)
   add_subdirectory(DataManipulation/Cxx)
-  add_subdirectory(Hybrid/Cxx)
   add_subdirectory(ImageProcessing/Cxx)
   add_subdirectory(IO/Cxx)
+  add_subdirectory(LIC/Cxx)
   add_subdirectory(Medical/Cxx)
   add_subdirectory(Modelling/Cxx)
+  add_subdirectory(MultiBlock/Cxx)
   add_subdirectory(Rendering/Cxx)
   add_subdirectory(Tutorial/Step1/Cxx)
   add_subdirectory(Tutorial/Step2/Cxx)
@@ -34,7 +32,17 @@ else()
   add_subdirectory(VisualizationAlgorithms/Cxx)
   add_subdirectory(VolumeRendering/Cxx)
   add_subdirectory(Widgets/Cxx)
-  add_subdirectory(Build/vtkLocal)
+  # This may have been already built as part of the VTK build.
+  # If so we cannot create the target "vtkLocalExample" because
+  # an imported target of the same name already exists in the
+  # VTK build.
+  if(NOT vtkLocalExample_LOADED)
+    add_subdirectory(Build/vtkLocal)
+  endif()
+  if(TARGET vtkGUISupportQt)
+    add_subdirectory(GUI/Qt)
+  endif()
+
 #  add_subdirectory(Build/vtkMy)
 #  add_subdirectory(GUI/Motif)
 #  IF(VTK_USE_PARALLEL)

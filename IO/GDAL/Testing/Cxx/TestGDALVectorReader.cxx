@@ -16,6 +16,7 @@
 
 // VTK includes
 #include <vtkActor.h>
+#include <vtkCellData.h>
 #include <vtkCompositePolyDataMapper.h>
 #include <vtkDataSetAttributes.h>
 #include <vtkDoubleArray.h>
@@ -45,7 +46,22 @@ int TestGDALVectorReader(int argc, char** argv)
   // Create reader to read shape file.
   vtkNew<vtkGDALVectorReader> reader;
   reader->SetFileName(vectorFileName);
+  reader->AddFeatureIdsOn();
   delete [] vectorFileName;
+
+  // Test layer information helpers
+  reader->UpdateInformation();
+  int nl = reader->GetNumberOfLayers();
+  for (int i = 0; i < nl; ++i)
+    {
+    reader->SetActiveLayer(i);
+    cout
+      << "Layer " << i
+      << " Type " << reader->GetActiveLayerType()
+      << " FeatureCount " << reader->GetActiveLayerFeatureCount()
+      << "\n";
+    }
+  reader->SetActiveLayer(0); // Read only layer 0, which is the only layer.
   reader->Update();
 
   // We need a renderer
@@ -53,6 +69,21 @@ int TestGDALVectorReader(int argc, char** argv)
 
   // Get the data
   vtkSmartPointer<vtkMultiBlockDataSet> mbds = reader->GetOutput();
+
+  // Verify that feature IDs exist as a scalar (assuming first block exists)
+  if (mbds && mbds->GetNumberOfBlocks() > 0)
+    {
+    vtkPolyData* pd = vtkPolyData::SafeDownCast(mbds->GetBlock(0));
+    vtkCellData* cd = pd ? pd->GetCellData() : NULL;
+    if (cd)
+      {
+      if (!cd->GetPedigreeIds())
+        {
+        cerr << "Unable to find pedigree IDs even though AddFeatureIds was ON\n";
+        return 1;
+        }
+      }
+    }
 
   // Create scene
   vtkNew<vtkActor> actor;

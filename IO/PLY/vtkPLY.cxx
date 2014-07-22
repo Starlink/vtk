@@ -52,7 +52,7 @@ WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 
 #include <stddef.h>
 #include <string.h>
-#include <assert.h>
+#include <cassert>
 
 /* memory allocation */
 #define myalloc(mem_size) vtkPLY::my_alloc((mem_size), __LINE__, __FILE__)
@@ -1034,7 +1034,7 @@ Entry:
   elem    - element for which we want to save away other properties
 ******************************************************************************/
 
-void setup_other_props(PlyFile *, PlyElement *elem)
+static void setup_other_props(PlyFile *, PlyElement *elem)
 {
   int i;
   PlyProperty *prop;

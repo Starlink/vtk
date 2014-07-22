@@ -89,7 +89,7 @@ vtkDataObject *vtkImageAppend::GetInput(int idx)
 }
 
 //----------------------------------------------------------------------------
-// This method tells the ouput it will have more components
+// This method tells the output it will have more components
 int vtkImageAppend::RequestInformation (
   vtkInformation * vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -264,7 +264,7 @@ int vtkImageAppend::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-void vtkImageAppendGetContinuousIncrements
+static void vtkImageAppendGetContinuousIncrements
   (int wExtent[6], int sExtent[6], vtkIdType nComp, bool forCells,
    vtkIdType &incX,
    vtkIdType &incY,

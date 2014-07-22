@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    TestPCPlot.cxx
+  Module:    TestParallelCoordinates.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -15,7 +15,6 @@
 
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
-#include "vtkSmartPointer.h"
 #include "vtkChartParallelCoordinates.h"
 #include "vtkPlot.h"
 #include "vtkTable.h"

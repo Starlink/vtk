@@ -27,10 +27,11 @@
 //-----------------------------------------------------------------------------
 vtkChart::MouseActions::MouseActions()
 {
-  this->Data[0] = vtkContextMouseEvent::LEFT_BUTTON;
-  this->Data[1] = vtkContextMouseEvent::MIDDLE_BUTTON;
-  this->Data[2] = vtkContextMouseEvent::RIGHT_BUTTON;
-  this->Data[3] = -1;
+  this->Pan() = vtkContextMouseEvent::LEFT_BUTTON;
+  this->Zoom() = vtkContextMouseEvent::MIDDLE_BUTTON;
+  this->Select() = vtkContextMouseEvent::RIGHT_BUTTON;
+  this->ZoomAxis() = -1;
+  this->SelectPolygon() = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -218,23 +219,89 @@ bool vtkChart::CalculatePlotTransform(vtkAxis *x, vtkAxis *y,
     vtkWarningMacro("Called with null arguments.");
     return false;
     }
+
+  vtkVector2d origin(x->GetMinimum(), y->GetMinimum());
+  vtkVector2d scale(x->GetMaximum() - x->GetMinimum(),
+                    y->GetMaximum() - y->GetMinimum());
+  vtkVector2d shift(0.0, 0.0);
+  vtkVector2d factor(1.0, 1.0);
+
+  for (int i = 0; i < 2; ++i)
+    {
+    if (fabs(log10(origin[i] / scale[i])) > 2)
+      {
+      shift[i] = floor(log10(origin[i] / scale[i]) / 3.0) * 3.0;
+      shift[i] = -origin[i];
+      }
+    if (fabs(log10(scale[i])) > 10)
+      {
+      // We need to scale the transform to show all data, do this in blocks.
+      factor[i] = pow(10.0, floor(log10(scale[i]) / 10.0) * -10.0);
+      scale[i] = scale[i] * factor[i];
+      }
+    }
+  x->SetScalingFactor(factor[0]);
+  x->SetShift(shift[0]);
+  y->SetScalingFactor(factor[1]);
+  y->SetShift(shift[1]);
+
   // Get the scale for the plot area from the x and y axes
   float *min = x->GetPoint1();
   float *max = x->GetPoint2();
-  if (fabs(max[0] - min[0]) == 0.0f)
+  if (fabs(max[0] - min[0]) == 0.0)
     {
     return false;
     }
-  float xScale = (x->GetMaximum() - x->GetMinimum()) / (max[0] - min[0]);
+  float xScale = scale[0] / (max[0] - min[0]);
 
   // Now the y axis
   min = y->GetPoint1();
   max = y->GetPoint2();
-  if (fabs(max[1] - min[1]) == 0.0f)
+  if (fabs(max[1] - min[1]) == 0.0)
     {
     return false;
     }
-  float yScale = (y->GetMaximum() - y->GetMinimum()) / (max[1] - min[1]);
+  float yScale = scale[1] / (max[1] - min[1]);
+
+  transform->Identity();
+  transform->Translate(this->Point1[0], this->Point1[1]);
+  // Get the scale for the plot area from the x and y axes
+  transform->Scale(1.0 / xScale, 1.0 / yScale);
+  transform->Translate(-(x->GetMinimum() + shift[0]) * factor[0],
+                       -(y->GetMinimum() + shift[1]) * factor[1]);
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool vtkChart::CalculateUnscaledPlotTransform(vtkAxis *x, vtkAxis *y,
+                                              vtkTransform2D *transform)
+{
+  if (!x || !y || !transform)
+    {
+    vtkWarningMacro("Called with null arguments.");
+    return false;
+    }
+
+  vtkVector2d scale(x->GetMaximum() - x->GetMinimum(),
+                    y->GetMaximum() - y->GetMinimum());
+
+  // Get the scale for the plot area from the x and y axes
+  float *min = x->GetPoint1();
+  float *max = x->GetPoint2();
+  if (fabs(max[0] - min[0]) == 0.0)
+    {
+    return false;
+    }
+  double xScale = scale[0] / (max[0] - min[0]);
+
+  // Now the y axis
+  min = y->GetPoint1();
+  max = y->GetPoint2();
+  if (fabs(max[1] - min[1]) == 0.0)
+    {
+    return false;
+    }
+  double yScale = scale[1] / (max[1] - min[1]);
 
   transform->Identity();
   transform->Translate(this->Point1[0], this->Point1[1]);

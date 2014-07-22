@@ -38,6 +38,7 @@ vtkMaskPoints::vtkMaskPoints()
   this->SingleVertexPerCell = 0;
   this->RandomModeType = 0;
   this->ProportionalMaximumNumberOfPoints = 0;
+  this->OutputPointsPrecision = DEFAULT_PRECISION;
 }
 
 inline double d_rand()
@@ -69,13 +70,13 @@ inline void SwapPoint(vtkPoints* points,
 // this is average case linear, worse case quadratic implementation
 // (i.e., just like quicksort) -- there is the median of 5 or
 // median of medians algorithm, but I'm too lazy to implement it
-void QuickSelect(vtkPoints* points,
-                 vtkPointData* data,
-                 vtkPointData* temp,
-                 vtkIdType start,
-                 vtkIdType end,
-                 vtkIdType nth,
-                 int axis)
+static void QuickSelect(vtkPoints* points,
+                        vtkPointData* data,
+                        vtkPointData* temp,
+                        vtkIdType start,
+                        vtkIdType end,
+                        vtkIdType nth,
+                        int axis)
 {
   // base case
   if(end - start < 2)
@@ -125,10 +126,10 @@ void QuickSelect(vtkPoints* points,
 
 // divide the data into sampling strata and randomly sample it
 // (one sample per stratum)
-void SortAndSample(vtkPoints* points, vtkPointData* data,
-                   vtkPointData* temp,
-                   vtkIdType start, vtkIdType end,
-                   vtkIdType size, int depth)
+static void SortAndSample(vtkPoints* points, vtkPointData* data,
+                          vtkPointData* temp,
+                          vtkIdType start, vtkIdType end,
+                          vtkIdType size, int depth)
 {
   // if size >= end - start return them all
   if(size >= (end - start))
@@ -318,6 +319,13 @@ int vtkMaskPoints::RequestData(
   vtkIdType ptId, id = 0;
   vtkPointData *outputPD = output->GetPointData();
   vtkIdType numPts = input->GetNumberOfPoints();
+
+  if(numPts < 1)
+    {
+    vtkErrorMacro(<<"No points to mask");
+    return 1;
+    }
+
   int abort = 0;
 
   // figure out how many sample points per process
@@ -342,6 +350,29 @@ int vtkMaskPoints::RequestData(
 
   // Allocate space
   newPts = vtkPoints::New();
+
+  // Set the desired precision for the points in the output.
+  if(this->OutputPointsPrecision == vtkAlgorithm::DEFAULT_PRECISION)
+    {
+    vtkPointSet *inputPointSet = vtkPointSet::SafeDownCast(input);
+    if(inputPointSet)
+      {
+      newPts->SetDataType(inputPointSet->GetPoints()->GetDataType());
+      }
+    else
+      {
+      newPts->SetDataType(VTK_FLOAT);
+      }
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::SINGLE_PRECISION)
+    {
+    newPts->SetDataType(VTK_FLOAT);
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::DOUBLE_PRECISION)
+    {
+    newPts->SetDataType(VTK_DOUBLE);
+    }
+
   newPts->Allocate(numNewPts);
   outputPD->CopyAllocate(pd, numNewPts);
 
@@ -462,6 +493,29 @@ int vtkMaskPoints::RequestData(
       {
       // need to copy the entire data to sort it, to leave original in tact
       vtkPoints* pointCopy = vtkPoints::New();
+
+      // Set the desired precision for the points.
+      if(this->OutputPointsPrecision == vtkAlgorithm::DEFAULT_PRECISION)
+        {
+        vtkPointSet *inputPointSet = vtkPointSet::SafeDownCast(input);
+        if(inputPointSet)
+          {
+          pointCopy->SetDataType(inputPointSet->GetPoints()->GetDataType());
+          }
+        else
+          {
+          pointCopy->SetDataType(VTK_FLOAT);
+          }
+        }
+      else if(this->OutputPointsPrecision == vtkAlgorithm::SINGLE_PRECISION)
+        {
+        pointCopy->SetDataType(VTK_FLOAT);
+        }
+      else if(this->OutputPointsPrecision == vtkAlgorithm::DOUBLE_PRECISION)
+        {
+        pointCopy->SetDataType(VTK_DOUBLE);
+        }
+
       vtkPointData* dataCopy = vtkPointData::New();
       vtkPointData* tempData = vtkPointData::New();
 
@@ -583,4 +637,6 @@ void vtkMaskPoints::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Random Mode Type: " << this->RandomModeType << "\n";
   os << indent << "Proportional Maximum Number of Points: " <<
                   this->ProportionalMaximumNumberOfPoints << "\n";
+
+  os << indent << "Output Points Precision: " << this->OutputPointsPrecision << "\n";
 }

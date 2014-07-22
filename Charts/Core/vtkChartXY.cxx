@@ -33,6 +33,8 @@
 #include "vtkVectorOperators.h"
 
 #include "vtkPlotBar.h"
+#include "vtkPlotBag.h"
+#include "vtkPlotFunctionalBag.h"
 #include "vtkPlotStacked.h"
 #include "vtkPlotLine.h"
 #include "vtkPlotPoints.h"
@@ -494,6 +496,20 @@ void vtkChartXY::RecalculatePlotTransforms()
         }
       this->CalculatePlotTransform(
         xAxis, yAxis, this->ChartPrivate->PlotCorners[i]->GetTransform());
+      // Now we need to set the scale factor on the plots to ensure they rescale
+      // their input data when necessary.
+      vtkRectd shiftScale(xAxis->GetShift(), yAxis->GetShift(),
+                          xAxis->GetScalingFactor(), yAxis->GetScalingFactor());
+      for (unsigned int j = 0;
+           j < this->ChartPrivate->PlotCorners[i]->GetNumberOfItems(); ++j)
+        {
+        vtkPlot *plot =
+            vtkPlot::SafeDownCast(this->ChartPrivate->PlotCorners[i]->GetItem(j));
+        if (plot)
+          {
+          plot->SetShiftScale(shiftScale);
+          }
+        }
       }
     }
   this->PlotTransformValid = true;
@@ -597,7 +613,7 @@ void vtkChartXY::RecalculatePlotBounds()
       continue;
       }
     (*it)->GetBounds(bounds);
-    if (bounds[1]-bounds[0] < 0.0)
+    if (bounds[1] - bounds[0] < 0.0)
       {
       // skip uninitialized bounds.
       continue;
@@ -1024,6 +1040,13 @@ vtkPlot * vtkChartXY::AddPlot(int type)
       plot = bar;
       break;
       }
+    case FUNCTIONALBAG:
+      {
+      vtkPlotFunctionalBag *bag = vtkPlotFunctionalBag::New();
+      bag->GetBrush()->SetColor(color.GetData());
+      plot = bag;
+      break;
+      }
     case STACKED:
       {
       vtkPlotStacked *stacked = vtkPlotStacked::New();
@@ -1032,6 +1055,15 @@ vtkPlot * vtkChartXY::AddPlot(int type)
       plot = stacked;
       break;
       }
+    case BAG:
+      {
+      vtkPlotBag *bag = vtkPlotBag::New();
+      bag->SetParent(this);
+      bag->GetBrush()->SetColor(color.GetData());
+      plot = bag;
+      break;
+      }
+
     default:
       plot = NULL;
     }
@@ -1272,15 +1304,17 @@ bool vtkChartXY::MouseMoveEvent(const vtkContextMouseEvent &mouse)
     vtkVector2d last(0.0, 0.0);
 
     // Go from screen to scene coordinates to work out the delta
+    vtkAxis* xAxis = this->ChartPrivate->axes[vtkAxis::BOTTOM];
+    vtkAxis* yAxis = this->ChartPrivate->axes[vtkAxis::LEFT];
     vtkTransform2D *transform =
         this->ChartPrivate->PlotCorners[0]->GetTransform();
     transform->InverseTransformPoints(screenPos.GetData(), pos.GetData(), 1);
     transform->InverseTransformPoints(lastScreenPos.GetData(), last.GetData(), 1);
     vtkVector2d delta = last - pos;
+    delta[0] /= xAxis->GetScalingFactor();
+    delta[1] /= yAxis->GetScalingFactor();
 
     // Now move the axes and recalculate the transform
-    vtkAxis* xAxis = this->ChartPrivate->axes[vtkAxis::BOTTOM];
-    vtkAxis* yAxis = this->ChartPrivate->axes[vtkAxis::LEFT];
     delta[0] = delta[0] > 0 ?
       std::min(delta[0], xAxis->GetMaximumLimit() - xAxis->GetMaximum()) :
       std::max(delta[0], xAxis->GetMinimumLimit() - xAxis->GetMinimum());
@@ -1301,13 +1335,15 @@ bool vtkChartXY::MouseMoveEvent(const vtkContextMouseEvent &mouse)
           vtkVector2d(mouse.GetLastScreenPos().Cast<double>().GetData());
       pos = vtkVector2d(0.0, 0.0);
       last = vtkVector2d(0.0, 0.0);
+      yAxis = this->ChartPrivate->axes[vtkAxis::RIGHT];
       transform = this->ChartPrivate->PlotCorners[1]->GetTransform();
       transform->InverseTransformPoints(screenPos.GetData(), pos.GetData(), 1);
       transform->InverseTransformPoints(lastScreenPos.GetData(), last.GetData(), 1);
       delta = last - pos;
+      delta[0] /= xAxis->GetScalingFactor();
+      delta[1] /= yAxis->GetScalingFactor();
 
       // Now move the axes and recalculate the transform
-      yAxis = this->ChartPrivate->axes[vtkAxis::RIGHT];
       delta[1] = delta[1] > 0 ?
         std::min(delta[1], yAxis->GetMaximumLimit() - yAxis->GetMaximum()) :
         std::max(delta[1], yAxis->GetMinimumLimit() - yAxis->GetMinimum());
@@ -1323,14 +1359,16 @@ bool vtkChartXY::MouseMoveEvent(const vtkContextMouseEvent &mouse)
           vtkVector2d(mouse.GetLastScreenPos().Cast<double>().GetData());
       pos = vtkVector2d(0.0, 0.0);
       last = vtkVector2d(0.0, 0.0);
+      xAxis = this->ChartPrivate->axes[vtkAxis::TOP];
+      yAxis = this->ChartPrivate->axes[vtkAxis::RIGHT];
       transform = this->ChartPrivate->PlotCorners[2]->GetTransform();
       transform->InverseTransformPoints(screenPos.GetData(), pos.GetData(), 1);
       transform->InverseTransformPoints(lastScreenPos.GetData(), last.GetData(), 1);
       delta = last - pos;
+      delta[0] /= xAxis->GetScalingFactor();
+      delta[1] /= yAxis->GetScalingFactor();
 
       // Now move the axes and recalculate the transform
-      xAxis = this->ChartPrivate->axes[vtkAxis::TOP];
-      yAxis = this->ChartPrivate->axes[vtkAxis::RIGHT];
       delta[0] = delta[0] > 0 ?
         std::min(delta[0], xAxis->GetMaximumLimit() - xAxis->GetMaximum()) :
         std::max(delta[0], xAxis->GetMinimumLimit() - xAxis->GetMinimum());
@@ -1354,6 +1392,63 @@ bool vtkChartXY::MouseMoveEvent(const vtkContextMouseEvent &mouse)
     {
     this->MouseBox.SetWidth(mouse.GetPos().GetX() - this->MouseBox.GetX());
     this->MouseBox.SetHeight(mouse.GetPos().GetY() - this->MouseBox.GetY());
+    // Mark the scene as dirty
+    this->Scene->SetDirty(true);
+    }
+  else if (mouse.GetButton() == this->Actions.ZoomAxis())
+    {
+    vtkVector2d screenPos(mouse.GetScreenPos().Cast<double>().GetData());
+    vtkVector2d lastScreenPos(mouse.GetLastScreenPos().Cast<double>().GetData());
+
+    vtkAxis *axes[] = {
+      this->ChartPrivate->axes[vtkAxis::BOTTOM],
+      this->ChartPrivate->axes[vtkAxis::LEFT],
+      this->ChartPrivate->axes[vtkAxis::TOP],
+      this->ChartPrivate->axes[vtkAxis::RIGHT]
+    };
+
+    for(int i = 0; i < 4; i++)
+      {
+      vtkAxis *axis = axes[i];
+      if(!axis)
+        {
+        continue;
+        }
+
+      // bottom, top -> 0, right, left -> 1
+      int side = i % 2;
+
+      // get mouse delta in the given direction for the axis
+      double delta = lastScreenPos[side] - screenPos[side];
+      if(std::abs(delta) == 0)
+        {
+        continue;
+        }
+
+      // scale and invert delta
+      delta /= -100.0;
+
+      // zoom axis range
+      double min = axis->GetMinimum();
+      double max = axis->GetMaximum();
+      double frac = (max - min) * 0.1;
+      if (frac > 0.0)
+        {
+        min += delta*frac;
+        max -= delta*frac;
+        }
+      else
+        {
+        min -= delta*frac;
+        max += delta*frac;
+        }
+      axis->SetMinimum(min);
+      axis->SetMaximum(max);
+      axis->RecalculateTickSpacing();
+      }
+
+    this->RecalculatePlotTransforms();
+
     // Mark the scene as dirty
     this->Scene->SetDirty(true);
     }
@@ -1449,7 +1544,10 @@ bool vtkChartXY::LocatePointInPlots(const vtkContextMouseEvent &mouse,
           if (seriesIndex >= 0)
             {
             // We found a point, set up the tooltip and return
-            this->SetTooltipInfo(mouse, plotPos, seriesIndex, plot,
+            vtkRectd ss(plot->GetShiftScale());
+            vtkVector2d plotPosd(plotPos[0] / ss[2] - ss[0],
+                                 plotPos[1] / ss[3] - ss[1]);
+            this->SetTooltipInfo(mouse, plotPosd, seriesIndex, plot,
                                  segmentIndex);
             if (invokeEvent >= 0)
               {
@@ -1487,11 +1585,11 @@ bool vtkChartXY::LocatePointInPlots(const vtkContextMouseEvent &mouse,
 
 //-----------------------------------------------------------------------------
 void vtkChartXY::SetTooltipInfo(const vtkContextMouseEvent& mouse,
-                                const vtkVector2f &plotPos,
+                                const vtkVector2d &plotPos,
                                 vtkIdType seriesIndex, vtkPlot* plot,
                                 vtkIdType segmentIndex)
 {
-  if(!this->Tooltip)
+  if (!this->Tooltip)
     {
     return;
     }
@@ -1548,6 +1646,12 @@ bool vtkChartXY::MouseButtonPressEvent(const vtkContextMouseEvent &mouse)
     // Selection, for now at least...
     this->MouseBox.Set(mouse.GetPos().GetX(), mouse.GetPos().GetY(), 0.0, 0.0);
     this->DrawBox = true;
+    return true;
+    }
+  else if (mouse.GetButton() == this->Actions.ZoomAxis())
+    {
+    this->MouseBox.Set(mouse.GetPos().GetX(), mouse.GetPos().GetY(), 0.0, 0.0);
+    this->DrawBox = false;
     return true;
     }
   else if (mouse.GetButton() == this->Actions.SelectPolygon())
@@ -1793,17 +1897,23 @@ bool vtkChartXY::MouseButtonReleaseEvent(const vtkContextMouseEvent &mouse)
     this->InvokeEvent(vtkCommand::InteractionEvent);
     return true;
     }
+  else if (mouse.GetButton() == this->Actions.ZoomAxis())
+    {
+    return true;
+    }
   return false;
 }
 
-void vtkChartXY::ZoomInAxes(vtkAxis *x, vtkAxis *y, float *origin, float *max)
+void vtkChartXY::ZoomInAxes(vtkAxis *x, vtkAxis *y, float *originf, float *maxf)
 {
   vtkNew<vtkTransform2D> transform;
-  this->CalculatePlotTransform(x, y, transform.GetPointer());
-  float torigin[2];
-  transform->InverseTransformPoints(origin, torigin, 1);
-  float tmax[2];
-  transform->InverseTransformPoints(max, tmax, 1);
+  this->CalculateUnscaledPlotTransform(x, y, transform.GetPointer());
+  vtkVector2d origin(originf[0], originf[1]);
+  vtkVector2d max(maxf[0], maxf[1]);
+  vtkVector2d torigin;
+  transform->InverseTransformPoints(origin.GetData(), torigin.GetData(), 1);
+  vtkVector2d tmax;
+  transform->InverseTransformPoints(max.GetData(), tmax.GetData(), 1);
 
   // Ensure we preserve the directionality of the axes
   if (x->GetMaximum() > x->GetMinimum())

@@ -2,27 +2,18 @@ cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
 PROJECT (Medical)
 
-if(NOT VTK_BINARY_DIR)
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkCommonDataModel
-    vtkCommonTransforms
-    vtkFiltersCore
-    vtkFiltersGeneral
-    vtkFiltersGeometry
-    vtkFiltersModeling
-    vtkIOImage
-    vtkIOXML
-    vtkImagingCore
-    vtkImagingStatistics
-    vtkRenderingCore
-    vtkRenderingOpenGL
-    vtkRenderingVolume
-    vtkRenderingVolumeOpenGL
-    vtkInteractionStyle
-  )
-  include(${VTK_USE_FILE})
-endif()
+find_package(VTK COMPONENTS
+  vtkFiltersGeometry
+  vtkFiltersModeling
+  vtkIOImage
+  vtkIOXML
+  vtkImagingStatistics
+  vtkInteractionStyle
+  vtkRenderingVolumeOpenGL
+  vtkTestingRendering
+  vtksys
+)
+include(${VTK_USE_FILE})
 
 add_executable(Medical1 MACOSX_BUNDLE Medical1.cxx)
 add_executable(Medical2 MACOSX_BUNDLE Medical2.cxx)
@@ -42,23 +33,17 @@ target_link_libraries(GenerateCubesFromLabels ${VTK_LIBRARIES})
 if(BUILD_TESTING)
   if(vtkTestingRendering_LOADED)
     ######## Regression Testing ########
-    set(KIT MedicalExamples)
-    set(MyTests TestMedical1.cxx TestMedical2.cxx TestMedical3.cxx TestMedical4.cxx)
-
-    include(vtkTestingObjectFactory)
-
-    add_executable(${KIT}CxxTests ${KIT}CxxTests.cxx ${MyTests})
-    target_link_libraries(${KIT}CxxTests ${VTK_LIBRARIES})
-
-      if (VTK_DATA_ROOT)
-        add_test(NAME ${KIT}-Medical1 COMMAND ${KIT}CxxTests
-          TestMedical1 ${VTK_DATA_ROOT}/Data/headsq/quarter)
-        add_test(NAME ${KIT}-Medical2 COMMAND ${KIT}CxxTests
-          TestMedical2 ${VTK_DATA_ROOT}/Data/headsq/quarter)
-        add_test(NAME ${KIT}-Medical3 COMMAND ${KIT}CxxTests
-          TestMedical3 ${VTK_DATA_ROOT}/Data/headsq/quarter)
-        add_test(NAME ${KIT}-Medical4 COMMAND ${KIT}CxxTests
-          TestMedical4 ${VTK_DATA_ROOT}/Data/headsq/quarter)
-      endif()
+    set(vtk-example MedicalExamples)
+    set(TestMedical1_ARGS ${VTK_TEST_DATA_DIR}/Data/headsq/quarter)
+    set(TestMedical2_ARGS ${VTK_TEST_DATA_DIR}/Data/headsq/quarter)
+    set(TestMedical3_ARGS ${VTK_TEST_DATA_DIR}/Data/headsq/quarter)
+    set(TestMedical4_ARGS ${VTK_TEST_DATA_DIR}/Data/headsq/quarter)
+    vtk_add_test_cxx(
+      TestMedical1.cxx
+      TestMedical2.cxx
+      TestMedical3.cxx
+      TestMedical4.cxx
+      )
+    vtk_test_cxx_executable(${vtk-example}CxxTests RENDERING_FACTORY)
   endif()
 endif()

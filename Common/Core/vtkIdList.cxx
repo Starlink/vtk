@@ -26,19 +26,13 @@ vtkIdList::vtkIdList()
 
 vtkIdList::~vtkIdList()
 {
-  if ( this->Ids != NULL )
-    {
-    delete [] this->Ids;
-    }
+  delete [] this->Ids;
 }
 
 void vtkIdList::Initialize()
 {
-  if ( this->Ids != NULL )
-    {
-    delete [] this->Ids;
-    this->Ids = NULL;
-    }
+  delete [] this->Ids;
+  this->Ids = NULL;
   this->NumberOfIds = 0;
   this->Size = 0;
 }
@@ -62,19 +56,6 @@ void vtkIdList::SetNumberOfIds(const vtkIdType number)
 {
   this->Allocate(number,0);
   this->NumberOfIds = number;
-}
-
-void vtkIdList::InsertId(const vtkIdType i, const vtkIdType vtkid)
-{
-  if ( i >= this->Size )
-    {
-    this->Resize(i+1);
-    }
-  this->Ids[i] = vtkid;
-  if ( i >= this->NumberOfIds )
-    {
-    this->NumberOfIds = i + 1;
-    }
 }
 
 vtkIdType vtkIdList::InsertUniqueId(const vtkIdType vtkid)
@@ -130,14 +111,12 @@ void vtkIdList::DeleteId(vtkIdType vtkid)
 
 void vtkIdList::DeepCopy(vtkIdList *ids)
 {
-  this->Initialize();
-  this->NumberOfIds = ids->NumberOfIds;
-  this->Size = ids->Size;
-  this->Ids = new vtkIdType [ids->Size];
-  for (vtkIdType i=0; i < ids->NumberOfIds; i++)
+  this->SetNumberOfIds(ids->NumberOfIds);
+  if (ids->NumberOfIds > 0)
     {
-    this->Ids[i] = ids->Ids[i];
+    std::copy(ids->Ids, ids->Ids + ids->NumberOfIds, this->Ids);
     }
+  this->Squeeze();
 }
 
 vtkIdType *vtkIdList::Resize(const vtkIdType sz)

@@ -46,7 +46,7 @@
 #include <map>
 
 #include <stdio.h>
-#include <assert.h>
+#include <cassert>
 
 #define R_NO_REMAP /* AVOID SOME SERIOUS STUPIDITY. DO NOT REMOVE. */
 
@@ -485,7 +485,7 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
   // traverse the tree to reorder the leaf vertices according to the
   // phylo tree numbering rule;
   // newNodeId is the checkup table that maps a vertexId(starting from 0)
-  // to it's corresponding R tree point id (staring from 1)
+  // to its corresponding R tree point id (starting from 1)
   vtkIdType leafCount = 0;
   vtkTreeDFSIterator* iter = vtkTreeDFSIterator::New();
   iter->SetTree(tree);
@@ -494,7 +494,7 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
   while (iter->HasNext())
     {// find out all the leaf nodes, and number them sequentially
     vtkIdType vertexId = iter->Next();
-    newNodeId[vertexId] = 0;//initilize
+    newNodeId[vertexId] = 0;//initialize
     if (tree->IsLeaf(vertexId))
       {
       leafCount++;
@@ -505,7 +505,7 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
   // second tree traverse to reorder the node vertices
   int nodeId = leafCount;
   iter->Restart();
-  vtkIdType vertexId = iter->Next();//skip the root (which id is zero)
+  vtkIdType vertexId;
   while (iter->HasNext())
     {
     vertexId = iter->Next();
@@ -516,7 +516,7 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
       }
     }
 
-  nedge = tree->GetNumberOfEdges() -1;// the first edge 0-1 does not count in R tree
+  nedge = tree->GetNumberOfEdges();
   ntip  = leafCount;
   nnode = nedge - ntip + 1;
 
@@ -534,7 +534,7 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
   // fill in e and e_len
   vtkSmartPointer<vtkEdgeListIterator> edgeIterator = vtkSmartPointer<vtkEdgeListIterator>::New();
   tree->GetEdges(edgeIterator);
-  vtkEdgeType vEdge = edgeIterator->Next();//skip the first empty edge (0,1) with weight 0
+  vtkEdgeType vEdge;
   int i = 0;
   vtkDoubleArray * weights = vtkDoubleArray::SafeDownCast((tree->GetEdgeData())->GetArray("weight"));
   while(edgeIterator->HasNext())
@@ -552,7 +552,6 @@ SEXP vtkRAdapter::VTKTreeToR(vtkTree* tree)
   // use GetAbstractArray() instead of GetArray()
   vtkStringArray * labels = vtkStringArray::SafeDownCast((tree->GetVertexData())->GetAbstractArray("node name"));
   iter->Restart();
-  vertexId = iter->Next();//skip the root
   while (iter->HasNext())
     {// find out all the leaf nodes, and number them sequentially
     vertexId = iter->Next();
@@ -707,34 +706,31 @@ vtkTree* vtkRAdapter::RToVTKTree(SEXP variable)
 
 
     // Create all of the tree vertice (number of edges +1)
-    // number of edges = nedge(in R tree)  + 1 (root edge in VTKTree)
-    int numOfEdges = nedge + 1;
+    // number of edges = nedge(in R tree)
+    int numOfEdges = nedge;
     for(int i = 0; i <= numOfEdges; i++)
       {
       builder->AddVertex();
       }
 
-    builder->AddEdge(0, ntip + 1); //root edge:  0 -- first node
     for(int i = 0; i < nedge; i++)
       {
-      vtkIdType source = edge[i];
-      vtkIdType target = edge[i+nedge];
+      // -1 because R vertices begin with 1, whereas VTK vertices begin with 0.
+      vtkIdType source = edge[i] - 1;
+      vtkIdType target = edge[i+nedge] - 1;
       builder->AddEdge(source, target);
       }
-
 
     // Create the edge weight array
     vtkNew<vtkDoubleArray> weights;
     weights->SetNumberOfComponents(1);
     weights->SetName("weight");
     weights->SetNumberOfValues(numOfEdges);
-    weights->SetValue(0, 0.0);//root edge weight = 0.0
     for (int i = 0; i < nedge; i++)
       {
-      weights->SetValue(i+1, edge_length[i]);
+      weights->SetValue(i, edge_length[i]);
       }
     builder->GetEdgeData()->AddArray(weights.GetPointer());
-
 
     // Create the names array
     // In R tree, the numeric id of the vertice is ordered such that the tips are listed first
@@ -742,15 +738,14 @@ vtkTree* vtkRAdapter::RToVTKTree(SEXP variable)
     vtkNew<vtkStringArray> names;
     names->SetNumberOfComponents(1);
     names->SetName("node name");
-    names->SetNumberOfValues(ntip + nnode + 1);
-    names->SetValue(0,""); //root name
+    names->SetNumberOfValues(ntip + nnode);
     for (int i = 0; i < ntip; i++)
       {
-      names->SetValue(i + 1, tip_label->GetValue(i));
+      names->SetValue(i, tip_label->GetValue(i));
       }
     for (int i = 0; i < nnode; i++)
       {
-        names->SetValue(i + ntip + 1, node_label->GetValue(i));
+      names->SetValue(i + ntip, node_label->GetValue(i));
       }
     builder->GetVertexData()->AddArray(names.GetPointer());
 
@@ -760,20 +755,11 @@ vtkTree* vtkRAdapter::RToVTKTree(SEXP variable)
       return NULL;
       }
 
-
-
     // Create the "node weight" array for the Vertices, in order to use
     // vtkTreeLayoutStrategy for visualizing the tree using vtkTreeHeatmapItem
     vtkNew<vtkDoubleArray> nodeWeights;
     nodeWeights->SetNumberOfTuples(tree->GetNumberOfVertices());
 
-    // trueWeights is (for the most part) a duplicate of nodeWeights.
-    // The only difference is that leaf nodes aren't clamped to the max
-    // weight in this array.
-    vtkNew<vtkDoubleArray> trueWeights;
-    trueWeights->SetNumberOfTuples(tree->GetNumberOfVertices());
-
-    double maxWeight = 0.0;
     vtkNew<vtkTreeDFSIterator> treeIterator;
     treeIterator->SetStartVertex(tree->GetRoot());
     treeIterator->SetTree(tree);
@@ -785,29 +771,13 @@ vtkTree* vtkRAdapter::RToVTKTree(SEXP variable)
       if (parent >= 0)
         {
         weight = weights->GetValue(tree->GetEdgeId(parent, vertex));
-        }
-      weight += nodeWeights->GetValue(parent);
-
-      if (weight > maxWeight)
-        {
-        maxWeight = weight;
+        weight += nodeWeights->GetValue(parent);
         }
       nodeWeights->SetValue(vertex, weight);
-      trueWeights->SetValue(vertex, weight);
       }
 
-    for (vtkIdType vertex = 0; vertex < tree->GetNumberOfVertices(); ++vertex)
-      {
-      if (tree->IsLeaf(vertex))
-        {
-        nodeWeights->SetValue(vertex, maxWeight);
-        }
-      }
     nodeWeights->SetName("node weight");
     tree->GetVertexData()->AddArray(nodeWeights.GetPointer());
-
-    trueWeights->SetName("true node weight");
-    tree->GetVertexData()->AddArray(trueWeights.GetPointer());
 
     this->vdoc->AddItem(tree);
     tree->Delete();

@@ -1,21 +1,15 @@
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
-PROJECT (VolumeRendering)
+project (VolumeRendering)
 
-if(NOT VTK_BINARY_DIR)
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkCommonDataModel
-    vtkIOImage
-    vtkIOXML
-    vtkImagingCore
-    vtkInteractionWidgets
-    vtkRenderingCore
-    vtkRenderingOpenGL
-    vtkRenderingVolume
-  )
-  include(${VTK_USE_FILE})
-endif()
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkIOImage
+  vtkIOXML
+  vtkInteractionWidgets
+  vtkRenderingVolumeOpenGL
+)
+include(${VTK_USE_FILE})
 
 set(RENDERING_EXAMPLES_SRCS
   GPURenderDemo

@@ -23,6 +23,7 @@
 #include <vtkInformationVector.h>
 #include <vtkIntArray.h>
 #include <vtkMultiBlockDataSet.h>
+#include <vtkNew.h>
 #include <vtkObjectFactory.h>
 #include <vtkStringArray.h>
 #include <vtkPolyData.h>
@@ -41,7 +42,7 @@ int vtkGDALVectorReader::OGRRegistered = 0;
 class vtkGDALVectorReader::Internal
 {
 public:
-  Internal( const char* srcName, int srcMode, int appendFeatures )
+  Internal( const char* srcName, int srcMode, int appendFeatures, int addFeatIds )
     {
     this->Source = OGRSFDriverRegistrar::Open( srcName, srcMode, &this->Driver );
     if ( ! this->Source )
@@ -54,6 +55,7 @@ public:
       }
     this->LayerIdx = 0;
     this->AppendFeatures = appendFeatures;
+    this->AddFeatureIds = addFeatIds;
     }
   ~Internal()
     {
@@ -91,6 +93,13 @@ public:
       fields->push_back( arr );
       (*pd)->GetCellData()->AddArray( arr );
       arr->FastDelete();
+      }
+    if (this->AddFeatureIds)
+      {
+      vtkNew<vtkIdTypeArray> featIds;
+      featIds->SetName("_vtkPedigreeIds");
+      (*pd)->GetCellData()->SetPedigreeIds(featIds.GetPointer());
+      fields->push_back(featIds.GetPointer());
       }
 
     *lines = vtkCellArray::New();
@@ -135,6 +144,7 @@ public:
       if ( ! pts )
         {
         pts = vtkPoints::New();
+        pts->SetDataTypeToDouble();
         pd->SetPoints( pts );
         pts->FastDelete();
         }
@@ -188,6 +198,14 @@ public:
             {
             sarr->InsertNextValue( sval );
             }
+          }
+        }
+      if (this->AddFeatureIds)
+        {
+        vtkIdTypeArray* idarr = vtkIdTypeArray::SafeDownCast(fields[numFields]);
+        for ( i = 0; i < nPoly; ++i )
+          {
+          idarr->InsertNextValue(feat->GetFID());
           }
         }
       OGRFeature::DestroyFeature(feat);
@@ -291,6 +309,7 @@ public:
   const char* LastError;
   int LayerIdx;
   int AppendFeatures;
+  int AddFeatureIds;
 };
 
 // -----------------------------------------------------------------------------
@@ -298,6 +317,7 @@ vtkGDALVectorReader::vtkGDALVectorReader()
 {
   this->FileName = 0;
   this->Implementation = 0;
+  this->ActiveLayer = -1;
 
   this->SetNumberOfInputPorts( 0 );
 
@@ -308,6 +328,7 @@ vtkGDALVectorReader::vtkGDALVectorReader()
     }
 
   this->AppendFeatures = 0;
+  this->AddFeatureIds = 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -326,6 +347,8 @@ void vtkGDALVectorReader::PrintSelf( ostream& os, vtkIndent indent )
   this->Superclass::PrintSelf( os, indent );
   os << indent << "FileName: " << ( this->FileName ? this->FileName : "(null)" ) << "\n";
   os << indent << "Implementation: " << this->Implementation << "\n";
+  os << indent << "AppendFeatures: " << (this->AppendFeatures ? "ON" : "OFF") << "\n";
+  os << indent << "AddFeatureIds: " << (this->AddFeatureIds ? "ON" : "OFF") << "\n";
 }
 
 // -----------------------------------------------------------------------------
@@ -408,13 +431,17 @@ int vtkGDALVectorReader::GetFeatureCount(int layerIndex)
 // -----------------------------------------------------------------------------
 int vtkGDALVectorReader::GetActiveLayerType()
 {
-  return this->GetLayerType(ActiveLayer);
+  return
+    this->ActiveLayer < 0 || this->ActiveLayer >= this->GetNumberOfLayers() ?
+    -1 : this->GetLayerType(this->ActiveLayer);
 }
 
 // -----------------------------------------------------------------------------
 int vtkGDALVectorReader::GetActiveLayerFeatureCount()
 {
-  return this->GetFeatureCount(ActiveLayer);
+  return
+    this->ActiveLayer < 0 || this->ActiveLayer >= this->GetNumberOfLayers() ?
+    0 : this->GetFeatureCount(this->ActiveLayer);
 }
 
 // -----------------------------------------------------------------------------
@@ -492,7 +519,13 @@ int vtkGDALVectorReader::RequestData( vtkInformation* request,
 
   vtkGDALVectorReader::Internal* p = this->Implementation;
 
-  for ( int layerIdx = 0; layerIdx < p->Source->GetLayerCount(); ++layerIdx )
+  int lastLayer = p->Source->GetLayerCount() - 1;
+  int startLayer =
+    this->ActiveLayer < 0 || this->ActiveLayer >= lastLayer ?
+    0 : this->ActiveLayer;
+  int endLayer = this->ActiveLayer < 0 || this->ActiveLayer >= lastLayer ?
+    lastLayer : this->ActiveLayer;
+  for ( int layerIdx = startLayer; layerIdx <= endLayer; ++layerIdx )
     {
     OGRLayer* layer = p->Source->GetLayer( layerIdx );
     if ( ! layer )
@@ -526,7 +559,8 @@ int vtkGDALVectorReader::InitializeInternal()
   if ( !this->Implementation )
     {
     this->Implementation = new vtkGDALVectorReader::Internal(
-                             this->FileName, 0 , this->AppendFeatures );
+                             this->FileName, 0 ,
+                             this->AppendFeatures, this->AddFeatureIds );
     if ( ! this->Implementation || this->Implementation->LastError )
       {
       if ( this->Implementation )

@@ -40,8 +40,8 @@ public:
   vtkTree* GetInput(int port);
 
 protected:
-  vtkTreeWriter() {};
-  ~vtkTreeWriter() {};
+  vtkTreeWriter() {}
+  ~vtkTreeWriter() {}
 
   void WriteData();
 
@@ -51,7 +51,7 @@ private:
   vtkTreeWriter(const vtkTreeWriter&);  // Not implemented.
   void operator=(const vtkTreeWriter&);  // Not implemented.
 
-  void WriteEdges(ostream& Stream, vtkTree* Tree, vtkIdType Vertex);
+  void WriteEdges(ostream& Stream, vtkTree* Tree);
 };
 
 #endif

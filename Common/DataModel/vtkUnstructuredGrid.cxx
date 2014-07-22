@@ -26,6 +26,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkLine.h"
+#include "vtkNew.h"
 #include "vtkObjectFactory.h"
 #include "vtkPixel.h"
 #include "vtkPointData.h"
@@ -40,6 +41,7 @@
 #include "vtkQuadraticEdge.h"
 #include "vtkQuadraticHexahedron.h"
 #include "vtkQuadraticWedge.h"
+#include "vtkQuadraticPolygon.h"
 #include "vtkQuadraticPyramid.h"
 #include "vtkQuadraticQuad.h"
 #include "vtkQuadraticTetra.h"
@@ -48,6 +50,7 @@
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
 #include "vtkUnsignedCharArray.h"
+#include "vtkUnstructuredGridCellIterator.h"
 #include "vtkVertex.h"
 #include "vtkVoxel.h"
 #include "vtkWedge.h"
@@ -84,6 +87,7 @@ vtkUnstructuredGrid::vtkUnstructuredGrid ()
   this->QuadraticEdge = NULL;
   this->QuadraticTriangle =NULL;
   this->QuadraticQuad = NULL;
+  this->QuadraticPolygon = NULL;
   this->QuadraticTetra = NULL;
   this->QuadraticHexahedron = NULL;
   this->QuadraticWedge = NULL;
@@ -240,6 +244,10 @@ vtkUnstructuredGrid::~vtkUnstructuredGrid()
     {
     this->QuadraticQuad->Delete();
     }
+  if(this->QuadraticPolygon)
+    {
+    this->QuadraticPolygon->Delete();
+    }
   if(this->QuadraticTetra)
     {
     this->QuadraticTetra->Delete();
@@ -325,86 +333,89 @@ int vtkUnstructuredGrid::GetGhostLevel()
 // Copy the geometric and topological structure of an input unstructured grid.
 void vtkUnstructuredGrid::CopyStructure(vtkDataSet *ds)
 {
-  vtkUnstructuredGrid *ug=static_cast<vtkUnstructuredGrid *>(ds);
-  vtkPointSet::CopyStructure(ds);
-
-  if (this->Connectivity != ug->Connectivity)
+  // If ds is a vtkUnstructuredGrid, do a shallow copy of the cell data.
+  if (vtkUnstructuredGrid *ug = vtkUnstructuredGrid::SafeDownCast(ds))
     {
-    if ( this->Connectivity )
+    if (this->Connectivity != ug->Connectivity)
       {
-      this->Connectivity->UnRegister(this);
+      if ( this->Connectivity )
+        {
+        this->Connectivity->UnRegister(this);
+        }
+      this->Connectivity = ug->Connectivity;
+      if (this->Connectivity)
+        {
+        this->Connectivity->Register(this);
+        }
       }
-    this->Connectivity = ug->Connectivity;
-    if (this->Connectivity)
+
+    if (this->Links != ug->Links)
       {
-      this->Connectivity->Register(this);
+      if ( this->Links )
+        {
+        this->Links->UnRegister(this);
+        }
+      this->Links = ug->Links;
+      if (this->Links)
+        {
+        this->Links->Register(this);
+        }
+      }
+
+    if (this->Types != ug->Types)
+      {
+      if ( this->Types )
+        {
+        this->Types->UnRegister(this);
+        }
+      this->Types = ug->Types;
+      if (this->Types)
+        {
+        this->Types->Register(this);
+        }
+      }
+
+    if (this->Locations != ug->Locations)
+      {
+      if ( this->Locations )
+        {
+        this->Locations->UnRegister(this);
+        }
+      this->Locations = ug->Locations;
+      if (this->Locations)
+        {
+        this->Locations->Register(this);
+        }
+      }
+
+    if (this->Faces != ug->Faces)
+      {
+      if ( this->Faces )
+        {
+        this->Faces->UnRegister(this);
+        }
+      this->Faces = ug->Faces;
+      if (this->Faces)
+        {
+        this->Faces->Register(this);
+        }
+      }
+
+    if (this->FaceLocations != ug->FaceLocations)
+      {
+      if ( this->FaceLocations )
+        {
+        this->FaceLocations->UnRegister(this);
+        }
+      this->FaceLocations = ug->FaceLocations;
+      if (this->FaceLocations)
+        {
+        this->FaceLocations->Register(this);
+        }
       }
     }
 
-  if (this->Links != ug->Links)
-    {
-    if ( this->Links )
-      {
-      this->Links->UnRegister(this);
-      }
-    this->Links = ug->Links;
-    if (this->Links)
-      {
-      this->Links->Register(this);
-      }
-    }
-
-  if (this->Types != ug->Types)
-    {
-    if ( this->Types )
-      {
-      this->Types->UnRegister(this);
-      }
-    this->Types = ug->Types;
-    if (this->Types)
-      {
-      this->Types->Register(this);
-      }
-    }
-
-  if (this->Locations != ug->Locations)
-    {
-    if ( this->Locations )
-      {
-      this->Locations->UnRegister(this);
-      }
-    this->Locations = ug->Locations;
-    if (this->Locations)
-      {
-      this->Locations->Register(this);
-      }
-    }
-
-  if (this->Faces != ug->Faces)
-    {
-    if ( this->Faces )
-      {
-      this->Faces->UnRegister(this);
-      }
-    this->Faces = ug->Faces;
-    if (this->Faces)
-      {
-      this->Faces->Register(this);
-      }
-    }
-
-  if (this->FaceLocations != ug->FaceLocations)
-    {
-    if ( this->FaceLocations )
-      {
-      this->FaceLocations->UnRegister(this);
-      }
-    this->FaceLocations = ug->FaceLocations;
-    if (this->FaceLocations)
-      {
-      this->FaceLocations->Register(this);
-      }
-    }
+  this->Superclass::CopyStructure(ds);
 }
 
 //----------------------------------------------------------------------------
@@ -637,6 +648,14 @@ vtkCell *vtkUnstructuredGrid::GetCell(vtkIdType cellId)
       cell = this->QuadraticQuad;
       break;
 
+    case VTK_QUADRATIC_POLYGON:
+      if(!this->QuadraticPolygon)
+        {
+        this->QuadraticPolygon = vtkQuadraticPolygon::New();
+        }
+      cell = this->QuadraticPolygon;
+      break;
+
     case VTK_QUADRATIC_TETRA:
       if(!this->QuadraticTetra)
         {
@@ -784,9 +803,7 @@ vtkCell *vtkUnstructuredGrid::GetCell(vtkIdType cellId)
 //----------------------------------------------------------------------------
 void vtkUnstructuredGrid::GetCell(vtkIdType cellId, vtkGenericCell *cell)
 {
-  vtkIdType i;
-  vtkIdType    loc;
-  double  x[3];
+  vtkIdType loc;
   vtkIdType *pts, numPts;
 
   int cellType = static_cast<int>(this->Types->GetValue(cellId));
@@ -796,14 +813,9 @@ void vtkUnstructuredGrid::GetCell(vtkIdType cellId, vtkGenericCell *cell)
   this->Connectivity->GetCell(loc,numPts,pts);
 
   cell->PointIds->SetNumberOfIds(numPts);
-  cell->Points->SetNumberOfPoints(numPts);
 
-  for (i=0; i<numPts; i++)
-    {
-    cell->PointIds->SetId(i,pts[i]);
-    this->Points->GetPoint(pts[i], x);
-    cell->Points->SetPoint(i, x);
-    }
+  std::copy(pts, pts + numPts, cell->PointIds->GetPointer(0));
+  this->Points->GetPoints(cell->PointIds, cell->Points);
 
   // Explicit face representation
   if ( cell->RequiresExplicitFaceRepresentation() )
@@ -1165,6 +1177,7 @@ void vtkUnstructuredGrid::SetCells(vtkUnsignedCharArray *cellTypes,
     if (cellTypes->GetValue(i) == VTK_POLYHEDRON)
       {
       containPolyhedron = true;
+      break; // We can terminate early
       }
     }
 
@@ -1326,12 +1339,12 @@ void vtkUnstructuredGrid::GetFaceStream(vtkIdType cellId, vtkIdList *ptIds)
     return;
     }
 
+  ptIds->Reset();
+
   if (!this->Faces || !this->FaceLocations)
     {
     return;
     }
-
-  ptIds->Reset();
 
   vtkIdType loc = this->FaceLocations->GetValue(cellId);
   vtkIdType* facePtr = this->Faces->GetPointer(loc);
@@ -1392,6 +1405,14 @@ void vtkUnstructuredGrid::GetPointCells(vtkIdType ptId, vtkIdList *cellIds)
     {
     cellIds->SetId(i,cells[i]);
     }
+}
+
+//----------------------------------------------------------------------------
+vtkCellIterator *vtkUnstructuredGrid::NewCellIterator()
+{
+  vtkUnstructuredGridCellIterator *iter(vtkUnstructuredGridCellIterator::New());
+  iter->SetUnstructuredGrid(this);
+  return iter;
 }
 
 //----------------------------------------------------------------------------
@@ -1557,9 +1578,7 @@ unsigned long vtkUnstructuredGrid::GetActualMemorySize()
 //----------------------------------------------------------------------------
 void vtkUnstructuredGrid::ShallowCopy(vtkDataObject *dataObject)
 {
-  vtkUnstructuredGrid *grid = vtkUnstructuredGrid::SafeDownCast(dataObject);
-
-  if ( grid != NULL )
+  if (vtkUnstructuredGrid *grid = vtkUnstructuredGrid::SafeDownCast(dataObject))
     {
     // I do not know if this is correct but.
 
@@ -1622,11 +1641,26 @@ void vtkUnstructuredGrid::ShallowCopy(vtkDataObject *dataObject)
       {
       this->FaceLocations->Register(this);
       }
-
+    }
+  else if (vtkUnstructuredGridBase *ugb =
+           vtkUnstructuredGridBase::SafeDownCast(dataObject))
+    {
+    // The source object has vtkUnstructuredGrid topology, but a different
+    // cell implementation. Deep copy the cells, and shallow copy the rest:
+    vtkSmartPointer<vtkCellIterator> cellIter =
+        vtkSmartPointer<vtkCellIterator>::Take(ugb->NewCellIterator());
+    for (cellIter->InitTraversal(); !cellIter->IsDoneWithTraversal();
+         cellIter->GoToNextCell())
+      {
+      this->InsertNextCell(cellIter->GetCellType(),
+                           cellIter->GetNumberOfPoints(),
+                           cellIter->GetPointIds()->GetPointer(0),
+                           cellIter->GetNumberOfFaces(),
+                           cellIter->GetFaces()->GetPointer(0));
+      }
     }
 
-  // Do superclass
-  this->vtkPointSet::ShallowCopy(dataObject);
+  this->Superclass::ShallowCopy(dataObject);
 }
 
 //----------------------------------------------------------------------------
@@ -1705,10 +1739,16 @@ void vtkUnstructuredGrid::DeepCopy(vtkDataObject *dataObject)
       this->FaceLocations->Register(this);
       this->FaceLocations->Delete();
       }
-    }
 
-  // Do superclass
-  this->vtkPointSet::DeepCopy(dataObject);
+    // Skip the unstructured grid base implementation, as it uses a less
+    // efficient method of copying cell data.
+    this->vtkUnstructuredGridBase::Superclass::DeepCopy(grid);
+    }
+  else
+    {
+    // Use the vtkUnstructuredGridBase deep copy implementation.
+    this->Superclass::DeepCopy(dataObject);
+    }
 
   // Finally Build Links if we need to
   if (grid && grid->Links)

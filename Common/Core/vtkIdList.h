@@ -109,6 +109,11 @@ public:
   // to result of intersection operation.
   void IntersectWith(vtkIdList* otherIds);
 
+  // Description:
+  // Adjust the size of the id list while maintaining its content (except
+  // when being truncated).
+  vtkIdType *Resize(const vtkIdType sz);
+
   //BTX
   // This method should become legacy
   void IntersectWith(vtkIdList& otherIds) {
@@ -123,11 +128,24 @@ protected:
   vtkIdType Size;
   vtkIdType *Ids;
 
-  vtkIdType *Resize(const vtkIdType sz);
 private:
   vtkIdList(const vtkIdList&);  // Not implemented.
   void operator=(const vtkIdList&);  // Not implemented.
 };
+
+// In-lined for performance
+inline void vtkIdList::InsertId(const vtkIdType i, const vtkIdType vtkid)
+{
+  if (i >= this->Size)
+    {
+    this->Resize(i + 1);
+    }
+  this->Ids[i] = vtkid;
+  if (i >= this->NumberOfIds)
+    {
+    this->NumberOfIds = i + 1;
+    }
+}
 
 // In-lined for performance
 inline vtkIdType vtkIdList::InsertNextId(const vtkIdType vtkid)

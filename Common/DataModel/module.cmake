@@ -4,11 +4,14 @@ vtk_module(vtkCommonDataModel
     vtkCommonMath
     vtkCommonMisc
     vtkCommonTransforms
+  PRIVATE_DEPENDS
+    vtksys
   TEST_DEPENDS
     vtkTestingCore
     vtkTestingRendering
     vtkInteractionStyle
     vtkCommonExecutionModel
+    vtkFiltersModeling
     vtkIOGeometry
     vtkIOLegacy
     vtkIOXML

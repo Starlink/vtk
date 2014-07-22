@@ -30,13 +30,12 @@
 #include "vtkUniformVariables.h"
 #include "vtkShader2Collection.h"
 #include "vtkTextureUnitManager.h"
-#include "vtkOpenGLRenderWindow.h"
-#include "vtkXMLMaterial.h"
-#include "vtkXMLShader.h"
 #include "vtkGLSLShaderDeviceAdapter2.h"
 #include "vtkOpenGLPainterDeviceAdapter.h"
+#include "vtkOpenGLRenderWindow.h"
+#include "vtkOpenGLError.h"
 
-#include <assert.h>
+#include <cassert>
 
 namespace
 {
@@ -187,15 +186,17 @@ bool vtkOpenGLProperty::RenderShaders(vtkActor* vtkNotUsed(anActor), vtkRenderer
     vtkErrorMacro("the vtkOpenGLProperty need a vtkOpenGLRenderer to render.");
     return false;
     }
-  vtkOpenGLRenderWindow* context = vtkOpenGLRenderWindow::SafeDownCast(
-      ren->GetRenderWindow());
+  vtkOpenGLRenderWindow *context
+    = vtkOpenGLRenderWindow::SafeDownCast(ren->GetRenderWindow());
+
   vtkShaderProgram2* prog = oRenderer->GetShaderProgram();
   if (prog)
     {
     assert("check: prog is initialized" && prog->GetContext() == context);
     }
 
-  bool useShaders = false;
+  vtkOpenGLClearErrorMacro();
+
   vtkShaderProgram2 *propProg;
   if (this->Shading)
     {
@@ -205,18 +206,25 @@ bool vtkOpenGLProperty::RenderShaders(vtkActor* vtkNotUsed(anActor), vtkRenderer
     {
     propProg = 0;
     }
+
+  bool useShaders = false;
   if (prog || propProg)
     {
-    useShaders = vtkShaderProgram2::IsSupported(context);
-    if (useShaders)
+    bool shader_support = vtkShaderProgram2::IsSupported(context);
+
+    // mesa doesn't support separate compilation units
+    // os mesa:
+    // 9.1.4 some tests failing
+    vtkOpenGLExtensionManager *extensions = context->GetExtensionManager();
+
+    bool driver_support
+      = !extensions->DriverIsMesa()
+      || extensions->GetIgnoreDriverBugs(
+        "Mesa support for separate compilation units");
+
+    if (shader_support && driver_support)
       {
-      const char *gl_renderer =
-        reinterpret_cast<const char *>(glGetString(GL_RENDERER));
-      if (strstr(gl_renderer, "Mesa") != 0)
-        {
-        useShaders = false;
-        vtkErrorMacro(<<"Mesa does not support separate compilation units.");
-        }
+      useShaders = true;
       }
     else
       {
@@ -634,12 +642,17 @@ bool vtkOpenGLProperty::RenderTextures(vtkActor*, vtkRenderer* ren,
       vtkgl::ActiveTexture(vtkgl::TEXTURE0);
       }
     }
+
+  vtkOpenGLCheckErrorMacro("failed after Render");
+
   return (numTextures > 0);
 }
 
 //-----------------------------------------------------------------------------
 void vtkOpenGLProperty::PostRender(vtkActor *actor, vtkRenderer *renderer)
 {
+  vtkOpenGLClearErrorMacro();
+
   vtkOpenGLRenderer *oRenderer = static_cast<vtkOpenGLRenderer *>(renderer);
   vtkShaderProgram2 *prog = oRenderer->GetShaderProgram();
 
@@ -699,6 +712,8 @@ void vtkOpenGLProperty::PostRender(vtkActor *actor, vtkRenderer *renderer)
       vtkgl::ActiveTexture(vtkgl::TEXTURE0);
       }
     }
+
+  vtkOpenGLCheckErrorMacro("failed after PostRender");
 }
 
 //-----------------------------------------------------------------------------
@@ -743,56 +758,6 @@ void vtkOpenGLProperty::LoadMultiTexturingExtensions(vtkRenderer* ren)
     }
 }
 
-// ----------------------------------------------------------------------------
-// Description:
-// Read this->Material from new style shaders.
-void vtkOpenGLProperty::ReadFrameworkMaterial()
-{
-  vtkShaderProgram2* prog = vtkShaderProgram2::New();
-  this->SetPropProgram(prog);
-  prog->Delete();
-
-  if (!this->Material)
-    {
-    vtkErrorMacro("No Material set to read.");
-    return;
-    }
-
-  int cc;
-  int max = this->Material->GetNumberOfVertexShaders();
-  for (cc=0; cc < max; cc++)
-    {
-    vtkShader2 *shader = vtkShader2::New();
-    vtkXMLShader *XMLshader = this->Material->GetVertexShader(cc);
-
-    shader->SetType(VTK_SHADER_TYPE_VERTEX);
-    shader->SetSourceCode(XMLshader->GetCode());
-
-    // there is no uniform in the example
-//    vtkUniformVariables *var=shader->GetUniformVariables();
-//    var->
-
-    prog->GetShaders()->AddItem(shader);
-    shader->Delete();
-    }
-  vtkDebugMacro(<< max << " Vertex shaders added.");
-
-  max = this->Material->GetNumberOfFragmentShaders();
-  for (cc=0; cc < max; cc++)
-    {
-    vtkShader2 *shader = vtkShader2::New();
-    vtkXMLShader *XMLshader = this->Material->GetFragmentShader(cc);
-
-    shader->SetType(VTK_SHADER_TYPE_FRAGMENT);
-    shader->SetSourceCode(XMLshader->GetCode());
-
-    prog->GetShaders()->AddItem(shader);
-    shader->Delete();
-    }
-  vtkDebugMacro(<< max << " Fragment shaders added.");
-
-}
-
 //-----------------------------------------------------------------------------
 void vtkOpenGLProperty::ReleaseGraphicsResources(vtkWindow *win)
 {
@@ -800,6 +765,7 @@ void vtkOpenGLProperty::ReleaseGraphicsResources(vtkWindow *win)
   int numTextures = this->GetNumberOfTextures();
   if (win && win->GetMapped() && numTextures > 0 && vtkgl::ActiveTexture)
     {
+    vtkOpenGLClearErrorMacro();
     GLint numSupportedTextures;
     glGetIntegerv(vtkgl::MAX_TEXTURE_UNITS, &numSupportedTextures);
     for (int i = 0; i < numTextures; i++)
@@ -819,6 +785,7 @@ void vtkOpenGLProperty::ReleaseGraphicsResources(vtkWindow *win)
       this->GetTextureAtIndex(i)->ReleaseGraphicsResources(win);
       }
     vtkgl::ActiveTexture(vtkgl::TEXTURE0);
+    vtkOpenGLCheckErrorMacro("failwed during ReleaseGraphicsResources");
     }
   else if (numTextures > 0 && vtkgl::ActiveTexture)
     {

@@ -15,7 +15,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkDepthPeelingPass.h"
 #include "vtkObjectFactory.h"
-#include <assert.h>
+#include <cassert>
 #include "vtkRenderState.h"
 #include "vtkProp.h"
 #include "vtkRenderer.h"
@@ -29,6 +29,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkShader2Collection.h"
 #include "vtkUniformVariables.h"
 #include "vtkTextureUnitManager.h"
+#include "vtkOpenGLError.h"
 
 vtkStandardNewMacro(vtkDepthPeelingPass);
 vtkCxxSetObjectMacro(vtkDepthPeelingPass,TranslucentPass,vtkRenderPass);
@@ -158,8 +159,13 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
       return; // nothing to render.
     }
 
-  this->CheckSupport(static_cast<vtkOpenGLRenderWindow *>(
-                       s->GetRenderer()->GetRenderWindow()));
+  // check driver support
+  vtkOpenGLRenderWindow *context
+    = vtkOpenGLRenderWindow::SafeDownCast(s->GetRenderer()->GetRenderWindow());
+
+  this->CheckSupport(context);
+
+  vtkOpenGLExtensionManager *extensions = context->GetExtensionManager();
 
   if(!this->IsSupported)
     {
@@ -169,6 +175,8 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
       this->NumberOfRenderedProps=this->TranslucentPass->GetNumberOfRenderedProps();
       return;
     }
+
+  vtkOpenGLClearErrorMacro();
 
   // Depth peeling.
   vtkRenderer *r=s->GetRenderer();
@@ -200,6 +208,90 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
     {
       this->DepthFormat=vtkgl::DEPTH_COMPONENT24_ARB;
     }
+
+  // NOTE, this class expects texture unit already selected
+  // don't change it.
+  //vtkgl::ActiveTexture(vtkgl::TEXTURE1);
+
+  // check if the GPU supports a viewport sized texture in
+  // the formats we will use. If not then we should fallback
+  // to alpha blending.
+
+  // This check is really an anachronism since modern GPU
+  // typically support full screen sized textures in all the
+  // common formats.
+
+  GLint depthTexSupport = 1;
+  GLint colorTexSupport = 1;
+
+  if ( extensions->DriverIsATI()
+     && !extensions->GetIgnoreDriverBugs("ATI proxy query bug.") )
+    {
+    // The ATI Radeon HD drivers currently choke on the proxy
+    // query, but depth peeling has been confirmed to work. For
+    // those driver fall back on the weaker max texture size
+    // check.
+    GLint maxTexSize = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+    if ( (this->ViewportWidth > maxTexSize)
+      || (this->ViewportHeight > maxTexSize) )
+      {
+      depthTexSupport = 0;
+      colorTexSupport = 0;
+      }
+    }
+  else
+    {
+    // Not a buggy ATI driver, it's OK to make the proxy query.
+    GLuint proxyQueryTex = 0;
+    glGenTextures(1, &proxyQueryTex);
+    glBindTexture(vtkgl::TEXTURE_RECTANGLE_ARB, proxyQueryTex);
+
+    // support for depth buffer format
+    glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0, this->DepthFormat,
+                 this->ViewportWidth, this->ViewportHeight, 0,
+                 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT,0);
+
+    glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0,
+                             GL_TEXTURE_WIDTH, &depthTexSupport);
+
+    // support for color buffer
+    glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA8,
+                 this->ViewportWidth, this->ViewportHeight, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, 0);
+
+    glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0,
+                             GL_TEXTURE_WIDTH,&colorTexSupport);
+
+    glBindTexture(vtkgl::TEXTURE_RECTANGLE_ARB, 0);
+    glDeleteTextures(1, &proxyQueryTex);
+    }
+
+  if (!(depthTexSupport && colorTexSupport))
+    {
+    // GPU does not support a view sized texture in this format.
+    // Do alpha blending technique instead.
+    vtkWarningMacro(
+        << "The GPU supports "
+        << this->ViewportWidth << "x"
+        << this->ViewportHeight << " texture: depth buffer "
+        << (depthTexSupport?"yes":"no") << ", color buffer "
+        << (colorTexSupport?"yes":"no"));
+
+    this->LastRenderingUsedDepthPeeling = false;
+    vtkgl::ActiveTexture(vtkgl::TEXTURE0);
+    this->TranslucentPass->Render(s);
+    this->NumberOfRenderedProps
+      = this->TranslucentPass->GetNumberOfRenderedProps();
+    return;
+    }
+
+  // Have to be set before a call to UpdateTranslucentPolygonalGeometry()
+  // because UpdateTranslucentPolygonalGeometry() will eventually call
+  // vtkOpenGLActor::Render() that uses this flag.
+  this->LastRenderingUsedDepthPeeling = true;
+  this->SetLastRenderingUsedDepthPeeling(s->GetRenderer(), true);
+
     // 1. Grab the RGBAZ of the opaque layer.
     GLuint opaqueLayerZ=0;
     GLuint opaqueLayerRgba=0;
@@ -226,24 +318,6 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
                     GL_LESS);
 
     // Allocate memory
-    glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,this->DepthFormat,
-                 this->ViewportWidth,this->ViewportHeight,
-                 0,GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0);
-    GLint width;
-    glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,
-                             GL_TEXTURE_WIDTH,&width);
-    if(width==0)
-      {
-      vtkDebugMacro(<<"not enough GPU RAM for opaque z");
-      // not enough GPU RAM. Do alpha blending technique instead
-      glDeleteTextures(1,&opaqueLayerRgba);
-      glDeleteTextures(1,&opaqueLayerZ);
-      this->LastRenderingUsedDepthPeeling=false;
-      vtkgl::ActiveTexture(vtkgl::TEXTURE0 );
-      this->TranslucentPass->Render(s);
-      this->NumberOfRenderedProps=this->TranslucentPass->GetNumberOfRenderedProps();
-      return;
-      }
     glTexImage2D(vtkgl::TEXTURE_RECTANGLE_ARB,0,this->DepthFormat,
                  this->ViewportWidth,this->ViewportHeight, 0,
                  GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0);
@@ -258,33 +332,10 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
     glTexParameteri(vtkgl::TEXTURE_RECTANGLE_ARB,GL_TEXTURE_MAG_FILTER,
                     GL_NEAREST);
     // Allocate memory
-    glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA8,
-                 this->ViewportWidth,this->ViewportHeight,
-                 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);
-    glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,
-                             GL_TEXTURE_WIDTH,&width);
-    if(width==0)
-      {
-      vtkDebugMacro(<<"not enough GPU RAM for opaque rgba");
-      // not enough GPU RAM. Do alpha blending technique instead
-      glDeleteTextures(1,&opaqueLayerRgba);
-      glDeleteTextures(1,&opaqueLayerZ);
-      this->LastRenderingUsedDepthPeeling=false;
-      vtkgl::ActiveTexture(vtkgl::TEXTURE0 );
-      this->TranslucentPass->Render(s);
-      this->NumberOfRenderedProps=this->TranslucentPass->GetNumberOfRenderedProps();
-      return;
-      }
-
-    // Have to be set before a call to UpdateTranslucentPolygonalGeometry()
-    // because UpdateTranslucentPolygonalGeometry() will eventually call
-    // vtkOpenGLActor::Render() that uses this flag.
-    this->LastRenderingUsedDepthPeeling=true;
-    this->SetLastRenderingUsedDepthPeeling(s->GetRenderer(),true);
-
     glTexImage2D(vtkgl::TEXTURE_RECTANGLE_ARB, 0, GL_RGBA8,
                  this->ViewportWidth,this->ViewportHeight, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, 0);
+
     // Grab the rgba-buffer
     glCopyTexSubImage2D(vtkgl::TEXTURE_RECTANGLE_ARB, 0, 0, 0, this->ViewportX,
                         this->ViewportY,this->ViewportWidth,
@@ -348,8 +399,7 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
 
     if(l>1) // some higher layer, we allocated some tex unit in RenderPeel()
       {
-      vtkTextureUnitManager *m=
-        this->Prog->GetContext()->GetTextureUnitManager();
+      vtkTextureUnitManager *m=context->GetTextureUnitManager();
       m->Free(this->ShadowTexUnit);
       m->Free(this->OpaqueShadowTexUnit);
       this->ShadowTexUnit=-1;
@@ -460,18 +510,22 @@ void vtkDepthPeelingPass::Render(const vtkRenderState *s)
     glDeleteTextures(1,&opaqueLayerRgba);
     glDeleteTextures(1,&opaqueLayerZ);
     this->NumberOfRenderedProps=this->TranslucentPass->GetNumberOfRenderedProps();
+
+    vtkOpenGLCheckErrorMacro("failed after Render");
 }
 
 // ----------------------------------------------------------------------------
 void vtkDepthPeelingPass::CheckSupport(vtkOpenGLRenderWindow *w)
 {
   assert("pre: w_exists" && w!=0);
+  vtkOpenGLClearErrorMacro();
+
+  vtkOpenGLExtensionManager *extensions=w->GetExtensionManager();
 
   if(!this->IsChecked || w->GetContextCreationTime()>this->CheckTime)
     {
       this->IsChecked=true;
       this->CheckTime.Modified();
-      vtkOpenGLExtensionManager *extensions=w->GetExtensionManager();
 
       bool supports_GL_1_3=extensions->ExtensionSupported("GL_VERSION_1_3")==1;
       bool supports_GL_1_4=extensions->ExtensionSupported("GL_VERSION_1_4")==1;
@@ -545,6 +599,20 @@ void vtkDepthPeelingPass::CheckSupport(vtkOpenGLRenderWindow *w)
       glGetIntegerv(GL_ALPHA_BITS, &alphaBits);
       bool supportsAtLeast8AlphaBits=alphaBits>=8;
 
+      // force alpha blending
+      // Mesa does not support true linking of shaders (VTK bug 8135)
+      // and Mesa 7.2 just crashes during the try-compile.
+      // os mesa 9.1.4 some tests fail
+      // ATI Radeon HD XXXXX on Windows chokes on PROXY_TEXTURE_RECTANGLE_ARB
+      // memory querries however if those are not used all the tests pass.
+      // ATI Radeon HD on Mac OSX PROXY_TEXTURE_RECTANGLE_ARB are fine but
+      // TestTranslucentLUTDepthPeeling fails. So leave it disabled on Apple
+      int driver_support
+        = (!(extensions->DriverIsATI()
+        && (extensions->GetDriverGLVersionMajor() < 3))
+        && !extensions->DriverIsMesa())
+        || extensions->GetIgnoreDriverBugs("ATI and Mesa depth peeling bugs");
+
       this->IsSupported =
         supports_depth_texture &&
         supports_shadow &&
@@ -557,7 +625,8 @@ void vtkDepthPeelingPass::CheckSupport(vtkOpenGLRenderWindow *w)
         supports_multitexture &&
         supports_GL_ARB_texture_rectangle &&
         supports_edge_clamp &&
-        supportsAtLeast8AlphaBits;
+        supportsAtLeast8AlphaBits &&
+        driver_support;
 
       if(this->IsSupported)
         {
@@ -601,6 +670,31 @@ void vtkDepthPeelingPass::CheckSupport(vtkOpenGLRenderWindow *w)
           }
 
         extensions->LoadExtension("GL_ARB_texture_rectangle");
+
+        // Some OpenGL implementations such as ATI
+        // claim to support both GLSL and GL_ARB_texture_rectangle but
+        // don't actually support sampler2DRectShadow in a GLSL code.
+        // Others (like Mesa) claim to support shaders but don't actually
+        // support true linking of shaders (and declaration of functions).
+        // To test that, we compile the shader, if it fails, we don't use
+        // deph peeling
+        GLuint shader =
+          vtkgl::CreateShader(vtkgl::FRAGMENT_SHADER);
+        vtkgl::ShaderSource(
+          shader, 1,
+          const_cast<const char **>(&vtkDepthPeeling_fs), 0);
+        vtkgl::CompileShader(shader);
+        GLint params;
+        vtkgl::GetShaderiv(shader,vtkgl::COMPILE_STATUS,
+                           &params);
+        this->IsSupported = params==GL_TRUE;
+        vtkgl::DeleteShader(shader);
+        if(!this->IsSupported)
+          {
+          vtkDebugMacro("this OpenGL implementation does not support "
+                        "GL_ARB_texture_rectangle in GLSL code or does"
+                        "not support true linking of shaders.");
+          }
         }
       else
         {
@@ -649,56 +743,13 @@ void vtkDepthPeelingPass::CheckSupport(vtkOpenGLRenderWindow *w)
           {
           vtkDebugMacro(<<"at least 8 alpha bits is not supported");
           }
-        }
-
-      if(this->IsSupported)
-        {
-        // Some OpenGL implementations are buggy so depth peeling does not
-        // work:
-        //  - ATI
-        //  - Mesa git does not support true linking of shaders (VTK bug 8135)
-        //    and Mesa 7.2 just crashes during the try-compile.
-        // Do alpha blending always.
-        const char* gl_renderer =
-          reinterpret_cast<const char *>(glGetString(GL_RENDERER));
-        int isATI = strstr(gl_renderer, "ATI") != 0;
-
-        bool isMesa=strstr(gl_renderer, "Mesa") != 0;
-
-        if(isMesa || isATI)
+        if (!driver_support)
           {
-          this->IsSupported = false;
-          }
-        }
-
-      if(this->IsSupported)
-        {
-        // Some OpenGL implementations such as ATI
-        // claim to support both GLSL and GL_ARB_texture_rectangle but
-        // don't actually support sampler2DRectShadow in a GLSL code.
-        // Others (like Mesa) claim to support shaders but don't actually
-        // support true linking of shaders (and declaration of functions).
-        // To test that, we compile the shader, if it fails, we don't use
-        // deph peeling
-        GLuint shader =
-          vtkgl::CreateShader(vtkgl::FRAGMENT_SHADER);
-        vtkgl::ShaderSource(
-          shader, 1,
-          const_cast<const char **>(&vtkDepthPeeling_fs), 0);
-        vtkgl::CompileShader(shader);
-        GLint params;
-        vtkgl::GetShaderiv(shader,vtkgl::COMPILE_STATUS,
-                           &params);
-        this->IsSupported = params==GL_TRUE;
-        vtkgl::DeleteShader(shader);
-        if(!this->IsSupported)
-          {
-          vtkDebugMacro("this OpenGL implementation does not support "
-                        "GL_ARB_texture_rectangle in GLSL code or does"
-                        "not support true linking of shaders.");
+          vtkDebugMacro(<<"buggy driver (Mesa or ATI)");
           }
         }
     }
+  vtkOpenGLClearErrorMacro();
 }
 
 // ----------------------------------------------------------------------------
@@ -731,6 +782,7 @@ void vtkDepthPeelingPass::CheckCompilation(
       vtkErrorMacro(<<"no log");
       }
     }
+  vtkOpenGLClearErrorMacro();
 }
 
 // ----------------------------------------------------------------------------
@@ -745,6 +797,8 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
 {
   assert("pre: s_exists" && s!=0);
   assert("pre: positive_layer" && layer>=0);
+
+  vtkOpenGLClearErrorMacro();
 
   GLbitfield mask=GL_COLOR_BUFFER_BIT;
   if(layer>0)
@@ -766,9 +820,11 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
     {
     if(layer==1)
       {
-    // allocate texture units.
-      vtkTextureUnitManager *m=
-        this->Prog->GetContext()->GetTextureUnitManager();
+      // allocate texture units.
+      vtkOpenGLRenderWindow *context
+        = vtkOpenGLRenderWindow::SafeDownCast(this->Prog->GetContext());
+
+      vtkTextureUnitManager *m = context->GetTextureUnitManager();
 
       // Avoid using texture unit 0 because the glBindTexture call's
       // below must specify unique active textures. If texture unit 0
@@ -828,7 +884,6 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
     oRenderer->SetShaderProgram(0);
     }
 
-  GLint width;
 //  vtkgl::ActiveTexture(vtkgl::TEXTURE0+this->ShadowTexUnit);
   if(layer==0)
     {
@@ -854,19 +909,8 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
                       vtkgl::TEXTURE_COMPARE_FUNC,
                       GL_GREATER);
 
-      // Allocate memory
-      glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,this->DepthFormat,
-                   this->ViewportWidth,this->ViewportHeight,
-                   0,GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0);
-      glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,
-                               GL_TEXTURE_WIDTH,&width);
-      if(width==0)
-        {
-        // not enough GPU RAM. Use alpha blending technique instead
-        glDeleteTextures(1,&transparentLayerZ);
-        this->TransparentLayerZ=0;
-        return 0;
-        }
+      // Allocate memory. verified that GPU supports
+      // a texture of this size and format above.
       glTexImage2D(vtkgl::TEXTURE_RECTANGLE_ARB,0,this->DepthFormat,
                    this->ViewportWidth,this->ViewportHeight, 0,
                    GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0);
@@ -893,19 +937,8 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
     glTexParameteri(vtkgl::TEXTURE_RECTANGLE_ARB,GL_TEXTURE_MAG_FILTER,
                     GL_NEAREST);
 
-    // Allocate memory
-    glTexImage2D(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA8,
-                 this->ViewportWidth,this->ViewportHeight,
-                 0,GL_RGBA, GL_UNSIGNED_BYTE, 0);
-    glGetTexLevelParameteriv(vtkgl::PROXY_TEXTURE_RECTANGLE_ARB,0,
-                             GL_TEXTURE_WIDTH,&width);
-    if(width==0)
-      {
-      // not enough GPU RAM. Do alpha blending technique instead
-      glDeleteTextures(1,&rgba);
-      return 0;
-      }
-
+    // Allocate memory. verified that GPU supports
+    // a texture of this size and format above.
     glTexImage2D(vtkgl::TEXTURE_RECTANGLE_ARB, 0, GL_RGBA8,
                  this->ViewportWidth,this->ViewportHeight, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, 0);
@@ -915,10 +948,12 @@ int vtkDepthPeelingPass::RenderPeel(const vtkRenderState *s,
                         this->ViewportY,this->ViewportWidth,
                         this->ViewportHeight);
     this->LayerList->List.push_back(rgba);
+    vtkOpenGLCheckErrorMacro("failed after RenderPeel");
     return 1;
     }
   else
     {
+    vtkOpenGLCheckErrorMacro("failed after RenderPeel");
     return 0;
     }
 }

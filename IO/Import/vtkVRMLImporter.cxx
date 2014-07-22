@@ -253,7 +253,7 @@ private:
 // or prototype types.
 //
 
-#include <assert.h>
+#include <cassert>
 
 //
 // Static list of node types.
@@ -564,12 +564,6 @@ struct yyltype
 yyltype;
 
 #define YYLTYPE yyltype
-#endif
-
-#ifndef __cplusplus
-#ifndef __STDC__
-#define const
-#endif
 #endif
 
 #define YYFINAL         128
@@ -903,8 +897,8 @@ while (0)
 
 #ifndef YYPURE
 
-int     yychar;                 /*  the lookahead symbol                */
-YYSTYPE yylval;                 /*  the semantic value of the           */
+static int     yychar;          /*  the lookahead symbol                */
+static YYSTYPE yylval;          /*  the semantic value of the           */
                                 /*  lookahead symbol                    */
 
 #ifdef YYLSP_NEEDED
@@ -912,11 +906,11 @@ YYLTYPE yylloc;                 /*  location data for the lookahead     */
                                 /*  symbol                              */
 #endif
 
-int yynerrs;                    /*  number of parse errors so far       */
+static int yynerrs;             /*  number of parse errors so far       */
 #endif  /* not YYPURE */
 
 #if YYDEBUG != 0
-int yydebug;                    /*  nonzero means print parse trace     */
+static int yydebug;             /*  nonzero means print parse trace     */
 /* Since this is uninitialized, it does not stop multiple parsers
    from coexisting.  */
 #endif
@@ -938,60 +932,26 @@ int yydebug;                    /*  nonzero means print parse trace     */
 #define YYMAXDEPTH 10000
 #endif
 
-/* Prevent warning if -Wstrict-prototypes.  */
-#ifdef __GNUC__
-int yyparse (vtkVRMLImporter*);
-#endif
-
-#if __GNUC__ > 1                /* GNU C and GNU C++ define this.  */
-#define __yy_memcpy(FROM,TO,COUNT)      __builtin_memcpy(TO,FROM,COUNT)
-#else                           /* not GNU C or C++ */
-#ifndef __cplusplus
-
-/* This is the most reliable way to avoid incompatibilities
-   in available built-in functions on various systems.  */
-static void
-__yy_memcpy (from, to, count)
-  char *from;
-char *to;
-int count;
-{
-  register char *f = from;
-  register char *t = to;
-  register int i = count;
-
-  while (i-- > 0)
-    *t++ = *f++;
-}
-
-#else /* __cplusplus */
-
-/* This is the most reliable way to avoid incompatibilities
-   in available built-in functions on various systems.  */
 static void
 __yy_memcpy (char *from, char *to, int count)
 {
-  register char *f = from;
-  register char *t = to;
-  register int i = count;
+  char *f = from;
+  char *t = to;
+  int i = count;
 
   while (i-- > 0)
     *t++ = *f++;
 }
 
-#endif
-#endif
 
-
-
-int
+static int
 yyparse(vtkVRMLImporter* self)
 {
   FakeAlloca yyallocator;
-  register int yystate;
-  register int yyn;
-  register short *yyssp;
-  register YYSTYPE *yyvsp;
+  int yystate;
+  int yyn;
+  short *yyssp;
+  YYSTYPE *yyvsp;
   int yyerrstatus;      /*  number of tokens to shift before error messages enabled */
   int yychar1 = 0;              /*  lookahead token as an internal (translated) token number */
 
@@ -1729,50 +1689,9 @@ expect(int type)
 #include <unistd.h>
 #endif
 
-/* cfront 1.2 defines "c_plusplus" instead of "__cplusplus" */
-#ifdef c_plusplus
-#ifndef __cplusplus
-#define __cplusplus
-#endif
-#endif
-
-
-#ifdef __cplusplus
-
 /* Use prototypes in function declarations. */
 #define YY_USE_PROTOS
-
-/* The "const" storage-class-modifier is valid. */
-#define YY_USE_CONST
-
-#else   /* ! __cplusplus */
-
-#ifdef __STDC__
-
-#define YY_USE_PROTOS
-#define YY_USE_CONST
-
-#endif  /* __STDC__ */
-#endif  /* ! __cplusplus */
-
-
-#ifdef __TURBOC__
-#define YY_USE_CONST
-#endif
-
-
-#ifndef YY_USE_CONST
-#ifndef const
-#define const
-#endif
-#endif
-
-
-#ifdef YY_USE_PROTOS
 #define YY_PROTO(proto) proto
-#else
-#define YY_PROTO(proto) ()
-#endif
 
 /* Returned upon end-of-file. */
 #define YY_NULL 0
@@ -4120,7 +4039,7 @@ char *yytext;
 #include <string.h>
 
 // used to reset the lexer input after initialization of VRML nodes
-void (*theyyInput)(char *, int &, int);
+static void (*theyyInput)(char *, int &, int);
 
 // We define the YY_INPUT so we an change the input source later
 #define YY_INPUT(buf, result, max_size) (*theyyInput)(buf, result, max_size);
@@ -4285,9 +4204,9 @@ void vtkVRMLImporter::DeleteObject(vtkObject* obj)
 
 int yylex ( vtkVRMLImporter* self )
 {
-  register yy_state_type yy_current_state;
-  register char *yy_cp, *yy_bp;
-  register int yy_act;
+  yy_state_type yy_current_state;
+  char *yy_cp, *yy_bp;
+  int yy_act;
 
 
 
@@ -4381,7 +4300,7 @@ int yylex ( vtkVRMLImporter* self )
       yy_match:
     do
       {
-      register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+      YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
       if ( yy_accept[yy_current_state] )
         {
         yy_last_accepting_state = yy_current_state;
@@ -4905,9 +4824,9 @@ int yylex ( vtkVRMLImporter* self )
 
 static int yy_get_next_buffer()
 {
-  register char *dest = yy_current_buffer->yy_ch_buf;
-  register char *source = yytext_ptr - 1; /* copy prev. char, too */
-  register int number_to_move, i;
+  char *dest = yy_current_buffer->yy_ch_buf;
+  char *source = yytext_ptr - 1; /* copy prev. char, too */
+  int number_to_move, i;
   int ret_val;
 
   if ( yy_c_buf_p > &yy_current_buffer->yy_ch_buf[yy_n_chars + 1] )
@@ -5027,14 +4946,14 @@ static int yy_get_next_buffer()
 
 static yy_state_type yy_get_previous_state()
 {
-  register yy_state_type yy_current_state;
-  register char *yy_cp;
+  yy_state_type yy_current_state;
+  char *yy_cp;
 
   yy_current_state = yy_start;
 
   for ( yy_cp = yytext_ptr + YY_MORE_ADJ; yy_cp < yy_c_buf_p; ++yy_cp )
     {
-    register YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
+    YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
     if ( yy_accept[yy_current_state] )
       {
       yy_last_accepting_state = yy_current_state;
@@ -5066,10 +4985,10 @@ static yy_state_type yy_try_NUL_trans( yy_state_type yy_current_state )
   yy_state_type yy_current_state;
 #endif
 {
-  register int yy_is_jam;
-  register char *yy_cp = yy_c_buf_p;
+  int yy_is_jam;
+  char *yy_cp = yy_c_buf_p;
 
-  register YY_CHAR yy_c = 1;
+  YY_CHAR yy_c = 1;
   if ( yy_accept[yy_current_state] )
     {
     yy_last_accepting_state = yy_current_state;
@@ -5268,7 +5187,7 @@ const char *s2;
 int n;
 #endif
 {
-  register int i;
+  int i;
   for ( i = 0; i < n; ++i )
     s1[i] = s2[i];
 }
@@ -5514,6 +5433,11 @@ vtkVRMLImporter::~vtkVRMLImporter()
   delete VrmlNodeType::useList;
   VrmlNodeType::useList = 0;
   vtkVRMLAllocator::CleanUp();
+
+  if (yy_current_buffer)
+    {
+    yy_delete_buffer(yy_current_buffer);
+    }
 }
 
 void vtkVRMLImporter::PrintSelf(ostream& os, vtkIndent indent)

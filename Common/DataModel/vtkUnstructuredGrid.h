@@ -25,7 +25,7 @@
 #define __vtkUnstructuredGrid_h
 
 #include "vtkCommonDataModelModule.h" // For export macro
-#include "vtkPointSet.h"
+#include "vtkUnstructuredGridBase.h"
 
 class vtkCellArray;
 class vtkCellLinks;
@@ -46,6 +46,7 @@ class vtkQuad;
 class vtkQuadraticEdge;
 class vtkQuadraticHexahedron;
 class vtkQuadraticWedge;
+class vtkQuadraticPolygon;
 class vtkQuadraticPyramid;
 class vtkQuadraticQuad;
 class vtkQuadraticTetra;
@@ -68,12 +69,13 @@ class vtkCubicLine;
 class vtkPolyhedron;
 class vtkIdTypeArray;
 
-class VTKCOMMONDATAMODEL_EXPORT vtkUnstructuredGrid : public vtkPointSet
+class VTKCOMMONDATAMODEL_EXPORT vtkUnstructuredGrid :
+    public vtkUnstructuredGridBase
 {
 public:
   static vtkUnstructuredGrid *New();
 
-  vtkTypeMacro(vtkUnstructuredGrid,vtkPointSet);
+  vtkTypeMacro(vtkUnstructuredGrid, vtkUnstructuredGridBase)
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -125,6 +127,7 @@ public:
   virtual void GetCellBounds(vtkIdType cellId, double bounds[6]);
   virtual void GetCellPoints(vtkIdType cellId, vtkIdList *ptIds);
   void GetPointCells(vtkIdType ptId, vtkIdList *cellIds);
+  vtkCellIterator* NewCellIterator();
 
   int GetCellType(vtkIdType cellId);
   vtkUnsignedCharArray* GetCellTypesArray() { return this->Types; }
@@ -331,6 +334,7 @@ protected:
   vtkQuadraticEdge                  *QuadraticEdge;
   vtkQuadraticTriangle              *QuadraticTriangle;
   vtkQuadraticQuad                  *QuadraticQuad;
+  vtkQuadraticPolygon               *QuadraticPolygon;
   vtkQuadraticTetra                 *QuadraticTetra;
   vtkQuadraticHexahedron            *QuadraticHexahedron;
   vtkQuadraticWedge                 *QuadraticWedge;

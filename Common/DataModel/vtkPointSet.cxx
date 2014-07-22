@@ -20,6 +20,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkPointLocator.h"
+#include "vtkPointSetCellIterator.h"
 
 #include "vtkSmartPointer.h"
 #define VTK_CREATE(type, name) \
@@ -93,12 +94,15 @@ void vtkPointSet::ComputeBounds()
 
   if ( this->Points )
     {
-    bounds = this->Points->GetBounds();
-    for (int i=0; i<6; i++)
+    if ( this->GetMTime() >= this->ComputeTime )
       {
-      this->Bounds[i] = bounds[i];
+      bounds = this->Points->GetBounds();
+      for (int i=0; i<6; i++)
+        {
+        this->Bounds[i] = bounds[i];
+        }
+      this->ComputeTime.Modified();
       }
-    this->ComputeTime.Modified();
     }
 }
 
@@ -319,6 +323,14 @@ vtkIdType vtkPointSet::FindCell(double x[3], vtkCell *cell,
 
   // Could not find the cell.
   return -1;
+}
+
+//----------------------------------------------------------------------------
+vtkCellIterator *vtkPointSet::NewCellIterator()
+{
+  vtkPointSetCellIterator *iter = vtkPointSetCellIterator::New();
+  iter->SetPointSet(this);
+  return iter;
 }
 
 //----------------------------------------------------------------------------

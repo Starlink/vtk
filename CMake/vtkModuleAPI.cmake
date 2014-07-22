@@ -1,15 +1,22 @@
-
-
 #-----------------------------------------------------------------------------
 # Private helper macros.
 
+# _vtk_module_config_recurse(<namespace> <module>)
+#
+# Internal macro to recursively load module information into the supplied
+# namespace, this is called from vtk_module_config. It should be noted that
+# _${ns}_${mod}_USED must be cleared if this macro is to work correctly on
+# subsequent invocations. The macro will load the module files using the
+# vtk_module_load, making all of its variables available in the local scope.
 macro(_vtk_module_config_recurse ns mod)
-  if(NOT _${ns}_${dep}_USED)
+  if(NOT _${ns}_${mod}_USED)
     set(_${ns}_${mod}_USED 1)
+    list(APPEND _${ns}_USED_MODULES ${mod})
     vtk_module_load("${mod}")
     list(APPEND ${ns}_LIBRARIES ${${mod}_LIBRARIES})
     list(APPEND ${ns}_INCLUDE_DIRS ${${mod}_INCLUDE_DIRS})
     list(APPEND ${ns}_LIBRARY_DIRS ${${mod}_LIBRARY_DIRS})
+    list(APPEND ${ns}_RUNTIME_LIBRARY_DIRS ${${mod}_RUNTIME_LIBRARY_DIRS})
     foreach(iface IN LISTS ${mod}_IMPLEMENTS)
       list(APPEND _${ns}_AUTOINIT_${iface} ${mod})
       list(APPEND _${ns}_AUTOINIT ${iface})
@@ -25,16 +32,18 @@ endmacro()
 
 # vtk_module_load(<module>)
 #
-# Loads variables describing the given module:
+# Loads variables describing the given module, these include custom variables
+# set by the module along with the standard ones listed below:
 #  <module>_LOADED         = True if the module has been loaded
 #  <module>_DEPENDS        = List of dependencies on other modules
 #  <module>_LIBRARIES      = Libraries to link
 #  <module>_INCLUDE_DIRS   = Header search path
 #  <module>_LIBRARY_DIRS   = Library search path (for outside dependencies)
+#  <module>_RUNTIME_LIBRARY_DIRS = Runtime linker search path
 macro(vtk_module_load mod)
   if(NOT ${mod}_LOADED)
     include("${VTK_MODULES_DIR}/${mod}.cmake" OPTIONAL RESULT_VARIABLE _found)
-    if (NOT _found)
+    if(NOT _found)
       # When building applications outside VTK, they can provide extra module
       # config files by simply adding the corresponding locations to the
       # CMAKE_MODULE_PATH
@@ -59,9 +68,10 @@ endmacro()
 
 # vtk_module_headers_load(<module>)
 #
-# Loads variables describing the given module:
-#  <module>_HEADERS_LOADED       = True if the module header info has been loaded
-#  <module>_HEADERS              = List of headers
+# Loads variables describing the headers/API of the given module, this is not
+# loaded by vtk_module_config, and is mainly useful for wrapping generation:
+#  <module>_HEADERS_LOADED      = True if the module header info has been loaded
+#  <module>_HEADERS             = List of headers
 #  <module>_HEADER_<header>_EXISTS
 #  <module>_HEADER_<header>_ABSTRACT
 #  <module>_HEADER_<header>_WRAP_EXCLUDE
@@ -70,7 +80,7 @@ macro(vtk_module_headers_load mod)
   if(NOT ${mod}_HEADERS_LOADED)
     include("${VTK_MODULES_DIR}/${mod}-Headers.cmake"
       OPTIONAL RESULT_VARIABLE _found)
-    if (NOT _found)
+    if(NOT _found)
       # When building applications outside VTK, they can provide extra module
       # config files by simply adding the corresponding locations to the
       # CMAKE_MODULE_PATH
@@ -89,6 +99,13 @@ endmacro()
 #  <namespace>_LIBRARIES    = Libraries to link
 #  <namespace>_INCLUDE_DIRS = Header search path
 #  <namespace>_LIBRARY_DIRS = Library search path (for outside dependencies)
+#  <namespace>_RUNTIME_LIBRARY_DIRS = Runtime linker search path
+#
+# Calling this macro also recursively calls vtk_module_load for all modules
+# explicitly named, and their dependencies, making them available in the local
+# scope. This means that module level information can be accessed once this
+# macro has been called.
+#
 # Do not name a module as the namespace.
 macro(vtk_module_config ns)
   set(_${ns}_MISSING ${ARGN})
@@ -107,12 +124,20 @@ macro(vtk_module_config ns)
   set(${ns}_LIBRARIES "")
   set(${ns}_INCLUDE_DIRS "")
   set(${ns}_LIBRARY_DIRS "")
+  set(${ns}_RUNTIME_LIBRARY_DIRS "")
   set(_${ns}_AUTOINIT "")
+
+  set(_${ns}_USED_MODULES "")
   foreach(mod ${ARGN})
     _vtk_module_config_recurse("${ns}" "${mod}")
   endforeach()
+  foreach(mod ${_${ns}_USED_MODULES})
+    unset(_${ns}_${mod}_USED)
+  endforeach()
+  unset(_${ns}_USED_MODULES)
+
   foreach(v ${ns}_LIBRARIES ${ns}_INCLUDE_DIRS ${ns}_LIBRARY_DIRS
-           _${ns}_AUTOINIT)
+            ${ns}_RUNTIME_LIBRARY_DIRS _${ns}_AUTOINIT)
     if(${v})
       list(REMOVE_DUPLICATES ${v})
     endif()
@@ -144,7 +169,9 @@ macro(vtk_module_config ns)
   unset(_${ns}_AUTOINIT)
 endmacro()
 
-# Call to add a single directory to the module search path
+# vtk_add_to_module_search_path(<source> <build>)
+#
+# Call to add a single module to the module search path.
 macro(vtk_add_to_module_search_path src bld)
   list(APPEND vtk_module_search_path "${src},${bld}")
 endmacro()

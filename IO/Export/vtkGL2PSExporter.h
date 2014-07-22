@@ -85,6 +85,7 @@ class vtkCollection;
 class vtkCoordinate;
 class vtkImageData;
 class vtkIntArray;
+class vtkLabeledDataMapper;
 class vtkMatrix4x4;
 class vtkPath;
 class vtkProp;
@@ -92,6 +93,7 @@ class vtkPropCollection;
 class vtkProp3DCollection;
 class vtkRenderer;
 class vtkRendererCollection;
+class vtkScalarBarActor;
 class vtkTextActor;
 class vtkTextActor3D;
 class vtkTextMapper;
@@ -127,6 +129,18 @@ public:
       SVG_FILE
   };
 //ETX
+
+  // Description:
+  // Configure the exporter to expect a painter-ordered 2D rendering, that is,
+  // a rendering at a fixed depth where primitives are drawn from the bottom up.
+  // This disables sorting, which will break the painter ordering, and turns off
+  // the simple line offset, which can cause line primitives to be drawn on top
+  // of all other geometry.
+  void UsePainterSettings()
+  {
+    this->SetSortToOff();
+    this->SetSimpleLineOffset(0);
+  }
 
   // Description:
   // Specify the format of file to write out.  This can be one of:
@@ -310,6 +324,8 @@ protected:
   void DrawTextActor3D(vtkTextActor3D *textAct, vtkRenderer *ren);
   void DrawTextMapper(vtkTextMapper *textMap, vtkActor2D *textAct,
                       vtkRenderer *ren);
+  void DrawLabeledDataMapper(vtkLabeledDataMapper *mapper, vtkRenderer *ren);
+  void DrawScalarBarActor(vtkScalarBarActor *bar, vtkRenderer *ren);
   void DrawViewportTextOverlay(const char *string, vtkTextProperty *tprop,
                                vtkCoordinate *coord, vtkRenderer *ren);
 

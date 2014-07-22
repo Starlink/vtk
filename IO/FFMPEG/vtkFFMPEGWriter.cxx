@@ -170,7 +170,11 @@ int vtkFFMPEGWriterInternal::Start()
 
   //Set up the codec.
   AVCodecContext *c = this->avStream->codec;
-  c->codec_id = (CodecID)this->avOutputFormat->video_codec;
+#ifdef VTK_FFMPEG_AVCODECID
+  c->codec_id = static_cast<AVCodecID>(this->avOutputFormat->video_codec);
+#else
+  c->codec_id = static_cast<CodecID>(this->avOutputFormat->video_codec);
+#endif
 #ifdef VTK_FFMPEG_HAS_OLD_HEADER
   c->codec_type = CODEC_TYPE_VIDEO;
 #else
@@ -368,12 +372,12 @@ int vtkFFMPEGWriterInternal::Write(vtkImageData *id)
     }
 #endif
 
-#if LIBAVFORMAT_VERSION_MAJOR >= 54
-  AVPacket pkt = { 0 };
-  int got_frame;
-#endif
-
   //run the encoder
+  AVPacket pkt;
+  av_init_packet(&pkt);
+  pkt.data = NULL;
+  pkt.size = 0;
+
 #if LIBAVFORMAT_VERSION_MAJOR < 54
   int toAdd = avcodec_encode_video(cc,
                                    this->codecBuf,
@@ -381,9 +385,6 @@ int vtkFFMPEGWriterInternal::Write(vtkImageData *id)
                                    this->yuvOutput);
   if (toAdd)
     {
-    AVPacket pkt;
-    av_init_packet(&pkt);
-
     //to do playback at actual recorded rate, this will need more work
     pkt.pts = cc->coded_frame->pts;
     //pkt.dts = ?; not dure what decompression time stamp should be
@@ -410,6 +411,7 @@ int vtkFFMPEGWriterInternal::Write(vtkImageData *id)
     }
 
 #else
+  int got_frame;
   int ret = avcodec_encode_video2(cc,
                                   &pkt,
                                   this->yuvOutput,
@@ -463,9 +465,7 @@ void vtkFFMPEGWriterInternal::End()
     if (this->openedFile)
       {
       av_write_trailer(this->avFormatContext);
-#if VTK_FFMPEG_OLD_URL_FCLOSE
-      url_fclose(&this->avFormatContext->pb);
-#elif LIBAVFORMAT_VERSION_MAJOR < 54
+#if LIBAVFORMAT_VERSION_MAJOR < 54
       url_fclose(this->avFormatContext->pb);
 #else
       avio_close(this->avFormatContext->pb);

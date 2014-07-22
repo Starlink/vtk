@@ -115,9 +115,16 @@ public:
   vtkGetMacro(SingleVertexPerCell,int);
   vtkBooleanMacro(SingleVertexPerCell,int);
 
+  // Description:
+  // Set/get the desired precision for the output types. See the documentation
+  // for the vtkAlgorithm::DesiredOutputPrecision enum for an explanation of
+  // the available precision settings.
+  vtkSetMacro(OutputPointsPrecision,int);
+  vtkGetMacro(OutputPointsPrecision,int);
+
 protected:
   vtkMaskPoints();
-  ~vtkMaskPoints() {};
+  ~vtkMaskPoints() {}
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **,
                           vtkInformationVector *);
@@ -131,12 +138,13 @@ protected:
   int SingleVertexPerCell;
   int RandomModeType; // choose the random sampling mode
   int ProportionalMaximumNumberOfPoints;
+  int OutputPointsPrecision;
 
-  virtual void InternalScatter(unsigned long*, unsigned long *, int, int) {};
-  virtual void InternalGather(unsigned long*, unsigned long*, int, int) {};
+  virtual void InternalScatter(unsigned long*, unsigned long *, int, int) {}
+  virtual void InternalGather(unsigned long*, unsigned long*, int, int) {}
   virtual int InternalGetNumberOfProcesses() { return 1; };
   virtual int InternalGetLocalProcessId() { return 0; };
-  virtual void InternalBarrier() {};
+  virtual void InternalBarrier() {}
   unsigned long GetLocalSampleSize(vtkIdType, int);
 
 private:

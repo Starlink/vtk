@@ -1,5 +1,4 @@
-find_package(MPI REQUIRED)
-mark_as_advanced(MPI_LIBRARY MPI_EXTRA_LIBRARY)
+include(vtkMPI)
 set(vtkParallelMPI_SYSTEM_INCLUDE_DIRS ${MPI_C_INCLUDE_PATH})
 
 include(vtkTestingMPISupport)
@@ -8,6 +7,7 @@ include(vtkTestingMacros)
 set(Module_SRCS
   vtkMPICommunicator.cxx
   vtkMPIController.cxx
+  vtkMPIUtilities.cxx
   # vtkMPIEventLog.cxx # Deprecated
   vtkMPI.h
   )
@@ -19,6 +19,7 @@ set_source_files_properties(
 
 set_source_files_properties(
   vtkMPI
+  vtkMPIUtilities
   WRAP_EXCLUDE
   )
 
@@ -29,7 +30,4 @@ add_definitions("-DMPICH_IGNORE_CXX_SEEK")
 set(${vtk-module}_EXPORT_CODE "#define VTK_USE_MPI")
 
 vtk_module_library(vtkParallelMPI ${Module_SRCS})
-target_link_libraries(vtkParallelMPI ${MPI_C_LIBRARIES})
-if (MPI_CXX_LIBRARIES)
-  target_link_libraries(vtkParallelMPI ${MPI_CXX_LIBRARIES})
-endif()
+vtk_mpi_link(vtkParallelMPI)

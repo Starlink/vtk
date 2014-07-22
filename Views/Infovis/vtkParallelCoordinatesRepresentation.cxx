@@ -78,6 +78,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkUnsignedIntArray.h"
 #include "vtkViewTheme.h"
 
+#include <algorithm>
 #include <vector>
 #include <vtksys/ios/sstream>
 
@@ -281,26 +282,13 @@ vtkParallelCoordinatesRepresentation::vtkParallelCoordinatesRepresentation()
 //------------------------------------------------------------------------------
 vtkParallelCoordinatesRepresentation::~vtkParallelCoordinatesRepresentation()
 {
-  if (I)
-    delete I;
-
-  if (this->Maxs)
-    delete [] this->Maxs;
-
-  if (this->Mins)
-    delete [] this->Mins;
-
-  if (this->MaxOffsets)
-    delete [] this->MaxOffsets;
-
-  if (this->MinOffsets)
-    delete [] this->MinOffsets;
-
-  if (this->Axes)
-    delete [] this->Axes;
-
-  if (this->Xs)
-    delete [] this->Xs;
+  delete I;
+  delete [] this->Maxs;
+  delete [] this->Mins;
+  delete [] this->MaxOffsets;
+  delete [] this->MinOffsets;
+  delete [] this->Axes;
+  delete [] this->Xs;
 
   this->SetInternalHoverText(0);
 }
@@ -860,12 +848,12 @@ int vtkParallelCoordinatesRepresentation::UpdatePlotProperties(vtkStringArray* i
 // Clear out all of the arrays and intialize them to defaults where appropriate.
 int vtkParallelCoordinatesRepresentation::ReallocateInternals()
 {
-  if (this->Maxs) delete [] this->Maxs;
-  if (this->Mins) delete [] this->Mins;
-  if (this->MaxOffsets) delete [] this->MaxOffsets;
-  if (this->MinOffsets) delete [] this->MinOffsets;
-  if (this->Axes)  delete [] this->Axes;
-  if (this->Xs) delete [] this->Xs;
+  delete [] this->Maxs;
+  delete [] this->Mins;
+  delete [] this->MaxOffsets;
+  delete [] this->MinOffsets;
+  delete [] this->Axes;
+  delete [] this->Xs;
 
   this->Maxs = new double[this->NumberOfAxes];
   this->Mins = new double[this->NumberOfAxes];
@@ -1239,6 +1227,7 @@ int vtkParallelCoordinatesRepresentation::PlaceCurves(vtkPolyData* polyData,
           this->Maxs[position] + this->MaxOffsets[position],
           points));
       }
+    iter->Delete();
     }
 
   // make a s-curve from (0,0) to (1,1) with the right number of segments.

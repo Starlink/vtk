@@ -1,34 +1,26 @@
-set(testswithdata)
-if (VTK_DATA_ROOT)
-  set(testswithdata
-    TestMultiBlock.cxx
+vtk_add_test_cxx(
+  TestArcSource.cxx,NO_VALID
+  TestConeSource.cxx,NO_VALID
+  TestCubeSource.cxx,NO_VALID
+  TestCylinderSource.cxx,NO_VALID
+  TestDiskSource.cxx,NO_VALID
+  TestEllipticalButtonSource.cxx,NO_VALID
+  TestFrustumSource.cxx,NO_VALID
+  TestGlyphSource2D.cxx,NO_VALID
+  TestLineSource.cxx,NO_VALID
+  TestMultiBlock.cxx
+  TestOutlineCornerSource.cxx,NO_VALID
+  TestOutlineSource.cxx,NO_VALID
+  TestParametricFunctionSource.cxx,NO_VALID
+  TestPlaneSource.cxx,NO_VALID
+  TestPlatonicSolidSource.cxx,NO_VALID
+  TestPointSource.cxx,NO_VALID
+  TestRectangularButtonSource.cxx,NO_VALID
+  TestRegularPolygonSource.cxx,NO_VALID
+  TestSphereSource.cxx,NO_VALID
+  TestSuperquadricSource.cxx,NO_VALID
+  TestTessellatedBoxSource.cxx,NO_VALID
+  TestTextSource.cxx,NO_VALID
+  TestTexturedSphereSource.cxx,NO_VALID
   )
-endif()
-
-create_test_sourcelist(Tests ${vtk-module}CxxTests.cxx
-  TestLineSource.cxx
-  TestTessellatedBoxSource.cxx
-  ${testswithdata}
-
-  EXTRA_INCLUDE vtkTestDriver.h
-)
-
-vtk_module_test_executable(${vtk-module}CxxTests ${Tests})
-
-set(TestsToRun ${Tests})
-list(REMOVE_ITEM TestsToRun ${vtk-module}CxxTests.cxx)
-
-# Add all the executables
-foreach(test ${TestsToRun})
-  get_filename_component(TName ${test} NAME_WE)
-  if(VTK_DATA_ROOT)
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName}
-        -D ${VTK_DATA_ROOT}
-        -T ${VTK_TEST_OUTPUT_DIR}
-        -V Baseline/Graphics/${TName}.png)
-  else()
-    add_test(NAME ${vtk-module}Cxx-${TName}
-      COMMAND ${vtk-module}CxxTests ${TName})
-  endif()
-endforeach()
+vtk_test_cxx_executable(${vtk-module}CxxTests)

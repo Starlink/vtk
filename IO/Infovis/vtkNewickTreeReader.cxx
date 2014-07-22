@@ -43,7 +43,7 @@ vtkNewickTreeReader::vtkNewickTreeReader()
 {
   vtkTree *output = vtkTree::New();
   this->SetOutput(output);
-  // Releasing data for pipeline parallism.
+  // Releasing data for pipeline parallelism.
   // Filters will know it is empty.
   output->ReleaseData();
   output->Delete();
@@ -95,7 +95,7 @@ int vtkNewickTreeReader::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-int vtkNewickTreeReader:: ReadNewickTree(  char * const buffer, vtkTree & tree)
+int vtkNewickTreeReader:: ReadNewickTree(  const char *  buffer, vtkTree & tree)
 {
   // Read through the input file to count the number of nodes in the tree.
   // We start at one to account for the root node
@@ -116,12 +116,11 @@ int vtkNewickTreeReader:: ReadNewickTree(  char * const buffer, vtkTree & tree)
   names->SetName("node name");
   names->SetNumberOfValues(numNodes);
 
-  //parse the input file to create the graph
+  // parse the input file to create the graph
   vtkNew<vtkMutableDirectedGraph> builder;
-  this->BuildTree(buffer, builder.GetPointer(), weights.GetPointer(),
+  this->BuildTree(const_cast<char*> (buffer), builder.GetPointer(), weights.GetPointer(),
     names.GetPointer(), -1);
 
-  builder->GetEdgeData()->AddArray(weights.GetPointer());
   builder->GetVertexData()->AddArray(names.GetPointer());
 
   if (!tree.CheckedShallowCopy(builder.GetPointer()))
@@ -130,17 +129,27 @@ int vtkNewickTreeReader:: ReadNewickTree(  char * const buffer, vtkTree & tree)
     return 1;
     }
 
+  // check if our input file contained edge weight information
+  bool haveWeights = false;
+  for (vtkIdType i = 0; i < weights->GetNumberOfTuples(); ++i)
+    {
+    if (weights->GetValue(i) != 0.0)
+      {
+      haveWeights = true;
+      break;
+      }
+    }
+  if (!haveWeights)
+    {
+    return 1;
+    }
+
+  tree.GetEdgeData()->AddArray(weights.GetPointer());
+
   vtkNew<vtkDoubleArray> nodeWeights;
   nodeWeights->SetNumberOfTuples(tree.GetNumberOfVertices());
 
-  // trueWeights is (for the most part) a duplicate of nodeWeights.
-  // The only difference is that leaf nodes aren't clamped to the max
-  // weight in this array.
-  vtkNew<vtkDoubleArray> trueWeights;
-  trueWeights->SetNumberOfTuples(tree.GetNumberOfVertices());
-
   //set node weights
-  double maxWeight = 0.0;
   vtkNew<vtkTreeDFSIterator> treeIterator;
   treeIterator->SetStartVertex(tree.GetRoot());
   treeIterator->SetTree(&tree);
@@ -154,31 +163,15 @@ int vtkNewickTreeReader:: ReadNewickTree(  char * const buffer, vtkTree & tree)
       weight = weights->GetValue(tree.GetEdgeId(parent, vertex));
       weight += nodeWeights->GetValue(parent);
       }
-
-    if (weight > maxWeight)
-      {
-      maxWeight = weight;
-      }
     nodeWeights->SetValue(vertex, weight);
-    trueWeights->SetValue(vertex, weight);
     }
 
-  for (vtkIdType vertex = 0; vertex < tree.GetNumberOfVertices(); ++vertex)
-    {
-    if (tree.IsLeaf(vertex))
-      {
-      nodeWeights->SetValue(vertex, maxWeight);
-      }
-    }
   nodeWeights->SetName("node weight");
   tree.GetVertexData()->AddArray(nodeWeights.GetPointer());
 
-  trueWeights->SetName("true node weight");
-  tree.GetVertexData()->AddArray(trueWeights.GetPointer());
-
   return 1;
-
 }
+
 //----------------------------------------------------------------------------
 int vtkNewickTreeReader::RequestData(
   vtkInformation *,
@@ -195,47 +188,47 @@ int vtkNewickTreeReader::RequestData(
 
   vtkDebugMacro(<<"Reading Newick tree ...");
 
-  if(this->GetFileName() == NULL || strcmp(this->GetFileName(), "") == 0)
+  if( !this->ReadFromInputString)
     {
-    vtkErrorMacro(<<"Input filename not set");
-    return 1;
-    }
+    if(!this->GetFileName())
+      {
+      vtkErrorMacro("FileName not set.");
+      return 1;
+      }
 
-  std::ifstream ifs( this->GetFileName(), std::ifstream::in );
-  if(!ifs.good())
+    std::ifstream ifs( this->GetFileName(), std::ifstream::in );
+    if(!ifs.good())
+      {
+      vtkErrorMacro(<<"Unable to open " << this->GetFileName() << " for reading");
+      return 1;
+      }
+
+    // Read the input file into a char *
+    ifs.seekg(0, std::ios::end);
+    this->InputStringLength = ifs.tellg();
+    ifs.seekg(0, std::ios::beg);
+    this->InputString = new char[this->InputStringLength];
+    ifs.read(this->InputString, this->InputStringLength);
+    ifs.close();
+    }
+  else
     {
-    vtkErrorMacro(<<"Unable to open " << this->GetFileName() << " for reading");
-    return 1;
+    if ( (!this->InputString) || (this->InputStringLength == 0))
+      {
+      vtkErrorMacro(<<"Input string is empty!");
+      return 1;
+      }
     }
 
   vtkTree* const output = vtkTree::SafeDownCast(
     outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
 
-
-  // Read the input file into a char *
-  int length;
-  ifs.seekg(0, std::ios::end);
-  length = ifs.tellg();
-  ifs.seekg(0, std::ios::beg);
-  char *buffer = new char[length];
-  ifs.read(buffer, length);
-
-
-  /*// Rewind input buffer
-  ifs.seekg(0, std::ios::beg);
-  ifs.read(buffer, length);
-  ifs.close();
-*/
-  ifs.close();
-
-  if(!ReadNewickTree(buffer, *output))
+  if(!ReadNewickTree(this->InputString, *output))
     {
-    vtkErrorMacro(<<"Error reading the buffer into a vtkTree structure.");
+    vtkErrorMacro(<<"Error reading a vtkTree from the input.");
     return 1;
     }
-
-    delete [] buffer;
 
   vtkDebugMacro(<< "Read " << output->GetNumberOfVertices() <<" vertices and "
     << output->GetNumberOfEdges() <<" edges.\n");
@@ -243,20 +236,21 @@ int vtkNewickTreeReader::RequestData(
   return 1;
 }
 
-void vtkNewickTreeReader::CountNodes(char * const buffer, vtkIdType *numNodes)
+//----------------------------------------------------------------------------
+void vtkNewickTreeReader::CountNodes(const char *buffer, vtkIdType *numNodes)
 {
   char *current;
   char *start;
   char temp;
   int childCount;
 
-  start = buffer;
+  start = const_cast<char*>(buffer);
 
   if (*start != '(')
   {
     // Leaf node. Separate name from weight.
     // If weight doesn't exist then take care of name only
-    current = buffer;
+    current = const_cast<char*>(buffer);
     while (*current != '\0')
     {
       current++;
@@ -366,6 +360,7 @@ void vtkNewickTreeReader::CountNodes(char * const buffer, vtkIdType *numNodes)
   }
 }
 
+//----------------------------------------------------------------------------
 vtkIdType vtkNewickTreeReader::BuildTree(char *buffer,
   vtkMutableDirectedGraph *g, vtkDoubleArray *weights, vtkStringArray *names,
   vtkIdType parent)
@@ -378,12 +373,6 @@ vtkIdType vtkNewickTreeReader::BuildTree(char *buffer,
   vtkIdType node;
 
   start = buffer;
-
-  if(parent == -1)
-    {
-    parent = g->AddVertex();
-    names->SetValue(parent, "");
-    }
 
   if (*start != '(')
   {
@@ -419,7 +408,15 @@ vtkIdType vtkNewickTreeReader::BuildTree(char *buffer,
   else
   {
     // Create node
-    node = g->AddChild(parent);
+    if(parent == -1)
+      {
+      node = g->AddVertex();
+      names->SetValue(node, "");
+      }
+    else
+      {
+      node = g->AddChild(parent);
+      }
 
     // Search for all child nodes
     // Find all ',' until corresponding ')' is encountered
@@ -548,4 +545,10 @@ int vtkNewickTreeReader::FillOutputPortInformation(int, vtkInformation* info)
 void vtkNewickTreeReader::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+  os << indent << "FileName: "
+     << (this->FileName ? this->FileName : "(none)") << endl;
+  os << indent << "InputString: "
+     << (this->InputString ? this->InputString : "(none)") << endl;
+  os << indent << "ReadFromInputString: "
+     << (this->ReadFromInputString ? "on" : "off") << endl;
 }

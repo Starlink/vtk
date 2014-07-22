@@ -2,18 +2,14 @@ cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
 PROJECT (DataManipulation)
 
-if(NOT VTK_BINARY_DIR)
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkCommonDataModel
-    vtkFiltersCore
-    vtkFiltersGeometry
-    vtkRenderingCore
-    vtkRenderingOpenGL
-    vtkInteractionStyle
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkCommonDataModel
+  vtkFiltersGeometry
+  vtkInteractionStyle
+  vtkRenderingOpenGL
 )
 include(${VTK_USE_FILE})
-endif()
 
 add_executable(Arrays MACOSX_BUNDLE Arrays.cxx)
 add_executable(Cube MACOSX_BUNDLE Cube.cxx)

@@ -31,15 +31,11 @@ public:
   octree_path( octree_pointer otree );
   octree_path( octree_node_pointer oroot );
   octree_path( octree_node_pointer oroot, std::vector<int>& children );
-  virtual ~octree_path();
 
   octree_node_reference operator * () const { return *_M_current_node; }
   octree_node_pointer operator -> () const { return &(operator*()); }
 
   size_type level() const { return this->_M_parents.size(); }
-
-  self_path& operator = ( const path& it );
-  self_path& operator = ( const const_path& src );
 
   bool operator == ( const path& it ) { return _M_root == it._M_root && _M_current_node == it._M_current_node; }
   bool operator == ( const const_path& it ) { return _M_root == it._M_root && _M_current_node == it._M_current_node; }

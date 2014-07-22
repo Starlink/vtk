@@ -4,9 +4,12 @@ vtk_module(vtkIOXML
   DEPENDS
     vtkIOXMLParser
     vtkIOGeometry
+  PRIVATE_DEPENDS
+    vtksys
   TEST_DEPENDS
     vtkFiltersAMR
     vtkFiltersCore
+    vtkFiltersHyperTree
     vtkFiltersSources
     vtkImagingSources
     vtkInfovisCore

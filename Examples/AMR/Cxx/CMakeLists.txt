@@ -3,27 +3,22 @@ cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 PROJECT (AMR)
 
 if(NOT VTK_SOURCE_DIR)
-  message(ERROR "Cannot build AMR examples without VTK_SOURCE_DIR")
+  message(ERROR " Cannot build AMR examples without VTK_SOURCE_DIR")
 endif()
 
-if(NOT VTK_BINARY_DIR)
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkCommonDataModel
-    vtkCommonExecutionModel
-    vtkFiltersAMR
-    vtkFiltersCore
-    vtkFiltersExtraction
-    vtkFiltersGeneral
-    vtkFiltersGeometry
-    vtkFiltersSources
-    vtkIOXML
-    vtkRenderingCore
-    vtkRenderingOpenGL
-    vtkTestingCore
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkFiltersAMR
+  vtkFiltersExtraction
+  vtkFiltersGeometry
+  vtkFiltersSources
+  vtkIOLegacy
+  vtkIOXML
+  vtkInteractionStyle
+  vtkRenderingOpenGL
+  vtkTestingCore
 )
 include(${VTK_USE_FILE})
-endif()
 
 include_directories(
   ${VTK_SOURCE_DIR}/Testing/Core

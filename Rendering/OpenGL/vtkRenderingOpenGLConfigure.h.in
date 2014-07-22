@@ -29,7 +29,6 @@
 #cmakedefine VTK_OPENGL_HAS_OSMESA
 #cmakedefine VTK_USE_OFFSCREEN
 
-#cmakedefine VTK_USE_CG_SHADERS
 #cmakedefine VTK_USE_GLSL_SHADERS
 
 #cmakedefine VTK_MATERIALS_DIRS
@@ -37,9 +36,6 @@
 #  undef VTK_MATERIALS_DIRS
 #  define VTK_MATERIALS_DIRS "@VTK_MATERIALS_DIRS@"
 #endif
-
-/* Should VTK use the display?  */
-#cmakedefine VTK_USE_DISPLAY
 
 /* Options for GPUInfo */
 #cmakedefine VTK_USE_DIRECTX

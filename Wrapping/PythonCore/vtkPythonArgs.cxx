@@ -220,7 +220,7 @@ inline bool vtkPythonGetStdStringValue(PyObject *o, std::string &a, const char *
 //--------------------------------------------------------------------
 // Overloaded methods, mostly based on the above templates
 
-bool vtkPythonGetValue(PyObject *o, const void *&a)
+static bool vtkPythonGetValue(PyObject *o, const void *&a)
 {
   PyBufferProcs *b = o->ob_type->tp_as_buffer;
   if (b && b->bf_getreadbuffer && b->bf_getsegcount)
@@ -269,7 +269,7 @@ bool vtkPythonGetValue(PyObject *o, void *&a)
 {
   // should have an alternate form for non-const "void *" that uses
   // writebuffer instead of readbuffer, but that would break existing code
-  const void *b;
+  const void *b = NULL;
   bool r = vtkPythonGetValue(o, b);
   a = const_cast<void *>(b);
   return r;
@@ -1354,4 +1354,20 @@ bool vtkPythonSequenceError(PyObject *o, Py_ssize_t n, Py_ssize_t m)
     }
   PyErr_SetString(PyExc_TypeError, text);
   return false;
+}
+
+//--------------------------------------------------------------------
+// Checking size of array arg.
+int vtkPythonArgs::GetArgSize(int i)
+{
+  int size = 0;
+  if (this->M + i < this->N)
+    {
+    PyObject *o = PyTuple_GET_ITEM(this->Args, this->M + i);
+    if (PySequence_Check(o))
+      {
+      size = static_cast<int>(PySequence_Size(o));
+      }
+    }
+  return size;
 }

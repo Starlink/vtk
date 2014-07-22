@@ -26,6 +26,56 @@ set(vtkCommonCore_EXPORT_OPTIONS
   VTK_ALL_NEW_OBJECT_FACTORY
   )
 
+# Choose which multi-threaded parallelism library to use
+set(VTK_SMP_IMPLEMENTATION_TYPE "Sequential" CACHE STRING
+  "Which multi-threaded parallelism implementation to use. Options are Sequential, Simple, Kaapi or TBB"
+)
+set_property(CACHE VTK_SMP_IMPLEMENTATION_TYPE PROPERTY STRINGS Sequential Simple Kaapi TBB)
+
+if( NOT ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi" OR
+         "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "TBB" OR
+         "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Simple") )
+  set(VTK_SMP_IMPLEMENTATION_TYPE "Sequential")
+endif()
+
+if ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "TBB")
+  find_package(TBB REQUIRED)
+  set(VTK_SMP_IMPLEMENTATION_LIBRARIES ${TBB_LIBRARY})
+  set(VTK_SMP_ATOMIC_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SMP/TBB")
+  include_directories(${TBB_INCLUDE_DIRS})
+  # This needs to be here because all modules that include vtkAtomic.h
+  # need to include tbb/atomic.h
+  list(APPEND vtkCommonCore_SYSTEM_INCLUDE_DIRS ${TBB_INCLUDE_DIRS})
+elseif ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi")
+  find_package(XKaapi REQUIRED)
+  include_directories(${XKAAPI_INCLUDE_DIRS})
+  set(VTK_SMP_IMPLEMENTATION_LIBRARIES ${XKAAPI_LIBRARIES})
+  set(VTK_SMP_ATOMIC_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SMP/Sequential")
+  list(APPEND vtkCommonCore_SYSTEM_INCLUDE_DIRS ${XKAAPI_INCLUDE_DIRS})
+elseif ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Simple")
+  set(VTK_SMP_IMPLEMENTATION_LIBRARIES)
+  set(VTK_SMP_ATOMIC_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SMP/Sequential")
+  message(WARNING "The Simple backend for SMP operations is an experimental backend that is mainly used for debugging currently. We recommend that you use either the TBB or the Kaapi backend for production work. Use the Sequential backend if you would like to turn off any SMP parallelism.")
+elseif ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Sequential")
+  set(VTK_SMP_IMPLEMENTATION_LIBRARIES)
+  set(VTK_SMP_ATOMIC_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SMP/Sequential")
+endif()
+
+if(EXISTS ${VTK_SMP_ATOMIC_DIRECTORY}/vtkAtomicInt.cxx)
+  set(VTK_ATOMIC_CXX_FILE ${VTK_SMP_ATOMIC_DIRECTORY}/vtkAtomicInt.cxx)
+else()
+  set(VTK_ATOMIC_CXX_FILE "")
+endif()
+
+configure_file(${VTK_SMP_ATOMIC_DIRECTORY}/vtkAtomicInt.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkAtomicInt.h COPY_ONLY)
+
+configure_file(SMP/${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPThreadLocal.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPThreadLocal.h COPY_ONLY)
+
+configure_file(SMP/${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPToolsInternal.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPToolsInternal.h COPY_ONLY)
+
 #-----------------------------------------------------------------------------
 
 include_directories(${VTK_SOURCE_DIR}/ThirdParty/utf8/source)
@@ -101,6 +151,7 @@ SET(Module_SRCS
   vtkLargeInteger.cxx
   vtkLongArray.cxx
   vtkLookupTable.cxx
+  vtkMappedDataArray.txx
   vtkMath.cxx
   vtkMinimalStandardRandomSequence.cxx
   vtkMultiThreader.cxx
@@ -123,12 +174,14 @@ SET(Module_SRCS
   vtkScalarsToColors.cxx
   vtkShortArray.cxx
   vtkSignedCharArray.cxx
+  vtkSimpleCriticalSection.cxx
   vtkSmartPointerBase.cxx
   vtkSortDataArray.cxx
   vtkStdString.cxx
   vtkStringArray.cxx
   vtkTimePointUtility.cxx
   vtkTimeStamp.cxx
+  vtkTypedDataArray.txx
   vtkUnicodeStringArray.cxx
   vtkUnicodeString.cxx
   vtkUnsignedCharArray.cxx
@@ -149,6 +202,13 @@ SET(Module_SRCS
   vtkTypeTemplate.h
   vtkType.h
   vtkSystemIncludes.h
+  ${VTK_ATOMIC_CXX_FILE}
+  vtkSMPThreadLocalObject.h
+  vtkSMPTools.h
+  SMP/${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPTools.cxx
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPToolsInternal.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPThreadLocal.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkAtomicInt.h
   ${CMAKE_CURRENT_BINARY_DIR}/vtkConfigure.h
   ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
   ${CMAKE_CURRENT_BINARY_DIR}/vtkVersionMacros.h
@@ -165,15 +225,19 @@ set(${vtk-module}_HDRS
   vtkArrayPrint.h
   vtkArrayPrint.txx
   vtkAutoInit.h
+  vtkDataArrayIteratorMacro.h
   vtkDataArrayTemplateImplicit.txx
   vtkIOStreamFwd.h
   vtkInformationInternals.h
+  vtkMappedDataArray.h
   vtkMathUtilities.h
   vtkNew.h
   vtkSetGet.h
   vtkSmartPointer.h
   vtkTemplateAliasMacro.h
   vtkTypeTraits.h
+  vtkTypedDataArray.h
+  vtkTypedDataArrayIterator.h
   vtkVariantCast.h
   vtkVariantCreate.h
   vtkVariantExtract.h
@@ -234,6 +298,13 @@ if(VTK_LEGACY_REMOVE)
 else()
   set(VTK_CONFIG_LEGACY_VERSION "#include \"vtkVersionMacros.h\" // removed by VTK_LEGACY_REMOVE")
 endif()
+
+# Check for atomic functions
+include(CheckSymbolExists)
+if (WIN32)
+  check_symbol_exists(InterlockedAdd "windows.h" VTK_HAS_INTERLOCKEDADD)
+endif()
+
 
 configure_file(vtkVersionMacros.h.in vtkVersionMacros.h @ONLY)
 configure_file(vtkConfigure.h.in vtkConfigure.h @ONLY)
@@ -302,22 +373,22 @@ foreach(t Int8 Int16 Int32 Int64 UInt8 UInt16 UInt32 UInt64 Float32 Float64)
   if(VTK_TYPE_NATIVE)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/vtkTypedArray.h.in
                    ${CMAKE_CURRENT_BINARY_DIR}/vtkType${t}Array.h
-                   @ONLY IMMEDIATE)
+                   @ONLY)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/vtkTypedArray.cxx.in
                    ${CMAKE_CURRENT_BINARY_DIR}/vtkType${t}Array.cxx
-                   @ONLY IMMEDIATE)
+                   @ONLY)
     set(Module_SRCS ${Module_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/vtkType${t}Array.cxx)
   endif()
 endforeach()
 
 # look for various headers and functions
-include(CheckSymbolExists)
+include(CheckCXXExpressionCompiles)
 include(CheckIncludeFile)
 
 # Check C++ <cmath> first, where the C++11 standard says these must be.
-check_symbol_exists(std::isnan "cmath" VTK_HAS_STD_ISNAN)
-check_symbol_exists(std::isinf "cmath" VTK_HAS_STD_ISINF)
-check_symbol_exists(std::isfinite "cmath" VTK_HAS_STD_ISFINITE)
+check_cxx_expression_compiles("std::isnan(0.0)" "cmath" VTK_HAS_STD_ISNAN)
+check_cxx_expression_compiles("std::isinf(0.0)" "cmath" VTK_HAS_STD_ISINF)
+check_cxx_expression_compiles("std::isfinite(0.0)" "cmath" VTK_HAS_STD_ISFINITE)
 
 # Check C99 <math.h> next, where the C99 standard says these must be.
 # (they will be found even if they are defined as macros)
@@ -421,6 +492,7 @@ set_source_files_properties(
   vtkOStrStreamWrapper.cxx
   vtkOStreamWrapper.cxx
   vtkOldStyleCallbackCommand.cxx
+  vtkSimpleCriticalSection.cxx
   vtkSmartPointerBase.cxx
   vtkStdString.cxx
   vtkTimeStamp.cxx
@@ -445,6 +517,7 @@ set_source_files_properties(
   vtkIOStreamFwd.h
   vtkInformationInternals.h
   vtkMathUtilities.h
+  vtkMappedDataArray.txx
   vtkNew.h
   vtkSetGet.h
   vtkSmartPointer.h
@@ -452,6 +525,7 @@ set_source_files_properties(
   vtkTemplateAliasMacro.h
   vtkTypeTraits.h
   vtkTypedArray.txx
+  vtkTypedDataArray.txx
   vtkVariantCast.h
   vtkVariantCreate.h
   vtkVariantExtract.h
@@ -466,6 +540,13 @@ set_source_files_properties(
   vtkMathConfigure.h
   vtkVersionMacros.h
   vtkTypeTemplate.h
+  vtkSMPThreadLocalObject.h
+  vtkSMPTools.h
+  SMP/${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPTools.cxx
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPToolsInternal.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkSMPThreadLocal.h
+  ${CMAKE_CURRENT_BINARY_DIR}/vtkAtomicInt.h
+  ${VTK_ATOMIC_CXX_FILE}
 
   WRAP_EXCLUDE
   )
@@ -512,5 +593,4 @@ endif()
 
 vtk_module_library(vtkCommonCore ${Module_SRCS})
 
-target_link_libraries(vtkCommonCore ${CMAKE_THREAD_LIBS_INIT})
-set_target_properties(vtkCommonCore PROPERTIES LINK_INTERFACE_LIBRARIES "")
+target_link_libraries(vtkCommonCore LINK_PRIVATE ${CMAKE_THREAD_LIBS_INIT} LINK_PUBLIC ${VTK_SMP_IMPLEMENTATION_LIBRARIES})

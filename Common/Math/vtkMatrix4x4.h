@@ -129,8 +129,8 @@ public:
 
   // Description:
   // Multiplies matrices a and b and stores the result in c.
-  static void Multiply4x4(const vtkMatrix4x4 *a, const vtkMatrix4x4 *b, vtkMatrix4x4 *c) {
-    vtkMatrix4x4::Multiply4x4(*a->Element,*b->Element,*c->Element); };
+  static void Multiply4x4(const vtkMatrix4x4 *a, const vtkMatrix4x4 *b,
+                          vtkMatrix4x4 *c);
 //BTX
   static void Multiply4x4(const double a[16], const double b[16],
                           double c[16]);
@@ -183,15 +183,53 @@ public:
 
 protected:
   vtkMatrix4x4() { vtkMatrix4x4::Identity(*this->Element); };
-  ~vtkMatrix4x4() {};
+  ~vtkMatrix4x4() {}
 
   float FloatPoint[4];
   double DoublePoint[4];
 private:
+  // Useful for viewing a double[16] as a double[4][4]
+  typedef double (*SqMatPtr)[4];
+  typedef const double (*ConstSqMatPtr)[4];
+
   vtkMatrix4x4(const vtkMatrix4x4&);  // Not implemented
   void operator= (const vtkMatrix4x4&);  // Not implemented
 };
 
+//----------------------------------------------------------------------------
+// Multiplies matrices a and b and stores the result in c.
+inline void vtkMatrix4x4::Multiply4x4(const double a[16], const double b[16],
+                                      double c[16])
+{
+  ConstSqMatPtr aMat = reinterpret_cast<ConstSqMatPtr>(a);
+  ConstSqMatPtr bMat = reinterpret_cast<ConstSqMatPtr>(b);
+
+  double tmp[16];
+  SqMatPtr cMat = reinterpret_cast<SqMatPtr>(tmp);
+
+  for (int i = 0; i < 4; i++)
+    {
+    for (int k = 0; k < 4; k++)
+      {
+      cMat[i][k] = aMat[i][0] * bMat[0][k] +
+                   aMat[i][1] * bMat[1][k] +
+                   aMat[i][2] * bMat[2][k] +
+                   aMat[i][3] * bMat[3][k];
+      }
+    }
+
+  // Copy to final dest
+  memcpy(c, tmp, 16 * sizeof(double));
+}
+
+//----------------------------------------------------------------------------
+inline void vtkMatrix4x4::Multiply4x4(
+  const vtkMatrix4x4 *a, const vtkMatrix4x4 *b, vtkMatrix4x4 *c)
+{
+  vtkMatrix4x4::Multiply4x4(*a->Element, *b->Element, *c->Element);
+}
+
+//----------------------------------------------------------------------------
 inline void vtkMatrix4x4::SetElement(int i, int j, double value)
 {
   if (this->Element[i][j] != value)

@@ -2,10 +2,12 @@ package vtk.rendering;
 
 import java.util.concurrent.locks.ReentrantLock;
 
+import vtk.vtkAxesActor;
 import vtk.vtkCamera;
 import vtk.vtkGenericRenderWindowInteractor;
 import vtk.vtkInteractorStyle;
 import vtk.vtkInteractorStyleTrackballCamera;
+import vtk.vtkOrientationMarkerWidget;
 import vtk.vtkRenderWindow;
 import vtk.vtkRenderer;
 
@@ -17,8 +19,11 @@ import vtk.vtkRenderer;
  *            The concrete type of the graphical component that will contains
  *            the vtkRenderWindow.
  *
- * @authors Sebastien Jourdain - sebastien.jourdain@kitware.com
- *          Joachim Pouderoux - joachim.pouderoux@kitware.com
+ * @authors Sebastien Jourdain - sebastien.jourdain@kitware.com, Kitware Inc 2012
+ *          Joachim Pouderoux - joachim.pouderoux@kitware.com, Kitware SAS 2012
+ * @copyright This work was supported by CEA/CESTA
+ *            Commissariat a l'Energie Atomique et aux Energies Alternatives,
+ *            15 avenue des Sablieres, CS 60001, 33116 Le Barp, France.
  */
 public abstract class vtkAbstractComponent<T> implements vtkComponent<T> {
   protected vtkRenderWindow renderWindow;
@@ -153,4 +158,24 @@ public abstract class vtkAbstractComponent<T> implements vtkComponent<T> {
   }
 
   public abstract T getComponent();
+
+  /**
+   * Generic helper method used to attach orientation axes to a vtkComponent
+   *
+   * @param vtkComponent<?>
+   */
+  public static void attachOrientationAxes(vtkComponent<?> component) {
+      // only build this once, because it creates its own renderer.
+      // Extra renderers causes issues with resetting.
+      vtkAxesActor axes = new vtkAxesActor();
+      vtkOrientationMarkerWidget axesWidget = new vtkOrientationMarkerWidget();
+
+      axesWidget.SetOutlineColor(0.9300, 0.5700, 0.1300);
+      axesWidget.SetOrientationMarker(axes);
+      axesWidget.SetInteractor(component.getRenderWindowInteractor());
+      axesWidget.SetDefaultRenderer(component.getRenderer());
+      axesWidget.SetViewport(0.0, 0.0, .2, .2);
+      axesWidget.EnabledOn();
+      axesWidget.InteractiveOff();
+  }
 }

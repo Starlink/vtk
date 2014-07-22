@@ -96,7 +96,7 @@ virtual void Set##name (const char* _arg) \
   vtkDebugMacro(<< this->GetClassName() << " (" << this << "): setting " << #name " to " << (_arg?_arg:"(null)") ); \
   if ( this->name == NULL && _arg == NULL) { return;} \
   if ( this->name && _arg && (!strcmp(this->name,_arg))) { return;} \
-  if (this->name) { delete [] this->name; } \
+  delete [] this->name; \
   if (_arg) \
     { \
     size_t n = strlen(_arg) + 1; \
@@ -577,9 +577,9 @@ virtual double *Get##name() \
     return this->name##Coordinate->GetValue(); \
 }
 
-// Macro used to determine whether a class is the same class or
-// a subclass of the named class.
-#define vtkTypeMacro(thisClass,superclass) \
+// Allows definition of vtkObject API such that NewInstance may return a
+// superclass of thisClass.
+#define vtkAbstractTypeMacroWithNewInstanceType(thisClass,superclass,instanceType) \
   typedef superclass Superclass; \
   private: \
   virtual const char* GetClassNameInternal() const { return #thisClass; } \
@@ -604,16 +604,25 @@ virtual double *Get##name() \
       } \
     return NULL;\
   } \
+  instanceType *NewInstance() const \
+  { \
+    return instanceType::SafeDownCast(this->NewInstanceInternal()); \
+  }
+
+// Same as vtkTypeMacro, but adapted for cases where thisClass is abstact.
+#define vtkAbstractTypeMacro(thisClass,superclass) \
+  vtkAbstractTypeMacroWithNewInstanceType(thisClass, superclass, thisClass)
+
+// Macro used to determine whether a class is the same class or
+// a subclass of the named class.
+#define vtkTypeMacro(thisClass,superclass) \
+  vtkAbstractTypeMacro(thisClass, superclass) \
   protected: \
   virtual vtkObjectBase *NewInstanceInternal() const \
   { \
     return thisClass::New(); \
   } \
-  public: \
-  thisClass *NewInstance() const \
-  { \
-    return thisClass::SafeDownCast(this->NewInstanceInternal()); \
-  }
+  public:
 
 // Legacy versions of vtkTypeMacro and helpers.
 #if !defined(VTK_LEGACY_REMOVE)
@@ -758,7 +767,11 @@ virtual double *Get##name() \
   // place to avoid stray semicolons because this is an error for some
   // compilers.  Using a class forward declaration allows any number
   // of repeats in any context without generating unique names.
-# define VTK_LEGACY(method) class vtkLegacyMethodRemoved
+
+# define VTK_LEGACY(method)         VTK_LEGACY__0(method,__LINE__)
+# define VTK_LEGACY__0(method,line) VTK_LEGACY__1(method,line)
+# define VTK_LEGACY__1(method,line) class vtkLegacyMethodRemoved##line
+
 #elif defined(VTK_LEGACY_SILENT) || defined(VTK_WRAPPING_CXX)
   // Provide legacy methods with no warnings.
 # define VTK_LEGACY(method) method

@@ -299,25 +299,26 @@ int vtkAppendFilter::RequestData(
       vtkUnstructuredGrid *ug = vtkUnstructuredGrid::SafeDownCast(ds);
       for (cellId=0; cellId < numCells && !abort; cellId++)
         {
+        newPtIds->Reset ();
         if (ug && ds->GetCellType(cellId) == VTK_POLYHEDRON )
           {
           vtkIdType nfaces, *facePtIds;
           ug->GetFaceStream(cellId,nfaces,facePtIds);
           for(vtkIdType id=0; id < nfaces; ++id)
             {
-            vtkIdType nPoints = *facePtIds;
+            vtkIdType nPoints = *facePtIds++;
             newPtIds->InsertNextId(nPoints);
-            for (vtkIdType j=0; j <= nPoints; ++j)
+            for (vtkIdType j=0; j < nPoints; ++j)
               {
-              newPtIds->InsertNextId(*(++facePtIds)+ptOffset);
+              newPtIds->InsertNextId(*(facePtIds++)+ptOffset);
               }
             }
-          output->InsertNextCell(VTK_POLYHEDRON,nfaces,newPtIds->GetPointer(0));
+          newCellId = output->InsertNextCell(VTK_POLYHEDRON,nfaces,newPtIds->GetPointer(0));
+          outputCD->CopyData(cellList,cd,inputCount,cellId,newCellId);
           }
         else
           {
           ds->GetCellPoints(cellId, ptIds);
-          newPtIds->Reset ();
           for (i=0; i < ptIds->GetNumberOfIds(); i++)
             {
             newPtIds->InsertId(i,ptIds->GetId(i)+ptOffset);

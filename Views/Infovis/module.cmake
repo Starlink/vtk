@@ -9,6 +9,10 @@ vtk_module(vtkViewsInfovis
     vtkInteractionStyle
     vtkFiltersModeling
     vtkFiltersImaging
+    vtkCommonColor
+    vtkChartsCore
+  PRIVATE_DEPENDS
+    vtkFiltersGeometry
   TEST_DEPENDS
     vtkTestingRendering
     vtkIOInfovis

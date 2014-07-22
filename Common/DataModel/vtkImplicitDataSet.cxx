@@ -18,6 +18,7 @@
 #include "vtkDataArray.h"
 #include "vtkDataSet.h"
 #include "vtkGarbageCollector.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
@@ -43,10 +44,7 @@ vtkImplicitDataSet::vtkImplicitDataSet()
 vtkImplicitDataSet::~vtkImplicitDataSet()
 {
   this->SetDataSet(NULL);
-  if ( this->Weights )
-    {
-    delete [] this->Weights;
-    }
+  delete [] this->Weights;
 }
 
 // Evaluate the implicit function. This returns the interpolated scalar value
@@ -61,10 +59,7 @@ double vtkImplicitDataSet::EvaluateFunction(double x[3])
 
   if ( this->DataSet->GetMaxCellSize() > this->Size )
     {
-    if ( this->Weights )
-      {
-      delete [] this->Weights;
-      }
+    delete [] this->Weights;
     this->Weights = new double[this->DataSet->GetMaxCellSize()];
     this->Size = this->DataSet->GetMaxCellSize();
     }
@@ -78,7 +73,7 @@ double vtkImplicitDataSet::EvaluateFunction(double x[3])
     }
 
   // Find the cell that contains xyz and get it
-  cell = this->DataSet->FindAndGetCell(x,NULL,-1,0.0,subId,pcoords,this->Weights);
+  cell = this->DataSet->FindAndGetCell(x,NULL,-1,VTK_DBL_EPSILON,subId,pcoords,this->Weights);
 
   if (cell)
     { // Interpolate the point data
@@ -122,10 +117,7 @@ void vtkImplicitDataSet::EvaluateGradient(double x[3], double n[3])
 
   if ( this->DataSet->GetMaxCellSize() > this->Size )
     {
-    if ( this->Weights )
-      {
-      delete [] this->Weights;
-      }
+    delete [] this->Weights;
     this->Weights = new double[this->DataSet->GetMaxCellSize()];
     this->Size = this->DataSet->GetMaxCellSize();
     }
@@ -143,7 +135,7 @@ void vtkImplicitDataSet::EvaluateGradient(double x[3], double n[3])
     }
 
   // Find the cell that contains xyz and get it
-  cell = this->DataSet->FindAndGetCell(x,NULL,-1,0.0,subId,pcoords,this->Weights);
+  cell = this->DataSet->FindAndGetCell(x,NULL,-1,VTK_DBL_EPSILON,subId,pcoords,this->Weights);
 
   if (cell)
     { // Interpolate the point data

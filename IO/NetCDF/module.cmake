@@ -5,7 +5,8 @@ vtk_module(vtkIONetCDF
     vtkCommonDataModel
     vtkCommonSystem
     vtkIOCore
-  COMPILE_DEPENDS
+  PRIVATE_DEPENDS
+    vtksys
     vtknetcdf
   TEST_DEPENDS
     vtkCommonExecutionModel

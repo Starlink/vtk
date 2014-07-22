@@ -20,10 +20,9 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkCharArray.h"
 #include "vtkFloatArray.h"
 #include "vtkNew.h"
-#include <assert.h>
+#include <cassert>
 
 vtkStandardNewMacro(vtkPParticlePathFilter);
-
 
 vtkPParticlePathFilter::vtkPParticlePathFilter()
 {
@@ -35,12 +34,10 @@ void vtkPParticlePathFilter::ResetCache()
   this->It.Reset();
 }
 
-
 void vtkPParticlePathFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   Superclass::PrintSelf(os,indent);
 }
-
 
 int vtkPParticlePathFilter::OutputParticles(vtkPolyData* particles)
 {

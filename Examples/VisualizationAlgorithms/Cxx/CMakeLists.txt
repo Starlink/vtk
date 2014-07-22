@@ -1,20 +1,18 @@
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
-PROJECT (VisualizationAlgorithms)
+project (VisualizationAlgorithms)
 
-if(NOT VTK_BINARY_DIR)
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkCommonDataModel
-    vtkFiltersCore
-    vtkFiltersModeling
-    vtkIOXML
-    vtkInteractionStyle
-    vtkRenderingCore
-    vtkRenderingOpenGL
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkCommonDataModel
+  vtkFiltersCore
+  vtkFiltersModeling
+  vtkIOXML
+  vtkInteractionStyle
+  vtkRenderingOpenGL
+  vtkTestingRendering
 )
-  include(${VTK_USE_FILE})
-endif()
+include(${VTK_USE_FILE})
 
 add_executable(TubesWithVaryingRadiusAndColors MACOSX_BUNDLE TubesWithVaryingRadiusAndColors.cxx)
 add_executable(FilledContours MACOSX_BUNDLE FilledContours.cxx)
@@ -27,30 +25,14 @@ target_link_libraries(BandedContours ${VTK_LIBRARIES})
 if(BUILD_TESTING)
   if(vtkTestingRendering_LOADED)
     ######## Regression Testing ########
-    set(KIT VisualizationAlgorithmsExamples)
-    set(MyTests
-        TestFilledContours.cxx
-        TestBandedContours.cxx
-        TestTubesWithVaryingRadiusAndColors.cxx
-    )
-
-    include(vtkTestingObjectFactory)
-
-    add_executable(${KIT}CxxTests ${KIT}CxxTests.cxx ${MyTests})
-    target_link_libraries(${KIT}CxxTests ${VTK_LIBRARIES})
-
-    add_test(NAME ${KIT}-TubesWithVaryingRadiusAndColors
-             COMMAND ${KIT}CxxTests
-             TestTubesWithVaryingRadiusAndColors)
-    if (VTK_DATA_ROOT)
-      add_test(NAME ${KIT}-FilledContours
-               COMMAND ${KIT}CxxTests
-               TestFilledContours
-               ${VTK_DATA_ROOT}/Data/filledContours.vtp 10)
-      add_test(NAME ${KIT}-BandedContours
-               COMMAND ${KIT}CxxTests
-               TestBandedContours
-               ${VTK_DATA_ROOT}/Data/filledContours.vtp 10)
-    endif()
+    set(vtk-example VisualizationAlgorithmsExamples)
+    set(TestFilledContours_ARGS "DATA{${VTK_TEST_INPUT_DIR}/filledContours.vtp}" 10)
+    set(TestBandedContours_ARGS "DATA{${VTK_TEST_INPUT_DIR}/filledContours.vtp}" 10)
+    vtk_add_test_cxx(
+      TestTubesWithVaryingRadiusAndColors.cxx
+      TestFilledContours.cxx
+      TestBandedContours.cxx
+      )
+    vtk_test_cxx_executable(${vtk-example}CxxTests RENDERING_FACTORY)
   endif()
 endif()

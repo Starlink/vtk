@@ -32,6 +32,7 @@ vtkThresholdPoints::vtkThresholdPoints()
 {
   this->LowerThreshold = 0.0;
   this->UpperThreshold = 1.0;
+  this->OutputPointsPrecision = DEFAULT_PRECISION;
 
   this->ThresholdFunction = &vtkThresholdPoints::Upper;
 
@@ -147,7 +148,37 @@ int vtkThresholdPoints::RequestData(
     }
 
   numPts = input->GetNumberOfPoints();
+
+  if(numPts < 1)
+    {
+    vtkErrorMacro(<<"No points to threshold");
+    return 1;
+    }
+
   newPoints = vtkPoints::New();
+
+  // Set the desired precision for the points in the output.
+  if(this->OutputPointsPrecision == vtkAlgorithm::DEFAULT_PRECISION)
+    {
+    vtkPointSet *inputPointSet = vtkPointSet::SafeDownCast(input);
+    if(inputPointSet)
+      {
+      newPoints->SetDataType(inputPointSet->GetPoints()->GetDataType());
+      }
+    else
+      {
+      newPoints->SetDataType(VTK_FLOAT);
+      }
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::SINGLE_PRECISION)
+    {
+    newPoints->SetDataType(VTK_FLOAT);
+    }
+  else if(this->OutputPointsPrecision == vtkAlgorithm::DOUBLE_PRECISION)
+    {
+    newPoints->SetDataType(VTK_DOUBLE);
+    }
+
   newPoints->Allocate(numPts);
   pd = input->GetPointData();
   outPD = output->GetPointData();
@@ -203,4 +234,5 @@ void vtkThresholdPoints::PrintSelf(ostream& os, vtkIndent indent)
 
   os << indent << "Lower Threshold: " << this->LowerThreshold << "\n";;
   os << indent << "Upper Threshold: " << this->UpperThreshold << "\n";;
+  os << indent << "Output Points Precision: " << this->OutputPointsPrecision << "\n";
 }
