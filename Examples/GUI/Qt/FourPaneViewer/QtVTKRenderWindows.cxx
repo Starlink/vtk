@@ -158,7 +158,7 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
     rep->GetResliceCursorActor()->
       GetCursorAlgorithm()->SetReslicePlaneNormal(i);
 
-    riw[i]->SetInput(reader->GetOutput());
+    riw[i]->SetInputData(reader->GetOutput());
     riw[i]->SetSliceOrientation(i);
     riw[i]->SetResliceModeToAxisAligned();
     }
@@ -194,7 +194,7 @@ QtVTKRenderWindows::QtVTKRenderWindows( int vtkNotUsed(argc), char *argv[])
     planeWidget[i]->SetTexturePlaneProperty(ipwProp);
     planeWidget[i]->TextureInterpolateOff();
     planeWidget[i]->SetResliceInterpolateToLinear();
-    planeWidget[i]->SetInput(reader->GetOutput());
+    planeWidget[i]->SetInputConnection(reader->GetOutputPort());
     planeWidget[i]->SetPlaneOrientation(i);
     planeWidget[i]->SetSliceIndex(imageDims[i]/2);
     planeWidget[i]->DisplayTextOn();
@@ -290,17 +290,17 @@ void QtVTKRenderWindows::SetBlendMode(int m)
 
 void QtVTKRenderWindows::SetBlendModeToMaxIP()
 {
-  this->SetBlendMode(VTK_IMAGESLAB_BLEND_MAX);
+  this->SetBlendMode(VTK_IMAGE_SLAB_MAX);
 }
 
 void QtVTKRenderWindows::SetBlendModeToMinIP()
 {
-  this->SetBlendMode(VTK_IMAGESLAB_BLEND_MIN);
+  this->SetBlendMode(VTK_IMAGE_SLAB_MIN);
 }
 
 void QtVTKRenderWindows::SetBlendModeToMeanIP()
 {
-  this->SetBlendMode(VTK_IMAGESLAB_BLEND_MEAN);
+  this->SetBlendMode(VTK_IMAGE_SLAB_MEAN);
 }
 
 void QtVTKRenderWindows::ResetViews()

@@ -4,7 +4,7 @@
 #--  BSD License: http://www.opensource.org/licenses/bsd-license.html
 #--////////////////////////////////////////////////////////////////////////////
 project(SimpleCocoaVTK)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6.3 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5 FATAL_ERROR)
 
 if(NOT VTK_BINARY_DIR)
   find_package(VTK)
@@ -52,7 +52,8 @@ set(MACOSX_BUNDLE_NSPRINCIPAL_CLASS "NSApplication")
 add_executable(SimpleCocoaVTK MACOSX_BUNDLE ${SimpleCocoaVTK_SRCS} ${SimpleCocoaVTK_HDRS})
 
 # Probably a better way to set the framework link libraries.
-target_link_libraries(SimpleCocoaVTK vtkRendering "-framework Cocoa -framework OpenGL -framework IOKit")
+target_link_libraries(SimpleCocoaVTK "-framework Cocoa -framework OpenGL -framework IOKit"
+                      vtkRenderingOpenGL vtkRenderingFreeTypeOpenGL vtkInteractionStyle )
 
 # Set a custom plist file for the app bundle
 set_target_properties(SimpleCocoaVTK PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${SimpleCocoaVTK_SOURCE_DIR}/Info-CMake.plist)

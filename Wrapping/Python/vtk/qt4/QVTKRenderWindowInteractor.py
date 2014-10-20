@@ -25,6 +25,9 @@ Changes by Phil Thompson, Oct. 2007
 
 Changes by Phil Thompson, Mar. 2008
  Added cursor support.
+
+Changes by Rodrigo Mologni, Sep. 2013 (Credit to Daniele Esposti)
+ Bug fix to PySide: Converts PyCObject to void pointer.
 """
 
 
@@ -127,7 +130,6 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         self._ActiveButton = QtCore.Qt.NoButton
 
         # private attributes
-        self.__oldFocus = None
         self.__saveX = 0
         self.__saveY = 0
         self.__saveModifiers = QtCore.Qt.NoModifier
@@ -155,7 +157,17 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         else:
             self._RenderWindow = vtk.vtkRenderWindow()
 
-        self._RenderWindow.SetWindowInfo(str(int(self.winId())))
+        WId = self.winId()
+
+        if type(WId).__name__ == 'PyCObject':
+            from ctypes import pythonapi, c_void_p, py_object
+
+            pythonapi.PyCObject_AsVoidPtr.restype  = c_void_p
+            pythonapi.PyCObject_AsVoidPtr.argtypes = [py_object]
+
+            WId = pythonapi.PyCObject_AsVoidPtr(WId)
+
+        self._RenderWindow.SetWindowInfo(str(int(WId)))
 
         if stereo: # stereo mode
             self._RenderWindow.StereoCapableWindowOn()
@@ -269,20 +281,12 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         return ctrl, shift
 
     def enterEvent(self, ev):
-        if not self.hasFocus():
-            self.__oldFocus = self.focusWidget()
-            self.setFocus()
-
         ctrl, shift = self._GetCtrlShift(ev)
         self._Iren.SetEventInformationFlipY(self.__saveX, self.__saveY,
                                             ctrl, shift, chr(0), 0, None)
         self._Iren.EnterEvent()
 
     def leaveEvent(self, ev):
-        if self.__saveButtons == QtCore.Qt.NoButton and self.__oldFocus:
-            self.__oldFocus.setFocus()
-            self.__oldFocus = None
-
         ctrl, shift = self._GetCtrlShift(ev)
         self._Iren.SetEventInformationFlipY(self.__saveX, self.__saveY,
                                             ctrl, shift, chr(0), 0, None)

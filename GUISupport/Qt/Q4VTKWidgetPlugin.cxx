@@ -51,7 +51,7 @@ QVTKWidgetPlugin::~QVTKWidgetPlugin()
 {
   qDebug("QVTKWidgetPlugin destructed\n");
 }
-    
+
 //! return the name of this widget
 QString QVTKWidgetPlugin::name() const
 {
@@ -77,8 +77,8 @@ QWidget* QVTKWidgetPlugin::createWidget(QWidget* parent)
 {
   qDebug("QVTKWidgetPlugin::createWidget\n");
   QVTKWidget* widget = new QVTKWidget(parent);
- 
-  // make black background 
+
+  // make black background
   QPalette p = widget->palette();
   p.setColor(QPalette::Background, QColor("black"));
   widget->setPalette(p);
@@ -144,5 +144,7 @@ QList<QDesignerCustomWidgetInterface*> QVTKPlugin::customWidgets() const
   return plugins;
 }
 
+#if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN(QVTKPlugin)
+#endif
 

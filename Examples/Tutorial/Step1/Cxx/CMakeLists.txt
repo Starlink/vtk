@@ -1,12 +1,13 @@
-PROJECT (Step1)
+cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK REQUIRED)
-IF(NOT VTK_USE_RENDERING)
-  MESSAGE(FATAL_ERROR "Example ${PROJECT_NAME} requires VTK_USE_RENDERING.")
-ENDIF(NOT VTK_USE_RENDERING)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
+project (Step1)
 
-ADD_EXECUTABLE(Cone Cone.cxx)
-TARGET_LINK_LIBRARIES(Cone vtkRendering)
+find_package(VTK COMPONENTS
+  vtkFiltersSources
+  vtkInteractionStyle
+  vtkRenderingOpenGL
+)
+include(${VTK_USE_FILE})
+
+add_executable(Cone MACOSX_BUNDLE Cone.cxx)
+target_link_libraries(Cone ${VTK_LIBRARIES})

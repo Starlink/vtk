@@ -1,5 +1,5 @@
 # This example demonstrates how to use 2D Delaunay triangulation.
-# We create a fancy image of a 2D Delaunay triangulation. Points are 
+# We create a fancy image of a 2D Delaunay triangulation. Points are
 # randomly generated.
 
 
@@ -23,7 +23,7 @@ vtkPolyData profile
 # Perform a 2D Delaunay triangulation on them.
 #
 vtkDelaunay2D del
-    del SetInput profile
+    del SetInputData profile
     del SetTolerance 0.001
 vtkPolyDataMapper mapMesh
     mapMesh SetInputConnection [del GetOutputPort]

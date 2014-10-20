@@ -15,66 +15,28 @@
 
 /* Minimal main program -- everything is loaded from the library */
 
+#include "vtkPython.h"
+
 #ifdef VTK_COMPILED_USING_MPI
 # include <mpi.h>
 # include "vtkMPIController.h"
 #endif // VTK_COMPILED_USING_MPI
 
-#include "vtkPython.h"
 #include "vtkVersion.h"
-#include "Wrapping/Python/vtkPythonAppInitConfigure.h"
-
-#if defined(CMAKE_INTDIR)
-# define VTK_PYTHON_LIBRARY_DIR VTK_PYTHON_LIBRARY_DIR_BUILD "/" CMAKE_INTDIR
-#else
-# define VTK_PYTHON_LIBRARY_DIR VTK_PYTHON_LIBRARY_DIR_BUILD
-#endif
-
-#include <sys/stat.h>
-
-/*
- * Make sure all the kits register their classes with vtkInstantiator.
- */
-#include "vtkCommonInstantiator.h"
-#include "vtkFilteringInstantiator.h"
-#include "vtkIOInstantiator.h"
-#include "vtkImagingInstantiator.h"
-#include "vtkGraphicsInstantiator.h"
+#include "vtkPythonAppInitConfigure.h"
 
 #include "vtkpythonmodules.h"
 
-#ifdef VTK_USE_RENDERING
-#include "vtkRenderingInstantiator.h"
-#include "vtkVolumeRenderingInstantiator.h"
-#include "vtkHybridInstantiator.h"
-#endif
+// Include the instantiators, this will be an empty file when instantiators
+// are not turned on. It will contain all wrapped modules otherwise.
+// Commenting out for now, as in my tests it made things slower.
+//#include "vtkInstantiators.h"
 
-#ifdef VTK_USE_PARALLEL
-#include "vtkParallelInstantiator.h"
-#endif
-
-#ifdef VTK_USE_CHARTS
-#include "vtkChartsInstantiator.h"
-#endif
-
-#ifdef VTK_USE_CHEMISTRY
-#include "vtkChemistryInstantiator.h"
-#endif
-
-#ifdef VTK_USE_GEOVIS
-#include "vtkGeovisInstantiator.h"
-#endif
-
-#ifdef VTK_USE_INFOVIS
-#include "vtkInfovisInstantiator.h"
-#endif
-
-#ifdef VTK_USE_VIEWS
-#include "vtkViewsInstantiator.h"
-#endif
+#include <sys/stat.h>
 
 #include <string>
 #include <vtksys/SystemTools.hxx>
+#include <vtksys/SystemInformation.hxx>
 
 #ifdef VTK_COMPILED_USING_MPI
 class vtkMPICleanup {
@@ -112,6 +74,7 @@ extern "C" {
 
 static void vtkPythonAppInitEnableMSVCDebugHook();
 static void vtkPythonAppInitPrependPath(const char* self_dir);
+static void RemoveArgumentFromArgv(int &argc, char **&argv, int at);
 
 /* The maximum length of a file name.  */
 #if defined(PATH_MAX)
@@ -127,6 +90,7 @@ static void vtkPythonAppInitPrependPath(const char* self_dir);
 #define VTK_PYTHON_TO_STRING0(x) VTK_PYTHON_TO_STRING1(x)
 #define VTK_PYTHON_TO_STRING1(x) #x
 #define VTK_PYTHON_VERSION VTK_PYTHON_TO_STRING(PY_MAJOR_VERSION.PY_MINOR_VERSION)
+
 
 int main(int argc, char **argv)
 {
@@ -145,7 +109,12 @@ int main(int argc, char **argv)
       if ( strcmp(argv[cc], "-V") == 0 )
         {
         displayVersion = 1;
-        break;
+        }
+      else
+      if ( strcmp(argv[cc], "--enable-bt") == 0 )
+        {
+        RemoveArgumentFromArgv(argc, argv, cc);
+        vtksys::SystemInformation::SetStackTraceOnError(1);
         }
       }
     }
@@ -170,6 +139,8 @@ int main(int argc, char **argv)
   strcpy(argv0, av0.c_str());
   Py_SetProgramName(argv0);
 
+  // This function is generated, and will register any static Python modules for VTK
+  // This needs to be done *before* Py_Initialize().
   CMakeLoadAllPythonModules();
 
   // Initialize interpreter.
@@ -264,7 +235,10 @@ static void vtkPythonAppInitPrependPath(const char* self_dir)
 #endif
     package_dir += (*build_dir);
     package_dir = vtksys::SystemTools::CollapseFullPath(package_dir.c_str());
-    if(vtksys::SystemTools::FileIsDirectory(package_dir.c_str()))
+
+    // We try to locate the directory containing vtk python module files.
+    std::string vtk_module_dir = package_dir + "/vtk";
+    if(vtksys::SystemTools::FileIsDirectory(vtk_module_dir.c_str()))
       {
       // This executable is running from the build tree.  Prepend the
       // library directory and package directory to the search path.
@@ -335,4 +309,16 @@ static void vtkPythonAppInitPrependPath(const char* self_dir)
     putenv(system_path);
 #endif
     }
+}
+
+//----------------------------------------------------------------------------
+static void RemoveArgumentFromArgv(int &argc, char **&argv, int at)
+{
+  int ii=at+1;
+  while (ii<argc)
+    {
+    argv[ii-1]=argv[ii];
+    ii+=1;
+    }
+  argc-=1;
 }

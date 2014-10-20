@@ -89,14 +89,6 @@ octree_cursor<T_,R_,P_,O_,OP_,d_>::octree_cursor( const const_path& src )
   this->_M_current_node = src._M_current_node;
 }
 
-/**\brief Destructor.
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_cursor<T_,R_,P_,O_,OP_,d_>::~octree_cursor()
-{
-}
-
 /**\brief Move the cursor up one level.
   *
   * If this is called when the cursor is on the root node, it has no effect.
@@ -268,10 +260,8 @@ octree_path<T_,R_,P_,O_,OP_,d_>& octree_cursor<T_,R_,P_,O_,OP_,d_>::operator = (
 /**\brief Assignment operator (for copying paths of immutable nodes).
   *
   */
-#if ! ( defined(_MSC_VER) && (_MSC_VER < 1300) )
 template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
 octree_path<T_,R_,P_,O_,OP_,d_>& octree_cursor<T_,R_,P_,O_,OP_,d_>::operator = ( const const_path& it )
 {
   return this->octree_path<T_,R_,P_,O_,OP_,d_>::operator=( it );
 }
-#endif

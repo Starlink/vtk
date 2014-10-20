@@ -1,5 +1,6 @@
 package vtk;
 
+import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,10 +21,19 @@ public class vtkJavaTesting {
             if (verbose) {
                 System.out.println("Try to load: " + lib);
             }
+
+            if(!new File(lib).exists()) {
+              if(verbose) {
+                System.out.println("File does not exist: " + lib);
+                return 0;
+              }
+            }
+
             Runtime.getRuntime().load(lib);
         } catch (UnsatisfiedLinkError e) {
             if (verbose) {
                 System.out.println("Failed to load: " + lib);
+                e.printStackTrace();
             }
             return 0;
         }
@@ -43,7 +53,7 @@ public class vtkJavaTesting {
                 && vtkJavaTesting.LoadLib(libname, verbose) != 1
                 && vtkJavaTesting.LoadLib(releaselibname, verbose) != 1
                 && vtkJavaTesting.LoadLib(debuglibname, verbose) != 1) {
-            System.out.println("Problem loading apropriate library");
+            System.out.println("Problem loading appropriate library");
         }
     }
 
@@ -81,7 +91,7 @@ public class vtkJavaTesting {
     public static void Exit(int retVal) {
         vtkJavaTesting.Tester = null;
         System.gc();
-        vtkObject.JAVA_OBJECT_MANAGER.gc(true);
+        vtkObjectBase.JAVA_OBJECT_MANAGER.gc(true);
 
         if (retVal == vtkJavaTesting.FAILED || retVal == vtkJavaTesting.NOT_RUN) {
             System.out.println("Test failed or was not run");
@@ -112,7 +122,7 @@ public class vtkJavaTesting {
     }
 
     public static vtkJavaGarbageCollector StartGCInEDT(long time, TimeUnit unit) {
-        vtkJavaGarbageCollector gc = vtkObject.JAVA_OBJECT_MANAGER.getAutoGarbageCollector();
+        vtkJavaGarbageCollector gc = vtkObjectBase.JAVA_OBJECT_MANAGER.getAutoGarbageCollector();
         gc.SetScheduleTime(time, unit);
         gc.SetAutoGarbageCollection(true);
         return gc;

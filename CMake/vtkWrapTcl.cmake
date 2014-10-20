@@ -38,12 +38,22 @@ MACRO(VTK_WRAP_TCL2 TARGET)
 ENDMACRO(VTK_WRAP_TCL2)
 
 MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
-  IF(NOT VTK_WRAP_TCL_INIT_EXE)
-    MESSAGE(SEND_ERROR "VTK_WRAP_TCL_INIT_EXE not specified when calling VTK_WRAP_TCL3")
-  ENDIF(NOT VTK_WRAP_TCL_INIT_EXE)
-  IF(NOT VTK_WRAP_TCL_EXE)
-    MESSAGE(SEND_ERROR "VTK_WRAP_TCL_EXE not specified when calling VTK_WRAP_TCL3")
-  ENDIF(NOT VTK_WRAP_TCL_EXE)
+  if(NOT VTK_WRAP_TCL_INIT_EXE)
+    if(TARGET vtkWrapTclInit)
+      set(VTK_WRAP_TCL_INIT_EXE vtkWrapTclInit)
+    else()
+      message(SEND_ERROR
+        "VTK_WRAP_TCL_INIT_EXE not specified when calling VTK_WRAP_TCL3")
+    endif()
+  endif()
+  if(NOT VTK_WRAP_TCL_EXE)
+    if(TARGET vtkWrapTcl)
+      set(VTK_WRAP_TCL_EXE vtkWrapTcl)
+    else()
+      message(SEND_ERROR
+        "VTK_WRAP_TCL_EXE not specified when calling VTK_WRAP_TCL3")
+    endif()
+  endif()
 
   IF(CMAKE_GENERATOR MATCHES "NMake Makefiles")
     SET(verbatim "")
@@ -67,35 +77,36 @@ MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
       "${VTK_WRAPPER_INIT_DATA}\nVERSION ${ARGV4}")
   ENDIF (${ARGC} GREATER 4)
 
-  GET_DIRECTORY_PROPERTY(TMP_DEF_LIST DEFINITION COMPILE_DEFINITIONS)
-  SET(TMP_DEFINITIONS)
-  FOREACH(TMP_DEF ${TMP_DEF_LIST})
-    SET(TMP_DEFINITIONS ${TMP_DEFINITIONS} -D "${quote}${TMP_DEF}${quote}")
-  ENDFOREACH(TMP_DEF ${TMP_DEF_LIST})
+  # all the include directories
+  if(VTK_WRAP_INCLUDE_DIRS)
+    set(TMP_INCLUDE_DIRS ${VTK_WRAP_INCLUDE_DIRS})
+  else()
+    set(TMP_INCLUDE_DIRS ${VTK_INCLUDE_DIRS})
+  endif()
 
-  IF(VTK_WRAP_INCLUDE_DIRS)
-    SET(TMP_INCLUDE_DIRS ${VTK_WRAP_INCLUDE_DIRS})
-  ELSE(VTK_WRAP_INCLUDE_DIRS)
-    SET(TMP_INCLUDE_DIRS ${VTK_INCLUDE_DIRS})
-  ENDIF(VTK_WRAP_INCLUDE_DIRS)
-  SET(TMP_INCLUDE)
-  FOREACH(INCLUDE_DIR ${TMP_INCLUDE_DIRS})
-    SET(TMP_INCLUDE ${TMP_INCLUDE} -I "${quote}${INCLUDE_DIR}${quote}")
-  ENDFOREACH(INCLUDE_DIR ${TMP_INCLUDE_DIRS})
+  # collect the common wrapper-tool arguments
+  set(_common_args)
+  get_directory_property(_def_list DEFINITION COMPILE_DEFINITIONS)
+  foreach(TMP_DEF ${_def_list})
+    set(_common_args "${_common_args}-D${TMP_DEF}\n")
+  endforeach()
+  foreach(INCLUDE_DIR ${TMP_INCLUDE_DIRS})
+    set(_common_args "${_common_args}-I\"${INCLUDE_DIR}\"\n")
+  endforeach()
+  if(VTK_WRAP_HINTS)
+    set(_common_args "${_common_args}--hints \"${VTK_WRAP_HINTS}\"\n")
+  endif()
+  if(KIT_HIERARCHY_FILE)
+    set(_common_args "${_common_args}--types \"${KIT_HIERARCHY_FILE}\"\n")
+  endif()
 
-  IF (VTK_WRAP_HINTS)
-    SET(TMP_HINTS "--hints" "${quote}${VTK_WRAP_HINTS}${quote}")
-  ELSE (VTK_WRAP_HINTS)
-    SET(TMP_HINTS)
-  ENDIF (VTK_WRAP_HINTS)
+  # write wrapper-tool arguments to a file
+  string(STRIP "${_common_args}" CMAKE_CONFIGURABLE_FILE_CONTENT)
+  set(_args_file ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.args)
+  configure_file(${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in
+                 ${_args_file} @ONLY)
 
-  IF (KIT_HIERARCHY_FILE)
-    SET(TMP_HIERARCHY "--types" "${quote}${KIT_HIERARCHY_FILE}${quote}")
-  ELSE (KIT_HIERARCHY_FILE)
-    SET(TMP_HIERARCHY)
-  ENDIF (KIT_HIERARCHY_FILE)
-
-  # For each class
+  # for each class
   FOREACH(FILE ${SOURCES})
     # should we wrap the file?
     GET_SOURCE_FILE_PROPERTY(TMP_WRAP_EXCLUDE ${FILE} WRAP_EXCLUDE)
@@ -116,16 +127,9 @@ MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
         SET(TMP_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/${TMP_FILENAME}.h)
       ENDIF (TMP_FILEPATH)
 
-      # is it abstract?
-      GET_SOURCE_FILE_PROPERTY(TMP_ABSTRACT ${FILE} ABSTRACT)
-      IF (TMP_ABSTRACT)
-        SET(TMP_CONCRETE "--abstract")
-      ELSE (TMP_ABSTRACT)
-        SET(TMP_CONCRETE "--concrete")
-        # add the info to the init file
-        SET(VTK_WRAPPER_INIT_DATA
-          "${VTK_WRAPPER_INIT_DATA}\n${TMP_FILENAME}")
-      ENDIF (TMP_ABSTRACT)
+      # add the info to the init file
+      SET(VTK_WRAPPER_INIT_DATA
+        "${VTK_WRAPPER_INIT_DATA}\n${TMP_FILENAME}")
 
       # new source file is nameTcl.cxx, add to resulting list
       SET(${SRC_LIST_NAME} ${${SRC_LIST_NAME}}
@@ -134,18 +138,14 @@ MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
       # add custom command to output
       ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${TMP_FILENAME}Tcl.cxx
-        DEPENDS ${VTK_WRAP_TCL_EXE} ${VTK_WRAP_HINTS}
+        DEPENDS ${VTK_WRAP_TCL_EXE} ${VTK_WRAP_HINTS} ${TMP_INPUT} ${_args_file}
         ${KIT_HIERARCHY_FILE}
-        MAIN_DEPENDENCY "${TMP_INPUT}"
         COMMAND ${VTK_WRAP_TCL_EXE}
         ARGS
-        ${TMP_CONCRETE}
         ${TMP_HINTS}
-        ${TMP_HIERARCHY}
-        ${TMP_DEFINITIONS}
-        ${TMP_INCLUDE}
+        "${quote}@${_args_file}${quote}"
+        "-o" "${quote}${CMAKE_CURRENT_BINARY_DIR}/${TMP_FILENAME}Tcl.cxx${quote}"
         "${quote}${TMP_INPUT}${quote}"
-        "${quote}${CMAKE_CURRENT_BINARY_DIR}/${TMP_FILENAME}Tcl.cxx${quote}"
         COMMENT "Tcl Wrapping - generating ${TMP_FILENAME}Tcl.cxx"
         ${verbatim}
         )
@@ -177,7 +177,6 @@ MACRO(VTK_WRAP_TCL3 TARGET SRC_LIST_NAME SOURCES COMMANDS)
     ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in
     ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}Init.data
     COPY_ONLY
-    IMMEDIATE
     )
 
   ADD_CUSTOM_COMMAND(
@@ -217,12 +216,12 @@ IF (VTK_WRAP_TCL_FIND_LIBS)
     # The tcl library needs the math library on unix.
     SET(VTK_TCL_LIBRARIES ${VTK_TCL_LIBRARIES} m)
   ENDIF(UNIX)
-  IF(VTK_USE_TK AND TK_FOUND)
+  IF(TK_FOUND)
     SET(VTK_TK_LIBRARIES ${TK_LIBRARY} ${VTK_TCL_LIBRARIES})
     IF(TK_LIBRARY_DEBUG)
       SET(VTK_TK_LIBRARIES optimized ${TK_LIBRARY} debug ${TK_LIBRARY_DEBUG} ${VTK_TCL_LIBRARIES})
     ENDIF(TK_LIBRARY_DEBUG)
-  ENDIF(VTK_USE_TK AND TK_FOUND)
+  ENDIF(TK_FOUND)
   INCLUDE(${VTK_CMAKE_DIR}/vtkTclTkMacros.cmake)
   # Hide useless settings provided by FindTCL.
   FOREACH(entry

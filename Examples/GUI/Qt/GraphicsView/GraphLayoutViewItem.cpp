@@ -54,7 +54,7 @@ GraphLayoutViewItem::GraphLayoutViewItem(QGLContext* ctx, QGraphicsItem* p)
   t->GetEdgeData()->AddArray(label);
 
   vtkSmartPointer<vtkStringToNumeric> numeric = vtkSmartPointer<vtkStringToNumeric>::New();
-  numeric->SetInput(t);
+  numeric->SetInputConnection(reader->GetOutputPort());
 
   GraphLayoutView->DisplayHoverTextOn();
   GraphLayoutView->SetLayoutStrategyToCircular();

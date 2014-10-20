@@ -1,33 +1,28 @@
+cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+
 PROJECT (Rendering)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK REQUIRED)
-IF(NOT VTK_USE_RENDERING)
-  MESSAGE(FATAL_ERROR "Example ${PROJECT_NAME} requires VTK_USE_RENDERING.")
-ENDIF(NOT VTK_USE_RENDERING)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
+if(NOT VTK_SOURCE_DIR)
+  message(ERROR " Cannot build Rendering examples without VTK_SOURCE_DIR")
+endif()
 
-INCLUDE_DIRECTORIES(
-  # in support of SurfaceLICDemo that includes 
-  # TestSurfaceLIC.h from the dir below
-  ${VTK_SOURCE_DIR}/Rendering/Testing/Cxx
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkFiltersSources
+  vtkInteractionStyle
+  vtkRenderingOpenGL
 )
+include(${VTK_USE_FILE})
 
-SET(RENDERING_EXAMPLES_SRCS
+set(RENDERING_EXAMPLES_SRCS
   Cylinder
   SpecularSpheres
   DiffuseSpheres
   AmbientSpheres
-  MaterialObjects
-  SurfaceLICDemo
+#  MaterialObjects
   )
 
-IF(APPLE)
-  SET(EXECUTABLE_FLAG MACOSX_BUNDLE)
-ENDIF(APPLE)
-
-FOREACH(name ${RENDERING_EXAMPLES_SRCS})
-  ADD_EXECUTABLE(${name} ${EXECUTABLE_FLAG} ${name}.cxx)
-  TARGET_LINK_LIBRARIES(${name} vtkRendering vtkIO )
-ENDFOREACH(name)
+foreach(name ${RENDERING_EXAMPLES_SRCS})
+  add_executable(${name} MACOSX_BUNDLE ${name}.cxx)
+  target_link_libraries(${name} ${VTK_LIBRARIES} )
+endforeach()

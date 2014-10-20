@@ -29,11 +29,11 @@ public:
   vtkTypeMacro(vtkBar2,vtkObject);
 
 protected:
-  vtkBar2() {};
-  ~vtkBar2() {};
+  vtkBar2() {}
+  ~vtkBar2() {}
 private:
   vtkBar2(const vtkBar2&);  // Not implemented.
   void operator=(const vtkBar2&);  // Not implemented.
 };
 
-#endif 
+#endif
