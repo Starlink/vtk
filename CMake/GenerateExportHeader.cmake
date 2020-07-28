@@ -168,6 +168,10 @@ macro(_test_compiler_hidden_visibility)
       ERROR_VARIABLE _gcc_version_info)
     string(REGEX MATCH "[3456789]\\.[0-9]\\.[0-9]"
       _gcc_version "${_gcc_version_info}")
+    if(NOT _gcc_version)
+      string(REGEX MATCH "1[0-9]\\.[0-9]\\.[0-9]"
+        _gcc_version "${_gcc_version_info}")
+    endif()
     # gcc on mac just reports: "gcc (GCC) 3.3 20030304 ..." without the
     # patch level, handle this here:
     if(NOT _gcc_version)

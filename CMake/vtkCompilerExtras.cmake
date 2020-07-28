@@ -30,6 +30,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   string (REGEX MATCH "[3456789]\\.[0-9]\\.[0-9]"
     _gcc_version "${_gcc_version_info}")
   if(NOT _gcc_version)
+    string (REGEX MATCH "1[0-9]\\.[0-9]\\.[0-9]"
+      _gcc_version "${_gcc_version_info}")
+  endif()
+  if(NOT _gcc_version)
     string (REGEX REPLACE ".*\\(GCC\\).* ([34]\\.[0-9]) .*" "\\1.0"
       _gcc_version "${_gcc_version_info}")
   endif()
